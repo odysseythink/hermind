@@ -53,15 +53,19 @@ func LoadFromPath(path string) (*Config, error) {
 }
 
 // expandPath resolves ~ in paths to the user home directory.
+// Only handles bare "~" or "~/..." — leaves "~username/..." untouched.
 func expandPath(p string) (string, error) {
-	if !strings.HasPrefix(p, "~") {
+	if p != "~" && !strings.HasPrefix(p, "~/") {
 		return p, nil
 	}
 	home, err := os.UserHomeDir()
 	if err != nil {
 		return "", fmt.Errorf("config: resolve home: %w", err)
 	}
-	return filepath.Join(home, strings.TrimPrefix(p, "~")), nil
+	if p == "~" {
+		return home, nil
+	}
+	return filepath.Join(home, strings.TrimPrefix(p, "~/")), nil
 }
 
 // expandEnvVars replaces "env:VAR_NAME" references in api keys with the env value.
@@ -69,6 +73,9 @@ func expandEnvVars(cfg *Config) error {
 	for name, p := range cfg.Providers {
 		if strings.HasPrefix(p.APIKey, "env:") {
 			varName := strings.TrimPrefix(p.APIKey, "env:")
+			if varName == "" {
+				return fmt.Errorf("config: provider %q has empty env variable reference", name)
+			}
 			p.APIKey = os.Getenv(varName)
 			cfg.Providers[name] = p
 		}
