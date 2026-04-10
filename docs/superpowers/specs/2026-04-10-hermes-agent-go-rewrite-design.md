@@ -736,7 +736,169 @@ hermes version      # Version info
 - Multi-line input (Shift+Enter newline, Enter submit)
 - Slash command autocomplete (Tab)
 - History navigation (Up/Down)
-- Skin/theme system
+- Skin/theme system (3 built-in skins, see below)
+
+### Built-in Skins
+
+| Skin | Color Support | Accent | Background | Use Case |
+|------|--------------|--------|------------|----------|
+| **Default** | Truecolor | Amber/Gold (#FFB800) | Charcoal (#1E1E1E) | Modern terminals (iTerm2, Alacritty, WezTerm) |
+| **Classic** | 16-color ANSI | Yellow (ANSI 3) | Default terminal bg | SSH sessions, older terminals, tmux |
+| **Minimal** | No color | None (bold/dim only) | Default terminal bg | CI/CD logs, piped output, accessibility |
+
+**What skins control:** prompt character style, accent color for headings/highlights, error color, tool call formatting color, status bar style, spinner animation style. Skins do NOT change layout or information hierarchy.
+
+**Auto-detection:** Default skin selected based on `$COLORTERM` (truecolor), `$TERM` (256color/16color), or pipe detection (`!isatty` → Minimal). Override via `config.yaml` → `cli.skin: "classic"`
+
+### CLI Design Tokens
+
+**Symbol vocabulary:**
+| Symbol | Meaning | Context |
+|--------|---------|---------|
+| `>` | User input prompt | Conversation |
+| `◆` | Agent thinking/processing | Status |
+| `⚡` | Tool execution | Tool calls |
+| `│` | Output continuation | Tool output lines |
+| `└` | Output end | Last tool output line |
+| `▊` | Streaming cursor | During LLM streaming |
+| `⚠` | Warning | Budget, deprecation |
+| `✗` | Error | Failed operations |
+| `◈` | Active indicator | Status bar |
+
+**Semantic colors (Default skin):**
+| Color | Hex | Usage |
+|-------|-----|-------|
+| Accent | #FFB800 (amber) | Headings, prompt character, highlights |
+| Success | #4EC9B0 (teal) | Successful tool execution, cost display |
+| Warning | #E5C07B (warm yellow) | Budget warnings, deprecation |
+| Error | #E06C75 (soft red) | Errors, non-zero exit codes |
+| Muted | #6C7A89 (gray) | Tool commands, timestamps, metadata |
+| Code | #98C379 (green) | Code blocks, file paths |
+
+**Spacing rules:**
+- 1 blank line between user message and agent response
+- 0 blank lines between tool call header and tool output
+- 1 blank line after tool output block before next content
+- 2-space indent for tool output lines (after `│`)
+- Status bar: fixed to terminal bottom, 1 line tall
+
+### REPL Visual Hierarchy (4-zone layout)
+
+```
+┌─────────────────────────────────────────────────────┐
+│  ██  HERMES AGENT  ██                               │  Zone 1: Brand banner
+│  claude-opus-4-6 · ~/.hermes · session #a3f2       │  Zone 2: Context bar
+├─────────────────────────────────────────────────────┤
+│                                                     │
+│  > user message here                                │  Zone 3: Conversation
+│                                                     │
+│  ◆ Thinking...                                      │
+│                                                     │
+│  Response with **markdown** rendering               │
+│  ```go                                              │
+│  func main() { ... }                                │
+│  ```                                                │
+│                                                     │
+│  ⚡ terminal: ls -la                                │  Tool call indicator
+│  │ total 48                                         │
+│  │ drwxr-xr-x  12 user  staff  384 Apr 10 14:00 . │
+│  └ exit 0 (0.02s)                                   │
+│                                                     │
+├─────────────────────────────────────────────────────┤
+│  tokens: 1.2k↑ 3.4k↓  cost: $0.08  ◈ streaming    │  Zone 4: Status bar
+└─────────────────────────────────────────────────────┘
+```
+
+**Startup performance target:** First prompt visible within 200ms. Config loading and skill scanning happen eagerly; MCP connections and provider health checks happen lazily (first use).
+
+**Exit experience:** On `/exit` or Ctrl+D, show a one-line session summary: `Session #a3f2: 12 messages, 8 tool calls, $0.34 · saved to ~/.hermes/state.db`. No confirmation prompt on exit (trust the user).
+
+- **Zone 1 (Banner):** ASCII art "HERMES" logo, shown once on startup. Compact (3-4 lines max).
+- **Zone 2 (Context bar):** Model name, config directory, session ID. Updates on model/session change.
+- **Zone 3 (Conversation):** Scrollable. User messages prefixed with `>`. Agent responses rendered as markdown via glamour. Tool calls shown with icon + command + collapsed output.
+- **Zone 4 (Status bar):** Persistent. Shows input/output token counts, estimated cost, and current state (idle/streaming/thinking/executing).
+
+### Interaction States
+
+Every user-visible feature must specify what the user sees in each state:
+
+```
+FEATURE              | LOADING              | EMPTY               | ERROR                    | SUCCESS              | PARTIAL
+---------------------|----------------------|---------------------|--------------------------|----------------------|------------------
+REPL startup         | "Loading config..."  | N/A                 | Config parse error msg   | Banner + prompt      | N/A
+LLM streaming        | "◆ Thinking..."      | N/A                 | API error + retry count  | Rendered markdown    | Partial stream shown as-is
+Tool execution       | "⚡ running: <cmd>"  | N/A                 | Exit code + stderr shown | Output + duration    | Timeout: partial output + warning
+Session search       | "Searching..."       | "No sessions found" | DB error message         | Formatted list       | Paginated with "more..."
+Skill loading        | "Loading skills..."  | "No skills found"   | Parse error + file path  | Silent (injected)    | N/A
+Context compression  | "Compressing..."     | N/A                 | Fallback to truncation   | "Compressed N→M msgs"| N/A
+Provider fallback    | "Retrying with ..."  | N/A                 | "All providers failed"   | Silent provider swap | N/A
+Cost display         | N/A                  | "$0.00"             | "Cost estimate unavail." | "$X.XX (estimated)"  | N/A
+```
+
+**Error display pattern:** All errors shown inline in the conversation flow, styled with red/error color. Errors include: what failed, why (if known), and what happens next (retry, fallback, abort). Never silently swallow errors.
+
+**Streaming display:** Characters appear as received. Markdown rendering happens after stream completes (not during — avoids flicker). During streaming, raw text with a blinking cursor indicator `▊`.
+
+**Tool call display pattern:**
+- Start: `⚡ <tool_name>: <command_summary>` (dimmed/muted color)
+- Running: spinner animation next to the tool line
+- Complete: output indented under tool line, prefixed with `│`. Duration shown. Exit code if non-zero.
+- Collapsed by default if output > 20 lines, with "[+N lines]" expand hint
+
+**Budget warning display:**
+- 70% consumed: subtle dimmed note `[budget: 27/90 remaining]`
+- 90% consumed: yellow warning `⚠ [budget: 9/90 — wrapping up]`
+
+### Terminal Responsive Behavior
+
+| Terminal Width | Adaptation |
+|---------------|-----------|
+| **80+ cols** (normal) | Full layout: banner, context bar, status bar, tool output |
+| **60-79 cols** (narrow) | Compact banner (single line "HERMES v1.0"), truncated context bar |
+| **40-59 cols** (very narrow) | No banner, no context bar, status bar shows only cost. Tool output hard-wrapped |
+| **<40 cols** | Warning on startup: "Terminal too narrow for optimal display". Minimal mode forced |
+
+**Terminal height:** Status bar always visible. Conversation scrolls. If terminal < 10 rows, status bar hidden.
+
+**Resize handling:** Listen for SIGWINCH. Redraw status bar and re-wrap current output on resize. No full repaint (avoid flicker).
+
+### Accessibility
+
+**Keyboard shortcuts:**
+| Key | Action |
+|-----|--------|
+| Enter | Submit message |
+| Shift+Enter | New line in input |
+| Ctrl+C | Interrupt current operation (cancel streaming/tool, return to prompt) |
+| Ctrl+D | Exit REPL (with session summary) |
+| Ctrl+L | Clear screen (keep history) |
+| Tab | Autocomplete slash command |
+| Up/Down | Navigate input history |
+| Ctrl+A / Ctrl+E | Move to start/end of input line |
+| Ctrl+U / Ctrl+K | Clear line before/after cursor |
+
+**Ctrl+C behavior (critical):**
+- During idle (at prompt): no-op (don't exit, unlike typical shells)
+- During LLM streaming: cancel stream, show partial response, return to prompt
+- During tool execution: kill tool process, show partial output + "interrupted", return to prompt
+- Double Ctrl+C within 1s: force exit (safety valve)
+
+**Screen reader support:**
+- Minimal skin auto-selected when `$TERM=dumb` or piped output
+- No spinner animations in Minimal skin (replaced with static text)
+- All status updates written as new lines (not in-place overwrites)
+- ANSI escape sequences stripped when output is not a TTY
+
+### Navigation Flow
+
+```
+hermes           → REPL (default, 4-zone layout)
+hermes run       → REPL (same)
+hermes gateway   → headless mode (structured log output, no TUI)
+hermes setup     → interactive wizard (step-by-step prompts, no 4-zone)
+hermes session   → list view (table) → detail view (conversation replay)
+hermes skill     → list view (table) → detail view (skill content)
+```
 
 ### Slash Commands
 
@@ -889,6 +1051,16 @@ release:
 ```
 
 Module path: `github.com/nousresearch/hermes-agent`
+
+---
+
+## Resolved Design Decisions
+
+1. **Gateway log format:** Structured JSON (one object per line). Machine-parseable for log aggregators (jq, Datadog, ELK). CLI mode uses slog human-readable format by default.
+
+2. **Session view (`hermes session view <id>`):** Re-rendered conversation with full markdown rendering, tool call formatting, and the same visual treatment as live REPL. Not a plain text dump.
+
+3. **Provider fallback visibility:** Visible switch with muted note. When fallback activates, show `⚠ Switched to <provider> (<reason>)` in muted color. Users need to know which provider is billing them.
 
 ---
 
