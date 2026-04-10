@@ -107,6 +107,23 @@ func expandEnvVars(cfg *Config) error {
 		}
 		cfg.Terminal.DaytonaToken = os.Getenv(varName)
 	}
+	// MCP server env vars
+	for name, s := range cfg.MCP.Servers {
+		changed := false
+		for k, v := range s.Env {
+			if strings.HasPrefix(v, "env:") {
+				varName := strings.TrimPrefix(v, "env:")
+				if varName == "" {
+					return fmt.Errorf("config: mcp server %q env var %q has empty env reference", name, k)
+				}
+				s.Env[k] = os.Getenv(varName)
+				changed = true
+			}
+		}
+		if changed {
+			cfg.MCP.Servers[name] = s
+		}
+	}
 	return nil
 }
 

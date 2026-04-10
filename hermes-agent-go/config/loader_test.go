@@ -120,6 +120,37 @@ terminal:
 	assert.Equal(t, "/opt/img/ubuntu.sif", cfg.Terminal.SingularityImage)
 }
 
+func TestLoadFromYAMLParsesMCPServers(t *testing.T) {
+	t.Setenv("GITHUB_TOKEN", "gh-secret")
+
+	dir := t.TempDir()
+	yamlPath := filepath.Join(dir, "config.yaml")
+	err := os.WriteFile(yamlPath, []byte(`
+mcp:
+  servers:
+    github:
+      command: npx
+      args: [-y, "@modelcontextprotocol/server-github"]
+      env:
+        GITHUB_PERSONAL_ACCESS_TOKEN: env:GITHUB_TOKEN
+    filesystem:
+      command: npx
+      args: [-y, "@modelcontextprotocol/server-filesystem", "/tmp"]
+      enabled: false
+`), 0o644)
+	require.NoError(t, err)
+
+	cfg, err := LoadFromPath(yamlPath)
+	require.NoError(t, err)
+	require.Contains(t, cfg.MCP.Servers, "github")
+	assert.Equal(t, "npx", cfg.MCP.Servers["github"].Command)
+	assert.Equal(t, "gh-secret", cfg.MCP.Servers["github"].Env["GITHUB_PERSONAL_ACCESS_TOKEN"])
+	assert.True(t, cfg.MCP.Servers["github"].IsEnabled())
+
+	require.Contains(t, cfg.MCP.Servers, "filesystem")
+	assert.False(t, cfg.MCP.Servers["filesystem"].IsEnabled())
+}
+
 func TestLoadFromYAMLParsesFallbackProviders(t *testing.T) {
 	dir := t.TempDir()
 	yamlPath := filepath.Join(dir, "config.yaml")

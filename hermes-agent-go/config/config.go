@@ -10,6 +10,33 @@ type Config struct {
 	Auxiliary         AuxiliaryConfig           `yaml:"auxiliary,omitempty"`
 	Terminal          TerminalConfig            `yaml:"terminal"`
 	Storage           StorageConfig             `yaml:"storage"`
+	MCP               MCPConfig                 `yaml:"mcp,omitempty"`
+}
+
+// MCPConfig holds the configured MCP server list.
+// Each server is identified by its key in the map.
+type MCPConfig struct {
+	Servers map[string]MCPServerConfig `yaml:"servers,omitempty"`
+}
+
+// MCPServerConfig describes a single MCP server to start on CLI launch.
+// Plan 6b supports stdio transport only (subprocess with command + args + env).
+// HTTP/SSE transport is deferred.
+type MCPServerConfig struct {
+	Command string            `yaml:"command"` // e.g. "npx"
+	Args    []string          `yaml:"args,omitempty"`
+	Env     map[string]string `yaml:"env,omitempty"`
+	// Enabled defaults to true if unset. Use false to disable a server
+	// without deleting its config block.
+	Enabled *bool `yaml:"enabled,omitempty"`
+}
+
+// IsEnabled returns true unless Enabled is explicitly false.
+func (m MCPServerConfig) IsEnabled() bool {
+	if m.Enabled == nil {
+		return true
+	}
+	return *m.Enabled
 }
 
 // ProviderConfig holds settings for a single LLM provider.
