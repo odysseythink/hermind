@@ -4,6 +4,7 @@ package agent
 import (
 	"context"
 	"errors"
+	"io"
 	"testing"
 
 	"github.com/nousresearch/hermes-agent/config"
@@ -46,7 +47,7 @@ type fakeStream struct {
 
 func (s *fakeStream) Recv() (*provider.StreamEvent, error) {
 	if s.idx >= len(s.events) {
-		return nil, errors.New("EOF")
+		return nil, io.EOF
 	}
 	ev := s.events[s.idx]
 	s.idx++
