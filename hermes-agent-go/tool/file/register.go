@@ -26,6 +26,22 @@ func RegisterAll(reg *tool.Registry) {
 	})
 
 	reg.Register(&tool.Entry{
+		Name:        "write_file",
+		Toolset:     "file",
+		Description: "Write content to a file.",
+		Emoji:       "✏️",
+		Handler:     writeFileHandler,
+		Schema: tool.ToolDefinition{
+			Type: "function",
+			Function: tool.FunctionDef{
+				Name:        "write_file",
+				Description: "Write content to a file, overwriting if it exists.",
+				Parameters:  json.RawMessage(writeFileSchema),
+			},
+		},
+	})
+
+	reg.Register(&tool.Entry{
 		Name:        "list_directory",
 		Toolset:     "file",
 		Description: "List files and subdirectories in a directory.",
@@ -41,5 +57,19 @@ func RegisterAll(reg *tool.Registry) {
 		},
 	})
 
-	// write_file and search_files added in Task 6
+	reg.Register(&tool.Entry{
+		Name:        "search_files",
+		Toolset:     "file",
+		Description: "Recursively search for files by glob pattern.",
+		Emoji:       "🔍",
+		Handler:     searchFilesHandler,
+		Schema: tool.ToolDefinition{
+			Type: "function",
+			Function: tool.FunctionDef{
+				Name:        "search_files",
+				Description: "Recursively find files in a directory matching a glob pattern.",
+				Parameters:  json.RawMessage(searchFilesSchema),
+			},
+		},
+	})
 }

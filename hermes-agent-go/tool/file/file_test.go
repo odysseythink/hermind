@@ -85,3 +85,74 @@ func TestListDirectoryMissing(t *testing.T) {
 	require.NoError(t, err)
 	assert.Contains(t, out, `"error"`)
 }
+
+func TestWriteFileHappyPath(t *testing.T) {
+	dir := t.TempDir()
+	path := filepath.Join(dir, "new.txt")
+
+	r := newTestRegistry()
+	args := json.RawMessage(`{"path":"` + path + `","content":"written"}`)
+	out, err := r.Dispatch(context.Background(), "write_file", args)
+	require.NoError(t, err)
+
+	var decoded map[string]any
+	require.NoError(t, json.Unmarshal([]byte(out), &decoded))
+	assert.Equal(t, float64(7), decoded["bytes_written"])
+
+	data, err := os.ReadFile(path)
+	require.NoError(t, err)
+	assert.Equal(t, "written", string(data))
+}
+
+func TestWriteFileCreatesParentDirs(t *testing.T) {
+	dir := t.TempDir()
+	path := filepath.Join(dir, "a", "b", "deep.txt")
+	r := newTestRegistry()
+	args := json.RawMessage(`{"path":"` + path + `","content":"deep","create_dirs":true}`)
+	out, err := r.Dispatch(context.Background(), "write_file", args)
+	require.NoError(t, err)
+	assert.NotContains(t, out, `"error"`)
+
+	data, err := os.ReadFile(path)
+	require.NoError(t, err)
+	assert.Equal(t, "deep", string(data))
+}
+
+func TestWriteFileRejectsEmptyPath(t *testing.T) {
+	r := newTestRegistry()
+	args := json.RawMessage(`{"content":"nothing"}`)
+	out, err := r.Dispatch(context.Background(), "write_file", args)
+	require.NoError(t, err)
+	assert.Contains(t, out, `"error"`)
+}
+
+func TestSearchFilesHappyPath(t *testing.T) {
+	dir := t.TempDir()
+	require.NoError(t, os.WriteFile(filepath.Join(dir, "a.go"), []byte("a"), 0o644))
+	require.NoError(t, os.WriteFile(filepath.Join(dir, "b.go"), []byte("b"), 0o644))
+	require.NoError(t, os.WriteFile(filepath.Join(dir, "c.txt"), []byte("c"), 0o644))
+
+	r := newTestRegistry()
+	args := json.RawMessage(`{"root":"` + dir + `","pattern":"*.go"}`)
+	out, err := r.Dispatch(context.Background(), "search_files", args)
+	require.NoError(t, err)
+
+	var decoded map[string]any
+	require.NoError(t, json.Unmarshal([]byte(out), &decoded))
+	matches, ok := decoded["matches"].([]any)
+	require.True(t, ok)
+	assert.Len(t, matches, 2)
+}
+
+func TestSearchFilesEmptyResults(t *testing.T) {
+	dir := t.TempDir()
+	r := newTestRegistry()
+	args := json.RawMessage(`{"root":"` + dir + `","pattern":"*.nope"}`)
+	out, err := r.Dispatch(context.Background(), "search_files", args)
+	require.NoError(t, err)
+
+	var decoded map[string]any
+	require.NoError(t, json.Unmarshal([]byte(out), &decoded))
+	matches, _ := decoded["matches"].([]any)
+	assert.Len(t, matches, 0)
+}
