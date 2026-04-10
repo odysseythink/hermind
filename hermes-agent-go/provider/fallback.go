@@ -64,3 +64,32 @@ func (fc *FallbackChain) Stream(ctx context.Context, req *Request) (Stream, erro
 	}
 	return nil, fmt.Errorf("%w: last error: %v", ErrAllProvidersFailed, lastErr)
 }
+
+// Name returns "fallback-chain" as the canonical name.
+func (fc *FallbackChain) Name() string { return "fallback-chain" }
+
+// ModelInfo delegates to the first provider in the chain, or returns nil.
+func (fc *FallbackChain) ModelInfo(model string) *ModelInfo {
+	if len(fc.providers) == 0 {
+		return nil
+	}
+	return fc.providers[0].ModelInfo(model)
+}
+
+// EstimateTokens delegates to the first provider in the chain.
+func (fc *FallbackChain) EstimateTokens(model string, text string) (int, error) {
+	if len(fc.providers) == 0 {
+		return 0, errors.New("provider: fallback chain is empty")
+	}
+	return fc.providers[0].EstimateTokens(model, text)
+}
+
+// Available returns true if any provider in the chain is available.
+func (fc *FallbackChain) Available() bool {
+	for _, p := range fc.providers {
+		if p.Available() {
+			return true
+		}
+	}
+	return false
+}

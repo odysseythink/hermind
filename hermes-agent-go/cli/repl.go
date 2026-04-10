@@ -15,7 +15,7 @@ import (
 	"github.com/nousresearch/hermes-agent/config"
 	"github.com/nousresearch/hermes-agent/message"
 	"github.com/nousresearch/hermes-agent/provider"
-	"github.com/nousresearch/hermes-agent/provider/anthropic"
+	"github.com/nousresearch/hermes-agent/provider/factory"
 	"github.com/nousresearch/hermes-agent/storage/sqlite"
 	"github.com/nousresearch/hermes-agent/tool"
 	"github.com/nousresearch/hermes-agent/tool/file"
@@ -37,30 +37,37 @@ func runREPL(ctx context.Context, app *App) error {
 		return err
 	}
 
-	// Build the Anthropic provider from config
-	anthropicCfg, ok := app.Config.Providers["anthropic"]
-	if !ok {
-		anthropicCfg = config.ProviderConfig{Provider: "anthropic"}
-	}
-
-	// Allow ANTHROPIC_API_KEY env var as fallback when config is missing the key
-	if anthropicCfg.APIKey == "" {
-		if envKey := os.Getenv("ANTHROPIC_API_KEY"); envKey != "" {
-			anthropicCfg.APIKey = envKey
-		}
-	}
-
-	if anthropicCfg.APIKey == "" {
-		return fmt.Errorf("hermes: anthropic provider is not configured. Set api_key in ~/.hermes/config.yaml or ANTHROPIC_API_KEY env var")
-	}
-	if anthropicCfg.Model == "" {
-		anthropicCfg.Model = defaultModelFromString(app.Config.Model)
-	}
-
-	p, err := anthropic.New(anthropicCfg)
+	// Build the primary provider via factory
+	primaryProvider, primaryName, err := buildPrimaryProvider(app.Config)
 	if err != nil {
-		return fmt.Errorf("hermes: create provider: %w", err)
+		return err
 	}
+
+	// Build fallback providers (skip entries with empty api_key)
+	providers := []provider.Provider{primaryProvider}
+	for i, fbCfg := range app.Config.FallbackProviders {
+		if fbCfg.APIKey == "" {
+			fmt.Fprintf(os.Stderr, "hermes: warning: fallback_providers[%d] (%s) has no api_key — skipping\n", i, fbCfg.Provider)
+			continue
+		}
+		fb, err := factory.New(fbCfg)
+		if err != nil {
+			fmt.Fprintf(os.Stderr, "hermes: warning: fallback_providers[%d] (%s): %v — skipping\n", i, fbCfg.Provider, err)
+			continue
+		}
+		providers = append(providers, fb)
+	}
+
+	// Use FallbackChain when multiple providers are configured
+	var p provider.Provider
+	if len(providers) == 1 {
+		p = providers[0]
+	} else {
+		p = provider.NewFallbackChain(providers)
+	}
+
+	displayModel := defaultModelFromString(app.Config.Model)
+	_ = primaryName
 
 	// Register built-in tools
 	toolRegistry := tool.NewRegistry()
@@ -75,7 +82,7 @@ func runREPL(ctx context.Context, app *App) error {
 	// Print the banner and context
 	sessionID := uuid.NewString()
 	fmt.Print(banner)
-	fmt.Printf("  %s · session %s\n\n", anthropicCfg.Model, sessionID[:8])
+	fmt.Printf("  %s · session %s\n\n", displayModel, sessionID[:8])
 
 	scanner := bufio.NewScanner(os.Stdin)
 	scanner.Buffer(make([]byte, 0, 64*1024), 1024*1024)
@@ -140,7 +147,7 @@ func runREPL(ctx context.Context, app *App) error {
 			UserMessage: line,
 			History:     history,
 			SessionID:   sessionID,
-			Model:       anthropicCfg.Model,
+			Model:       displayModel,
 		})
 		if err != nil {
 			if ctx.Err() != nil {
@@ -207,6 +214,50 @@ func ensureStorage(app *App) error {
 	}
 	app.Storage = store
 	return nil
+}
+
+// buildPrimaryProvider constructs the primary provider from the config.
+// It parses cfg.Model (e.g., "anthropic/claude-opus-4-6") to determine the
+// provider name, looks up the matching entry in cfg.Providers, and calls
+// factory.New. For anthropic, it falls back to the ANTHROPIC_API_KEY env var
+// if api_key is missing from config.
+func buildPrimaryProvider(cfg *config.Config) (provider.Provider, string, error) {
+	// Parse "provider/model" to extract the provider name
+	primaryName := cfg.Model
+	if idx := strings.Index(cfg.Model, "/"); idx >= 0 {
+		primaryName = cfg.Model[:idx]
+	}
+
+	// Look up provider config (default to empty if missing)
+	pCfg, ok := cfg.Providers[primaryName]
+	if !ok {
+		pCfg = config.ProviderConfig{Provider: primaryName}
+	}
+	if pCfg.Provider == "" {
+		pCfg.Provider = primaryName
+	}
+
+	// For anthropic, fall back to ANTHROPIC_API_KEY env var
+	if primaryName == "anthropic" && pCfg.APIKey == "" {
+		if envKey := os.Getenv("ANTHROPIC_API_KEY"); envKey != "" {
+			pCfg.APIKey = envKey
+		}
+	}
+
+	if pCfg.APIKey == "" {
+		return nil, "", fmt.Errorf("hermes: %s provider is not configured. Set api_key in ~/.hermes/config.yaml or ANTHROPIC_API_KEY env var", primaryName)
+	}
+
+	// Default the model field from cfg.Model
+	if pCfg.Model == "" {
+		pCfg.Model = defaultModelFromString(cfg.Model)
+	}
+
+	p, err := factory.New(pCfg)
+	if err != nil {
+		return nil, "", fmt.Errorf("hermes: create provider: %w", err)
+	}
+	return p, primaryName, nil
 }
 
 // defaultModelFromString parses "anthropic/claude-opus-4-6" into just "claude-opus-4-6".
