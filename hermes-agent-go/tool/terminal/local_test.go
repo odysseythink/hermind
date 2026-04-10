@@ -118,3 +118,39 @@ func TestShellExecuteRejectsMissingCommand(t *testing.T) {
 	assert.Contains(t, result, `"error"`)
 	assert.Contains(t, result, "command")
 }
+
+// Factory dispatch tests
+
+func TestNewFactoryDispatchesLocal(t *testing.T) {
+	b, err := New("local", Config{})
+	require.NoError(t, err)
+	_, ok := b.(*Local)
+	assert.True(t, ok)
+}
+
+func TestNewFactoryDispatchesSSH(t *testing.T) {
+	b, err := New("ssh", Config{SSHHost: "h", SSHUser: "u", SSHKey: "/tmp/k"})
+	require.NoError(t, err)
+	_, ok := b.(*SSH)
+	assert.True(t, ok)
+}
+
+func TestNewFactoryDispatchesModal(t *testing.T) {
+	b, err := New("modal", Config{ModalBaseURL: "https://x", ModalToken: "t"})
+	require.NoError(t, err)
+	_, ok := b.(*Modal)
+	assert.True(t, ok)
+}
+
+func TestNewFactoryDispatchesDaytona(t *testing.T) {
+	b, err := New("daytona", Config{DaytonaBaseURL: "https://x", DaytonaToken: "t"})
+	require.NoError(t, err)
+	_, ok := b.(*Daytona)
+	assert.True(t, ok)
+}
+
+func TestNewFactoryUnknown(t *testing.T) {
+	_, err := New("made-up-backend", Config{})
+	require.Error(t, err)
+	assert.Contains(t, err.Error(), "not supported")
+}
