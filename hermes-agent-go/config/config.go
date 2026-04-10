@@ -7,6 +7,7 @@ type Config struct {
 	Providers         map[string]ProviderConfig `yaml:"providers"`
 	FallbackProviders []ProviderConfig          `yaml:"fallback_providers,omitempty"`
 	Agent             AgentConfig               `yaml:"agent"`
+	Auxiliary         AuxiliaryConfig           `yaml:"auxiliary,omitempty"`
 	Terminal          TerminalConfig            `yaml:"terminal"`
 	Storage           StorageConfig             `yaml:"storage"`
 }
@@ -19,10 +20,32 @@ type ProviderConfig struct {
 	Model    string `yaml:"model"`
 }
 
+// CompressionConfig controls context compression behavior.
+// When the conversation history exceeds Threshold * model context length,
+// the Engine summarizes middle messages via the auxiliary provider.
+type CompressionConfig struct {
+	Enabled     bool    `yaml:"enabled"`      // default true
+	Threshold   float64 `yaml:"threshold"`    // default 0.5 (50% of context)
+	TargetRatio float64 `yaml:"target_ratio"` // default 0.2 (compress to 20%)
+	ProtectLast int     `yaml:"protect_last"` // default 20 messages
+	MaxPasses   int     `yaml:"max_passes"`   // default 3
+}
+
+// AuxiliaryConfig holds the auxiliary provider used for compression,
+// vision summarization, and other secondary tasks.
+// If unset, the main provider is used.
+type AuxiliaryConfig struct {
+	Provider string `yaml:"provider,omitempty"`
+	BaseURL  string `yaml:"base_url,omitempty"`
+	APIKey   string `yaml:"api_key,omitempty"`
+	Model    string `yaml:"model,omitempty"`
+}
+
 // AgentConfig holds engine-level settings.
 type AgentConfig struct {
-	MaxTurns       int `yaml:"max_turns"`
-	GatewayTimeout int `yaml:"gateway_timeout,omitempty"`
+	MaxTurns       int               `yaml:"max_turns"`
+	GatewayTimeout int               `yaml:"gateway_timeout,omitempty"`
+	Compression    CompressionConfig `yaml:"compression,omitempty"`
 }
 
 // TerminalConfig holds settings for the terminal (shell exec) backend.
@@ -78,6 +101,13 @@ func Default() *Config {
 		Agent: AgentConfig{
 			MaxTurns:       90,
 			GatewayTimeout: 1800,
+			Compression: CompressionConfig{
+				Enabled:     true,
+				Threshold:   0.5,
+				TargetRatio: 0.2,
+				ProtectLast: 20,
+				MaxPasses:   3,
+			},
 		},
 		Terminal: TerminalConfig{
 			Backend: "local",
