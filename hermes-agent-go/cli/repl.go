@@ -17,6 +17,9 @@ import (
 	"github.com/nousresearch/hermes-agent/provider"
 	"github.com/nousresearch/hermes-agent/provider/anthropic"
 	"github.com/nousresearch/hermes-agent/storage/sqlite"
+	"github.com/nousresearch/hermes-agent/tool"
+	"github.com/nousresearch/hermes-agent/tool/file"
+	"github.com/nousresearch/hermes-agent/tool/terminal"
 )
 
 const banner = `
@@ -59,6 +62,16 @@ func runREPL(ctx context.Context, app *App) error {
 		return fmt.Errorf("hermes: create provider: %w", err)
 	}
 
+	// Register built-in tools
+	toolRegistry := tool.NewRegistry()
+	file.RegisterAll(toolRegistry)
+	localBackend, err := terminal.NewLocal(terminal.Config{})
+	if err != nil {
+		return fmt.Errorf("hermes: create terminal backend: %w", err)
+	}
+	defer localBackend.Close()
+	terminal.RegisterShellExecute(toolRegistry, localBackend)
+
 	// Print the banner and context
 	sessionID := uuid.NewString()
 	fmt.Print(banner)
@@ -69,6 +82,7 @@ func runREPL(ctx context.Context, app *App) error {
 
 	var history []message.Message
 	turnCount := 0
+	toolCallCount := 0
 	totalUsage := message.Usage{}
 
 	for {
@@ -94,13 +108,30 @@ func runREPL(ctx context.Context, app *App) error {
 		}
 
 		// Build engine fresh per turn (single-use semantics)
-		engine := agent.NewEngine(p, app.Storage, app.Config.Agent, "cli")
+		engine := agent.NewEngineWithTools(p, app.Storage, toolRegistry, app.Config.Agent, "cli")
 
 		// Register streaming callback: print deltas as they arrive
 		engine.SetStreamDeltaCallback(func(d *provider.StreamDelta) {
 			if d != nil && d.Content != "" {
 				fmt.Print(d.Content)
 			}
+		})
+		// Tool start: print the tool call header
+		engine.SetToolStartCallback(func(call message.ContentBlock) {
+			fmt.Printf("\n⚡ %s: %s\n", call.ToolUseName, string(call.ToolUseInput))
+		})
+		// Tool result: print a truncated snippet of the result
+		engine.SetToolResultCallback(func(call message.ContentBlock, result string) {
+			snippet := result
+			if len(snippet) > 300 {
+				snippet = snippet[:300] + "\n... [truncated]"
+			}
+			// Indent each line with "│ " and mark the end with "└"
+			lines := strings.Split(snippet, "\n")
+			for _, line := range lines {
+				fmt.Printf("│ %s\n", line)
+			}
+			fmt.Println("└")
 		})
 
 		fmt.Println() // newline before streaming output
@@ -121,6 +152,18 @@ func runREPL(ctx context.Context, app *App) error {
 		}
 
 		fmt.Println() // newline after streaming
+
+		// Count tool calls in this turn's messages beyond the existing history
+		newMessages := result.Messages[len(history):]
+		for _, m := range newMessages {
+			if !m.Content.IsText() {
+				for _, b := range m.Content.Blocks() {
+					if b.Type == "tool_use" {
+						toolCallCount++
+					}
+				}
+			}
+		}
 		history = result.Messages
 		turnCount++
 		totalUsage.InputTokens += result.Usage.InputTokens
@@ -128,8 +171,8 @@ func runREPL(ctx context.Context, app *App) error {
 	}
 
 	// Session summary
-	fmt.Printf("\nSession #%s: %d messages, %d in / %d out tokens · saved to %s\n",
-		sessionID[:8], turnCount*2,
+	fmt.Printf("\nSession #%s: %d messages, %d tool calls, %d in / %d out tokens · saved to %s\n",
+		sessionID[:8], turnCount*2, toolCallCount,
 		totalUsage.InputTokens, totalUsage.OutputTokens,
 		app.Config.Storage.SQLitePath,
 	)
@@ -173,4 +216,3 @@ func defaultModelFromString(s string) string {
 	}
 	return s
 }
-
