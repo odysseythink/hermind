@@ -82,3 +82,31 @@ providers:
 	assert.Error(t, err)
 	assert.Contains(t, err.Error(), "empty env variable")
 }
+
+func TestLoadFromYAMLParsesFallbackProviders(t *testing.T) {
+	dir := t.TempDir()
+	yamlPath := filepath.Join(dir, "config.yaml")
+	err := os.WriteFile(yamlPath, []byte(`
+model: anthropic/claude-opus-4-6
+providers:
+  anthropic:
+    provider: anthropic
+    api_key: sk-anthropic
+    model: claude-opus-4-6
+fallback_providers:
+  - provider: deepseek
+    api_key: sk-deepseek
+    model: deepseek-chat
+  - provider: openai
+    api_key: sk-openai
+    model: gpt-4o
+`), 0o644)
+	require.NoError(t, err)
+
+	cfg, err := LoadFromPath(yamlPath)
+	require.NoError(t, err)
+	require.Len(t, cfg.FallbackProviders, 2)
+	assert.Equal(t, "deepseek", cfg.FallbackProviders[0].Provider)
+	assert.Equal(t, "sk-deepseek", cfg.FallbackProviders[0].APIKey)
+	assert.Equal(t, "openai", cfg.FallbackProviders[1].Provider)
+}

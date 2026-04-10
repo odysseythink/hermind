@@ -70,6 +70,7 @@ func expandPath(p string) (string, error) {
 
 // expandEnvVars replaces "env:VAR_NAME" references in api keys with the env value.
 func expandEnvVars(cfg *Config) error {
+	// Primary providers
 	for name, p := range cfg.Providers {
 		if strings.HasPrefix(p.APIKey, "env:") {
 			varName := strings.TrimPrefix(p.APIKey, "env:")
@@ -78,6 +79,17 @@ func expandEnvVars(cfg *Config) error {
 			}
 			p.APIKey = os.Getenv(varName)
 			cfg.Providers[name] = p
+		}
+	}
+	// Fallback providers
+	for i, p := range cfg.FallbackProviders {
+		if strings.HasPrefix(p.APIKey, "env:") {
+			varName := strings.TrimPrefix(p.APIKey, "env:")
+			if varName == "" {
+				return fmt.Errorf("config: fallback provider %d has empty env variable reference", i)
+			}
+			p.APIKey = os.Getenv(varName)
+			cfg.FallbackProviders[i] = p
 		}
 	}
 	return nil

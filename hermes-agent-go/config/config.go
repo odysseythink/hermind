@@ -3,10 +3,11 @@ package config
 // Config holds all user-configurable settings for hermes-agent.
 // YAML tags mirror the existing Python hermes config.yaml format.
 type Config struct {
-	Model     string                    `yaml:"model"`
-	Providers map[string]ProviderConfig `yaml:"providers"`
-	Agent     AgentConfig               `yaml:"agent"`
-	Storage   StorageConfig             `yaml:"storage"`
+	Model             string                    `yaml:"model"`
+	Providers         map[string]ProviderConfig `yaml:"providers"`
+	FallbackProviders []ProviderConfig          `yaml:"fallback_providers,omitempty"`
+	Agent             AgentConfig               `yaml:"agent"`
+	Storage           StorageConfig             `yaml:"storage"`
 }
 
 // ProviderConfig holds settings for a single LLM provider.
