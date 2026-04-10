@@ -19,6 +19,7 @@ import (
 	"github.com/nousresearch/hermes-agent/tool"
 	"github.com/nousresearch/hermes-agent/tool/delegate"
 	"github.com/nousresearch/hermes-agent/tool/file"
+	"github.com/nousresearch/hermes-agent/tool/mcp"
 	"github.com/nousresearch/hermes-agent/tool/memory"
 	"github.com/nousresearch/hermes-agent/tool/terminal"
 	"github.com/nousresearch/hermes-agent/tool/web"
@@ -150,6 +151,30 @@ func runREPL(ctx context.Context, app *App) error {
 			ToolCalls:  0, // tracking deferred to Plan 6b
 		}, nil
 	})
+
+	// MCP: start all configured servers and register their tools.
+	var mcpManager *mcp.Manager
+	if len(app.Config.MCP.Servers) > 0 {
+		mcpManager = mcp.NewManager("0.1.0", toolRegistry)
+
+		var serverCfgs []mcp.ServerConfig
+		for name, srv := range app.Config.MCP.Servers {
+			if !srv.IsEnabled() {
+				continue
+			}
+			serverCfgs = append(serverCfgs, mcp.ServerConfig{
+				Name:    name,
+				Command: srv.Command,
+				Args:    srv.Args,
+				Env:     srv.Env,
+			})
+		}
+
+		if err := mcpManager.Start(ctx, serverCfgs); err != nil {
+			fmt.Fprintf(os.Stderr, "hermes: mcp warning: %v\n", err)
+		}
+		defer mcpManager.Close()
+	}
 
 	// Hand off to the bubbletea TUI.
 	err = ui.Run(ctx, ui.RunOptions{
