@@ -111,6 +111,9 @@ type anthropicStream struct {
 
 // Recv reads the next SSE event and returns a StreamEvent.
 func (s *anthropicStream) Recv() (*provider.StreamEvent, error) {
+	if s.closed {
+		return nil, io.EOF
+	}
 	if s.done {
 		return nil, io.EOF
 	}

@@ -28,7 +28,7 @@ func (fc *FallbackChain) Complete(ctx context.Context, req *Request) (*Response,
 	}
 
 	var lastErr error
-	for i, p := range fc.providers {
+	for _, p := range fc.providers {
 		resp, err := p.Complete(ctx, req)
 		if err == nil {
 			return resp, nil
@@ -39,7 +39,6 @@ func (fc *FallbackChain) Complete(ctx context.Context, req *Request) (*Response,
 			return nil, err
 		}
 		// Continue to the next provider
-		_ = i
 	}
 	return nil, fmt.Errorf("%w: last error: %v", ErrAllProvidersFailed, lastErr)
 }
