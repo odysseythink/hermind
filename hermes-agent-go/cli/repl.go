@@ -9,10 +9,10 @@ import (
 	"os"
 	"path/filepath"
 	"strings"
-	"time"
 
 	"github.com/google/uuid"
 	"github.com/nousresearch/hermes-agent/agent"
+	"github.com/nousresearch/hermes-agent/config"
 	"github.com/nousresearch/hermes-agent/message"
 	"github.com/nousresearch/hermes-agent/provider"
 	"github.com/nousresearch/hermes-agent/provider/anthropic"
@@ -36,13 +36,19 @@ func runREPL(ctx context.Context, app *App) error {
 
 	// Build the Anthropic provider from config
 	anthropicCfg, ok := app.Config.Providers["anthropic"]
-	if !ok || anthropicCfg.APIKey == "" {
-		return fmt.Errorf("hermes: anthropic provider is not configured. Set api_key in ~/.hermes/config.yaml or ANTHROPIC_API_KEY env var")
+	if !ok {
+		anthropicCfg = config.ProviderConfig{Provider: "anthropic"}
 	}
 
-	// Allow ANTHROPIC_API_KEY env override
-	if envKey := os.Getenv("ANTHROPIC_API_KEY"); envKey != "" && anthropicCfg.APIKey == "" {
-		anthropicCfg.APIKey = envKey
+	// Allow ANTHROPIC_API_KEY env var as fallback when config is missing the key
+	if anthropicCfg.APIKey == "" {
+		if envKey := os.Getenv("ANTHROPIC_API_KEY"); envKey != "" {
+			anthropicCfg.APIKey = envKey
+		}
+	}
+
+	if anthropicCfg.APIKey == "" {
+		return fmt.Errorf("hermes: anthropic provider is not configured. Set api_key in ~/.hermes/config.yaml or ANTHROPIC_API_KEY env var")
 	}
 	if anthropicCfg.Model == "" {
 		anthropicCfg.Model = defaultModelFromString(app.Config.Model)
@@ -168,5 +174,3 @@ func defaultModelFromString(s string) string {
 	return s
 }
 
-// (Unused import silencer when time isn't directly referenced in this file.)
-var _ = time.Now

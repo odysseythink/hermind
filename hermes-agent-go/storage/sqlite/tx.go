@@ -47,14 +47,6 @@ type txImpl struct {
 	tx    *sql.Tx
 }
 
-// queryer is the common interface satisfied by both *sql.DB and *sql.Tx.
-// This lets us share query logic between Store and txImpl.
-type queryer interface {
-	ExecContext(ctx context.Context, query string, args ...any) (sql.Result, error)
-	QueryContext(ctx context.Context, query string, args ...any) (*sql.Rows, error)
-	QueryRowContext(ctx context.Context, query string, args ...any) *sql.Row
-}
-
 func (t *txImpl) CreateSession(ctx context.Context, session *storage.Session) error {
 	modelConfig := string(session.ModelConfig)
 	if modelConfig == "" {
@@ -211,7 +203,3 @@ func (t *txImpl) UpdateUsage(ctx context.Context, sessionID string, usage *stora
 
 // Compile-time check that txImpl satisfies storage.Tx
 var _ storage.Tx = (*txImpl)(nil)
-
-// Silence unused-helper warnings if the queryer type isn't used inline
-var _ queryer = (*sql.DB)(nil)
-var _ queryer = (*sql.Tx)(nil)

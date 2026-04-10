@@ -24,7 +24,6 @@ func (s *Store) AddMessage(ctx context.Context, sessionID string, msg *storage.S
 	if err != nil {
 		return fmt.Errorf("sqlite: add message to %s: %w", sessionID, err)
 	}
-	s.writeCount.Add(1)
 	return nil
 }
 

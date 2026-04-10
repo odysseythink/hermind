@@ -5,7 +5,6 @@ import (
 	"database/sql"
 	"fmt"
 	"path/filepath"
-	"sync/atomic"
 
 	_ "modernc.org/sqlite" // pure-Go SQLite driver
 )
@@ -13,9 +12,8 @@ import (
 // Store is the SQLite-backed implementation of storage.Storage.
 // Safe for concurrent use. Uses WAL mode.
 type Store struct {
-	db         *sql.DB
-	path       string
-	writeCount atomic.Int64
+	db   *sql.DB
+	path string
 }
 
 // Open creates or opens a SQLite database at the given path.
