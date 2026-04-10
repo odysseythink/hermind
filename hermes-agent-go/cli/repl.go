@@ -7,6 +7,7 @@ import (
 	"os"
 	"path/filepath"
 	"strings"
+	"time"
 
 	"github.com/google/uuid"
 	"github.com/nousresearch/hermes-agent/cli/ui"
@@ -62,12 +63,29 @@ func runREPL(ctx context.Context, app *App) error {
 	// Register built-in tools
 	toolRegistry := tool.NewRegistry()
 	file.RegisterAll(toolRegistry)
-	localBackend, err := terminal.NewLocal(terminal.Config{})
-	if err != nil {
-		return fmt.Errorf("hermes: create terminal backend: %w", err)
+	termCfg := terminal.Config{
+		Cwd:              app.Config.Terminal.Cwd,
+		DockerImage:      app.Config.Terminal.DockerImage,
+		DockerVolumes:    app.Config.Terminal.DockerVolumes,
+		SSHHost:          app.Config.Terminal.SSHHost,
+		SSHUser:          app.Config.Terminal.SSHUser,
+		SSHKey:           app.Config.Terminal.SSHKey,
+		SingularityImage: app.Config.Terminal.SingularityImage,
+		ModalBaseURL:     app.Config.Terminal.ModalBaseURL,
+		ModalToken:       app.Config.Terminal.ModalToken,
+		DaytonaBaseURL:   app.Config.Terminal.DaytonaBaseURL,
+		DaytonaToken:     app.Config.Terminal.DaytonaToken,
 	}
-	defer localBackend.Close()
-	terminal.RegisterShellExecute(toolRegistry, localBackend)
+	if app.Config.Terminal.Timeout > 0 {
+		termCfg.Timeout = time.Duration(app.Config.Terminal.Timeout) * time.Second
+	}
+
+	backend, err := terminal.New(app.Config.Terminal.Backend, termCfg)
+	if err != nil {
+		return fmt.Errorf("hermes: create terminal backend %q: %w", app.Config.Terminal.Backend, err)
+	}
+	defer backend.Close()
+	terminal.RegisterShellExecute(toolRegistry, backend)
 
 	sessionID := uuid.NewString()
 
