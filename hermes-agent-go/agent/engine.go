@@ -6,6 +6,7 @@ import (
 	"github.com/nousresearch/hermes-agent/message"
 	"github.com/nousresearch/hermes-agent/provider"
 	"github.com/nousresearch/hermes-agent/storage"
+	"github.com/nousresearch/hermes-agent/tool"
 )
 
 // Engine is single-use per conversation. NOT thread-safe.
@@ -14,20 +15,30 @@ import (
 type Engine struct {
 	provider provider.Provider
 	storage  storage.Storage
+	tools    *tool.Registry     // may be nil if no tools are available
 	config   config.AgentConfig // value, not pointer — immutable snapshot
 	platform string
 	prompt   *PromptBuilder
 
 	// Callbacks — optional. Nil means no-op.
 	onStreamDelta func(delta *provider.StreamDelta)
+	onToolStart   func(call message.ContentBlock)                // fired before tool execution
+	onToolResult  func(call message.ContentBlock, result string) // fired after
 }
 
-// NewEngine constructs a fresh Engine for one conversation.
-// storage may be nil if the caller does not want persistence (e.g., unit tests).
+// NewEngine constructs an Engine without tools. Use NewEngineWithTools if
+// you want the LLM to be able to invoke tools.
 func NewEngine(p provider.Provider, s storage.Storage, cfg config.AgentConfig, platform string) *Engine {
+	return NewEngineWithTools(p, s, nil, cfg, platform)
+}
+
+// NewEngineWithTools constructs an Engine with a tool registry.
+// If tools is nil, the engine behaves exactly like NewEngine.
+func NewEngineWithTools(p provider.Provider, s storage.Storage, tools *tool.Registry, cfg config.AgentConfig, platform string) *Engine {
 	return &Engine{
 		provider: p,
 		storage:  s,
+		tools:    tools,
 		config:   cfg,
 		platform: platform,
 		prompt:   NewPromptBuilder(platform),
@@ -38,6 +49,16 @@ func NewEngine(p provider.Provider, s storage.Storage, cfg config.AgentConfig, p
 // Must be called before RunConversation. Calling after is undefined behavior.
 func (e *Engine) SetStreamDeltaCallback(fn func(delta *provider.StreamDelta)) {
 	e.onStreamDelta = fn
+}
+
+// SetToolStartCallback registers a callback invoked before each tool execution.
+func (e *Engine) SetToolStartCallback(fn func(call message.ContentBlock)) {
+	e.onToolStart = fn
+}
+
+// SetToolResultCallback registers a callback invoked after each tool execution.
+func (e *Engine) SetToolResultCallback(fn func(call message.ContentBlock, result string)) {
+	e.onToolResult = fn
 }
 
 // RunOptions parameterizes a conversation run.
