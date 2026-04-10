@@ -7,6 +7,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"net/http"
+	"strings"
 
 	"github.com/nousresearch/hermes-agent/message"
 	"github.com/nousresearch/hermes-agent/provider"
@@ -71,10 +72,20 @@ func (a *Anthropic) buildRequest(req *provider.Request, stream bool) *messagesRe
 		Messages:      make([]apiMessage, 0, len(req.Messages)),
 	}
 
+	// Convert tools
+	if len(req.Tools) > 0 {
+		apiReq.Tools = make([]anthropicTool, 0, len(req.Tools))
+		for _, t := range req.Tools {
+			apiReq.Tools = append(apiReq.Tools, anthropicTool{
+				Name:        t.Function.Name,
+				Description: t.Function.Description,
+				InputSchema: t.Function.Parameters,
+			})
+		}
+	}
+
+	// Convert messages
 	for _, m := range req.Messages {
-		// Anthropic only supports "user" and "assistant" roles in messages.
-		// System messages go to the top-level System field.
-		// Tool messages are handled in Plan 2.
 		role := string(m.Role)
 		if role != "user" && role != "assistant" {
 			continue
@@ -88,35 +99,78 @@ func (a *Anthropic) buildRequest(req *provider.Request, stream bool) *messagesRe
 }
 
 // contentToAPIItems converts message.Content to Anthropic's content array format.
+// Handles text, tool_use, and tool_result blocks.
 func contentToAPIItems(c message.Content) []apiContentItem {
 	if c.IsText() {
 		return []apiContentItem{{Type: "text", Text: c.Text()}}
 	}
 	items := make([]apiContentItem, 0, len(c.Blocks()))
 	for _, b := range c.Blocks() {
-		if b.Type == "text" {
+		switch b.Type {
+		case "text":
 			items = append(items, apiContentItem{Type: "text", Text: b.Text})
+		case "tool_use":
+			items = append(items, apiContentItem{
+				Type:  "tool_use",
+				ID:    b.ToolUseID,
+				Name:  b.ToolUseName,
+				Input: b.ToolUseInput,
+			})
+		case "tool_result":
+			items = append(items, apiContentItem{
+				Type:      "tool_result",
+				ToolUseID: b.ToolUseID,
+				Content:   b.ToolResult,
+			})
 		}
-		// Image and tool blocks handled in Plan 2/5.
 	}
 	return items
 }
 
 // convertResponse converts an Anthropic wire response to the provider shape.
+// If the response contains any tool_use blocks, Content is returned as
+// BlockContent preserving all blocks. Otherwise, Content is TextContent
+// with all text concatenated.
 func (a *Anthropic) convertResponse(apiResp *messagesResponse) *provider.Response {
-	// Concatenate all text blocks into a single text response.
-	// In Plan 2, tool_use blocks will be converted to ToolCalls.
-	var text string
+	hasToolUse := false
 	for _, c := range apiResp.Content {
-		if c.Type == "text" {
-			text += c.Text
+		if c.Type == "tool_use" {
+			hasToolUse = true
+			break
 		}
+	}
+
+	var content message.Content
+	if hasToolUse {
+		blocks := make([]message.ContentBlock, 0, len(apiResp.Content))
+		for _, c := range apiResp.Content {
+			switch c.Type {
+			case "text":
+				blocks = append(blocks, message.ContentBlock{Type: "text", Text: c.Text})
+			case "tool_use":
+				blocks = append(blocks, message.ContentBlock{
+					Type:         "tool_use",
+					ToolUseID:    c.ID,
+					ToolUseName:  c.Name,
+					ToolUseInput: c.Input,
+				})
+			}
+		}
+		content = message.BlockContent(blocks)
+	} else {
+		var text strings.Builder
+		for _, c := range apiResp.Content {
+			if c.Type == "text" {
+				text.WriteString(c.Text)
+			}
+		}
+		content = message.TextContent(text.String())
 	}
 
 	return &provider.Response{
 		Message: message.Message{
 			Role:    message.RoleAssistant,
-			Content: message.TextContent(text),
+			Content: content,
 		},
 		FinishReason: apiResp.StopReason,
 		Usage: message.Usage{
