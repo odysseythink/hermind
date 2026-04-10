@@ -2,18 +2,15 @@
 package cli
 
 import (
-	"bufio"
 	"context"
 	"fmt"
-	"io"
 	"os"
 	"path/filepath"
 	"strings"
 
 	"github.com/google/uuid"
-	"github.com/nousresearch/hermes-agent/agent"
+	"github.com/nousresearch/hermes-agent/cli/ui"
 	"github.com/nousresearch/hermes-agent/config"
-	"github.com/nousresearch/hermes-agent/message"
 	"github.com/nousresearch/hermes-agent/provider"
 	"github.com/nousresearch/hermes-agent/provider/factory"
 	"github.com/nousresearch/hermes-agent/storage/sqlite"
@@ -22,15 +19,8 @@ import (
 	"github.com/nousresearch/hermes-agent/tool/terminal"
 )
 
-const banner = `
-╭─────────────────────────╮
-│    HERMES AGENT         │
-╰─────────────────────────╯
-`
-
-// runREPL starts the interactive read-eval-print loop.
-// For Plan 1 this is a minimal bufio.Scanner-based REPL.
-// Plan 4 replaces this with a bubbletea TUI.
+// runREPL starts the interactive TUI session.
+// Plan 4: delegates to the bubbletea TUI via ui.Run.
 func runREPL(ctx context.Context, app *App) error {
 	// Open storage lazily
 	if err := ensureStorage(app); err != nil {
@@ -42,6 +32,7 @@ func runREPL(ctx context.Context, app *App) error {
 	if err != nil {
 		return err
 	}
+	_ = primaryName
 
 	// Build fallback providers (skip entries with empty api_key)
 	providers := []provider.Provider{primaryProvider}
@@ -67,7 +58,6 @@ func runREPL(ctx context.Context, app *App) error {
 	}
 
 	displayModel := defaultModelFromString(app.Config.Model)
-	_ = primaryName
 
 	// Register built-in tools
 	toolRegistry := tool.NewRegistry()
@@ -79,110 +69,21 @@ func runREPL(ctx context.Context, app *App) error {
 	defer localBackend.Close()
 	terminal.RegisterShellExecute(toolRegistry, localBackend)
 
-	// Print the banner and context
 	sessionID := uuid.NewString()
-	fmt.Print(banner)
-	fmt.Printf("  %s · session %s\n\n", displayModel, sessionID[:8])
 
-	scanner := bufio.NewScanner(os.Stdin)
-	scanner.Buffer(make([]byte, 0, 64*1024), 1024*1024)
-
-	var history []message.Message
-	turnCount := 0
-	toolCallCount := 0
-	totalUsage := message.Usage{}
-
-	for {
-		fmt.Print("> ")
-		if !scanner.Scan() {
-			// Ctrl+D or EOF
-			err := scanner.Err()
-			if err != nil && err != io.EOF {
-				return err
-			}
-			break
-		}
-		line := strings.TrimSpace(scanner.Text())
-		if line == "" {
-			continue
-		}
-		if line == "/exit" || line == "/quit" {
-			break
-		}
-		if line == "/help" {
-			fmt.Println("Commands: /exit /quit /help")
-			continue
-		}
-
-		// Build engine fresh per turn (single-use semantics)
-		engine := agent.NewEngineWithTools(p, app.Storage, toolRegistry, app.Config.Agent, "cli")
-
-		// Register streaming callback: print deltas as they arrive
-		engine.SetStreamDeltaCallback(func(d *provider.StreamDelta) {
-			if d != nil && d.Content != "" {
-				fmt.Print(d.Content)
-			}
-		})
-		// Tool start: print the tool call header
-		engine.SetToolStartCallback(func(call message.ContentBlock) {
-			fmt.Printf("\n⚡ %s: %s\n", call.ToolUseName, string(call.ToolUseInput))
-		})
-		// Tool result: print a truncated snippet of the result
-		engine.SetToolResultCallback(func(call message.ContentBlock, result string) {
-			snippet := result
-			if len(snippet) > 300 {
-				snippet = snippet[:300] + "\n... [truncated]"
-			}
-			// Indent each line with "│ " and mark the end with "└"
-			lines := strings.Split(snippet, "\n")
-			for _, line := range lines {
-				fmt.Printf("│ %s\n", line)
-			}
-			fmt.Println("└")
-		})
-
-		fmt.Println() // newline before streaming output
-
-		result, err := engine.RunConversation(ctx, &agent.RunOptions{
-			UserMessage: line,
-			History:     history,
-			SessionID:   sessionID,
-			Model:       displayModel,
-		})
-		if err != nil {
-			if ctx.Err() != nil {
-				fmt.Println("\n[interrupted]")
-				break
-			}
-			fmt.Fprintf(os.Stderr, "\nerror: %v\n", err)
-			continue
-		}
-
-		fmt.Println() // newline after streaming
-
-		// Count tool calls in this turn's messages beyond the existing history
-		newMessages := result.Messages[len(history):]
-		for _, m := range newMessages {
-			if !m.Content.IsText() {
-				for _, b := range m.Content.Blocks() {
-					if b.Type == "tool_use" {
-						toolCallCount++
-					}
-				}
-			}
-		}
-		history = result.Messages
-		turnCount++
-		totalUsage.InputTokens += result.Usage.InputTokens
-		totalUsage.OutputTokens += result.Usage.OutputTokens
+	// Hand off to the bubbletea TUI.
+	err = ui.Run(ctx, ui.RunOptions{
+		Config:    app.Config,
+		Storage:   app.Storage,
+		Provider:  p,
+		ToolReg:   toolRegistry,
+		AgentCfg:  app.Config.Agent,
+		SessionID: sessionID,
+		Model:     displayModel,
+	})
+	if err != nil {
+		return fmt.Errorf("hermes: tui: %w", err)
 	}
-
-	// Session summary
-	fmt.Printf("\nSession #%s: %d messages, %d tool calls, %d in / %d out tokens · saved to %s\n",
-		sessionID[:8], turnCount*2, toolCallCount,
-		totalUsage.InputTokens, totalUsage.OutputTokens,
-		app.Config.Storage.SQLitePath,
-	)
 	return nil
 }
 
