@@ -92,6 +92,21 @@ func expandEnvVars(cfg *Config) error {
 			cfg.FallbackProviders[i] = p
 		}
 	}
+	// Terminal tokens
+	if strings.HasPrefix(cfg.Terminal.ModalToken, "env:") {
+		varName := strings.TrimPrefix(cfg.Terminal.ModalToken, "env:")
+		if varName == "" {
+			return fmt.Errorf("config: terminal.modal_token has empty env variable reference")
+		}
+		cfg.Terminal.ModalToken = os.Getenv(varName)
+	}
+	if strings.HasPrefix(cfg.Terminal.DaytonaToken, "env:") {
+		varName := strings.TrimPrefix(cfg.Terminal.DaytonaToken, "env:")
+		if varName == "" {
+			return fmt.Errorf("config: terminal.daytona_token has empty env variable reference")
+		}
+		cfg.Terminal.DaytonaToken = os.Getenv(varName)
+	}
 	return nil
 }
 
