@@ -306,3 +306,58 @@ func TestCompleteSendsToolResult(t *testing.T) {
 
 	assert.Equal(t, "end_turn", resp.FinishReason)
 }
+
+func TestStreamToolUse(t *testing.T) {
+	_, a := newTestServer(t, func(w http.ResponseWriter, r *http.Request) {
+		w.Header().Set("Content-Type", "text/event-stream")
+		w.WriteHeader(http.StatusOK)
+		flusher := w.(http.Flusher)
+
+		// SSE sequence for a tool_use response
+		events := []string{
+			"event: message_start\ndata: {\"type\":\"message_start\",\"message\":{\"id\":\"msg_03\",\"type\":\"message\",\"role\":\"assistant\",\"model\":\"claude-opus-4-6\",\"content\":[],\"usage\":{\"input_tokens\":20,\"output_tokens\":0}}}\n\n",
+			"event: content_block_start\ndata: {\"type\":\"content_block_start\",\"index\":0,\"content_block\":{\"type\":\"tool_use\",\"id\":\"tool_02\",\"name\":\"read_file\",\"input\":{}}}\n\n",
+			"event: content_block_delta\ndata: {\"type\":\"content_block_delta\",\"index\":0,\"delta\":{\"type\":\"input_json_delta\",\"partial_json\":\"{\\\"path\\\":\"}}\n\n",
+			"event: content_block_delta\ndata: {\"type\":\"content_block_delta\",\"index\":0,\"delta\":{\"type\":\"input_json_delta\",\"partial_json\":\"\\\"go.mod\\\"}\"}}\n\n",
+			"event: content_block_stop\ndata: {\"type\":\"content_block_stop\",\"index\":0}\n\n",
+			"event: message_delta\ndata: {\"type\":\"message_delta\",\"delta\":{\"stop_reason\":\"tool_use\"},\"usage\":{\"output_tokens\":8}}\n\n",
+			"event: message_stop\ndata: {\"type\":\"message_stop\"}\n\n",
+		}
+		for _, e := range events {
+			_, _ = io.WriteString(w, e)
+			flusher.Flush()
+		}
+	})
+
+	stream, err := a.Stream(context.Background(), &provider.Request{
+		Model: "claude-opus-4-6",
+		Messages: []message.Message{
+			{Role: message.RoleUser, Content: message.TextContent("read go.mod")},
+		},
+	})
+	require.NoError(t, err)
+	defer stream.Close()
+
+	var doneEvent *provider.StreamEvent
+	for {
+		ev, err := stream.Recv()
+		if err != nil {
+			t.Fatalf("unexpected error: %v", err)
+		}
+		if ev.Type == provider.EventDone {
+			doneEvent = ev
+			break
+		}
+	}
+
+	require.NotNil(t, doneEvent)
+	require.NotNil(t, doneEvent.Response)
+	assert.Equal(t, "tool_use", doneEvent.Response.FinishReason)
+
+	blocks := doneEvent.Response.Message.Content.Blocks()
+	require.Len(t, blocks, 1)
+	assert.Equal(t, "tool_use", blocks[0].Type)
+	assert.Equal(t, "tool_02", blocks[0].ToolUseID)
+	assert.Equal(t, "read_file", blocks[0].ToolUseName)
+	assert.JSONEq(t, `{"path":"go.mod"}`, string(blocks[0].ToolUseInput))
+}

@@ -107,6 +107,17 @@ type anthropicStream struct {
 	usage        message.Usage
 	done         bool
 	closed       bool
+
+	// tool_use accumulator: index → partial tool_use block
+	toolUses   map[int]*toolUseBuilder
+	blockOrder []int // order blocks were opened
+}
+
+// toolUseBuilder accumulates a streaming tool_use block across events.
+type toolUseBuilder struct {
+	ID        string
+	Name      string
+	InputJSON strings.Builder // partial_json accumulates here
 }
 
 // Recv reads the next SSE event and returns a StreamEvent.
@@ -167,27 +178,69 @@ func (s *anthropicStream) handleEvent(eventType string, data []byte) (*provider.
 		}
 		s.model = ev.Message.Model
 		s.usage.InputTokens = ev.Message.Usage.InputTokens
+		if s.toolUses == nil {
+			s.toolUses = make(map[int]*toolUseBuilder)
+		}
 		return nil, nil
+
+	case anthropicEventContentBlockStart:
+		var ev struct {
+			Index        int `json:"index"`
+			ContentBlock struct {
+				Type  string          `json:"type"`
+				ID    string          `json:"id"`
+				Name  string          `json:"name"`
+				Input json.RawMessage `json:"input"`
+			} `json:"content_block"`
+		}
+		if err := json.Unmarshal(data, &ev); err != nil {
+			return nil, fmt.Errorf("anthropic stream: parse content_block_start: %w", err)
+		}
+		if ev.ContentBlock.Type == "tool_use" {
+			if s.toolUses == nil {
+				s.toolUses = make(map[int]*toolUseBuilder)
+			}
+			s.toolUses[ev.Index] = &toolUseBuilder{
+				ID:   ev.ContentBlock.ID,
+				Name: ev.ContentBlock.Name,
+			}
+			s.blockOrder = append(s.blockOrder, ev.Index)
+		}
+		return nil, nil
+
 	case anthropicEventContentBlockDelta:
 		var ev struct {
+			Index int `json:"index"`
 			Delta struct {
-				Type string `json:"type"`
-				Text string `json:"text"`
+				Type        string `json:"type"`
+				Text        string `json:"text"`
+				PartialJSON string `json:"partial_json"`
 			} `json:"delta"`
 		}
 		if err := json.Unmarshal(data, &ev); err != nil {
 			return nil, fmt.Errorf("anthropic stream: parse delta: %w", err)
 		}
-		if ev.Delta.Type == "text_delta" && ev.Delta.Text != "" {
-			s.text.WriteString(ev.Delta.Text)
-			return &provider.StreamEvent{
-				Type: provider.EventDelta,
-				Delta: &provider.StreamDelta{
-					Content: ev.Delta.Text,
-				},
-			}, nil
+
+		switch ev.Delta.Type {
+		case "text_delta":
+			if ev.Delta.Text != "" {
+				s.text.WriteString(ev.Delta.Text)
+				return &provider.StreamEvent{
+					Type:  provider.EventDelta,
+					Delta: &provider.StreamDelta{Content: ev.Delta.Text},
+				}, nil
+			}
+		case "input_json_delta":
+			// Accumulate into the matching tool_use builder
+			if b, ok := s.toolUses[ev.Index]; ok {
+				b.InputJSON.WriteString(ev.Delta.PartialJSON)
+			}
 		}
 		return nil, nil
+
+	case anthropicEventContentBlockStop:
+		return nil, nil
+
 	case anthropicEventMessageDelta:
 		var ev struct {
 			Delta struct {
@@ -203,31 +256,70 @@ func (s *anthropicStream) handleEvent(eventType string, data []byte) (*provider.
 		}
 		s.usage.OutputTokens = ev.Usage.OutputTokens
 		return nil, nil
+
 	case anthropicEventMessageStop:
 		s.done = true
 		return s.buildDoneEvent(), nil
+
 	case anthropicEventError:
 		return nil, &provider.Error{
 			Kind:     provider.ErrUnknown,
 			Provider: "anthropic",
 			Message:  "stream error event: " + string(data),
 		}
-	case anthropicEventPing, anthropicEventContentBlockStart, anthropicEventContentBlockStop:
-		// Ignore these — they carry no output for our purposes
+
+	case anthropicEventPing:
 		return nil, nil
+
 	default:
 		return nil, nil
 	}
 }
 
 // buildDoneEvent creates the terminal EventDone with accumulated state.
+// If any tool_use blocks were collected, the response content is returned
+// as BlockContent preserving all blocks; otherwise it's a plain TextContent.
 func (s *anthropicStream) buildDoneEvent() *provider.StreamEvent {
+	var content message.Content
+
+	if len(s.toolUses) > 0 {
+		blocks := make([]message.ContentBlock, 0, 1+len(s.toolUses))
+		// Preserve text first if any
+		if s.text.Len() > 0 {
+			blocks = append(blocks, message.ContentBlock{
+				Type: "text",
+				Text: s.text.String(),
+			})
+		}
+		// Then tool_use blocks in the order they were opened
+		for _, idx := range s.blockOrder {
+			b := s.toolUses[idx]
+			if b == nil {
+				continue
+			}
+			input := json.RawMessage(b.InputJSON.String())
+			// If no partial_json was ever received, fall back to empty object
+			if len(input) == 0 {
+				input = json.RawMessage("{}")
+			}
+			blocks = append(blocks, message.ContentBlock{
+				Type:         "tool_use",
+				ToolUseID:    b.ID,
+				ToolUseName:  b.Name,
+				ToolUseInput: input,
+			})
+		}
+		content = message.BlockContent(blocks)
+	} else {
+		content = message.TextContent(s.text.String())
+	}
+
 	return &provider.StreamEvent{
 		Type: provider.EventDone,
 		Response: &provider.Response{
 			Message: message.Message{
 				Role:    message.RoleAssistant,
-				Content: message.TextContent(s.text.String()),
+				Content: content,
 			},
 			FinishReason: s.finishReason,
 			Usage:        s.usage,
