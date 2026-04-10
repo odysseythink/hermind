@@ -5,6 +5,7 @@ import (
 	"context"
 
 	"github.com/nousresearch/hermes-agent/message"
+	"github.com/nousresearch/hermes-agent/tool"
 )
 
 // Provider is the interface every LLM backend implements.
@@ -71,7 +72,8 @@ type Request struct {
 	Model        string
 	SystemPrompt string
 	Messages     []message.Message
-	// Tools, MaxTokens, Temperature, etc. are added in later plans.
+	// Tools is the set of tool definitions the LLM may invoke. May be empty.
+	Tools         []tool.ToolDefinition
 	MaxTokens     int
 	Temperature   *float64
 	TopP          *float64
