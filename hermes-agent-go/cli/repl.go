@@ -10,14 +10,18 @@ import (
 	"time"
 
 	"github.com/google/uuid"
+	"github.com/nousresearch/hermes-agent/agent"
 	"github.com/nousresearch/hermes-agent/cli/ui"
 	"github.com/nousresearch/hermes-agent/config"
 	"github.com/nousresearch/hermes-agent/provider"
 	"github.com/nousresearch/hermes-agent/provider/factory"
 	"github.com/nousresearch/hermes-agent/storage/sqlite"
 	"github.com/nousresearch/hermes-agent/tool"
+	"github.com/nousresearch/hermes-agent/tool/delegate"
 	"github.com/nousresearch/hermes-agent/tool/file"
+	"github.com/nousresearch/hermes-agent/tool/memory"
 	"github.com/nousresearch/hermes-agent/tool/terminal"
+	"github.com/nousresearch/hermes-agent/tool/web"
 )
 
 // runREPL starts the interactive TUI session.
@@ -60,6 +64,25 @@ func runREPL(ctx context.Context, app *App) error {
 
 	displayModel := defaultModelFromString(app.Config.Model)
 
+	// Auxiliary provider for context compression, vision summarization, etc.
+	// If not configured, compression is a no-op.
+	var auxProvider provider.Provider
+	if app.Config.Auxiliary.APIKey != "" || app.Config.Auxiliary.Provider != "" {
+		auxCfg := config.ProviderConfig{
+			Provider: app.Config.Auxiliary.Provider,
+			BaseURL:  app.Config.Auxiliary.BaseURL,
+			APIKey:   app.Config.Auxiliary.APIKey,
+			Model:    app.Config.Auxiliary.Model,
+		}
+		if auxCfg.Provider == "" {
+			// Default to the same provider as primary
+			auxCfg.Provider = "anthropic"
+		}
+		if auxP, err := factory.New(auxCfg); err == nil {
+			auxProvider = auxP
+		}
+	}
+
 	// Register built-in tools
 	toolRegistry := tool.NewRegistry()
 	file.RegisterAll(toolRegistry)
@@ -87,17 +110,57 @@ func runREPL(ctx context.Context, app *App) error {
 	defer backend.Close()
 	terminal.RegisterShellExecute(toolRegistry, backend)
 
+	// Web tools (always register web_fetch, others if API keys present)
+	exaKey := os.Getenv("EXA_API_KEY")
+	firecrawlKey := os.Getenv("FIRECRAWL_API_KEY")
+	web.RegisterAll(toolRegistry, exaKey, firecrawlKey)
+
+	// Memory tools (require storage)
+	if app.Storage != nil {
+		memory.RegisterAll(toolRegistry, app.Storage)
+	}
+
 	sessionID := uuid.NewString()
+
+	// Delegate tool — the runner spawns a fresh Engine per call
+	delegate.RegisterDelegate(toolRegistry, func(ctx context.Context, task, extra string, maxTurns int) (*delegate.SubagentResult, error) {
+		// Reuse the same registry; rely on prompt guidance to tell the subagent
+		// not to call delegate. Plan 6b can add filter-based registries if
+		// recursion becomes a real problem.
+		subEngine := agent.NewEngineWithToolsAndAux(
+			p, auxProvider, app.Storage, toolRegistry,
+			config.AgentConfig{
+				MaxTurns:    maxTurns,
+				Compression: app.Config.Agent.Compression,
+			},
+			"subagent",
+		)
+
+		result, err := subEngine.RunConversation(ctx, &agent.RunOptions{
+			UserMessage: task + "\n\n" + extra,
+			SessionID:   sessionID + "-sub",
+			Model:       displayModel,
+		})
+		if err != nil {
+			return nil, err
+		}
+		return &delegate.SubagentResult{
+			Response:   result.Response,
+			Iterations: result.Iterations,
+			ToolCalls:  0, // tracking deferred to Plan 6b
+		}, nil
+	})
 
 	// Hand off to the bubbletea TUI.
 	err = ui.Run(ctx, ui.RunOptions{
-		Config:    app.Config,
-		Storage:   app.Storage,
-		Provider:  p,
-		ToolReg:   toolRegistry,
-		AgentCfg:  app.Config.Agent,
-		SessionID: sessionID,
-		Model:     displayModel,
+		Config:      app.Config,
+		Storage:     app.Storage,
+		Provider:    p,
+		AuxProvider: auxProvider,
+		ToolReg:     toolRegistry,
+		AgentCfg:    app.Config.Agent,
+		SessionID:   sessionID,
+		Model:       displayModel,
 	})
 	if err != nil {
 		return fmt.Errorf("hermes: tui: %w", err)

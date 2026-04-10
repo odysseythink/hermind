@@ -16,13 +16,14 @@ import (
 
 // RunOptions holds the dependencies required to start a TUI REPL.
 type RunOptions struct {
-	Config    *config.Config
-	Storage   storage.Storage
-	Provider  provider.Provider
-	ToolReg   *tool.Registry
-	AgentCfg  config.AgentConfig
-	SessionID string
-	Model     string
+	Config      *config.Config
+	Storage     storage.Storage
+	Provider    provider.Provider
+	AuxProvider provider.Provider // may be nil
+	ToolReg     *tool.Registry
+	AgentCfg    config.AgentConfig
+	SessionID   string
+	Model       string
 }
 
 // Run starts the bubbletea TUI. Blocks until the user exits.
@@ -52,8 +53,8 @@ func Run(ctx context.Context, opts RunOptions) error {
 	// via program.Send.
 	dispatcher := func(userInput string, history []message.Message) {
 		go func() {
-			engine := agent.NewEngineWithTools(
-				opts.Provider, opts.Storage, opts.ToolReg,
+			engine := agent.NewEngineWithToolsAndAux(
+				opts.Provider, opts.AuxProvider, opts.Storage, opts.ToolReg,
 				opts.AgentCfg, "cli",
 			)
 			engine.SetStreamDeltaCallback(func(d *provider.StreamDelta) {
