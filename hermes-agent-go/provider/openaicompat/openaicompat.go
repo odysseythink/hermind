@@ -111,5 +111,12 @@ func (c *Client) EstimateTokens(model, text string) (int, error) {
 	return len(text) / 4, nil
 }
 
+// SetAPIKey replaces the Bearer token used for subsequent requests.
+// Used by providers that rotate auth tokens (e.g., Zhipu JWT).
+// Not safe for concurrent use.
+func (c *Client) SetAPIKey(key string) {
+	c.cfg.APIKey = key
+}
+
 // Compile-time assertion that *Client satisfies provider.Provider.
 var _ provider.Provider = (*Client)(nil)
