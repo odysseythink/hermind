@@ -1,5 +1,6 @@
 package message
 
+// Role identifies who produced a message in the conversation (user, assistant, tool, system).
 type Role string
 
 const (
@@ -28,6 +29,7 @@ type ToolCall struct {
 	Function ToolCallFunction `json:"function"`
 }
 
+// ToolCallFunction holds the function name and JSON-encoded arguments of a tool call.
 type ToolCallFunction struct {
 	Name      string `json:"name"`
 	Arguments string `json:"arguments"` // JSON-encoded argument string

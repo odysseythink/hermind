@@ -6,8 +6,9 @@ import (
 )
 
 // Content is a typed union of plain text and structured content blocks.
-// Exactly one of text or blocks is populated. Never both.
-// Use TextContent(s) or BlockContent(b) to construct.
+// The zero value is equivalent to TextContent(""), representing empty text.
+// Use the TextContent or BlockContent constructors to make intent explicit.
+// The JSON null form also unmarshals to the zero value.
 type Content struct {
 	text   string
 	blocks []ContentBlock
@@ -40,10 +41,17 @@ func (c Content) MarshalJSON() ([]byte, error) {
 	return json.Marshal(c.blocks)
 }
 
-// UnmarshalJSON accepts either a string or an array of ContentBlock.
+// UnmarshalJSON accepts a JSON string, array of ContentBlock, or null.
+// A null value leaves c as the zero value (equivalent to TextContent("")).
 func (c *Content) UnmarshalJSON(data []byte) error {
 	if len(data) == 0 {
 		return fmt.Errorf("message: empty content")
+	}
+	// Accept JSON null — leave c as zero value (IsText() == true, Text() == "")
+	if string(data) == "null" {
+		c.text = ""
+		c.blocks = nil
+		return nil
 	}
 	// Try string first (cheapest discriminator)
 	if data[0] == '"' {

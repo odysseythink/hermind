@@ -62,3 +62,11 @@ func TestContentUnmarshalJSONRejectsInvalid(t *testing.T) {
 	err := json.Unmarshal([]byte(`123`), &c)
 	assert.Error(t, err)
 }
+
+func TestContentUnmarshalJSONAcceptsNull(t *testing.T) {
+	var c Content
+	err := json.Unmarshal([]byte("null"), &c)
+	require.NoError(t, err)
+	assert.True(t, c.IsText())
+	assert.Equal(t, "", c.Text())
+}
