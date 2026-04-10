@@ -94,3 +94,22 @@ type SearchResult struct {
 	Snippet   string
 	Rank      float64
 }
+
+// Memory is a persisted agent memory entry.
+type Memory struct {
+	ID        string          `json:"id"`
+	UserID    string          `json:"user_id,omitempty"`
+	Content   string          `json:"content"`
+	Category  string          `json:"category,omitempty"`
+	Tags      []string        `json:"tags,omitempty"`
+	Metadata  json.RawMessage `json:"metadata,omitempty"`
+	CreatedAt time.Time       `json:"created_at"`
+	UpdatedAt time.Time       `json:"updated_at"`
+}
+
+// MemorySearchOptions controls MemorySearch behavior.
+type MemorySearchOptions struct {
+	UserID string
+	Tags   []string
+	Limit  int
+}

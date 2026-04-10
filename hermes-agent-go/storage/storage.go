@@ -32,6 +32,12 @@ type Storage interface {
 	// Usage accounting
 	UpdateUsage(ctx context.Context, sessionID string, usage *UsageUpdate) error
 
+	// Memory operations
+	SaveMemory(ctx context.Context, memory *Memory) error
+	GetMemory(ctx context.Context, id string) (*Memory, error)
+	SearchMemories(ctx context.Context, query string, opts *MemorySearchOptions) ([]*Memory, error)
+	DeleteMemory(ctx context.Context, id string) error
+
 	// Transactions — group multiple operations atomically.
 	// The function is called with a Tx scoped to a single SQL transaction.
 	// Return an error to roll back. Return nil to commit.
