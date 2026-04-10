@@ -46,15 +46,35 @@ type Config struct {
 	SSHKey          string
 	PersistentShell bool // hint only — not all backends support it
 	Timeout         time.Duration
+
+	// Modal backend
+	ModalBaseURL string
+	ModalToken   string
+
+	// Daytona backend
+	DaytonaBaseURL string
+	DaytonaToken   string
+
+	// Singularity backend
+	SingularityImage string // path to .sif file
 }
 
-// New constructs a backend by name. Only "local" is implemented in this plan.
-// Plan 5 adds "docker", "ssh", "modal", "daytona", "singularity".
+// New constructs a backend by name. Returns a helpful error for unknown types.
 func New(backendType string, cfg Config) (Backend, error) {
 	switch backendType {
 	case "local", "":
 		return NewLocal(cfg)
+	case "docker":
+		return NewDocker(cfg)
+	case "ssh":
+		return NewSSH(cfg)
+	case "singularity", "apptainer":
+		return NewSingularity(cfg)
+	case "modal":
+		return NewModal(cfg)
+	case "daytona":
+		return NewDaytona(cfg)
 	default:
-		return nil, fmt.Errorf("terminal: backend %q is not supported in this build", backendType)
+		return nil, fmt.Errorf("terminal: backend %q is not supported", backendType)
 	}
 }
