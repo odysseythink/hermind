@@ -187,7 +187,7 @@ func (t *txImpl) UpdateSystemPrompt(ctx context.Context, sessionID, prompt strin
 }
 
 func (t *txImpl) UpdateUsage(ctx context.Context, sessionID string, usage *storage.UsageUpdate) error {
-	_, err := t.tx.ExecContext(ctx, `
+	res, err := t.tx.ExecContext(ctx, `
         UPDATE sessions SET
             input_tokens = input_tokens + ?,
             output_tokens = output_tokens + ?,
@@ -201,6 +201,10 @@ func (t *txImpl) UpdateUsage(ctx context.Context, sessionID string, usage *stora
 	)
 	if err != nil {
 		return fmt.Errorf("sqlite tx: update usage: %w", err)
+	}
+	affected, _ := res.RowsAffected()
+	if affected == 0 {
+		return storage.ErrNotFound
 	}
 	return nil
 }

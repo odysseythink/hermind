@@ -226,3 +226,13 @@ func TestWithTxRollsBackOnPanic(t *testing.T) {
 	_, err := store.GetSession(ctx, "tx-panic")
 	assert.ErrorIs(t, err, storage.ErrNotFound)
 }
+
+func TestUpdateUsageReturnsNotFoundForMissingSession(t *testing.T) {
+	store := newTestStore(t)
+	ctx := context.Background()
+
+	err := store.UpdateUsage(ctx, "nonexistent-session", &storage.UsageUpdate{
+		InputTokens: 10,
+	})
+	assert.ErrorIs(t, err, storage.ErrNotFound)
+}

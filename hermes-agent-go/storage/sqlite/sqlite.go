@@ -11,7 +11,7 @@ import (
 )
 
 // Store is the SQLite-backed implementation of storage.Storage.
-// Safe for concurrent use. Uses WAL mode with BEGIN IMMEDIATE write txns.
+// Safe for concurrent use. Uses WAL mode.
 type Store struct {
 	db         *sql.DB
 	path       string
@@ -46,6 +46,10 @@ func Open(path string) (*Store, error) {
 			return nil, fmt.Errorf("sqlite: pragma %q: %w", p, err)
 		}
 	}
+
+	// SQLite only supports one writer at a time. Cap the pool to serialize
+	// write transactions and avoid busy_timeout contention under load.
+	db.SetMaxOpenConns(1)
 
 	return &Store{db: db, path: path}, nil
 }

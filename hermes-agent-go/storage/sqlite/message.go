@@ -3,7 +3,6 @@ package sqlite
 
 import (
 	"context"
-	"database/sql"
 	"fmt"
 
 	"github.com/nousresearch/hermes-agent/storage"
@@ -189,7 +188,7 @@ func (s *Store) UpdateSystemPrompt(ctx context.Context, sessionID, prompt string
 
 // UpdateUsage adds to the running usage counters for a session.
 func (s *Store) UpdateUsage(ctx context.Context, sessionID string, usage *storage.UsageUpdate) error {
-	_, err := s.db.ExecContext(ctx, `
+	res, err := s.db.ExecContext(ctx, `
         UPDATE sessions SET
             input_tokens = input_tokens + ?,
             output_tokens = output_tokens + ?,
@@ -204,8 +203,9 @@ func (s *Store) UpdateUsage(ctx context.Context, sessionID string, usage *storag
 	if err != nil {
 		return fmt.Errorf("sqlite: update usage: %w", err)
 	}
+	affected, _ := res.RowsAffected()
+	if affected == 0 {
+		return storage.ErrNotFound
+	}
 	return nil
 }
-
-// Helper to silence unused imports if needed
-var _ = sql.ErrNoRows
