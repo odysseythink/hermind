@@ -7,7 +7,6 @@ import (
 	"github.com/charmbracelet/bubbles/textarea"
 	"github.com/charmbracelet/bubbles/viewport"
 	tea "github.com/charmbracelet/bubbletea"
-	"github.com/nousresearch/hermes-agent/agent"
 	"github.com/nousresearch/hermes-agent/config"
 	"github.com/nousresearch/hermes-agent/message"
 	"github.com/nousresearch/hermes-agent/provider"
@@ -64,6 +63,11 @@ type Model struct {
 
 	// Quit flag — set when the user invokes /exit
 	quitting bool
+
+	// dispatch is the function that launches an Engine goroutine for a
+	// given user message. Installed by Run() after construction so that
+	// the goroutine can reach the *tea.Program instance.
+	dispatch func(userInput string, history []message.Message)
 }
 
 // streamingToolState tracks the currently-running tool call for the UI.
@@ -118,17 +122,6 @@ func (m Model) Init() tea.Cmd {
 	return textarea.Blink
 }
 
-// conversationResult is a helper used by Run() to wrap an Engine call as a tea.Cmd.
-// This is not used directly by the Model — it lives here so update.go can dispatch
-// to a goroutine via the command pattern.
-func (m Model) makeEngineCmd(userMessage string) tea.Cmd {
-	return func() tea.Msg {
-		// This cmd is replaced with a streaming-aware goroutine in Run().
-		// Left as a placeholder so Model + Update can compile independently.
-		return convErrorMsg{Err: nil}
-	}
-}
-
 // appendRenderedLine adds a pre-rendered line to the conversation log.
 // Caller is responsible for applying skin styling before passing the string.
 func (m *Model) appendRenderedLine(line string) {
@@ -172,7 +165,3 @@ func itoa(n int) string {
 	return string(buf[i:])
 }
 
-// Ensure unused imports are referenced to satisfy the compiler.
-// agent and provider are used in messages.go; these references prevent import errors.
-var _ = (*agent.ConversationResult)(nil)
-var _ = (*provider.StreamDelta)(nil)

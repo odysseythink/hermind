@@ -3,6 +3,7 @@ package ui
 
 import (
 	"context"
+	"fmt"
 
 	tea "github.com/charmbracelet/bubbletea"
 	"github.com/nousresearch/hermes-agent/message"
@@ -138,13 +139,17 @@ func (m Model) quit() (tea.Model, tea.Cmd) {
 	return m, tea.Quit
 }
 
-// startConversation is a placeholder that run.go replaces with an Engine-backed goroutine.
-// Since tea.Cmd closures can't reference a Model method that spawns a goroutine with
-// Program.Send, the real implementation lives in run.go where the *tea.Program is available.
+// startConversation kicks off an Engine goroutine via the dispatcher
+// installed by Run(). The goroutine posts tea.Msg values back to the
+// running Program.
 func (m Model) startConversation(text string) tea.Cmd {
-	// This is intentionally a no-op placeholder; run.go uses a separate path
-	// (a dispatcher closure stored on the Model via ModelConfig.StartConversationFn)
-	// to actually run the Engine. Tasks 9-10 wire this.
+	if m.dispatch == nil {
+		return func() tea.Msg {
+			return convErrorMsg{Err: fmt.Errorf("ui: no dispatcher installed")}
+		}
+	}
+	// Fire and forget — the dispatcher spawns its own goroutine.
+	m.dispatch(text, m.history)
 	return nil
 }
 
