@@ -77,11 +77,27 @@ func (c *Content) UnmarshalJSON(data []byte) error {
 }
 
 // ContentBlock is one element of a structured content array.
-// Used for multimodal content (images) and tool results.
+// Used for multimodal content (images), tool use (tool_use), and tool
+// results (tool_result).
 type ContentBlock struct {
-	Type     string `json:"type"` // "text", "image_url", "tool_use", "tool_result"
-	Text     string `json:"text,omitempty"`
+	Type string `json:"type"`
+
+	// Text content (type: "text")
+	Text string `json:"text,omitempty"`
+
+	// Image content (type: "image_url")
 	ImageURL *Image `json:"image_url,omitempty"`
+
+	// Tool use — the assistant is asking to invoke a tool.
+	// Type: "tool_use"
+	ToolUseID    string          `json:"id,omitempty"`
+	ToolUseName  string          `json:"name,omitempty"`
+	ToolUseInput json.RawMessage `json:"input,omitempty"`
+
+	// Tool result — the tool's output fed back to the assistant.
+	// Type: "tool_result"
+	// Note: ToolUseID is reused to identify which tool call this result belongs to.
+	ToolResult string `json:"content,omitempty"`
 }
 
 // Image represents an image reference in a content block.
