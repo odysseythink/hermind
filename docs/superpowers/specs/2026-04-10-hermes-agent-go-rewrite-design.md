@@ -18,6 +18,77 @@
 
 ---
 
+## System Data Flow
+
+### Conversation Flow (CLI)
+
+```
+┌──────────┐       ┌──────────┐       ┌──────────┐      ┌──────────┐
+│   User   │──────▶│   CLI    │──────▶│  Engine  │─────▶│ Provider │
+│  (term)  │       │  (REPL)  │       │          │      │  (LLM)   │
+└──────────┘       └──────────┘       └────┬─────┘      └────┬─────┘
+                         ▲                  │                 │
+                         │                  │◀────stream──────┘
+                         │                  ▼
+                         │             ┌──────────┐
+                         │             │   Tool   │
+                         │             │ Registry │
+                         │             └────┬─────┘
+                         │                  │
+                         │                  ▼
+                         │             ┌──────────┐
+                         │             │ Terminal/│
+                         │             │  File/   │
+                         │             │  Web/... │
+                         │             └────┬─────┘
+                         │                  │
+                         │◀───results───────┘
+                         │
+                         └────────┐
+                                  ▼
+                           ┌──────────┐
+                           │ Storage  │
+                           │(SQLite/  │
+                           │  PG)     │
+                           └──────────┘
+```
+
+### Gateway Message Flow
+
+```
+┌─────────────┐     ┌──────────────┐     ┌──────────────┐     ┌──────────┐
+│  Telegram/  │     │   Platform   │     │   Gateway    │     │  Session │
+│   Discord/  │────▶│   Adapter    │────▶│  Orchestrator│────▶│ Manager  │
+│   21 total  │     │  (goroutine) │     │  (errgroup)  │     │          │
+└─────────────┘     └──────────────┘     └──────┬───────┘     └────┬─────┘
+                                                 │                  │
+                                                 ▼                  │
+                                          ┌──────────┐              │
+                                          │  Engine  │◀──history────┘
+                                          │(per-msg) │
+                                          └────┬─────┘
+                                               │
+                                               ▼
+                                          ┌──────────┐
+                                          │ Delivery │
+                                          │  Router  │
+                                          └────┬─────┘
+                                               │
+                                               ▼
+                                    ┌────────────────┐
+                                    │  Back to user  │
+                                    │ via platform   │
+                                    └────────────────┘
+```
+
+**Concurrency model:**
+- Each platform runs as an independent goroutine (via `errgroup`)
+- Each message gets a fresh `Engine` instance (single-use, not thread-safe)
+- Same-session messages serialized via `LiveSession.Mutex` to preserve ordering
+- Tool execution within a single conversation uses a bounded `errgroup` (max 8 concurrent)
+
+---
+
 ## Architecture: Modular Monolith
 
 ```
@@ -81,12 +152,58 @@ const (
 
 type Message struct {
     Role            Role            `json:"role"`
-    Content         any             `json:"content"`          // string or []ContentBlock
+    Content         Content         `json:"content"`
     ToolCalls       []ToolCall      `json:"tool_calls,omitempty"`
     ToolCallID      string          `json:"tool_call_id,omitempty"`
     ToolName        string          `json:"tool_name,omitempty"`
     Reasoning       string          `json:"reasoning,omitempty"`
     FinishReason    string          `json:"finish_reason,omitempty"`
+}
+
+// Content is a typed union of plain text and structured content blocks.
+// Exactly one of text or blocks is populated. Never both.
+type Content struct {
+    text   string          // simple text message
+    blocks []ContentBlock  // multimodal or tool_use/tool_result
+}
+
+// Constructors — forces explicit choice at creation time.
+func TextContent(s string) Content {
+    return Content{text: s}
+}
+
+func BlockContent(blocks []ContentBlock) Content {
+    return Content{blocks: blocks}
+}
+
+// Accessors — typed, no assertions required.
+func (c Content) IsText() bool       { return c.blocks == nil }
+func (c Content) Text() string       { return c.text }
+func (c Content) Blocks() []ContentBlock { return c.blocks }
+
+// MarshalJSON produces the OpenAI-compatible shape: string OR array.
+func (c Content) MarshalJSON() ([]byte, error) {
+    if c.IsText() {
+        return json.Marshal(c.text)
+    }
+    return json.Marshal(c.blocks)
+}
+
+// UnmarshalJSON accepts both shapes.
+func (c *Content) UnmarshalJSON(data []byte) error {
+    // Try string first
+    var s string
+    if err := json.Unmarshal(data, &s); err == nil {
+        c.text = s
+        return nil
+    }
+    // Fall back to array
+    var blocks []ContentBlock
+    if err := json.Unmarshal(data, &blocks); err != nil {
+        return fmt.Errorf("content must be string or []ContentBlock: %w", err)
+    }
+    c.blocks = blocks
+    return nil
 }
 
 type ContentBlock struct {
@@ -169,7 +286,48 @@ type Provider interface {
     Complete(ctx context.Context, req *Request) (*Response, error)
     Stream(ctx context.Context, req *Request) (Stream, error)
     ModelInfo(model string) *ModelInfo
+    EstimateTokens(model string, text string) (int, error)
     Available() bool
+}
+
+// Error is the shared error taxonomy. Each provider converts vendor-specific
+// errors to this type so the fallback chain and retry logic work consistently.
+type Error struct {
+    Kind       ErrorKind
+    Provider   string  // "anthropic", "openai", ...
+    StatusCode int     // HTTP status if available
+    Message    string
+    Cause      error   // wrapped original error
+}
+
+type ErrorKind int
+
+const (
+    ErrUnknown ErrorKind = iota
+    ErrRateLimit      // 429: retry with backoff, eligible for fallback
+    ErrAuth           // 401/403: do not retry, do not fallback (config issue)
+    ErrContentFilter  // content blocked: do not retry, return to user
+    ErrInvalidRequest // 400: do not retry, likely a bug
+    ErrTimeout        // request timeout: retry once, then fallback
+    ErrServerError    // 5xx: retry with backoff, eligible for fallback
+    ErrContextTooLong // context window exceeded: trigger compression, do not fallback
+)
+
+func (e *Error) Error() string { return e.Message }
+func (e *Error) Unwrap() error { return e.Cause }
+
+// IsRetryable decides whether the fallback chain should try the next provider.
+func IsRetryable(err error) bool {
+    var pErr *Error
+    if !errors.As(err, &pErr) {
+        return false
+    }
+    switch pErr.Kind {
+    case ErrRateLimit, ErrTimeout, ErrServerError:
+        return true
+    default:
+        return false
+    }
 }
 
 type Stream interface {
@@ -211,8 +369,8 @@ type ModelInfo struct {
     SupportsStreaming bool
     SupportsCaching  bool
     SupportsReasoning bool
-    TokenEstimator   func(text string) int
 }
+// Note: token estimation moved to Provider.EstimateTokens() method above.
 ```
 
 ### Provider Registry
@@ -262,25 +420,32 @@ Most Chinese providers are OpenAI-compatible. Shared `openaicompat` base impleme
 ```go
 // provider/fallback.go
 
+// FallbackChain is single-use, not thread-safe.
+// Create a new chain per conversation to avoid shared mutable state.
 type FallbackChain struct {
     providers []Provider
-    current   int
+}
+
+func NewFallbackChain(providers []Provider) *FallbackChain {
+    return &FallbackChain{providers: providers}
 }
 
 func (fc *FallbackChain) Complete(ctx context.Context, req *Request) (*Response, error) {
-    for i := fc.current; i < len(fc.providers); i++ {
+    for i := 0; i < len(fc.providers); i++ {
         resp, err := fc.providers[i].Complete(ctx, req)
         if err == nil {
-            fc.current = 0 // Restore primary on next round
             return resp, nil
         }
         if !isRetryable(err) {
             return nil, err
         }
+        // Continue to next provider in chain
     }
     return nil, ErrAllProvidersFailed
 }
 ```
+
+**Concurrency note:** `FallbackChain` holds no mutable state. Each `RunConversation` call in the Engine creates a fresh chain via `NewFallbackChain(...)`, matching the Python version's per-conversation lifecycle. This avoids race conditions in the gateway scenario where multiple goroutines would otherwise share a chain.
 
 ---
 
@@ -291,13 +456,16 @@ func (fc *FallbackChain) Complete(ctx context.Context, req *Request) (*Response,
 ```go
 // agent/engine.go
 
+// Engine is single-use per conversation. NOT thread-safe.
+// The gateway creates a fresh Engine per incoming message.
+// The CLI creates a fresh Engine per /run invocation.
 type Engine struct {
     provider    provider.Provider
     tools       *tool.Registry
     storage     storage.Storage
     skillLoader *skill.Loader
     prompt      *PromptBuilder
-    config      *config.AgentConfig
+    config      config.AgentConfig  // value, not pointer — immutable snapshot
     
     onStreamDelta  func(delta *message.StreamDelta)
     onStep         func(step *StepEvent)
@@ -553,13 +721,44 @@ func NewBackend(backendType string, cfg config.TerminalConfig) (Backend, error)
 
 type Bridge struct {
     registry *tool.Registry
-    clients  map[string]*Client
+    clients  map[string]*clientState  // server_name → state
+    mu       sync.RWMutex
 }
 
-// Connects to MCP server, pulls tool list, registers into Registry
-// Namespace: "serverName__toolName" to avoid conflicts
+type clientState struct {
+    client    *Client
+    transport Transport
+    toolNames []string  // tools registered by this server (for cleanup)
+    status    ConnStatus
+}
+
+// Connects to MCP server, pulls tool list, registers into Registry.
+// Namespace: "serverName__toolName" to avoid conflicts.
 func (b *Bridge) Connect(serverName string, transport Transport) error
+
+// Disconnect unregisters all tools from this server and closes the client.
+func (b *Bridge) Disconnect(serverName string) error
 ```
+
+### MCP Failure Handling
+
+**Reconnection strategy:**
+- On transport error (connection dropped): attempt reconnection with exponential backoff
+- Backoff schedule: 1s, 2s, 4s (max 3 attempts over ~7 seconds)
+- During reconnection: tool calls to that server return `McpUnavailable` error
+- After max retries: unregister all tools from this server, log permanent failure, fire `onStatus` callback to notify user
+
+**Tool call failure:**
+- MCP tool handler wraps transport calls in a short timeout (default 30s)
+- On timeout or transport error: return structured error via `tool.ToolError()`
+- Error message format: `MCP server '<name>' unreachable: <cause>. Tools: <list>`
+- Engine treats this as a normal tool error (conversation continues, LLM sees the error)
+
+**Visible to user:**
+- CLI: inline error in conversation flow using error color
+- Gateway: error logged, user sees `⚠ Tool <name> failed: server unreachable` in response
+
+**Why this matters:** MCP servers are external processes (Python scripts, Node tools, etc.) and can crash or hang. Without reconnection + graceful unregistration, a dead MCP server poisons every subsequent conversation turn with cryptic transport errors. The agent doesn't know the tool is broken, so it keeps trying.
 
 **Design notes:**
 - Unified handler signature: `func(ctx, json.RawMessage) (string, error)`
@@ -576,6 +775,7 @@ func (b *Bridge) Connect(serverName string, transport Transport) error
 ```go
 // storage/storage.go
 
+// Storage is the root interface. Implementations must be safe for concurrent use.
 type Storage interface {
     // Session
     CreateSession(ctx context.Context, session *Session) error
@@ -594,11 +794,45 @@ type Storage interface {
     // Usage
     UpdateUsage(ctx context.Context, sessionID string, usage *UsageUpdate) error
     
+    // Transactions — group multiple operations atomically
+    WithTx(ctx context.Context, fn func(tx Tx) error) error
+    
     // Lifecycle
     Close() error
     Migrate() error
 }
+
+// Tx is the transaction-scoped interface. Same methods as Storage (except
+// lifecycle and WithTx). Operations within a Tx are atomic: either all commit
+// or all roll back.
+type Tx interface {
+    CreateSession(ctx context.Context, session *Session) error
+    GetSession(ctx context.Context, id string) (*Session, error)
+    UpdateSession(ctx context.Context, id string, updates *SessionUpdate) error
+    AddMessage(ctx context.Context, sessionID string, msg *StoredMessage) error
+    UpdateSystemPrompt(ctx context.Context, sessionID string, prompt string) error
+    UpdateUsage(ctx context.Context, sessionID string, usage *UsageUpdate) error
+}
 ```
+
+**Transaction usage pattern:**
+
+```go
+// At end of conversation, save messages + usage atomically
+err := storage.WithTx(ctx, func(tx Tx) error {
+    for _, msg := range newMessages {
+        if err := tx.AddMessage(ctx, sessionID, msg); err != nil {
+            return err
+        }
+    }
+    if err := tx.UpdateUsage(ctx, sessionID, &usage); err != nil {
+        return err
+    }
+    return tx.UpdateSession(ctx, sessionID, &update)
+})
+```
+
+**Why this matters:** Without transactions, a crash between `AddMessage` and `UpdateUsage` leaves the session with correct messages but wrong token counts forever. The Python version uses SQLite's implicit transaction on each write; Go needs explicit transaction support because Engine batches multiple writes at conversation end.
 
 ### Session & Message Types
 
@@ -655,6 +889,19 @@ type StoredMessage struct {
 - `tsvector` replaces FTS5 for full-text search
 - Advisory locks replace SQLite's IMMEDIATE transactions
 - Same Storage interface, different implementation
+
+### Storage Driver Selection Guide
+
+| Scenario | Driver | Rationale |
+|----------|--------|-----------|
+| Single-user CLI | SQLite | Zero setup, file-based, fast for single writer |
+| Single-instance gateway (< 50 msgs/sec) | SQLite | WAL mode handles light concurrency well |
+| Single-instance gateway (50+ msgs/sec) | PostgreSQL | Avoid WAL write contention under load |
+| Multi-instance gateway (HA, load-balanced) | PostgreSQL | SQLite can't be safely shared across processes |
+| Read-heavy analytics / reporting | PostgreSQL | Better concurrent reader performance, richer query planner |
+| Docker/container deployment | PostgreSQL | Avoid ephemeral filesystem issues; externalize state |
+
+**Default:** SQLite. Users upgrade to PostgreSQL when they hit contention or deploy multiple gateway instances. Switching is a config change — no code changes required (both drivers implement the same `Storage` interface).
 
 ### Storage Factory
 
@@ -938,6 +1185,77 @@ type Gateway struct {
 - Same-session messages serialized via `LiveSession.Mutex`
 - Idle sessions evicted after 30 minutes
 
+### Graceful Shutdown
+
+```go
+// cmd/hermes/gateway.go
+
+func runGateway(cfg *config.Config) error {
+    // Trap SIGTERM/SIGINT via signal.NotifyContext
+    ctx, cancel := signal.NotifyContext(context.Background(), 
+        syscall.SIGTERM, syscall.SIGINT)
+    defer cancel()
+    
+    gw, err := gateway.New(cfg, store)
+    if err != nil {
+        return err
+    }
+    
+    // Start gateway (blocks until ctx is cancelled)
+    runErr := gw.Run(ctx)
+    
+    // Drain phase: stop accepting new messages, let in-flight complete
+    drainCtx, drainCancel := context.WithTimeout(context.Background(), 30*time.Second)
+    defer drainCancel()
+    
+    if err := gw.Drain(drainCtx); err != nil {
+        log.Warn("drain timeout", "err", err)
+    }
+    
+    // Close phase: platform connections, DB flush
+    if err := gw.Close(); err != nil {
+        log.Error("shutdown error", "err", err)
+    }
+    
+    return runErr
+}
+```
+
+**Concurrency limits (bounded worker pool):**
+
+```go
+type Gateway struct {
+    // ...
+    platformLimits map[string]*semaphore.Weighted  // per-platform concurrency caps
+}
+
+func (gw *Gateway) handleMessage(ctx context.Context, name string, p Platform, in *IncomingMessage) {
+    sem := gw.platformLimits[name]
+    if !sem.TryAcquire(1) {
+        // Server busy: send throttled response to user
+        gw.delivery.SendBusy(p, in)
+        return
+    }
+    defer sem.Release(1)
+    
+    // ... rest of handling
+}
+```
+
+- **Default concurrency:** 32 per platform (configurable via `gateway.platforms.<name>.max_concurrent`)
+- **Overflow behavior:** Send "Server busy, please retry" response to user, don't block
+- **Why bounded:** a spammed group could spawn 10,000 goroutines without limits, each with its own Engine + DB connection. OOM within seconds.
+
+**Shutdown sequence:**
+1. Receive SIGTERM/SIGINT → `ctx` is cancelled
+2. Gateway stops dequeuing new messages from platform channels
+3. In-flight conversations get 30s to complete (configurable via `agent.drain_timeout`)
+4. Platform adapters close connections (send "bot going offline" messages where appropriate)
+5. Database flushes pending writes (SQLite WAL checkpoint, PostgreSQL connection drain)
+6. Process exits with code 0 (clean) or 1 (drain timeout)
+
+**Why this matters:** Without graceful shutdown, deploying a new version kills in-flight conversations mid-response. Users on Telegram/Discord see no reply. With graceful shutdown, they see their current response complete, then the bot goes quiet until the new version starts.
+
 ### Platform Interface
 
 ```go
@@ -952,6 +1270,56 @@ type Platform interface {
 ### 21 Platform Adapters
 
 telegram, discord, slack, whatsapp, signal, matrix, email, sms, dingtalk, feishu, wechat, mattermost, homeassistant, api, wecom, line, teams, rocketchat, irc, xmpp, webhook
+
+### Platform Registry (init() pattern)
+
+```go
+// gateway/platform/registry.go
+
+type Factory func(cfg map[string]any) (Platform, error)
+
+var registry = map[string]Factory{}
+
+func Register(name string, factory Factory) {
+    registry[name] = factory
+}
+
+func New(name string, cfg map[string]any) (Platform, error) {
+    f, ok := registry[name]
+    if !ok {
+        return nil, fmt.Errorf("unknown platform: %s", name)
+    }
+    return f(cfg)
+}
+```
+
+Each platform package registers itself via `init()`:
+
+```go
+// gateway/platform/telegram/init.go
+func init() { platform.Register("telegram", New) }
+
+// gateway/platform/telegram/config.go — typed config, not map[string]any
+type Config struct {
+    Token       string `mapstructure:"token"`
+    HomeChannel string `mapstructure:"home_channel"`
+    ProxyURL    string `mapstructure:"proxy_url,omitempty"`
+}
+
+// gateway/platform/telegram/telegram.go
+func New(cfg map[string]any) (platform.Platform, error) {
+    var c Config
+    if err := mapstructure.Decode(cfg, &c); err != nil {
+        return nil, fmt.Errorf("telegram config: %w", err)
+    }
+    if c.Token == "" {
+        return nil, errors.New("telegram: token is required")
+    }
+    return &TelegramAdapter{config: c}, nil
+}
+```
+
+**Why typed per-platform configs matter:** The old `map[string]any` approach defers all validation to runtime. A typo in `bot_token` becomes a silent nil that surfaces only when the bot tries to connect. With typed configs, `mapstructure.Decode` fails fast with a clear error at startup.
 
 ### Delivery Router
 
@@ -1021,7 +1389,7 @@ type Provider interface {
 | TUI | `bubbletea` + `bubbles` + `lipgloss` | Charm ecosystem |
 | Markdown | `glamour` | Terminal markdown rendering |
 | HTTP | `net/http` (stdlib) | No external dependency needed |
-| SSE | `bufio.Scanner` (stdlib) | SSE protocol is simple |
+| SSE | `bufio.Scanner` (stdlib) with 10MB buffer | SSE protocol is simple. **Critical:** must call `scanner.Buffer(make([]byte, 0, 64*1024), 10*1024*1024)` — default 64KB limit corrupts large LLM tool call streams |
 | WebSocket | `nhooyr.io/websocket` | Pure Go, clean API |
 | YAML | `gopkg.in/yaml.v3` | Standard choice |
 | SQLite | `modernc.org/sqlite` | Pure Go, no CGo |
@@ -1064,9 +1432,168 @@ Module path: `github.com/nousresearch/hermes-agent`
 
 ---
 
+## Test Strategy
+
+### Coverage Target
+
+- **100% of new code paths** must have tests. This is non-negotiable for a rewrite where tests prove the port preserves Python semantics.
+- Quality bar: ★★★ (happy path + edge cases + error paths) for core modules; ★★ acceptable for boilerplate adapters.
+
+### Test Types
+
+**1. Unit tests (`*_test.go` alongside each file)**
+
+- Pure logic: message serialization, budget arithmetic, compression rules, skin detection
+- Run on every commit via `go test ./...`
+- Target: sub-second per package, under 30 seconds total
+
+**2. Race detector tests**
+
+All concurrent-use code must have tests run under `-race`:
+- `agent.Budget` (atomic counters)
+- `tool.Registry` (mutex-protected map)
+- `storage/sqlite.Store` (WAL concurrency)
+- `gateway.Gateway` (platform goroutines)
+- `gateway.SessionManager` (live session map)
+
+CI command: `go test -race ./...`
+
+**3. Port-fidelity tests (golden files)**
+
+These are THE critical tests for this rewrite. They prove Go reads Python data correctly.
+
+- **SQLite compatibility:** Bundle a recorded Python `state.db` under `testdata/python-state.db`. Load it via the Go SQLite store. Assert every session, message, and usage field matches expected values. If Python schema changes, update the golden file.
+- **Skill format compatibility:** Copy all bundled Python skills under `testdata/skills/`. Load them via the Go skill loader. Assert each `Skill` struct matches the expected shape.
+- **Config compatibility:** Bundle example Python `config.yaml` files under `testdata/configs/`. Load each via Go config loader. Assert all fields populate without error.
+
+**4. Integration tests (`//go:build integration` build tag)**
+
+Behind a build tag so they don't run on every commit:
+
+- Provider integration: real API calls (or recorded cassettes via `github.com/dnaeon/go-vcr`)
+- Terminal backends: real Docker, SSH localhost, Modal, Daytona
+- Storage PostgreSQL: via `testcontainers-go`
+- Platform adapters: real bot tokens (optional, per-platform env vars)
+
+CI command: `go test -tags=integration ./...` (runs nightly or on release)
+
+**5. Benchmarks**
+
+Critical paths only:
+- `Engine.RunConversation` with mocked provider — measure loop overhead
+- `tool.Registry.Dispatch` — measure lookup + dispatch cost
+- `storage/sqlite.AddMessage` — measure write throughput
+- Streaming collector — measure per-token overhead
+
+Stored in `testdata/benchmarks/baseline.txt`, checked on each release to catch regressions.
+
+### Testing Tools
+
+| Tool | Purpose |
+|------|---------|
+| `testing` (stdlib) | Test framework |
+| `testify/assert` + `testify/require` | Readable assertions |
+| `testify/mock` | Interface mocks (Provider, Storage, Platform) |
+| `github.com/dnaeon/go-vcr` | HTTP cassette recording for provider integration tests |
+| `github.com/testcontainers/testcontainers-go` | Real PostgreSQL for integration tests |
+| `-race` flag | Data race detection |
+| `go test -cover` | Coverage reports |
+| `go-cmp` (`github.com/google/go-cmp`) | Deep struct comparison for golden file tests |
+
+### CI Pipeline
+
+```yaml
+# .github/workflows/test.yml (referenced in Distribution section)
+jobs:
+  unit:
+    - go test -race -cover ./...
+  lint:
+    - golangci-lint run
+  integration:
+    - go test -tags=integration ./...
+    if: github.event_name == 'push' && github.ref == 'refs/heads/main'
+```
+
+---
+
+## Distribution & Release
+
+### GitHub Actions Workflows
+
+**`.github/workflows/test.yml`** — runs on every push and PR:
+- Go setup (1.24)
+- `go build ./...`
+- `go test -race -cover ./...`
+- `golangci-lint run`
+
+**`.github/workflows/release.yml`** — runs on version tag push (v*):
+- Uses `goreleaser` to build all cross-platform binaries
+- Uploads binaries to GitHub Releases
+- Builds and pushes Docker image to `ghcr.io/nousresearch/hermes-agent`
+- Generates checksums and SBOM
+
+### goreleaser Config
+
+```yaml
+# .goreleaser.yml
+project_name: hermes
+builds:
+  - main: ./cmd/hermes
+    binary: hermes
+    env: [CGO_ENABLED=0]
+    goos: [linux, darwin, windows]
+    goarch: [amd64, arm64]
+
+archives:
+  - format: tar.gz
+    format_overrides:
+      - goos: windows
+        format: zip
+
+checksum:
+  name_template: 'checksums.txt'
+
+dockers:
+  - image_templates:
+      - 'ghcr.io/nousresearch/hermes-agent:{{ .Version }}'
+      - 'ghcr.io/nousresearch/hermes-agent:latest'
+    dockerfile: Dockerfile
+```
+
+### Installation Methods
+
+| Method | Command |
+|--------|---------|
+| Go install | `go install github.com/nousresearch/hermes-agent/cmd/hermes@latest` |
+| Binary download | `curl -L <release-url> \| tar xz` from GitHub Releases |
+| Docker | `docker run ghcr.io/nousresearch/hermes-agent:latest` |
+| Homebrew (future) | `brew install nousresearch/tap/hermes` (custom tap) |
+
+### Version Management
+
+- Semantic versioning: v0.1.0, v0.2.0, v1.0.0
+- `cmd/hermes.Version` injected at build time via `-ldflags "-X main.Version=$VERSION"`
+- `hermes version` prints version, git commit, build date
+
+---
+
 ## Implementation Priority
 
 1. **Agent Engine** — message types, provider interface, conversation loop, budget, compression
 2. **CLI** — cobra subcommands, bubbletea REPL, markdown rendering
 3. **Tools** — registry, terminal (all 6 backends), file, web, MCP bridge
 4. **Gateway** — platform interface, session management, delivery, all 21 adapters
+
+## GSTACK REVIEW REPORT
+
+| Review | Trigger | Why | Runs | Status | Findings |
+|--------|---------|-----|------|--------|----------|
+| CEO Review | `/plan-ceo-review` | Scope & strategy | 0 | — | — |
+| Codex Review | `/codex review` | Independent 2nd opinion | 0 | — | — |
+| Eng Review | `/plan-eng-review` | Architecture & tests (required) | 1 | CLEAN (PLAN) | 15 issues, 0 critical gaps |
+| Design Review | `/plan-design-review` | UI/UX gaps | 1 | CLEAN (FULL) | score: 4/10 → 9/10, 3 decisions |
+| DX Review | `/plan-devex-review` | Developer experience gaps | 0 | — | — |
+
+- **UNRESOLVED:** 0
+- **VERDICT:** ENG + DESIGN CLEARED — ready to implement
+
