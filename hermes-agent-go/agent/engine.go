@@ -13,12 +13,14 @@ import (
 // The gateway creates a fresh Engine per incoming message.
 // The CLI creates a fresh Engine per /run invocation.
 type Engine struct {
-	provider provider.Provider
-	storage  storage.Storage
-	tools    *tool.Registry     // may be nil if no tools are available
-	config   config.AgentConfig // value, not pointer — immutable snapshot
-	platform string
-	prompt   *PromptBuilder
+	provider    provider.Provider
+	auxProvider provider.Provider  // optional, used by Compressor
+	storage     storage.Storage
+	tools       *tool.Registry     // may be nil if no tools are available
+	config      config.AgentConfig // value, not pointer — immutable snapshot
+	platform    string
+	prompt      *PromptBuilder
+	compressor  *Compressor        // optional, nil means compression disabled
 
 	// Callbacks — optional. Nil means no-op.
 	onStreamDelta func(delta *provider.StreamDelta)
@@ -32,17 +34,28 @@ func NewEngine(p provider.Provider, s storage.Storage, cfg config.AgentConfig, p
 	return NewEngineWithTools(p, s, nil, cfg, platform)
 }
 
-// NewEngineWithTools constructs an Engine with a tool registry.
-// If tools is nil, the engine behaves exactly like NewEngine.
+// NewEngineWithTools constructs an Engine with tools and no auxiliary provider.
+// Compression will be a no-op without an auxiliary provider.
 func NewEngineWithTools(p provider.Provider, s storage.Storage, tools *tool.Registry, cfg config.AgentConfig, platform string) *Engine {
-	return &Engine{
-		provider: p,
-		storage:  s,
-		tools:    tools,
-		config:   cfg,
-		platform: platform,
-		prompt:   NewPromptBuilder(platform),
+	return NewEngineWithToolsAndAux(p, nil, s, tools, cfg, platform)
+}
+
+// NewEngineWithToolsAndAux constructs an Engine with tools and an auxiliary
+// provider for compression. If aux is nil, compression is disabled.
+func NewEngineWithToolsAndAux(p, aux provider.Provider, s storage.Storage, tools *tool.Registry, cfg config.AgentConfig, platform string) *Engine {
+	e := &Engine{
+		provider:    p,
+		auxProvider: aux,
+		storage:     s,
+		tools:       tools,
+		config:      cfg,
+		platform:    platform,
+		prompt:      NewPromptBuilder(platform),
 	}
+	if cfg.Compression.Enabled && aux != nil {
+		e.compressor = NewCompressor(cfg.Compression, aux)
+	}
+	return e
 }
 
 // SetStreamDeltaCallback registers a callback invoked for each streaming delta.

@@ -8,6 +8,7 @@ import (
 	"io"
 	"time"
 
+	"github.com/nousresearch/hermes-agent/config"
 	"github.com/nousresearch/hermes-agent/message"
 	"github.com/nousresearch/hermes-agent/provider"
 	"github.com/nousresearch/hermes-agent/storage"
@@ -72,6 +73,19 @@ func (e *Engine) RunConversation(ctx context.Context, opts *RunOptions) (*Conver
 			break
 		}
 		iterations++
+
+		// Compression check: if enabled and history is long enough,
+		// replace the middle of history with a summary.
+		if e.compressor != nil && shouldCompress(history, e.config.Compression) {
+			newHistory, err := e.compressor.Compress(ctx, history)
+			if err != nil {
+				// Don't fail the conversation on compression errors — log and continue.
+				// Plan 6 keeps this simple; logging is deferred.
+				_ = err
+			} else {
+				history = newHistory
+			}
+		}
 
 		req := &provider.Request{
 			Model:        model,
@@ -271,6 +285,22 @@ func (e *Engine) persistMessageTx(ctx context.Context, tx storage.Tx, sessionID 
 		return err
 	}
 	return tx.AddMessage(ctx, sessionID, stored)
+}
+
+// shouldCompress decides whether the current history should be compressed.
+// Plan 6 uses a simple count-based trigger: compress if len(history) exceeds
+// (1/threshold) * protect_last. Future plans can add token-aware triggers.
+func shouldCompress(history []message.Message, cfg config.CompressionConfig) bool {
+	if !cfg.Enabled {
+		return false
+	}
+	if cfg.ProtectLast <= 0 {
+		return false
+	}
+	// Trigger compression when we have more than 3× protect_last messages.
+	// This roughly corresponds to hitting 50-75% of typical context windows
+	// after a long conversation with tool calls.
+	return len(history) > 3*cfg.ProtectLast
 }
 
 // storedFromMessage converts a message.Message to a storage.StoredMessage.
