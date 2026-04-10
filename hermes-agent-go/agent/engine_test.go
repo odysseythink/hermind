@@ -203,6 +203,31 @@ func TestEngineToolLoopSingleToolCall(t *testing.T) {
 	assert.Contains(t, blocks[0].ToolResult, "echoed")
 }
 
+func TestEngineUsesFallbackChainOnRetryableError(t *testing.T) {
+	// failingProvider returns a retryable ErrRateLimit from Stream
+	failing := &fakeProvider{
+		name: "failing",
+		streamFn: func() (provider.Stream, error) {
+			return nil, &provider.Error{Kind: provider.ErrRateLimit, Provider: "failing", Message: "rate limited"}
+		},
+	}
+
+	// succeedingProvider returns a normal text response
+	succeeding := newFakeStreamingProvider("fallback response")
+	succeeding.name = "succeeding"
+
+	chain := provider.NewFallbackChain([]provider.Provider{failing, succeeding})
+	e := NewEngine(chain, nil, config.AgentConfig{MaxTurns: 10}, "cli")
+
+	result, err := e.RunConversation(context.Background(), &RunOptions{
+		UserMessage: "hello",
+		SessionID:   "fallback-test",
+	})
+	require.NoError(t, err)
+	assert.Equal(t, "fallback response", result.Response.Content.Text())
+	assert.Equal(t, 1, result.Iterations)
+}
+
 func TestEngineBudgetExhaustion(t *testing.T) {
 	// Provider that ALWAYS returns a tool_use — should exhaust budget
 	reg := tool.NewRegistry()
