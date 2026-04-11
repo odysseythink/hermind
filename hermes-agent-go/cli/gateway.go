@@ -16,6 +16,7 @@ import (
 	"github.com/nousresearch/hermes-agent/gateway/platforms"
 	"github.com/nousresearch/hermes-agent/metrics"
 	"github.com/nousresearch/hermes-agent/provider"
+	"github.com/nousresearch/hermes-agent/tracing"
 	"github.com/nousresearch/hermes-agent/provider/factory"
 	"github.com/nousresearch/hermes-agent/tool"
 	"github.com/nousresearch/hermes-agent/tool/file"
@@ -69,6 +70,28 @@ func runGateway(ctx context.Context, app *App) error {
 	}
 
 	g := gateway.NewGateway(*app.Config, primary, aux, app.Storage, reg)
+
+	// Optional tracing.
+	if app.Config.Tracing.Enabled {
+		var w *os.File = os.Stderr
+		if path := app.Config.Tracing.File; path != "" {
+			f, err := os.OpenFile(path, os.O_CREATE|os.O_WRONLY|os.O_APPEND, 0o644)
+			if err != nil {
+				fmt.Fprintf(os.Stderr, "gateway: tracing: %v (falling back to stderr)\n", err)
+			} else {
+				w = f
+				defer f.Close()
+			}
+		}
+		exporter := tracing.NewJSONLinesExporter(w)
+		tracer := tracing.NewTracer(exporter)
+		g.SetTracer(tracer)
+		defer func() {
+			shutdownCtx, cancel := context.WithTimeout(context.Background(), 2*time.Second)
+			defer cancel()
+			_ = tracer.Shutdown(shutdownCtx)
+		}()
+	}
 
 	// Optional /metrics HTTP server.
 	var metricsSrv *http.Server

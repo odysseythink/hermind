@@ -17,6 +17,7 @@ type Config struct {
 	Cron              CronConfig                `yaml:"cron,omitempty"`
 	Logging           LoggingConfig             `yaml:"logging,omitempty"`
 	Metrics           MetricsConfig             `yaml:"metrics,omitempty"`
+	Tracing           TracingConfig             `yaml:"tracing,omitempty"`
 }
 
 // CronConfig holds cron scheduler configuration.
@@ -40,6 +41,12 @@ type LoggingConfig struct {
 // MetricsConfig controls the Prometheus /metrics HTTP server.
 type MetricsConfig struct {
 	Addr string `yaml:"addr,omitempty"` // e.g. ":9100"; empty disables metrics
+}
+
+// TracingConfig controls stdlib-based tracing output.
+type TracingConfig struct {
+	Enabled bool   `yaml:"enabled,omitempty"`
+	File    string `yaml:"file,omitempty"` // path to JSON-lines sink; "" = stderr
 }
 
 // GatewayConfig controls the multi-platform gateway.

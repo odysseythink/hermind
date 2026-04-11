@@ -12,6 +12,7 @@ import (
 	"github.com/nousresearch/hermes-agent/message"
 	"github.com/nousresearch/hermes-agent/provider"
 	"github.com/nousresearch/hermes-agent/tool"
+	"github.com/nousresearch/hermes-agent/tracing"
 )
 
 // fakeStream returns a single delta then Done.
@@ -117,6 +118,40 @@ func (f *flakyProvider) Stream(_ context.Context, req *provider.Request) (provid
 func (flakyProvider) ModelInfo(string) *provider.ModelInfo       { return nil }
 func (flakyProvider) EstimateTokens(string, string) (int, error) { return 0, nil }
 func (flakyProvider) Available() bool                            { return true }
+
+func TestGatewayTracerRecordsSpan(t *testing.T) {
+	exp := tracing.NewMemoryExporter()
+	tr := tracing.NewTracer(exp)
+	cfg := config.Config{
+		Model: "anthropic/claude-opus-4-6",
+		Agent: config.AgentConfig{MaxTurns: 3},
+	}
+	g := NewGateway(cfg, echoProvider{}, nil, nil, tool.NewRegistry())
+	g.SetTracer(tr)
+	in := IncomingMessage{Platform: "fake", UserID: "u-trace", Text: "hello"}
+	if _, err := g.handleMessage(context.Background(), in); err != nil {
+		t.Fatalf("handleMessage: %v", err)
+	}
+	spans := exp.Spans()
+	if len(spans) != 1 {
+		t.Fatalf("expected 1 span, got %d", len(spans))
+	}
+	if spans[0].Name != "gateway.handleMessage" {
+		t.Errorf("span name = %q", spans[0].Name)
+	}
+	if spans[0].Status != tracing.StatusOK {
+		t.Errorf("status = %d, want OK", spans[0].Status)
+	}
+	var foundPlatform bool
+	for _, a := range spans[0].Attributes {
+		if a.Key == "platform" && a.Value == "fake" {
+			foundPlatform = true
+		}
+	}
+	if !foundPlatform {
+		t.Errorf("missing platform attribute: %+v", spans[0].Attributes)
+	}
+}
 
 func TestGatewayDedupSkipsDuplicate(t *testing.T) {
 	cfg := config.Config{

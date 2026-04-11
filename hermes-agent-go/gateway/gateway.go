@@ -17,6 +17,7 @@ import (
 	"github.com/nousresearch/hermes-agent/provider"
 	"github.com/nousresearch/hermes-agent/storage"
 	"github.com/nousresearch/hermes-agent/tool"
+	"github.com/nousresearch/hermes-agent/tracing"
 )
 
 // Gateway routes messages from one or more Platform adapters into
@@ -37,7 +38,13 @@ type Gateway struct {
 	metricErrors     *metrics.Counter
 	metricRetries    *metrics.Counter
 	metricHandlerDur *metrics.Histogram
+
+	// Tracer — nil means tracing is disabled.
+	tracer *tracing.Tracer
 }
+
+// SetTracer attaches a tracing.Tracer to this Gateway.
+func (g *Gateway) SetTracer(tr *tracing.Tracer) { g.tracer = tr }
 
 // NewGateway builds a Gateway with the given dependencies.
 func NewGateway(cfg config.Config, p, aux provider.Provider, s storage.Storage, reg *tool.Registry) *Gateway {
@@ -120,6 +127,12 @@ func (g *Gateway) handleMessage(ctx context.Context, in IncomingMessage) (*Outgo
 	if g.metricMessages != nil {
 		g.metricMessages.With(map[string]string{"platform": in.Platform}).Inc()
 	}
+	// Tracing: start a root span for the whole handleMessage call.
+	ctx, span := g.tracer.Start(ctx, "gateway.handleMessage",
+		tracing.String("platform", in.Platform),
+		tracing.String("user_id", in.UserID),
+	)
+	defer g.tracer.End(span)
 	start := time.Now()
 	out, err := g.runWithRetry(ctx, in)
 	if g.metricHandlerDur != nil {
@@ -127,6 +140,11 @@ func (g *Gateway) handleMessage(ctx context.Context, in IncomingMessage) (*Outgo
 	}
 	if err != nil && g.metricErrors != nil {
 		g.metricErrors.With(map[string]string{"platform": in.Platform}).Inc()
+	}
+	if span != nil {
+		if err != nil {
+			span.SetStatus(tracing.StatusError, err.Error())
+		}
 	}
 	return out, err
 }
