@@ -13,6 +13,21 @@ type Config struct {
 	MCP               MCPConfig                 `yaml:"mcp,omitempty"`
 	Memory            MemoryConfig              `yaml:"memory,omitempty"`
 	Browser           BrowserConfig             `yaml:"browser,omitempty"`
+	Gateway           GatewayConfig             `yaml:"gateway,omitempty"`
+}
+
+// GatewayConfig controls the multi-platform gateway.
+type GatewayConfig struct {
+	Platforms map[string]PlatformConfig `yaml:"platforms,omitempty"`
+}
+
+// PlatformConfig is an untyped configuration blob passed to each
+// platform adapter. Known keys depend on the adapter (see
+// gateway/platforms).
+type PlatformConfig struct {
+	Enabled bool              `yaml:"enabled"`
+	Type    string            `yaml:"type"`
+	Options map[string]string `yaml:"options,omitempty"`
 }
 
 // BrowserConfig holds browser automation provider configuration.
