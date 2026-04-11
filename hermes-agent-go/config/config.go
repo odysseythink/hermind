@@ -71,10 +71,19 @@ type BrowserbaseConfig struct {
 // MemoryConfig holds the optional external memory provider configuration.
 // At most one provider is active at a time (see tool/memory/memprovider).
 type MemoryConfig struct {
-	Provider    string            `yaml:"provider,omitempty"` // "", "honcho", "mem0", "supermemory"
+	Provider    string            `yaml:"provider,omitempty"` // "", "honcho", "mem0", "supermemory", "hindsight", ...
 	Honcho      HonchoConfig      `yaml:"honcho,omitempty"`
 	Mem0        Mem0Config        `yaml:"mem0,omitempty"`
 	Supermemory SupermemoryConfig `yaml:"supermemory,omitempty"`
+	Hindsight   HindsightConfig   `yaml:"hindsight,omitempty"`
+}
+
+// HindsightConfig holds the Hindsight cloud provider configuration.
+type HindsightConfig struct {
+	BaseURL string `yaml:"base_url,omitempty"`
+	APIKey  string `yaml:"api_key,omitempty"`
+	BankID  string `yaml:"bank_id,omitempty"`
+	Budget  string `yaml:"budget,omitempty"` // low, mid, high
 }
 
 // HonchoConfig holds the Honcho provider configuration.

@@ -32,6 +32,11 @@ func New(cfg config.MemoryConfig) (Provider, error) {
 			return nil, fmt.Errorf("memprovider: supermemory requires api_key")
 		}
 		return NewSupermemory(cfg.Supermemory), nil
+	case "hindsight":
+		if cfg.Hindsight.APIKey == "" {
+			return nil, fmt.Errorf("memprovider: hindsight requires api_key")
+		}
+		return NewHindsight(cfg.Hindsight), nil
 	default:
 		return nil, fmt.Errorf("memprovider: unknown provider %q", name)
 	}
