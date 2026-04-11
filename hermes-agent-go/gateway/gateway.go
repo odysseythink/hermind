@@ -41,10 +41,24 @@ type Gateway struct {
 
 	// Tracer — nil means tracing is disabled.
 	tracer *tracing.Tracer
+
+	// Hooks — optional pre/post interceptors.
+	hooks *Hooks
+	// Channel directory — optional.
+	channels *ChannelDirectory
 }
 
 // SetTracer attaches a tracing.Tracer to this Gateway.
 func (g *Gateway) SetTracer(tr *tracing.Tracer) { g.tracer = tr }
+
+// SetHooks attaches a Hooks instance to the gateway.
+func (g *Gateway) SetHooks(h *Hooks) { g.hooks = h }
+
+// SetChannelDirectory attaches a ChannelDirectory.
+func (g *Gateway) SetChannelDirectory(d *ChannelDirectory) { g.channels = d }
+
+// ChannelDirectory returns the attached directory (nil if unset).
+func (g *Gateway) ChannelDirectory() *ChannelDirectory { return g.channels }
 
 // NewGateway builds a Gateway with the given dependencies.
 func NewGateway(cfg config.Config, p, aux provider.Provider, s storage.Storage, reg *tool.Registry) *Gateway {
@@ -127,6 +141,17 @@ func (g *Gateway) handleMessage(ctx context.Context, in IncomingMessage) (*Outgo
 	if g.metricMessages != nil {
 		g.metricMessages.With(map[string]string{"platform": in.Platform}).Inc()
 	}
+	// Pre-hooks: drop, mutate, or error out.
+	if g.hooks != nil {
+		next, err := g.hooks.RunPre(ctx, in)
+		if err != nil {
+			return nil, err
+		}
+		if next == nil {
+			return nil, nil
+		}
+		in = *next
+	}
 	// Tracing: start a root span for the whole handleMessage call.
 	ctx, span := g.tracer.Start(ctx, "gateway.handleMessage",
 		tracing.String("platform", in.Platform),
@@ -145,6 +170,14 @@ func (g *Gateway) handleMessage(ctx context.Context, in IncomingMessage) (*Outgo
 		if err != nil {
 			span.SetStatus(tracing.StatusError, err.Error())
 		}
+	}
+	// Post-hooks: mutate or drop the reply.
+	if err == nil && out != nil && g.hooks != nil {
+		next, herr := g.hooks.RunPost(ctx, in, *out)
+		if herr != nil {
+			return nil, herr
+		}
+		out = next
 	}
 	return out, err
 }
