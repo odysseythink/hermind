@@ -32,6 +32,7 @@ func NewRootCmd(app *App) *cobra.Command {
 		newRunCmd(app),
 		newGatewayCmd(app),
 		newCronCmd(app),
+		newSkillsCmd(app),
 		newVersionCmd(),
 	)
 
