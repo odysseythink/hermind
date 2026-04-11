@@ -21,6 +21,7 @@ import (
 	"github.com/nousresearch/hermes-agent/tool/file"
 	"github.com/nousresearch/hermes-agent/tool/mcp"
 	"github.com/nousresearch/hermes-agent/tool/memory"
+	"github.com/nousresearch/hermes-agent/tool/memory/memprovider"
 	"github.com/nousresearch/hermes-agent/tool/terminal"
 	"github.com/nousresearch/hermes-agent/tool/web"
 )
@@ -122,6 +123,26 @@ func runREPL(ctx context.Context, app *App) error {
 	}
 
 	sessionID := uuid.NewString()
+
+	// External memory provider (Plan 6c): honcho / mem0 / supermemory.
+	// Register its tools into the main registry and hook Shutdown into
+	// the REPL lifecycle.
+	extMem, err := memprovider.New(app.Config.Memory)
+	if err != nil {
+		fmt.Fprintf(os.Stderr, "hermes: memory provider: %v\n", err)
+	}
+	if extMem != nil {
+		if err := extMem.Initialize(ctx, sessionID); err != nil {
+			fmt.Fprintf(os.Stderr, "hermes: memory provider %s init: %v\n", extMem.Name(), err)
+		} else {
+			extMem.RegisterTools(toolRegistry)
+			defer func() {
+				shutdownCtx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
+				defer cancel()
+				_ = extMem.Shutdown(shutdownCtx)
+			}()
+		}
+	}
 
 	// Delegate tool — the runner spawns a fresh Engine per call
 	delegate.RegisterDelegate(toolRegistry, func(ctx context.Context, task, extra string, maxTurns int) (*delegate.SubagentResult, error) {

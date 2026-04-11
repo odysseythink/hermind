@@ -11,6 +11,38 @@ type Config struct {
 	Terminal          TerminalConfig            `yaml:"terminal"`
 	Storage           StorageConfig             `yaml:"storage"`
 	MCP               MCPConfig                 `yaml:"mcp,omitempty"`
+	Memory            MemoryConfig              `yaml:"memory,omitempty"`
+}
+
+// MemoryConfig holds the optional external memory provider configuration.
+// At most one provider is active at a time (see tool/memory/memprovider).
+type MemoryConfig struct {
+	Provider    string            `yaml:"provider,omitempty"` // "", "honcho", "mem0", "supermemory"
+	Honcho      HonchoConfig      `yaml:"honcho,omitempty"`
+	Mem0        Mem0Config        `yaml:"mem0,omitempty"`
+	Supermemory SupermemoryConfig `yaml:"supermemory,omitempty"`
+}
+
+// HonchoConfig holds the Honcho provider configuration.
+type HonchoConfig struct {
+	BaseURL   string `yaml:"base_url,omitempty"`
+	APIKey    string `yaml:"api_key,omitempty"`
+	Workspace string `yaml:"workspace,omitempty"`
+	Peer      string `yaml:"peer,omitempty"`
+}
+
+// Mem0Config holds the Mem0 provider configuration.
+type Mem0Config struct {
+	BaseURL string `yaml:"base_url,omitempty"`
+	APIKey  string `yaml:"api_key,omitempty"`
+	UserID  string `yaml:"user_id,omitempty"`
+}
+
+// SupermemoryConfig holds the Supermemory provider configuration.
+type SupermemoryConfig struct {
+	BaseURL string `yaml:"base_url,omitempty"`
+	APIKey  string `yaml:"api_key,omitempty"`
+	UserID  string `yaml:"user_id,omitempty"`
 }
 
 // MCPConfig holds the configured MCP server list.
