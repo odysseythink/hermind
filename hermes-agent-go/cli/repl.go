@@ -24,6 +24,7 @@ import (
 	"github.com/nousresearch/hermes-agent/tool/memory"
 	"github.com/nousresearch/hermes-agent/tool/memory/memprovider"
 	"github.com/nousresearch/hermes-agent/tool/terminal"
+	"github.com/nousresearch/hermes-agent/tool/vision"
 	"github.com/nousresearch/hermes-agent/tool/web"
 )
 
@@ -127,6 +128,15 @@ func runREPL(ctx context.Context, app *App) error {
 	// credentials are present (via env vars or config).
 	browserProvider := browser.NewBrowserbase(app.Config.Browser.Browserbase)
 	browser.RegisterAll(toolRegistry, browserProvider)
+
+	// Vision tool (Plan 6e). Uses the auxiliary provider since vision
+	// analysis is a secondary-model task. If no aux provider is set,
+	// the tool is not registered.
+	visionModel := app.Config.Auxiliary.Model
+	if visionModel == "" {
+		visionModel = displayModel
+	}
+	vision.Register(toolRegistry, auxProvider, visionModel)
 
 	sessionID := uuid.NewString()
 
