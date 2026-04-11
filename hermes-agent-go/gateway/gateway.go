@@ -2,10 +2,12 @@ package gateway
 
 import (
 	"context"
+	"encoding/json"
 	"fmt"
 	"log/slog"
 	"strings"
 	"sync"
+	"time"
 
 	"github.com/nousresearch/hermes-agent/agent"
 	"github.com/nousresearch/hermes-agent/config"
@@ -26,11 +28,12 @@ type Gateway struct {
 	tools     *tool.Registry
 	platforms map[string]Platform
 	sessions  *SessionStore
+	dedup     *Dedup
 }
 
 // NewGateway builds a Gateway with the given dependencies.
 func NewGateway(cfg config.Config, p, aux provider.Provider, s storage.Storage, reg *tool.Registry) *Gateway {
-	return &Gateway{
+	g := &Gateway{
 		cfg:       cfg,
 		provider:  p,
 		aux:       aux,
@@ -38,7 +41,12 @@ func NewGateway(cfg config.Config, p, aux provider.Provider, s storage.Storage, 
 		tools:     reg,
 		platforms: make(map[string]Platform),
 		sessions:  NewSessionStore(),
+		dedup:     NewDedup(2048),
 	}
+	if s != nil {
+		g.sessions.SetLoader(g.loadHistoryFromStorage)
+	}
+	return g
 }
 
 // Register adds a platform adapter. Duplicate names replace prior entries.
@@ -75,17 +83,61 @@ func (g *Gateway) Start(ctx context.Context) error {
 	}
 }
 
-// handleMessage is the MessageHandler passed to each platform.
+// handleMessage is the MessageHandler passed to each platform. It
+// attaches a request ID, performs deduplication, and invokes the
+// retry helper.
 func (g *Gateway) handleMessage(ctx context.Context, in IncomingMessage) (*OutgoingMessage, error) {
 	ctx = logging.WithRequestID(ctx, "")
-	sess := g.sessions.GetOrCreate(in.Platform, in.UserID)
+	if in.MessageID != "" {
+		key := in.Platform + ":" + in.MessageID
+		if g.dedup.Seen(key) {
+			slog.InfoContext(ctx, "gateway: duplicate message skipped", "platform", in.Platform, "message_id", in.MessageID)
+			return nil, nil
+		}
+	}
+	return g.runWithRetry(ctx, in)
+}
+
+// runWithRetry executes runOnce up to maxAttempts times with
+// exponential backoff between attempts.
+func (g *Gateway) runWithRetry(ctx context.Context, in IncomingMessage) (*OutgoingMessage, error) {
+	const maxAttempts = 3
+	var lastErr error
+	backoff := 100 * time.Millisecond
+	for attempt := 1; attempt <= maxAttempts; attempt++ {
+		out, err := g.runOnce(ctx, in)
+		if err == nil {
+			return out, nil
+		}
+		if ctx.Err() != nil {
+			return nil, ctx.Err()
+		}
+		lastErr = err
+		slog.WarnContext(ctx, "gateway: retry", "attempt", attempt, "err", err.Error())
+		if attempt == maxAttempts {
+			break
+		}
+		timer := time.NewTimer(backoff)
+		select {
+		case <-ctx.Done():
+			timer.Stop()
+			return nil, ctx.Err()
+		case <-timer.C:
+		}
+		backoff *= 2
+	}
+	return nil, lastErr
+}
+
+// runOnce performs a single Engine invocation for the given incoming
+// message and returns the reply.
+func (g *Gateway) runOnce(ctx context.Context, in IncomingMessage) (*OutgoingMessage, error) {
+	sess := g.sessions.GetOrCreate(ctx, in.Platform, in.UserID)
 
 	eng := agent.NewEngineWithToolsAndAux(
 		g.provider, g.aux, g.storage, g.tools,
 		g.cfg.Agent, in.Platform,
 	)
-	// Copy the session history so the Engine can't mutate the
-	// cached slice concurrently with another request.
 	historyCopy := append([]message.Message{}, sess.History...)
 	result, err := eng.RunConversation(ctx, &agent.RunOptions{
 		UserMessage: in.Text,
@@ -103,6 +155,37 @@ func (g *Gateway) handleMessage(ctx context.Context, in IncomingMessage) (*Outgo
 		ChatID: in.ChatID,
 		Text:   result.Response.Content.Text(),
 	}, nil
+}
+
+// loadHistoryFromStorage rehydrates a session's history from the
+// persistent message store. Only the last 50 messages are loaded to
+// bound rehydration cost.
+func (g *Gateway) loadHistoryFromStorage(ctx context.Context, platform, userID, sessionID string) ([]message.Message, error) {
+	if g.storage == nil {
+		return nil, nil
+	}
+	// GetSession first — if the session row doesn't exist, there is
+	// no persisted history yet.
+	if _, err := g.storage.GetSession(ctx, sessionID); err != nil {
+		return nil, nil
+	}
+	stored, err := g.storage.GetMessages(ctx, sessionID, 50, 0)
+	if err != nil {
+		return nil, err
+	}
+	out := make([]message.Message, 0, len(stored))
+	for _, sm := range stored {
+		var content message.Content
+		if err := json.Unmarshal([]byte(sm.Content), &content); err != nil {
+			// Fallback: treat as plain text.
+			content = message.TextContent(sm.Content)
+		}
+		out = append(out, message.Message{
+			Role:    message.Role(sm.Role),
+			Content: content,
+		})
+	}
+	return out, nil
 }
 
 // modelFromCfg extracts the model name from cfg.Model (strip provider/ prefix).

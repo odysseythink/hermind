@@ -82,6 +82,88 @@ func (f *fakePlatform) SendReply(_ context.Context, out OutgoingMessage) error {
 	return nil
 }
 
+// flakyProvider fails the first N times then succeeds by echoing the
+// last user message. Used to exercise runWithRetry.
+type flakyProvider struct {
+	mu       sync.Mutex
+	failures int
+	succeeds int
+}
+
+func (f *flakyProvider) Name() string { return "flaky" }
+func (f *flakyProvider) Complete(context.Context, *provider.Request) (*provider.Response, error) {
+	return nil, errors.New("not used")
+}
+func (f *flakyProvider) Stream(_ context.Context, req *provider.Request) (provider.Stream, error) {
+	f.mu.Lock()
+	defer f.mu.Unlock()
+	if f.failures > 0 {
+		f.failures--
+		return nil, errors.New("transient")
+	}
+	f.succeeds++
+	last := req.Messages[len(req.Messages)-1]
+	text := "echo: " + last.Content.Text()
+	return &fakeStream{
+		events: []*provider.StreamEvent{
+			{Type: provider.EventDelta, Delta: &provider.StreamDelta{Content: text}},
+			{Type: provider.EventDone, Response: &provider.Response{
+				Message: message.Message{Role: message.RoleAssistant, Content: message.TextContent(text)},
+				FinishReason: "end_turn",
+			}},
+		},
+	}, nil
+}
+func (flakyProvider) ModelInfo(string) *provider.ModelInfo       { return nil }
+func (flakyProvider) EstimateTokens(string, string) (int, error) { return 0, nil }
+func (flakyProvider) Available() bool                            { return true }
+
+func TestGatewayDedupSkipsDuplicate(t *testing.T) {
+	cfg := config.Config{
+		Model: "anthropic/claude-opus-4-6",
+		Agent: config.AgentConfig{MaxTurns: 3},
+	}
+	g := NewGateway(cfg, echoProvider{}, nil, nil, tool.NewRegistry())
+	ctx := context.Background()
+	in := IncomingMessage{Platform: "fake", UserID: "u1", MessageID: "m1", Text: "hello"}
+	out, err := g.handleMessage(ctx, in)
+	if err != nil {
+		t.Fatalf("first: %v", err)
+	}
+	if out == nil || out.Text != "echo: hello" {
+		t.Fatalf("first out = %+v", out)
+	}
+	// Duplicate should be skipped (out=nil, err=nil).
+	out2, err := g.handleMessage(ctx, in)
+	if err != nil {
+		t.Fatalf("duplicate: %v", err)
+	}
+	if out2 != nil {
+		t.Errorf("expected nil out on duplicate, got %+v", out2)
+	}
+}
+
+func TestGatewayRetryRecovers(t *testing.T) {
+	cfg := config.Config{
+		Model: "anthropic/claude-opus-4-6",
+		Agent: config.AgentConfig{MaxTurns: 3},
+	}
+	fp := &flakyProvider{failures: 2}
+	g := NewGateway(cfg, fp, nil, nil, tool.NewRegistry())
+	ctx := context.Background()
+	in := IncomingMessage{Platform: "fake", UserID: "u-retry", Text: "ping"}
+	out, err := g.handleMessage(ctx, in)
+	if err != nil {
+		t.Fatalf("handleMessage: %v", err)
+	}
+	if out == nil || out.Text != "echo: ping" {
+		t.Fatalf("out = %+v", out)
+	}
+	if fp.succeeds != 1 {
+		t.Errorf("expected 1 success, got %d", fp.succeeds)
+	}
+}
+
 func TestGatewayRoutesMessageAndReplies(t *testing.T) {
 	fp := &fakePlatform{
 		name:    "fake",

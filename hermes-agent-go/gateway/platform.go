@@ -9,11 +9,12 @@ import "context"
 
 // IncomingMessage is the platform-agnostic shape every adapter emits.
 type IncomingMessage struct {
-	Platform string // "telegram", "api_server", etc.
-	UserID   string
-	ChatID   string
-	Text     string
-	Extra    map[string]any
+	Platform  string // "telegram", "api_server", etc.
+	UserID    string
+	ChatID    string
+	Text      string
+	MessageID string // platform-native message id, used for dedup
+	Extra     map[string]any
 }
 
 // OutgoingMessage is what the Gateway hands back to the adapter.
