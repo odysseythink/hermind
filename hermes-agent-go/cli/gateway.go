@@ -104,6 +104,29 @@ func buildPlatform(name string, pc config.PlatformConfig) (gateway.Platform, err
 		return platforms.NewTelegram(pc.Options["token"]), nil
 	case "acp":
 		return platforms.NewACP(pc.Options["addr"], pc.Options["token"]), nil
+	case "slack":
+		return platforms.NewSlack(pc.Options["webhook_url"]), nil
+	case "discord":
+		return platforms.NewDiscord(pc.Options["webhook_url"]), nil
+	case "mattermost":
+		return platforms.NewMattermost(pc.Options["webhook_url"]), nil
+	case "feishu":
+		return platforms.NewFeishu(pc.Options["webhook_url"]), nil
+	case "dingtalk":
+		return platforms.NewDingTalk(pc.Options["webhook_url"]), nil
+	case "wecom":
+		return platforms.NewWeCom(pc.Options["webhook_url"]), nil
+	case "email":
+		return platforms.NewEmail(
+			pc.Options["host"], pc.Options["port"],
+			pc.Options["username"], pc.Options["password"],
+			pc.Options["from"], pc.Options["to"],
+		), nil
+	case "sms":
+		return platforms.NewSMS(
+			pc.Options["account_sid"], pc.Options["auth_token"],
+			pc.Options["from"], pc.Options["to"],
+		), nil
 	default:
 		return nil, fmt.Errorf("unknown platform type %q", t)
 	}
