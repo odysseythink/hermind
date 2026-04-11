@@ -17,6 +17,7 @@ import (
 	"github.com/nousresearch/hermes-agent/provider/factory"
 	"github.com/nousresearch/hermes-agent/storage/sqlite"
 	"github.com/nousresearch/hermes-agent/tool"
+	"github.com/nousresearch/hermes-agent/tool/browser"
 	"github.com/nousresearch/hermes-agent/tool/delegate"
 	"github.com/nousresearch/hermes-agent/tool/file"
 	"github.com/nousresearch/hermes-agent/tool/mcp"
@@ -121,6 +122,11 @@ func runREPL(ctx context.Context, app *App) error {
 	if app.Storage != nil {
 		memory.RegisterAll(toolRegistry, app.Storage)
 	}
+
+	// Browser automation tools (Plan 6d). Registered only when Browserbase
+	// credentials are present (via env vars or config).
+	browserProvider := browser.NewBrowserbase(app.Config.Browser.Browserbase)
+	browser.RegisterAll(toolRegistry, browserProvider)
 
 	sessionID := uuid.NewString()
 

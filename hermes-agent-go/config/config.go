@@ -12,6 +12,25 @@ type Config struct {
 	Storage           StorageConfig             `yaml:"storage"`
 	MCP               MCPConfig                 `yaml:"mcp,omitempty"`
 	Memory            MemoryConfig              `yaml:"memory,omitempty"`
+	Browser           BrowserConfig             `yaml:"browser,omitempty"`
+}
+
+// BrowserConfig holds browser automation provider configuration.
+// Only Browserbase is supported in Plan 6d.
+type BrowserConfig struct {
+	Provider    string            `yaml:"provider,omitempty"` // "", "browserbase"
+	Browserbase BrowserbaseConfig `yaml:"browserbase,omitempty"`
+}
+
+// BrowserbaseConfig holds Browserbase cloud provider settings.
+// Env vars BROWSERBASE_API_KEY / BROWSERBASE_PROJECT_ID take precedence
+// over the YAML values at load time (see tool/browser/browserbase.go).
+type BrowserbaseConfig struct {
+	BaseURL   string `yaml:"base_url,omitempty"`
+	APIKey    string `yaml:"api_key,omitempty"`
+	ProjectID string `yaml:"project_id,omitempty"`
+	KeepAlive bool   `yaml:"keep_alive,omitempty"`
+	Proxies   bool   `yaml:"proxies,omitempty"`
 }
 
 // MemoryConfig holds the optional external memory provider configuration.
