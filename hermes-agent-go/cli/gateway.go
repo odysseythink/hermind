@@ -151,6 +151,18 @@ func buildPlatform(name string, pc config.PlatformConfig) (gateway.Platform, err
 			pc.Options["account_sid"], pc.Options["auth_token"],
 			pc.Options["from"], pc.Options["to"],
 		), nil
+	case "signal":
+		return platforms.NewSignal(pc.Options["base_url"], pc.Options["account"]), nil
+	case "whatsapp":
+		return platforms.NewWhatsApp(pc.Options["phone_id"], pc.Options["access_token"]), nil
+	case "matrix":
+		return platforms.NewMatrix(
+			pc.Options["home_server"], pc.Options["access_token"], pc.Options["room_id"],
+		), nil
+	case "homeassistant":
+		return platforms.NewHomeAssistant(
+			pc.Options["base_url"], pc.Options["access_token"], pc.Options["service"],
+		), nil
 	default:
 		return nil, fmt.Errorf("unknown platform type %q", t)
 	}
