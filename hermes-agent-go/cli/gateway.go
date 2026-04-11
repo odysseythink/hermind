@@ -102,6 +102,8 @@ func buildPlatform(name string, pc config.PlatformConfig) (gateway.Platform, err
 		return platforms.NewWebhook(pc.Options["url"], pc.Options["token"]), nil
 	case "telegram":
 		return platforms.NewTelegram(pc.Options["token"]), nil
+	case "acp":
+		return platforms.NewACP(pc.Options["addr"], pc.Options["token"]), nil
 	default:
 		return nil, fmt.Errorf("unknown platform type %q", t)
 	}

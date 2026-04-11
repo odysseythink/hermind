@@ -14,6 +14,26 @@ type Config struct {
 	Memory            MemoryConfig              `yaml:"memory,omitempty"`
 	Browser           BrowserConfig             `yaml:"browser,omitempty"`
 	Gateway           GatewayConfig             `yaml:"gateway,omitempty"`
+	Cron              CronConfig                `yaml:"cron,omitempty"`
+	Logging           LoggingConfig             `yaml:"logging,omitempty"`
+}
+
+// CronConfig holds cron scheduler configuration.
+type CronConfig struct {
+	Jobs []CronJobConfig `yaml:"jobs,omitempty"`
+}
+
+// CronJobConfig is a single scheduled prompt.
+type CronJobConfig struct {
+	Name     string `yaml:"name"`
+	Schedule string `yaml:"schedule"` // e.g. "every 5m"
+	Prompt   string `yaml:"prompt"`
+	Model    string `yaml:"model,omitempty"`
+}
+
+// LoggingConfig controls the slog output level.
+type LoggingConfig struct {
+	Level string `yaml:"level,omitempty"` // debug, info, warn, error
 }
 
 // GatewayConfig controls the multi-platform gateway.

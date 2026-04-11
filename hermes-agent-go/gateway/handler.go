@@ -2,7 +2,7 @@ package gateway
 
 import (
 	"context"
-	"log"
+	"log/slog"
 )
 
 // DispatchAndReply is a convenience adapters call inside their event
@@ -11,13 +11,13 @@ import (
 func DispatchAndReply(ctx context.Context, p Platform, handler MessageHandler, in IncomingMessage) {
 	out, err := handler(ctx, in)
 	if err != nil {
-		log.Printf("gateway: %s: handler error: %v", p.Name(), err)
+		slog.ErrorContext(ctx, "gateway: handler error", "platform", p.Name(), "err", err.Error())
 		return
 	}
 	if out == nil {
 		return
 	}
 	if err := p.SendReply(ctx, *out); err != nil {
-		log.Printf("gateway: %s: send reply error: %v", p.Name(), err)
+		slog.ErrorContext(ctx, "gateway: send reply error", "platform", p.Name(), "err", err.Error())
 	}
 }

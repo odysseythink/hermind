@@ -3,12 +3,13 @@ package gateway
 import (
 	"context"
 	"fmt"
-	"log"
+	"log/slog"
 	"strings"
 	"sync"
 
 	"github.com/nousresearch/hermes-agent/agent"
 	"github.com/nousresearch/hermes-agent/config"
+	"github.com/nousresearch/hermes-agent/logging"
 	"github.com/nousresearch/hermes-agent/message"
 	"github.com/nousresearch/hermes-agent/provider"
 	"github.com/nousresearch/hermes-agent/storage"
@@ -58,7 +59,7 @@ func (g *Gateway) Start(ctx context.Context) error {
 		wg.Add(1)
 		go func(name string, p Platform) {
 			defer wg.Done()
-			log.Printf("gateway: starting platform %s", name)
+			slog.InfoContext(ctx, "gateway: starting platform", "platform", name)
 			if err := p.Run(ctx, g.handleMessage); err != nil && ctx.Err() == nil {
 				errCh <- fmt.Errorf("gateway: %s: %w", name, err)
 			}
@@ -76,6 +77,7 @@ func (g *Gateway) Start(ctx context.Context) error {
 
 // handleMessage is the MessageHandler passed to each platform.
 func (g *Gateway) handleMessage(ctx context.Context, in IncomingMessage) (*OutgoingMessage, error) {
+	ctx = logging.WithRequestID(ctx, "")
 	sess := g.sessions.GetOrCreate(in.Platform, in.UserID)
 
 	eng := agent.NewEngineWithToolsAndAux(
