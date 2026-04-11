@@ -25,9 +25,15 @@ type Scheduler struct {
 	mu      sync.Mutex
 	runs    *metrics.Counter
 	errors  *metrics.Counter
+	history HistoryStore
 }
 
 func NewScheduler() *Scheduler { return &Scheduler{} }
+
+// SetHistory attaches a HistoryStore so every job run is persisted.
+func (s *Scheduler) SetHistory(h HistoryStore) {
+	s.history = h
+}
 
 // SetMetrics attaches a metrics registry and registers the standard
 // cron metrics into it. Safe to call at most once.
@@ -81,11 +87,28 @@ func (s *Scheduler) runJobLoop(ctx context.Context, j Job) {
 			if s.runs != nil {
 				s.runs.With(map[string]string{"job": j.Name}).Inc()
 			}
-			if err := j.Run(ctx); err != nil {
-				slog.ErrorContext(ctx, "cron: job failed", "job", j.Name, "err", err.Error())
+			start := time.Now().UTC()
+			err := j.Run(ctx)
+			end := time.Now().UTC()
+			status := "ok"
+			errMsg := ""
+			if err != nil {
+				status = "error"
+				errMsg = err.Error()
+				slog.ErrorContext(ctx, "cron: job failed", "job", j.Name, "err", errMsg)
 				if s.errors != nil {
 					s.errors.With(map[string]string{"job": j.Name}).Inc()
 				}
+			}
+			if s.history != nil {
+				_, _ = s.history.Record(ctx, Run{
+					JobName:    j.Name,
+					StartedAt:  start,
+					EndedAt:    end,
+					Status:     status,
+					Error:      errMsg,
+					DurationMS: end.Sub(start).Milliseconds(),
+				})
 			}
 		}
 	}
