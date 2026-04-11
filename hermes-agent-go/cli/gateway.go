@@ -8,9 +8,13 @@ import (
 	"strings"
 	"syscall"
 
+	"net/http"
+	"time"
+
 	"github.com/nousresearch/hermes-agent/config"
 	"github.com/nousresearch/hermes-agent/gateway"
 	"github.com/nousresearch/hermes-agent/gateway/platforms"
+	"github.com/nousresearch/hermes-agent/metrics"
 	"github.com/nousresearch/hermes-agent/provider"
 	"github.com/nousresearch/hermes-agent/provider/factory"
 	"github.com/nousresearch/hermes-agent/tool"
@@ -65,6 +69,26 @@ func runGateway(ctx context.Context, app *App) error {
 	}
 
 	g := gateway.NewGateway(*app.Config, primary, aux, app.Storage, reg)
+
+	// Optional /metrics HTTP server.
+	var metricsSrv *http.Server
+	if addr := app.Config.Metrics.Addr; addr != "" {
+		metricsReg := metrics.NewRegistry()
+		g.SetMetrics(metricsReg)
+		mux := http.NewServeMux()
+		mux.Handle("/metrics", metricsReg)
+		metricsSrv = &http.Server{Addr: addr, Handler: mux, ReadHeaderTimeout: 5 * time.Second}
+		go func() {
+			if err := metricsSrv.ListenAndServe(); err != nil && err != http.ErrServerClosed {
+				fmt.Fprintf(os.Stderr, "gateway: metrics server: %v\n", err)
+			}
+		}()
+		defer func() {
+			shutdownCtx, cancel := context.WithTimeout(context.Background(), 2*time.Second)
+			defer cancel()
+			_ = metricsSrv.Shutdown(shutdownCtx)
+		}()
+	}
 
 	for name, pc := range app.Config.Gateway.Platforms {
 		if !pc.Enabled {

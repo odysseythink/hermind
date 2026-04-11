@@ -6,6 +6,8 @@ import (
 	"log/slog"
 	"sync"
 	"time"
+
+	"github.com/nousresearch/hermes-agent/metrics"
 )
 
 // Job is a single scheduled work unit.
@@ -19,11 +21,23 @@ type Job struct {
 
 // Scheduler runs a fixed set of Jobs concurrently.
 type Scheduler struct {
-	jobs []Job
-	mu   sync.Mutex
+	jobs    []Job
+	mu      sync.Mutex
+	runs    *metrics.Counter
+	errors  *metrics.Counter
 }
 
 func NewScheduler() *Scheduler { return &Scheduler{} }
+
+// SetMetrics attaches a metrics registry and registers the standard
+// cron metrics into it. Safe to call at most once.
+func (s *Scheduler) SetMetrics(reg *metrics.Registry) {
+	if reg == nil || s.runs != nil {
+		return
+	}
+	s.runs = reg.NewCounter("cron_job_runs_total", "Total cron job runs.")
+	s.errors = reg.NewCounter("cron_job_errors_total", "Total cron job errors.")
+}
 
 // Add registers a job. Must be called before Start.
 func (s *Scheduler) Add(j Job) {
@@ -47,7 +61,7 @@ func (s *Scheduler) Start(ctx context.Context) error {
 		wg.Add(1)
 		go func(j Job) {
 			defer wg.Done()
-			runJobLoop(ctx, j)
+			s.runJobLoop(ctx, j)
 		}(j)
 	}
 	wg.Wait()
@@ -55,7 +69,7 @@ func (s *Scheduler) Start(ctx context.Context) error {
 }
 
 // runJobLoop fires j.Run on each tick.
-func runJobLoop(ctx context.Context, j Job) {
+func (s *Scheduler) runJobLoop(ctx context.Context, j Job) {
 	t := time.NewTicker(j.Schedule.Every)
 	defer t.Stop()
 	for {
@@ -64,8 +78,14 @@ func runJobLoop(ctx context.Context, j Job) {
 			return
 		case <-t.C:
 			slog.InfoContext(ctx, "cron: running job", "job", j.Name)
+			if s.runs != nil {
+				s.runs.With(map[string]string{"job": j.Name}).Inc()
+			}
 			if err := j.Run(ctx); err != nil {
 				slog.ErrorContext(ctx, "cron: job failed", "job", j.Name, "err", err.Error())
+				if s.errors != nil {
+					s.errors.With(map[string]string{"job": j.Name}).Inc()
+				}
 			}
 		}
 	}

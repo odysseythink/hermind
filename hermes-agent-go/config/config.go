@@ -16,6 +16,7 @@ type Config struct {
 	Gateway           GatewayConfig             `yaml:"gateway,omitempty"`
 	Cron              CronConfig                `yaml:"cron,omitempty"`
 	Logging           LoggingConfig             `yaml:"logging,omitempty"`
+	Metrics           MetricsConfig             `yaml:"metrics,omitempty"`
 }
 
 // CronConfig holds cron scheduler configuration.
@@ -34,6 +35,11 @@ type CronJobConfig struct {
 // LoggingConfig controls the slog output level.
 type LoggingConfig struct {
 	Level string `yaml:"level,omitempty"` // debug, info, warn, error
+}
+
+// MetricsConfig controls the Prometheus /metrics HTTP server.
+type MetricsConfig struct {
+	Addr string `yaml:"addr,omitempty"` // e.g. ":9100"; empty disables metrics
 }
 
 // GatewayConfig controls the multi-platform gateway.

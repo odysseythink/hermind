@@ -13,6 +13,7 @@ import (
 	"github.com/nousresearch/hermes-agent/config"
 	"github.com/nousresearch/hermes-agent/logging"
 	"github.com/nousresearch/hermes-agent/message"
+	"github.com/nousresearch/hermes-agent/metrics"
 	"github.com/nousresearch/hermes-agent/provider"
 	"github.com/nousresearch/hermes-agent/storage"
 	"github.com/nousresearch/hermes-agent/tool"
@@ -29,6 +30,13 @@ type Gateway struct {
 	platforms map[string]Platform
 	sessions  *SessionStore
 	dedup     *Dedup
+
+	// Metrics — nil means metrics are disabled.
+	metrics          *metrics.Registry
+	metricMessages   *metrics.Counter
+	metricErrors     *metrics.Counter
+	metricRetries    *metrics.Counter
+	metricHandlerDur *metrics.Histogram
 }
 
 // NewGateway builds a Gateway with the given dependencies.
@@ -47,6 +55,20 @@ func NewGateway(cfg config.Config, p, aux provider.Provider, s storage.Storage, 
 		g.sessions.SetLoader(g.loadHistoryFromStorage)
 	}
 	return g
+}
+
+// SetMetrics attaches a metrics registry and registers the standard
+// gateway metrics into it. Safe to call at most once; subsequent
+// calls are ignored.
+func (g *Gateway) SetMetrics(reg *metrics.Registry) {
+	if g.metrics != nil || reg == nil {
+		return
+	}
+	g.metrics = reg
+	g.metricMessages = reg.NewCounter("gateway_messages_total", "Total inbound messages.")
+	g.metricErrors = reg.NewCounter("gateway_handler_errors_total", "Total handler errors (final, after retries).")
+	g.metricRetries = reg.NewCounter("gateway_handler_retry_total", "Total handler retry attempts.")
+	g.metricHandlerDur = reg.NewHistogram("gateway_handler_duration_seconds", "Handler duration in seconds.")
 }
 
 // Register adds a platform adapter. Duplicate names replace prior entries.
@@ -95,7 +117,18 @@ func (g *Gateway) handleMessage(ctx context.Context, in IncomingMessage) (*Outgo
 			return nil, nil
 		}
 	}
-	return g.runWithRetry(ctx, in)
+	if g.metricMessages != nil {
+		g.metricMessages.With(map[string]string{"platform": in.Platform}).Inc()
+	}
+	start := time.Now()
+	out, err := g.runWithRetry(ctx, in)
+	if g.metricHandlerDur != nil {
+		g.metricHandlerDur.With(map[string]string{"platform": in.Platform}).Observe(time.Since(start).Seconds())
+	}
+	if err != nil && g.metricErrors != nil {
+		g.metricErrors.With(map[string]string{"platform": in.Platform}).Inc()
+	}
+	return out, err
 }
 
 // runWithRetry executes runOnce up to maxAttempts times with
@@ -114,6 +147,9 @@ func (g *Gateway) runWithRetry(ctx context.Context, in IncomingMessage) (*Outgoi
 		}
 		lastErr = err
 		slog.WarnContext(ctx, "gateway: retry", "attempt", attempt, "err", err.Error())
+		if g.metricRetries != nil {
+			g.metricRetries.With(map[string]string{"platform": in.Platform}).Inc()
+		}
 		if attempt == maxAttempts {
 			break
 		}

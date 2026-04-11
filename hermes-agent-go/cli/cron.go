@@ -3,15 +3,18 @@ package cli
 import (
 	"context"
 	"fmt"
+	"net/http"
 	"os"
 	"os/signal"
 	"syscall"
+	"time"
 
 	"github.com/google/uuid"
 	"github.com/nousresearch/hermes-agent/agent"
 	"github.com/nousresearch/hermes-agent/config"
 	"github.com/nousresearch/hermes-agent/cron"
 	"github.com/nousresearch/hermes-agent/logging"
+	"github.com/nousresearch/hermes-agent/metrics"
 	"github.com/nousresearch/hermes-agent/provider"
 	"github.com/spf13/cobra"
 )
@@ -38,6 +41,27 @@ func runCron(ctx context.Context, app *App) error {
 	}
 
 	sched := cron.NewScheduler()
+
+	// Optional /metrics HTTP server.
+	var metricsSrv *http.Server
+	if addr := app.Config.Metrics.Addr; addr != "" {
+		metricsReg := metrics.NewRegistry()
+		sched.SetMetrics(metricsReg)
+		mux := http.NewServeMux()
+		mux.Handle("/metrics", metricsReg)
+		metricsSrv = &http.Server{Addr: addr, Handler: mux, ReadHeaderTimeout: 5 * time.Second}
+		go func() {
+			if err := metricsSrv.ListenAndServe(); err != nil && err != http.ErrServerClosed {
+				fmt.Fprintf(os.Stderr, "cron: metrics server: %v\n", err)
+			}
+		}()
+		defer func() {
+			shutdownCtx, cancel := context.WithTimeout(context.Background(), 2*time.Second)
+			defer cancel()
+			_ = metricsSrv.Shutdown(shutdownCtx)
+		}()
+	}
+
 	for _, jc := range app.Config.Cron.Jobs {
 		if jc.Name == "" || jc.Schedule == "" || jc.Prompt == "" {
 			fmt.Fprintf(os.Stderr, "cron: skipping malformed job %q\n", jc.Name)
