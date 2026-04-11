@@ -163,6 +163,14 @@ func buildPlatform(name string, pc config.PlatformConfig) (gateway.Platform, err
 		return platforms.NewHomeAssistant(
 			pc.Options["base_url"], pc.Options["access_token"], pc.Options["service"],
 		), nil
+	case "slack_events":
+		return platforms.NewSlackEvents(pc.Options["addr"], pc.Options["bot_token"]), nil
+	case "discord_bot":
+		return platforms.NewDiscordBot(pc.Options["token"], pc.Options["channel_id"]), nil
+	case "mattermost_bot":
+		return platforms.NewMattermostBot(
+			pc.Options["base_url"], pc.Options["token"], pc.Options["channel_id"],
+		), nil
 	default:
 		return nil, fmt.Errorf("unknown platform type %q", t)
 	}
