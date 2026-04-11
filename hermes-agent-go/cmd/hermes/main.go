@@ -11,11 +11,17 @@ import (
 	"github.com/nousresearch/hermes-agent/cli"
 )
 
-// Version is set via ldflags at build time.
-var Version = "dev"
+// Injected at build time via ldflags.
+var (
+	Version   = "dev"
+	Commit    = ""
+	BuildDate = ""
+)
 
 func main() {
 	cli.Version = Version
+	cli.Commit = Commit
+	cli.BuildDate = BuildDate
 
 	app, err := cli.NewApp()
 	if err != nil {
