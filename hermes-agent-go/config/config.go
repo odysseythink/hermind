@@ -71,12 +71,42 @@ type BrowserbaseConfig struct {
 // MemoryConfig holds the optional external memory provider configuration.
 // At most one provider is active at a time (see tool/memory/memprovider).
 type MemoryConfig struct {
-	Provider    string            `yaml:"provider,omitempty"` // "", "honcho", "mem0", "supermemory", "hindsight", ...
-	Honcho      HonchoConfig      `yaml:"honcho,omitempty"`
-	Mem0        Mem0Config        `yaml:"mem0,omitempty"`
-	Supermemory SupermemoryConfig `yaml:"supermemory,omitempty"`
-	Hindsight   HindsightConfig   `yaml:"hindsight,omitempty"`
+	Provider     string             `yaml:"provider,omitempty"` // honcho|mem0|supermemory|hindsight|retaindb|openviking|byterover|holographic
+	Honcho       HonchoConfig       `yaml:"honcho,omitempty"`
+	Mem0         Mem0Config         `yaml:"mem0,omitempty"`
+	Supermemory  SupermemoryConfig  `yaml:"supermemory,omitempty"`
+	Hindsight    HindsightConfig    `yaml:"hindsight,omitempty"`
+	RetainDB     RetainDBConfig     `yaml:"retaindb,omitempty"`
+	OpenViking   OpenVikingConfig   `yaml:"openviking,omitempty"`
+	Byterover    ByteroverConfig    `yaml:"byterover,omitempty"`
+	Holographic  HolographicConfig  `yaml:"holographic,omitempty"`
 }
+
+// RetainDBConfig holds the RetainDB provider configuration.
+type RetainDBConfig struct {
+	BaseURL string `yaml:"base_url,omitempty"`
+	APIKey  string `yaml:"api_key,omitempty"`
+	Project string `yaml:"project,omitempty"`
+	UserID  string `yaml:"user_id,omitempty"`
+}
+
+// OpenVikingConfig holds the OpenViking provider configuration.
+type OpenVikingConfig struct {
+	Endpoint string `yaml:"endpoint,omitempty"`
+	APIKey   string `yaml:"api_key,omitempty"`
+}
+
+// ByteroverConfig holds the Byterover CLI wrapper configuration.
+// Byterover is driven by a local `brv` CLI; this config only records
+// an optional explicit path to the binary and a working directory.
+type ByteroverConfig struct {
+	BrvPath string `yaml:"brv_path,omitempty"`
+	Cwd     string `yaml:"cwd,omitempty"`
+}
+
+// HolographicConfig is a placeholder — the holographic provider uses
+// the shared SQLite storage so there is no backend URL or key.
+type HolographicConfig struct{}
 
 // HindsightConfig holds the Hindsight cloud provider configuration.
 type HindsightConfig struct {

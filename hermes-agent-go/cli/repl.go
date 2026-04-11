@@ -140,10 +140,10 @@ func runREPL(ctx context.Context, app *App) error {
 
 	sessionID := uuid.NewString()
 
-	// External memory provider (Plan 6c): honcho / mem0 / supermemory.
-	// Register its tools into the main registry and hook Shutdown into
-	// the REPL lifecycle.
-	extMem, err := memprovider.New(app.Config.Memory)
+	// External memory provider (Plan 6c / 6c.1 / 6c.2): register the
+	// active provider's tools into the main registry and hook Shutdown
+	// into the REPL lifecycle.
+	extMem, err := memprovider.New(app.Config.Memory, memprovider.WithStorage(app.Storage))
 	if err != nil {
 		fmt.Fprintf(os.Stderr, "hermes: memory provider: %v\n", err)
 	}

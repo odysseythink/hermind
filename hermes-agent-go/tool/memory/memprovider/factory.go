@@ -5,13 +5,35 @@ import (
 	"strings"
 
 	"github.com/nousresearch/hermes-agent/config"
+	"github.com/nousresearch/hermes-agent/storage"
 )
+
+// FactoryOption customizes how memprovider.New builds a Provider.
+// Only the holographic backend currently uses these; other providers
+// are configured via config.MemoryConfig alone.
+type FactoryOption func(*factoryOptions)
+
+type factoryOptions struct {
+	storage storage.Storage
+}
+
+// WithStorage injects a shared storage.Storage into the factory so
+// local-backed providers (holographic) can reuse the same SQLite store
+// as the built-in memory tool.
+func WithStorage(s storage.Storage) FactoryOption {
+	return func(o *factoryOptions) { o.storage = s }
+}
 
 // New builds the active external memory provider from configuration.
 // Returns (nil, nil) when no provider is configured. Returns an error
 // when the provider name is unknown or the selected provider has no
-// API key (so typos surface loudly instead of silently doing nothing).
-func New(cfg config.MemoryConfig) (Provider, error) {
+// credentials / dependencies.
+func New(cfg config.MemoryConfig, opts ...FactoryOption) (Provider, error) {
+	fo := &factoryOptions{}
+	for _, opt := range opts {
+		opt(fo)
+	}
+
 	name := strings.ToLower(strings.TrimSpace(cfg.Provider))
 	if name == "" {
 		return nil, nil
@@ -37,6 +59,20 @@ func New(cfg config.MemoryConfig) (Provider, error) {
 			return nil, fmt.Errorf("memprovider: hindsight requires api_key")
 		}
 		return NewHindsight(cfg.Hindsight), nil
+	case "retaindb":
+		if cfg.RetainDB.APIKey == "" {
+			return nil, fmt.Errorf("memprovider: retaindb requires api_key")
+		}
+		return NewRetainDB(cfg.RetainDB), nil
+	case "openviking":
+		return NewOpenViking(cfg.OpenViking), nil
+	case "byterover":
+		return NewByterover(cfg.Byterover), nil
+	case "holographic":
+		if fo.storage == nil {
+			return nil, fmt.Errorf("memprovider: holographic requires storage (pass WithStorage)")
+		}
+		return NewHolographic(fo.storage), nil
 	default:
 		return nil, fmt.Errorf("memprovider: unknown provider %q", name)
 	}
