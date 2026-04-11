@@ -39,6 +39,7 @@ func NewRootCmd(app *App) *cobra.Command {
 		newModelsCmd(app),
 		newProfileCmd(app),
 		newPluginsCmd(app),
+		newUpgradeCmd(app),
 		newVersionCmd(),
 	)
 
