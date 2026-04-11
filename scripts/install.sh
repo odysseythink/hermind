@@ -1,6 +1,11 @@
 #!/usr/bin/env bash
 # install.sh — fetch the latest hermes release from GitHub and install
 # it into /usr/local/bin. Override PREFIX or VERSION via env vars.
+#
+# On macOS and Linux with Homebrew, the preferred path is:
+#     brew tap nousresearch/tap
+#     brew install hermes
+# This script is for systems without Homebrew.
 set -euo pipefail
 
 REPO=${REPO:-nousresearch/hermes-agent-go}

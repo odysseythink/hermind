@@ -40,6 +40,26 @@ archives:
       - README*
       - CHANGELOG*
 
+brews:
+  - name: hermes
+    ids: [hermes]
+    homepage: https://github.com/nousresearch/hermes-agent-go
+    description: "Hermes Agent — Go port of the hermes AI agent framework"
+    license: MIT
+    repository:
+      owner: nousresearch
+      name: homebrew-tap
+      token: "{{ .Env.HOMEBREW_TAP_TOKEN }}"
+    directory: Formula
+    commit_author:
+      name: hermes-release-bot
+      email: hermes-release-bot@users.noreply.github.com
+    commit_msg_template: "brew: update hermes to {{ .Tag }}"
+    install: |
+      bin.install "hermes"
+    test: |
+      system "#{bin}/hermes", "version"
+
 checksum:
   name_template: 'checksums.txt'
 

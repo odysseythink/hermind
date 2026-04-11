@@ -1,3 +1,11 @@
+# Release workflow.
+#
+# Required repo secrets:
+#   HOMEBREW_TAP_TOKEN — personal access token with "contents:write" on
+#                         the homebrew-tap repo so goreleaser can push
+#                         an updated formula. The default GITHUB_TOKEN
+#                         only scopes to this repo and cannot reach the
+#                         tap repo.
 name: release
 
 on:
@@ -35,3 +43,4 @@ jobs:
           args: release --clean
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          HOMEBREW_TAP_TOKEN: ${{ secrets.HOMEBREW_TAP_TOKEN }}
