@@ -133,3 +133,52 @@ func TestDiscordGatewaySendReply(t *testing.T) {
 		t.Errorf("hits = %d", atomic.LoadInt32(&hits))
 	}
 }
+
+func TestDiscordGatewayIgnoresBotMessages(t *testing.T) {
+	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		c, err := websocket.Accept(w, r, nil)
+		if err != nil {
+			return
+		}
+		defer c.CloseNow()
+
+		// Hello.
+		hello := map[string]any{"op": 10, "d": map[string]any{"heartbeat_interval": 30000}}
+		buf, _ := json.Marshal(hello)
+		_ = c.Write(r.Context(), websocket.MessageText, buf)
+
+		// Read Identify.
+		_, _, _ = c.Read(r.Context())
+
+		// Send a bot message (should be ignored).
+		dispatch := map[string]any{
+			"op": 0, "t": "MESSAGE_CREATE", "s": 1,
+			"d": map[string]any{
+				"id": "msg1", "channel_id": "ch1", "content": "bot says hi",
+				"author": map[string]any{"id": "bot1", "username": "mybot", "bot": true},
+			},
+		}
+		buf, _ = json.Marshal(dispatch)
+		_ = c.Write(r.Context(), websocket.MessageText, buf)
+
+		<-r.Context().Done()
+	}))
+	defer srv.Close()
+
+	restSrv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, _ *http.Request) {
+		t.Error("SendReply should not be called for bot messages")
+		_, _ = w.Write([]byte(`{"id":"msg1"}`))
+	}))
+	defer restSrv.Close()
+
+	wsURL := "ws" + srv.URL[len("http"):]
+	dg := NewDiscordGateway("tok", "").WithGatewayURL(wsURL).WithBaseURL(restSrv.URL)
+
+	ctx, cancel := context.WithTimeout(context.Background(), 1*time.Second)
+	defer cancel()
+
+	_ = dg.Run(ctx, func(_ context.Context, in gateway.IncomingMessage) (*gateway.OutgoingMessage, error) {
+		t.Error("handler should not be called for bot messages")
+		return nil, nil
+	})
+}

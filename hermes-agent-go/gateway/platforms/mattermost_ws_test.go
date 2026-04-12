@@ -126,3 +126,47 @@ func TestMattermostWSSendReply(t *testing.T) {
 		t.Errorf("hits = %d", atomic.LoadInt32(&hits))
 	}
 }
+
+func TestMattermostWSIgnoresEmptyMessages(t *testing.T) {
+	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		c, err := websocket.Accept(w, r, nil)
+		if err != nil {
+			return
+		}
+		defer c.CloseNow()
+
+		// Auth challenge.
+		challenge := map[string]any{"event": "authentication_challenge", "status": "OK"}
+		buf, _ := json.Marshal(challenge)
+		_ = c.Write(r.Context(), websocket.MessageText, buf)
+		// Read auth response.
+		_, _, _ = c.Read(r.Context())
+
+		// Send an empty post.
+		post := map[string]any{"id": "p1", "channel_id": "ch1", "message": "", "user_id": "u1"}
+		postJSON, _ := json.Marshal(post)
+		event := map[string]any{"event": "posted", "data": map[string]any{"post": string(postJSON)}}
+		buf, _ = json.Marshal(event)
+		_ = c.Write(r.Context(), websocket.MessageText, buf)
+
+		<-r.Context().Done()
+	}))
+	defer srv.Close()
+
+	restSrv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, _ *http.Request) {
+		t.Error("SendReply should not be called for empty messages")
+		_, _ = w.Write([]byte(`{"id":"p1"}`))
+	}))
+	defer restSrv.Close()
+
+	wsURL := "ws" + srv.URL[len("http"):]
+	mm := NewMattermostWS(restSrv.URL, "tok", "").WithWebSocketURL(wsURL)
+
+	ctx, cancel := context.WithTimeout(context.Background(), 1*time.Second)
+	defer cancel()
+
+	_ = mm.Run(ctx, func(_ context.Context, in gateway.IncomingMessage) (*gateway.OutgoingMessage, error) {
+		t.Error("handler should not be called for empty messages")
+		return nil, nil
+	})
+}
