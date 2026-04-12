@@ -1,8 +1,18 @@
 package tracing
 
 import (
+	"bytes"
+	"context"
+	"log/slog"
+	"net/http"
+	"sync"
+	"time"
+
 	commonpb "go.opentelemetry.io/proto/otlp/common/v1"
+	collectorpb "go.opentelemetry.io/proto/otlp/collector/trace/v1"
+	resourcepb "go.opentelemetry.io/proto/otlp/resource/v1"
 	tracepb "go.opentelemetry.io/proto/otlp/trace/v1"
+	"google.golang.org/protobuf/proto"
 )
 
 // spanToOTLP converts an internal Span to an OTLP protobuf Span.
@@ -80,4 +90,132 @@ func statusToOTLP(s Status, msg string) *tracepb.Status {
 		code = tracepb.Status_STATUS_CODE_UNSET
 	}
 	return &tracepb.Status{Code: code, Message: msg}
+}
+
+// OTLPHTTPConfig configures the OTLP/HTTP exporter.
+type OTLPHTTPConfig struct {
+	Endpoint      string            // base URL, e.g. "http://localhost:4318"
+	Headers       map[string]string // sent with every request
+	BatchSize     int               // max spans per flush (default 256)
+	FlushInterval time.Duration     // how often to flush (default 5s)
+}
+
+// OTLPHTTPExporter exports spans to an OTLP/HTTP endpoint.
+type OTLPHTTPExporter struct {
+	cfg     OTLPHTTPConfig
+	client  *http.Client
+	mu      sync.Mutex
+	buffer  []*Span
+	done    chan struct{}
+	stopped bool
+}
+
+func NewOTLPHTTPExporter(cfg OTLPHTTPConfig) *OTLPHTTPExporter {
+	if cfg.BatchSize <= 0 {
+		cfg.BatchSize = 256
+	}
+	if cfg.FlushInterval <= 0 {
+		cfg.FlushInterval = 5 * time.Second
+	}
+	e := &OTLPHTTPExporter{
+		cfg:    cfg,
+		client: &http.Client{Timeout: 30 * time.Second},
+		buffer: make([]*Span, 0, cfg.BatchSize),
+		done:   make(chan struct{}),
+	}
+	go e.flushLoop()
+	return e
+}
+
+func (e *OTLPHTTPExporter) Export(s *Span) {
+	e.mu.Lock()
+	defer e.mu.Unlock()
+	if e.stopped {
+		return
+	}
+	e.buffer = append(e.buffer, s)
+	if len(e.buffer) >= e.cfg.BatchSize {
+		e.flushLocked()
+	}
+}
+
+func (e *OTLPHTTPExporter) Shutdown(ctx context.Context) error {
+	e.mu.Lock()
+	if e.stopped {
+		e.mu.Unlock()
+		return nil
+	}
+	e.stopped = true
+	e.flushLocked()
+	e.mu.Unlock()
+	close(e.done)
+	return nil
+}
+
+func (e *OTLPHTTPExporter) flushLoop() {
+	ticker := time.NewTicker(e.cfg.FlushInterval)
+	defer ticker.Stop()
+	for {
+		select {
+		case <-e.done:
+			return
+		case <-ticker.C:
+			e.mu.Lock()
+			e.flushLocked()
+			e.mu.Unlock()
+		}
+	}
+}
+
+func (e *OTLPHTTPExporter) flushLocked() {
+	if len(e.buffer) == 0 {
+		return
+	}
+	batch := e.buffer
+	e.buffer = make([]*Span, 0, e.cfg.BatchSize)
+
+	otlpSpans := make([]*tracepb.Span, len(batch))
+	for i, s := range batch {
+		otlpSpans[i] = spanToOTLP(s)
+	}
+
+	req := &collectorpb.ExportTraceServiceRequest{
+		ResourceSpans: []*tracepb.ResourceSpans{{
+			Resource:   &resourcepb.Resource{},
+			ScopeSpans: []*tracepb.ScopeSpans{{Spans: otlpSpans}},
+		}},
+	}
+
+	go e.send(req)
+}
+
+func (e *OTLPHTTPExporter) send(req *collectorpb.ExportTraceServiceRequest) {
+	body, err := proto.Marshal(req)
+	if err != nil {
+		slog.Warn("otlp: marshal error", "err", err)
+		return
+	}
+	url := e.cfg.Endpoint + "/v1/traces"
+	httpReq, err := http.NewRequest("POST", url, bytes.NewReader(body))
+	if err != nil {
+		slog.Warn("otlp: request error", "err", err)
+		return
+	}
+	httpReq.Header.Set("Content-Type", "application/x-protobuf")
+	for k, v := range e.cfg.Headers {
+		httpReq.Header.Set(k, v)
+	}
+	resp, err := e.client.Do(httpReq)
+	if err != nil {
+		slog.Warn("otlp: send error", "err", err)
+		return
+	}
+	defer resp.Body.Close()
+	if resp.StatusCode == 429 || resp.StatusCode == 503 {
+		slog.Warn("otlp: transient error, spans dropped", "status", resp.StatusCode)
+		return
+	}
+	if resp.StatusCode >= 300 {
+		slog.Warn("otlp: export failed", "status", resp.StatusCode)
+	}
 }
