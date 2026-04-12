@@ -184,3 +184,41 @@ func TestOTLPHTTPExporterSendsHeaders(t *testing.T) {
 		t.Error("custom header not received")
 	}
 }
+
+func TestOTLPHTTPExporterWithTracer(t *testing.T) {
+	var received int32
+	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		body, _ := io.ReadAll(r.Body)
+		var req collectorpb.ExportTraceServiceRequest
+		if err := proto.Unmarshal(body, &req); err != nil {
+			t.Errorf("unmarshal: %v", err)
+		}
+		spans := req.ResourceSpans[0].ScopeSpans[0].Spans
+		for _, s := range spans {
+			if s.Name == "parent" || s.Name == "child" {
+				atomic.AddInt32(&received, 1)
+			}
+		}
+		w.WriteHeader(200)
+	}))
+	defer srv.Close()
+
+	exp := NewOTLPHTTPExporter(OTLPHTTPConfig{
+		Endpoint:      srv.URL,
+		FlushInterval: 50 * time.Millisecond,
+		BatchSize:     10,
+	})
+	tr := NewTracer(exp)
+
+	ctx, parent := tr.Start(context.Background(), "parent", String("key", "val"))
+	_, child := tr.Start(ctx, "child")
+	tr.End(child)
+	tr.End(parent)
+
+	time.Sleep(200 * time.Millisecond)
+	tr.Shutdown(context.Background())
+
+	if atomic.LoadInt32(&received) < 2 {
+		t.Errorf("expected 2 spans, got %d", received)
+	}
+}
