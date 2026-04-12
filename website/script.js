@@ -12,9 +12,18 @@ const PLATFORMS = {
     stepNote:
       "Downloads a single Go binary. No Python, no dependencies, no sudo needed.",
   },
+  brew: {
+    command: "brew install NousResearch/tap/hermes-agent",
+    prompt: "$",
+    note: "macOS & Linux · Requires Homebrew · Auto-updates with brew upgrade",
+    stepNote:
+      "Installs via Homebrew tap. Auto-updates with brew upgrade.",
+  },
 };
 
 function detectPlatform() {
+  const ua = navigator.userAgent.toLowerCase();
+  if (ua.includes("mac")) return "brew";
   return "linux";
 }
 
