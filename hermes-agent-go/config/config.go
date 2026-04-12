@@ -64,10 +64,10 @@ type PlatformConfig struct {
 }
 
 // BrowserConfig holds browser automation provider configuration.
-// Only Browserbase is supported in Plan 6d.
 type BrowserConfig struct {
-	Provider    string            `yaml:"provider,omitempty"` // "", "browserbase"
+	Provider    string            `yaml:"provider,omitempty"` // "", "browserbase", "camofox"
 	Browserbase BrowserbaseConfig `yaml:"browserbase,omitempty"`
+	Camofox     CamofoxConfig     `yaml:"camofox,omitempty"`
 }
 
 // BrowserbaseConfig holds Browserbase cloud provider settings.
@@ -79,6 +79,12 @@ type BrowserbaseConfig struct {
 	ProjectID string `yaml:"project_id,omitempty"`
 	KeepAlive bool   `yaml:"keep_alive,omitempty"`
 	Proxies   bool   `yaml:"proxies,omitempty"`
+}
+
+// CamofoxConfig holds Camofox local browser provider settings.
+type CamofoxConfig struct {
+	BaseURL            string `yaml:"base_url,omitempty"`            // default http://localhost:9377
+	ManagedPersistence bool   `yaml:"managed_persistence,omitempty"` // reuse profiles per user ID
 }
 
 // MemoryConfig holds the optional external memory provider configuration.
