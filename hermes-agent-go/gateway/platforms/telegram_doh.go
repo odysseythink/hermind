@@ -150,9 +150,12 @@ func (d *DoHTransport) tryFallbackIP(req *http.Request, ip string) (*http.Respon
 	if clone.Host == "" {
 		clone.Host = origHost
 	}
-	transport := d.Primary
-	if transport == nil {
-		transport = http.DefaultTransport
+	timeout := d.Timeout
+	if timeout == 0 {
+		timeout = 10 * time.Second
+	}
+	transport := &http.Transport{
+		DialContext: (&net.Dialer{Timeout: timeout}).DialContext,
 	}
 	return transport.RoundTrip(clone)
 }
