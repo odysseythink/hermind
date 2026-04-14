@@ -155,8 +155,8 @@ func (d *DiscordGateway) sendIdentify(ctx context.Context) {
 			"intents": 512 | 32768, // GUILD_MESSAGES | MESSAGE_CONTENT
 			"properties": map[string]string{
 				"os":      "linux",
-				"browser": "hermes-agent",
-				"device":  "hermes-agent",
+				"browser": "hermind",
+				"device":  "hermind",
 			},
 		},
 	}

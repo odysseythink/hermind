@@ -16,7 +16,7 @@ import (
 
 func TestWebFetchHappyPath(t *testing.T) {
 	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		assert.Equal(t, "hermes-agent/1.0", r.Header.Get("User-Agent"))
+		assert.Equal(t, "hermind/1.0", r.Header.Get("User-Agent"))
 		w.Header().Set("Content-Type", "text/plain")
 		_, _ = w.Write([]byte("hello world"))
 	}))

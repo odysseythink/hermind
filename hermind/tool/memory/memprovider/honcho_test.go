@@ -38,7 +38,7 @@ func TestHonchoSyncTurnAndRecall(t *testing.T) {
 	p := NewHoncho(config.HonchoConfig{
 		BaseURL:   srv.URL,
 		APIKey:    "test-key",
-		Workspace: "hermes",
+		Workspace: "hermind",
 		Peer:      "me",
 	})
 	if p.Name() != "honcho" {

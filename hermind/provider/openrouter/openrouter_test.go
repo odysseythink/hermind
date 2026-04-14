@@ -58,5 +58,5 @@ func TestSendsRoutingHeaders(t *testing.T) {
 	require.NoError(t, err)
 
 	assert.Equal(t, "https://github.com/odysseythink/hermind", gotReferer)
-	assert.Equal(t, "hermes-agent", gotTitle)
+	assert.Equal(t, "hermind", gotTitle)
 }

@@ -77,7 +77,7 @@ func webFetchHandler(ctx context.Context, raw json.RawMessage) (string, error) {
 	}
 	// Default User-Agent
 	if httpReq.Header.Get("User-Agent") == "" {
-		httpReq.Header.Set("User-Agent", "hermes-agent/1.0")
+		httpReq.Header.Set("User-Agent", "hermind/1.0")
 	}
 
 	client := &http.Client{Timeout: fetchTimeout}

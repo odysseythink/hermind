@@ -23,7 +23,7 @@ func NewHindsight(cfg config.HindsightConfig) *Hindsight {
 	}
 	cfg.BaseURL = strings.TrimRight(cfg.BaseURL, "/")
 	if cfg.BankID == "" {
-		cfg.BankID = "hermes"
+		cfg.BankID = "hermind"
 	}
 	if cfg.Budget == "" {
 		cfg.Budget = "mid"

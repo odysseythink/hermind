@@ -52,7 +52,7 @@ func (e *Email) SendReply(ctx context.Context, out gateway.OutgoingMessage) erro
 	if e.Host == "" || e.From == "" || e.To == "" {
 		return fmt.Errorf("email: host/from/to are required")
 	}
-	subject := "hermes reply"
+	subject := "hermind reply"
 	if out.ChatID != "" {
 		subject = "hermind: " + out.ChatID
 	}

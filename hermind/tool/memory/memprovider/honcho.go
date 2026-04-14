@@ -29,7 +29,7 @@ func NewHoncho(cfg config.HonchoConfig) *Honcho {
 	}
 	cfg.BaseURL = strings.TrimRight(cfg.BaseURL, "/")
 	if cfg.Workspace == "" {
-		cfg.Workspace = "hermes"
+		cfg.Workspace = "hermind"
 	}
 	if cfg.Peer == "" {
 		cfg.Peer = "me"

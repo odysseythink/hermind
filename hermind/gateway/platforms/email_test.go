@@ -34,7 +34,7 @@ func TestEmailSendReplyWithInjectedSendMail(t *testing.T) {
 	if capturedFrom != "bot@x" || len(capturedTo) != 1 || capturedTo[0] != "me@x" {
 		t.Errorf("from/to = %q / %v", capturedFrom, capturedTo)
 	}
-	if !strings.Contains(capturedBody, "Subject: hermes: t1") {
+	if !strings.Contains(capturedBody, "Subject: hermind: t1") {
 		t.Errorf("missing subject: %s", capturedBody)
 	}
 	if !strings.Contains(capturedBody, "\r\n\r\nhi") {

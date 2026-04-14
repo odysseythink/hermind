@@ -73,7 +73,7 @@ func TestServerFullFlow(t *testing.T) {
 		return &gateway.OutgoingMessage{Text: "echo: " + in.Text, UserID: in.UserID, ChatID: in.ChatID}, nil
 	}
 
-	srv := NewServer(addr, "hermes-test", reg, handler, perms)
+	srv := NewServer(addr, "hermind-test", reg, handler, perms)
 	ctx, cancel := context.WithCancel(context.Background())
 	defer cancel()
 	go func() { _ = srv.Run(ctx) }()
@@ -104,7 +104,7 @@ func TestServerFullFlow(t *testing.T) {
 	var wellKnown map[string]any
 	_ = json.NewDecoder(resp.Body).Decode(&wellKnown)
 	resp.Body.Close()
-	if wellKnown["name"] != "hermes-test" {
+	if wellKnown["name"] != "hermind-test" {
 		t.Errorf("name = %v", wellKnown["name"])
 	}
 

@@ -13,11 +13,11 @@ const defaultBaseURL = "https://openrouter.ai/api/v1"
 // but expects two extra headers for ranking/attribution:
 //
 //	HTTP-Referer: https://github.com/odysseythink/hermind
-//	X-Title: hermes-agent
+//	X-Title: hermind
 func New(cfg config.ProviderConfig) (provider.Provider, error) {
 	headers := map[string]string{
 		"HTTP-Referer": "https://github.com/odysseythink/hermind",
-		"X-Title":      "hermes-agent",
+		"X-Title":      "hermind",
 	}
 	return openaicompat.NewFromProviderConfig("openrouter", defaultBaseURL, cfg, headers)
 }

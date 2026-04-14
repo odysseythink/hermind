@@ -39,7 +39,7 @@ func (s *Supermemory) add(ctx context.Context, content string) error {
 	body := map[string]any{
 		"content":        content,
 		"user_id":        s.cfg.UserID,
-		"container_tags": []string{"hermes"},
+		"container_tags": []string{"hermind"},
 	}
 	return httpJSON(ctx, "POST", url, s.cfg.APIKey, body, nil)
 }

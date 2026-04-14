@@ -8,9 +8,9 @@ import (
 	"time"
 )
 
-// Pairing ties a platform user identity to a hermes profile via a
+// Pairing ties a platform user identity to a hermind profile via a
 // short-lived one-time token. The typical UX is:
-//   1. Operator runs `hermes pair create bob` → prints TOKEN.
+//   1. Operator runs `hermind pair create bob` → prints TOKEN.
 //   2. Operator tells bob to DM "/pair TOKEN" on the messaging
 //      platform.
 //   3. The gateway calls Pairing.Redeem(TOKEN, platform, userID)

@@ -22,7 +22,7 @@ func NewRetainDB(cfg config.RetainDBConfig) *RetainDB {
 	}
 	cfg.BaseURL = strings.TrimRight(cfg.BaseURL, "/")
 	if cfg.Project == "" {
-		cfg.Project = "hermes"
+		cfg.Project = "hermind"
 	}
 	if cfg.UserID == "" {
 		cfg.UserID = "default"

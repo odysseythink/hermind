@@ -68,7 +68,7 @@ func (m *Manager) startOne(ctx context.Context, cfg ServerConfig) error {
 		return fmt.Errorf("transport start: %w", err)
 	}
 
-	if _, err := client.Initialize(ctx, "hermes-agent", m.clientVersion); err != nil {
+	if _, err := client.Initialize(ctx, "hermind", m.clientVersion); err != nil {
 		_ = client.Close()
 		return fmt.Errorf("initialize: %w", err)
 	}

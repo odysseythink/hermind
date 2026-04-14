@@ -33,7 +33,7 @@ func TestRetainDBSaveAndSearch(t *testing.T) {
 	p := NewRetainDB(config.RetainDBConfig{
 		BaseURL: srv.URL,
 		APIKey:  "k",
-		Project: "hermes",
+		Project: "hermind",
 		UserID:  "alice",
 	})
 	if p.Name() != "retaindb" {

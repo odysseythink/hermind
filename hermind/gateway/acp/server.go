@@ -44,7 +44,7 @@ func NewServer(addr, name string, toolReg *tool.Registry, handler gateway.Messag
 		addr = ":8083"
 	}
 	if name == "" {
-		name = "hermes"
+		name = "hermind"
 	}
 	return &Server{
 		Addr:     addr,

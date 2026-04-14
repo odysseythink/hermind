@@ -36,7 +36,7 @@ func TestHindsightRetainRecallReflect(t *testing.T) {
 	p := NewHindsight(config.HindsightConfig{
 		BaseURL: srv.URL,
 		APIKey:  "hs-key",
-		BankID:  "hermes",
+		BankID:  "hermind",
 		Budget:  "mid",
 	})
 	if p.Name() != "hindsight" {
