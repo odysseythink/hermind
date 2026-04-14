@@ -2,6 +2,11 @@
 package cli
 
 import (
+	"errors"
+	"fmt"
+	"os"
+
+	configui "github.com/odysseythink/hermind/cli/ui/config"
 	"github.com/odysseythink/hermind/config"
 	"github.com/odysseythink/hermind/storage"
 )
@@ -15,7 +20,19 @@ type App struct {
 // NewApp constructs an App by loading config. Storage is opened lazily
 // by the command that needs it.
 func NewApp() (*App, error) {
-	cfg, err := config.Load()
+	path, err := defaultConfigPath()
+	if err != nil {
+		return nil, err
+	}
+
+	if _, statErr := os.Stat(path); errors.Is(statErr, os.ErrNotExist) {
+		fmt.Fprintln(os.Stderr, "no config found — launching first-run setup...")
+		if err := configui.RunFirstRun(path); err != nil {
+			return nil, fmt.Errorf("first-run setup: %w", err)
+		}
+	}
+
+	cfg, err := config.LoadFromPath(path)
 	if err != nil {
 		return nil, err
 	}
