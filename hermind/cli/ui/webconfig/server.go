@@ -4,8 +4,10 @@ package webconfig
 
 import (
 	"embed"
+	"errors"
 	"io/fs"
 	"net/http"
+	"time"
 
 	"github.com/odysseythink/hermind/config/editor"
 )
@@ -16,6 +18,7 @@ var webFS embed.FS
 // Server wires editor.Doc to HTTP handlers + embedded static assets.
 type Server struct {
 	doc *editor.Doc
+	srv *http.Server
 }
 
 // New loads path and prepares a Server.
@@ -46,5 +49,15 @@ func Serve(path, addr string) error {
 	if err != nil {
 		return err
 	}
-	return http.ListenAndServe(addr, s.Handler())
+	s.srv = &http.Server{
+		Addr:              addr,
+		Handler:           s.Handler(),
+		ReadHeaderTimeout: 10 * time.Second,
+	}
+	err = s.srv.ListenAndServe()
+	if errors.Is(err, http.ErrServerClosed) {
+		return nil
+	}
+	return err
 }
+

@@ -140,3 +140,23 @@ func TestPostConfigAcceptsBoolAndInt(t *testing.T) {
 		t.Errorf("int not serialized as YAML int:\n%s", raw)
 	}
 }
+
+func TestRevealRejectsCrossOrigin(t *testing.T) {
+	dir := t.TempDir()
+	p := filepath.Join(dir, "config.yaml")
+	os.WriteFile(p, []byte("memory:\n  honcho:\n    api_key: s\n"), 0o644)
+	s, _ := New(p)
+	ts := httptest.NewServer(s.Handler())
+	defer ts.Close()
+
+	body, _ := json.Marshal(map[string]string{"path": "memory.honcho.api_key"})
+	req, _ := http.NewRequest("POST", ts.URL+"/api/reveal", bytes.NewReader(body))
+	req.Header.Set("Origin", "http://evil.example.com")
+	resp, err := http.DefaultClient.Do(req)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if resp.StatusCode != 403 {
+		t.Errorf("expected 403, got %d", resp.StatusCode)
+	}
+}

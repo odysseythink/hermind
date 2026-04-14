@@ -66,7 +66,8 @@ func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 			ti.Placeholder = "name (e.g. openai)"
 			ti.Focus()
 			m.ed = &fieldEditor{
-				field: editor.Field{Path: f.Path, Kind: editor.KindString, Label: "new " + f.Label},
+				mode:  modeAddItem,
+				field: f,
 				input: ti,
 			}
 			m.editing = true
@@ -81,7 +82,8 @@ func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 			ti.Placeholder = "name to delete"
 			ti.Focus()
 			m.ed = &fieldEditor{
-				field: editor.Field{Path: f.Path, Kind: editor.KindString, Label: "del " + f.Label},
+				mode:  modeDeleteItem,
+				field: f,
 				input: ti,
 			}
 			m.editing = true

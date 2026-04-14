@@ -10,7 +10,7 @@ import (
 // View implements tea.Model.
 func (m Model) View() string {
 	var b strings.Builder
-	b.WriteString("hermind config — [tab] section  [↑↓] field  [enter] edit  [s] save  [q] quit\n\n")
+	b.WriteString("hermind config — [tab] section  [↑↓] field  [enter] edit/commit  [esc] cancel  [a] add  [d] del  [s] save  [q] quit\n\n")
 
 	// section column
 	b.WriteString("Sections:\n")

@@ -8,11 +8,21 @@ import (
 	"github.com/odysseythink/hermind/config/editor"
 )
 
+// editorMode distinguishes field editing vs. add/delete-item prompting.
+type editorMode int
+
+const (
+	modeEdit editorMode = iota
+	modeAddItem
+	modeDeleteItem
+)
+
 // fieldEditor holds per-field editor state while Model.editing==true.
 type fieldEditor struct {
 	field   editor.Field
 	input   textinput.Model
 	enumIdx int
+	mode    editorMode
 }
 
 func newFieldEditor(f editor.Field, current string) fieldEditor {
@@ -37,19 +47,20 @@ func newFieldEditor(f editor.Field, current string) fieldEditor {
 // commit converts the editor state back into a value and writes it to doc.
 // Returns user-visible error string or empty on success.
 func (fe fieldEditor) commit(doc *editor.Doc) string {
-	if strings.HasPrefix(fe.field.Label, "new ") {
+	switch fe.mode {
+	case modeAddItem:
 		name := strings.TrimSpace(fe.input.Value())
 		if name == "" {
 			return "name required"
 		}
-		if fe.field.Path == "providers" {
+		switch fe.field.Path {
+		case "providers":
 			return writeBlock(doc, fe.field.Path+"."+name, newProviderBlock(name))
-		}
-		if fe.field.Path == "mcp.servers" {
+		case "mcp.servers":
 			return writeBlock(doc, fe.field.Path+"."+name, newMCPServerBlock())
 		}
-	}
-	if strings.HasPrefix(fe.field.Label, "del ") {
+		return "unsupported list path: " + fe.field.Path
+	case modeDeleteItem:
 		name := strings.TrimSpace(fe.input.Value())
 		if name == "" {
 			return "name required"

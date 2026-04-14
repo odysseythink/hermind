@@ -1,9 +1,11 @@
 package webconfig
 
 import (
+	"context"
 	"encoding/json"
 	"net/http"
-	"os"
+	"net/url"
+	"time"
 
 	"github.com/odysseythink/hermind/config/editor"
 )
@@ -19,6 +21,10 @@ type schemaField struct {
 }
 
 func (s *Server) handleSchema(w http.ResponseWriter, r *http.Request) {
+	if r.Method != http.MethodGet {
+		http.Error(w, "method not allowed", http.StatusMethodNotAllowed)
+		return
+	}
 	fields := editor.Schema()
 	out := make([]schemaField, len(fields))
 	for i, f := range fields {
@@ -107,6 +113,10 @@ func (s *Server) handleConfig(w http.ResponseWriter, r *http.Request) {
 }
 
 func (s *Server) handleSave(w http.ResponseWriter, r *http.Request) {
+	if r.Method != http.MethodPost {
+		http.Error(w, "method not allowed", http.StatusMethodNotAllowed)
+		return
+	}
 	if err := s.doc.Save(); err != nil {
 		http.Error(w, err.Error(), http.StatusInternalServerError)
 		return
@@ -115,6 +125,14 @@ func (s *Server) handleSave(w http.ResponseWriter, r *http.Request) {
 }
 
 func (s *Server) handleReveal(w http.ResponseWriter, r *http.Request) {
+	if r.Method != http.MethodPost {
+		http.Error(w, "method not allowed", http.StatusMethodNotAllowed)
+		return
+	}
+	if !isLocalOrigin(r) {
+		http.Error(w, "cross-origin denied", http.StatusForbidden)
+		return
+	}
 	var body struct {
 		Path string `json:"path"`
 	}
@@ -133,8 +151,38 @@ func (s *Server) handleReveal(w http.ResponseWriter, r *http.Request) {
 }
 
 func (s *Server) handleShutdown(w http.ResponseWriter, r *http.Request) {
+	if r.Method != http.MethodPost {
+		http.Error(w, "method not allowed", http.StatusMethodNotAllowed)
+		return
+	}
 	w.WriteHeader(http.StatusNoContent)
-	go func() { os.Exit(0) }()
+	if f, ok := w.(http.Flusher); ok {
+		f.Flush()
+	}
+	go func() {
+		ctx, cancel := context.WithTimeout(context.Background(), 2*time.Second)
+		defer cancel()
+		if s.srv != nil {
+			_ = s.srv.Shutdown(ctx)
+		}
+	}()
+}
+
+// isLocalOrigin returns true when the request carries no Origin header, or
+// when Origin points at loopback. Defends /api/reveal from DNS-rebinding
+// attacks that would otherwise let a malicious site exfiltrate secrets
+// through the user's browser.
+func isLocalOrigin(r *http.Request) bool {
+	origin := r.Header.Get("Origin")
+	if origin == "" {
+		return true // same-origin fetch sends no Origin
+	}
+	u, err := url.Parse(origin)
+	if err != nil {
+		return false
+	}
+	host := u.Hostname()
+	return host == "127.0.0.1" || host == "localhost" || host == "::1"
 }
 
 func writeJSON(w http.ResponseWriter, v any) {
