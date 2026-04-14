@@ -35,7 +35,7 @@ func main() {
 
 	root := cli.NewRootCmd(app)
 	if err := root.ExecuteContext(ctx); err != nil {
-		fmt.Fprintf(os.Stderr, "hermind: %v\n", err)
+		fmt.Fprintf(os.Stderr, "%v\n", err)
 		os.Exit(1)
 	}
 }
