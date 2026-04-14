@@ -53,7 +53,7 @@ function renderField(f) {
   if (f.kind === 3) {
     const cb = document.createElement('input'); cb.type = 'checkbox';
     cb.checked = cur === 'true' || cur === true;
-    cb.onchange = () => persist(f.path, cb.checked ? 'true' : 'false');
+    cb.onchange = () => persist(f.path, cb.checked);
     return cb;
   }
   if (f.kind === 5) {
@@ -79,12 +79,21 @@ function renderField(f) {
   const inp = document.createElement('input');
   inp.type = (f.kind === 1 || f.kind === 2) ? 'number' : 'text';
   inp.value = cur;
-  inp.onchange = () => persist(f.path, inp.value);
+  inp.onchange = () => {
+    let v = inp.value;
+    if (f.kind === 1) v = parseInt(v, 10);
+    else if (f.kind === 2) v = parseFloat(v);
+    persist(f.path, v);
+  };
   return inp;
 }
 
 async function persist(path, value) {
-  const r = await fetch('/api/config', {method:'POST', body: JSON.stringify({path, value})});
+  const r = await fetch('/api/config', {
+    method: 'POST',
+    headers: {'Content-Type': 'application/json'},
+    body: JSON.stringify({path, value})
+  });
   if (!r.ok) { status('error: ' + await r.text()); return; }
   values[path] = value;
   status('edited (unsaved)');

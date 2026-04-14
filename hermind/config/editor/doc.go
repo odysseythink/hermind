@@ -53,6 +53,9 @@ func (d *Doc) Save() error {
 	if err := enc.Close(); err != nil { return err }
 
 	dir := filepath.Dir(d.path)
+	if err := os.MkdirAll(dir, 0o700); err != nil {
+		return err
+	}
 	tmp, err := os.CreateTemp(dir, ".config-*.yaml.tmp")
 	if err != nil { return err }
 	tmpName := tmp.Name()

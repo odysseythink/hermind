@@ -91,3 +91,52 @@ func TestSchemaEndpoint(t *testing.T) {
 		t.Error("schema empty")
 	}
 }
+
+func TestPostConfigRejectsUnknownPath(t *testing.T) {
+	ts, _ := newServer(t)
+	payload, _ := json.Marshal(map[string]any{"path": "not.a.field", "value": "x"})
+	resp, err := http.Post(ts.URL+"/api/config", "application/json", bytes.NewReader(payload))
+	if err != nil {
+		t.Fatal(err)
+	}
+	if resp.StatusCode != 400 {
+		t.Errorf("expected 400, got %d", resp.StatusCode)
+	}
+}
+
+func TestPostConfigRejectsListKind(t *testing.T) {
+	ts, _ := newServer(t)
+	payload, _ := json.Marshal(map[string]any{"path": "providers", "value": "x"})
+	resp, err := http.Post(ts.URL+"/api/config", "application/json", bytes.NewReader(payload))
+	if err != nil {
+		t.Fatal(err)
+	}
+	if resp.StatusCode != 400 {
+		t.Errorf("expected 400, got %d", resp.StatusCode)
+	}
+}
+
+func TestPostConfigAcceptsBoolAndInt(t *testing.T) {
+	ts, p := newServer(t)
+	// Bool: agent.compression.enabled
+	payload, _ := json.Marshal(map[string]any{"path": "agent.compression.enabled", "value": true})
+	resp, _ := http.Post(ts.URL+"/api/config", "application/json", bytes.NewReader(payload))
+	if resp.StatusCode >= 300 {
+		t.Errorf("bool post failed: %d", resp.StatusCode)
+	}
+	// Int: agent.max_turns
+	payload, _ = json.Marshal(map[string]any{"path": "agent.max_turns", "value": 42})
+	resp, _ = http.Post(ts.URL+"/api/config", "application/json", bytes.NewReader(payload))
+	if resp.StatusCode >= 300 {
+		t.Errorf("int post failed: %d", resp.StatusCode)
+	}
+	http.Post(ts.URL+"/api/save", "application/json", nil)
+	raw, _ := os.ReadFile(p)
+	// Both values should be written without string quotes in YAML.
+	if !bytes.Contains(raw, []byte("enabled: true")) {
+		t.Errorf("bool not serialized as YAML bool:\n%s", raw)
+	}
+	if !bytes.Contains(raw, []byte("max_turns: 42")) {
+		t.Errorf("int not serialized as YAML int:\n%s", raw)
+	}
+}

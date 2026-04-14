@@ -58,18 +58,45 @@ func (s *Server) handleConfig(w http.ResponseWriter, r *http.Request) {
 			http.Error(w, err.Error(), http.StatusBadRequest)
 			return
 		}
-		for _, f := range editor.Schema() {
-			if f.Path != body.Path {
-				continue
-			}
-			if f.Validate != nil {
-				if err := f.Validate(body.Value); err != nil {
-					http.Error(w, err.Error(), http.StatusBadRequest)
-					return
-				}
+		var matched *editor.Field
+		for i := range editor.Schema() {
+			f := editor.Schema()[i]
+			if f.Path == body.Path {
+				matched = &f
+				break
 			}
 		}
-		if err := s.doc.Set(body.Path, body.Value); err != nil {
+		if matched == nil {
+			http.Error(w, "unknown field: "+body.Path, http.StatusBadRequest)
+			return
+		}
+		if matched.Kind == editor.KindList {
+			http.Error(w, "list fields cannot be set directly", http.StatusBadRequest)
+			return
+		}
+		if matched.Validate != nil {
+			if err := matched.Validate(body.Value); err != nil {
+				http.Error(w, err.Error(), http.StatusBadRequest)
+				return
+			}
+		}
+		// Coerce JSON numbers to the YAML type declared by the schema.
+		v := body.Value
+		switch matched.Kind {
+		case editor.KindInt:
+			if f, ok := v.(float64); ok {
+				v = int64(f)
+			}
+		case editor.KindFloat:
+			if f, ok := v.(float64); ok {
+				v = f
+			}
+		case editor.KindBool:
+			if b, ok := v.(bool); ok {
+				v = b
+			}
+		}
+		if err := s.doc.Set(body.Path, v); err != nil {
 			http.Error(w, err.Error(), http.StatusBadRequest)
 			return
 		}

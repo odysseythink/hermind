@@ -126,3 +126,21 @@ func TestSetBlockAddsNewMapEntry(t *testing.T) {
 		t.Errorf("got %q", v)
 	}
 }
+
+func TestSaveCreatesParentDir(t *testing.T) {
+	dir := filepath.Join(t.TempDir(), "nested", "notthere")
+	path := filepath.Join(dir, "config.yaml")
+	doc, err := Load(path)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if err := doc.Set("model", "x"); err != nil {
+		t.Fatal(err)
+	}
+	if err := doc.Save(); err != nil {
+		t.Fatalf("Save: %v", err)
+	}
+	if _, err := os.Stat(path); err != nil {
+		t.Fatalf("file not created: %v", err)
+	}
+}
