@@ -1,17 +1,17 @@
 version: 2
 
-project_name: hermes
+project_name: hermind
 
 before:
   hooks:
-    - go -C hermes-agent-go mod tidy
-    - go -C hermes-agent-go test ./...
+    - go -C hermind mod tidy
+    - go -C hermind test ./...
 
 builds:
-  - id: hermes
-    main: ./cmd/hermes
-    binary: hermes
-    dir: hermes-agent-go
+  - id: hermind
+    main: ./cmd/hermind
+    binary: hermind
+    dir: hermind
     env:
       - CGO_ENABLED=0
     goos:
@@ -31,8 +31,8 @@ builds:
       - -X main.BuildDate={{.Date}}
 
 archives:
-  - id: hermes
-    ids: [hermes]
+  - id: hermind
+    ids: [hermind]
     name_template: >-
       {{ .ProjectName }}_{{ .Version }}_{{ .Os }}_{{- if eq .Arch "amd64" }}x86_64{{ else }}{{ .Arch }}{{ end }}
     files:
@@ -41,24 +41,24 @@ archives:
       - CHANGELOG*
 
 brews:
-  - name: hermes
-    ids: [hermes]
-    homepage: https://github.com/nousresearch/hermes-agent-go
-    description: "Hermes Agent — Go port of the hermes AI agent framework"
+  - name: hermind
+    ids: [hermind]
+    homepage: https://github.com/odysseythink/hermind
+    description: "Hermind — Go port of the hermes AI agent framework"
     license: MIT
     repository:
-      owner: nousresearch
+      owner: odysseythink
       name: homebrew-tap
       token: "{{ .Env.HOMEBREW_TAP_TOKEN }}"
     directory: Formula
     commit_author:
-      name: hermes-release-bot
-      email: hermes-release-bot@users.noreply.github.com
-    commit_msg_template: "brew: update hermes to {{ .Tag }}"
+      name: hermind-release-bot
+      email: hermind-release-bot@users.noreply.github.com
+    commit_msg_template: "brew: update hermind to {{ .Tag }}"
     install: |
-      bin.install "hermes"
+      bin.install "hermind"
     test: |
-      system "#{bin}/hermes", "version"
+      system "#{bin}/hermind", "version"
 
 checksum:
   name_template: 'checksums.txt'

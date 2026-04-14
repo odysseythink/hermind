@@ -1,5 +1,5 @@
 {
-  description = "hermes-agent — Go port of the hermes AI agent framework";
+  description = "hermind — Go port of the hermes AI agent framework";
 
   inputs = {
     nixpkgs.url = "github:NixOS/nixpkgs/nixos-unstable";
@@ -13,13 +13,13 @@
         version = "0.1.0";
       in {
         packages.default = pkgs.buildGoModule {
-          pname = "hermes";
+          pname = "hermind";
           inherit version;
-          src = ./hermes-agent-go;
+          src = ./hermind;
           # vendorHash should be set via `nix hash path` after the
           # first build — the lock file below is the placeholder.
           vendorHash = null;
-          subPackages = [ "cmd/hermes" ];
+          subPackages = [ "cmd/hermind" ];
           ldflags = [
             "-s"
             "-w"
@@ -28,7 +28,7 @@
             "-X main.BuildDate=nix"
           ];
           meta = {
-            description = "Hermes Agent Go port";
+            description = "Hermind — Go port of the hermes AI agent framework";
             license = pkgs.lib.licenses.mit;
           };
         };
