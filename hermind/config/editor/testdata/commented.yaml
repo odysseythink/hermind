@@ -1,0 +1,5 @@
+# top comment
+model: anthropic/claude-opus-4-6  # inline
+providers:
+  anthropic:
+    api_key: abc
