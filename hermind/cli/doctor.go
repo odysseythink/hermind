@@ -74,7 +74,7 @@ func checkStorage(ctx context.Context, app *App) error {
 	path := app.Config.Storage.SQLitePath
 	if path == "" {
 		home, _ := os.UserHomeDir()
-		path = filepath.Join(home, ".hermes", "state.db")
+		path = filepath.Join(home, ".hermind", "state.db")
 	}
 	// Don't mutate the app's storage — open a throwaway handle.
 	if dir := filepath.Dir(path); dir != "" {

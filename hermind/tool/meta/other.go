@@ -52,7 +52,7 @@ func RegisterClarify(reg *tool.Registry) {
 }
 
 // RegisterCheckpoint wires checkpoint_save / checkpoint_restore
-// against a directory under $HERMES_HOME/checkpoints.
+// against a directory under $HERMIND_HOME/checkpoints.
 func RegisterCheckpoint(reg *tool.Registry) {
 	base := defaultCheckpointDir()
 	reg.Register(&tool.Entry{
@@ -64,7 +64,7 @@ func RegisterCheckpoint(reg *tool.Registry) {
 			Type: "function",
 			Function: tool.FunctionDef{
 				Name: "checkpoint_save",
-				Description: "Save a checkpoint. Name must be alphanumeric. State is stored as JSON under $HERMES_HOME/checkpoints/<name>.json.",
+				Description: "Save a checkpoint. Name must be alphanumeric. State is stored as JSON under $HERMIND_HOME/checkpoints/<name>.json.",
 				Parameters: json.RawMessage(`{
   "type":"object",
   "properties":{
@@ -230,11 +230,11 @@ func RegisterApproval(reg *tool.Registry) {
 }
 
 func defaultCheckpointDir() string {
-	if v := os.Getenv("HERMES_HOME"); v != "" {
+	if v := os.Getenv("HERMIND_HOME"); v != "" {
 		return filepath.Join(v, "checkpoints")
 	}
 	home, _ := os.UserHomeDir()
-	return filepath.Join(home, ".hermes", "checkpoints")
+	return filepath.Join(home, ".hermind", "checkpoints")
 }
 
 func validName(name string) bool {

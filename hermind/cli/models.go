@@ -61,11 +61,11 @@ func newModelsListCmd() *cobra.Command {
 func newModelsSwitchCmd() *cobra.Command {
 	return &cobra.Command{
 		Use:   "switch <provider/model>",
-		Short: "Switch the active model in ~/.hermes/config.yaml",
+		Short: "Switch the active model in ~/.hermind/config.yaml",
 		Args:  cobra.ExactArgs(1),
 		RunE: func(cmd *cobra.Command, args []string) error {
 			home, _ := os.UserHomeDir()
-			cfgPath := filepath.Join(home, ".hermes", "config.yaml")
+			cfgPath := filepath.Join(home, ".hermind", "config.yaml")
 			data, err := os.ReadFile(cfgPath)
 			if err != nil {
 				return fmt.Errorf("read %s: %w", cfgPath, err)

@@ -24,17 +24,17 @@ func newSetupCmd(app *App) *cobra.Command {
 }
 
 // runSetupInteractive walks the user through minimum config and
-// writes ~/.hermes/config.yaml.
+// writes ~/.hermind/config.yaml.
 func runSetupInteractive(reader *bufio.Reader) error {
 	fmt.Println("hermes setup — interactive configuration wizard")
-	fmt.Println("This writes ~/.hermes/config.yaml. Press Enter to accept defaults.")
+	fmt.Println("This writes ~/.hermind/config.yaml. Press Enter to accept defaults.")
 	fmt.Println()
 
 	provider := prompt(reader, "Primary provider [anthropic]", "anthropic")
 	apiKey := prompt(reader, fmt.Sprintf("%s api key (leave blank to use env var)", provider), "")
 	model := prompt(reader, "Default model [claude-opus-4-6]", "claude-opus-4-6")
 	terminalBackend := prompt(reader, "Terminal backend [local]", "local")
-	storagePath := prompt(reader, "SQLite path [~/.hermes/state.db]", "~/.hermes/state.db")
+	storagePath := prompt(reader, "SQLite path [~/.hermind/state.db]", "~/.hermind/state.db")
 
 	cfg := config.Default()
 	cfg.Model = provider + "/" + model
@@ -52,7 +52,7 @@ func runSetupInteractive(reader *bufio.Reader) error {
 	if err != nil {
 		return err
 	}
-	cfgDir := filepath.Join(home, ".hermes")
+	cfgDir := filepath.Join(home, ".hermind")
 	if err := os.MkdirAll(cfgDir, 0o755); err != nil {
 		return err
 	}

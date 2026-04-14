@@ -12,19 +12,19 @@ import (
 )
 
 // enabledSkillsFile holds the list of active skill names per profile.
-// Format: a YAML list at ~/.hermes/profiles/<name>/enabled_skills.yaml
-// (or ~/.hermes/enabled_skills.yaml for the default profile).
+// Format: a YAML list at ~/.hermind/profiles/<name>/enabled_skills.yaml
+// (or ~/.hermind/enabled_skills.yaml for the default profile).
 type enabledSkillsFile struct {
 	Path  string
 	Names []string
 }
 
 func enabledSkillsPath() string {
-	if v := os.Getenv("HERMES_HOME"); v != "" {
+	if v := os.Getenv("HERMIND_HOME"); v != "" {
 		return filepath.Join(v, "enabled_skills.yaml")
 	}
 	home, _ := os.UserHomeDir()
-	base := filepath.Join(home, ".hermes")
+	base := filepath.Join(home, ".hermind")
 	if p := ActiveProfile(); p != "" {
 		base = filepath.Join(base, "profiles", p)
 	}

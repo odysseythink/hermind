@@ -22,7 +22,7 @@ type credentialsFile struct {
 
 func defaultCredentialsPath() string {
 	home, _ := os.UserHomeDir()
-	return filepath.Join(home, ".hermes", "credentials.yaml")
+	return filepath.Join(home, ".hermind", "credentials.yaml")
 }
 
 func loadCredentials() (*credentialsFile, error) {

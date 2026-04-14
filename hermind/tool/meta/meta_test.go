@@ -44,7 +44,7 @@ func TestClarifyReturnsPending(t *testing.T) {
 }
 
 func TestCheckpointSaveAndRestore(t *testing.T) {
-	t.Setenv("HERMES_HOME", t.TempDir())
+	t.Setenv("HERMIND_HOME", t.TempDir())
 	reg := tool.NewRegistry()
 	RegisterCheckpoint(reg)
 	saveArgs, _ := json.Marshal(map[string]any{

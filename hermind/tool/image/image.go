@@ -36,7 +36,7 @@ func NewClient(baseURL, apiKey, model, saveDir string) *Client {
 	}
 	if saveDir == "" {
 		home, _ := os.UserHomeDir()
-		saveDir = filepath.Join(home, ".hermes", "cache", "images")
+		saveDir = filepath.Join(home, ".hermind", "cache", "images")
 	}
 	return &Client{
 		BaseURL:    strings.TrimRight(baseURL, "/"),

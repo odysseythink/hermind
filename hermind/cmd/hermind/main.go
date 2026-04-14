@@ -25,7 +25,7 @@ func main() {
 
 	app, err := cli.NewApp()
 	if err != nil {
-		fmt.Fprintf(os.Stderr, "hermes: init: %v\n", err)
+		fmt.Fprintf(os.Stderr, "hermind: init: %v\n", err)
 		os.Exit(1)
 	}
 	defer func() { _ = app.Close() }()
@@ -35,7 +35,7 @@ func main() {
 
 	root := cli.NewRootCmd(app)
 	if err := root.ExecuteContext(ctx); err != nil {
-		fmt.Fprintf(os.Stderr, "hermes: %v\n", err)
+		fmt.Fprintf(os.Stderr, "hermind: %v\n", err)
 		os.Exit(1)
 	}
 }

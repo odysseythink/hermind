@@ -12,12 +12,12 @@ import (
 
 // DefaultConfigDir is the default location for hermes config files.
 const (
-	DefaultConfigDir  = "~/.hermes"
+	DefaultConfigDir  = "~/.hermind"
 	DefaultConfigFile = "config.yaml"
 	DefaultDBFile     = "state.db"
 )
 
-// Load reads the default config file at ~/.hermes/config.yaml.
+// Load reads the default config file at ~/.hermind/config.yaml.
 // Missing file is not an error — returns defaults.
 func Load() (*Config, error) {
 	path, err := expandPath(filepath.Join(DefaultConfigDir, DefaultConfigFile))
@@ -131,7 +131,7 @@ func expandEnvVars(cfg *Config) error {
 func resolveDefaults(cfg *Config) {
 	if cfg.Storage.SQLitePath == "" {
 		if home, err := os.UserHomeDir(); err == nil {
-			cfg.Storage.SQLitePath = filepath.Join(home, ".hermes", DefaultDBFile)
+			cfg.Storage.SQLitePath = filepath.Join(home, ".hermind", DefaultDBFile)
 		}
 	}
 }

@@ -10,28 +10,28 @@ import (
 	"github.com/spf13/cobra"
 )
 
-// profileRoot returns ~/.hermes/profiles (or $HERMES_HOME/profiles).
+// profileRoot returns ~/.hermind/profiles (or $HERMIND_HOME/profiles).
 func profileRoot() string {
-	if v := os.Getenv("HERMES_HOME"); v != "" {
+	if v := os.Getenv("HERMIND_HOME"); v != "" {
 		return filepath.Join(v, "profiles")
 	}
 	home, _ := os.UserHomeDir()
-	return filepath.Join(home, ".hermes", "profiles")
+	return filepath.Join(home, ".hermind", "profiles")
 }
 
 // activeProfileFile remembers which profile was last selected.
 func activeProfileFile() string {
-	if v := os.Getenv("HERMES_HOME"); v != "" {
+	if v := os.Getenv("HERMIND_HOME"); v != "" {
 		return filepath.Join(v, "active_profile")
 	}
 	home, _ := os.UserHomeDir()
-	return filepath.Join(home, ".hermes", "active_profile")
+	return filepath.Join(home, ".hermind", "active_profile")
 }
 
 // ActiveProfile returns the currently selected profile name. Empty
-// string means "use the top-level ~/.hermes layout" (legacy mode).
+// string means "use the top-level ~/.hermind layout" (legacy mode).
 func ActiveProfile() string {
-	if v := strings.TrimSpace(os.Getenv("HERMES_PROFILE")); v != "" {
+	if v := strings.TrimSpace(os.Getenv("HERMIND_PROFILE")); v != "" {
 		return v
 	}
 	data, err := os.ReadFile(activeProfileFile())

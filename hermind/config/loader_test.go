@@ -51,14 +51,14 @@ func TestLoadFromMissingFileReturnsDefaults(t *testing.T) {
 }
 
 func TestEnvVarExpansion(t *testing.T) {
-	t.Setenv("HERMES_TEST_KEY", "sk-from-env")
+	t.Setenv("HERMIND_TEST_KEY", "sk-from-env")
 	dir := t.TempDir()
 	yamlPath := filepath.Join(dir, "config.yaml")
 	err := os.WriteFile(yamlPath, []byte(`
 providers:
   anthropic:
     provider: anthropic
-    api_key: env:HERMES_TEST_KEY
+    api_key: env:HERMIND_TEST_KEY
 `), 0o644)
 	require.NoError(t, err)
 

@@ -54,7 +54,7 @@ func (e *Email) SendReply(ctx context.Context, out gateway.OutgoingMessage) erro
 	}
 	subject := "hermes reply"
 	if out.ChatID != "" {
-		subject = "hermes: " + out.ChatID
+		subject = "hermind: " + out.ChatID
 	}
 	msg := []byte(strings.Join([]string{
 		"From: " + e.From,

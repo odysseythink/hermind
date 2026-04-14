@@ -47,12 +47,12 @@ func runREPL(ctx context.Context, app *App) error {
 	providers := []provider.Provider{primaryProvider}
 	for i, fbCfg := range app.Config.FallbackProviders {
 		if fbCfg.APIKey == "" {
-			fmt.Fprintf(os.Stderr, "hermes: warning: fallback_providers[%d] (%s) has no api_key — skipping\n", i, fbCfg.Provider)
+			fmt.Fprintf(os.Stderr, "hermind: warning: fallback_providers[%d] (%s) has no api_key — skipping\n", i, fbCfg.Provider)
 			continue
 		}
 		fb, err := factory.New(fbCfg)
 		if err != nil {
-			fmt.Fprintf(os.Stderr, "hermes: warning: fallback_providers[%d] (%s): %v — skipping\n", i, fbCfg.Provider, err)
+			fmt.Fprintf(os.Stderr, "hermind: warning: fallback_providers[%d] (%s): %v — skipping\n", i, fbCfg.Provider, err)
 			continue
 		}
 		providers = append(providers, fb)
@@ -109,7 +109,7 @@ func runREPL(ctx context.Context, app *App) error {
 
 	backend, err := terminal.New(app.Config.Terminal.Backend, termCfg)
 	if err != nil {
-		return fmt.Errorf("hermes: create terminal backend %q: %w", app.Config.Terminal.Backend, err)
+		return fmt.Errorf("hermind: create terminal backend %q: %w", app.Config.Terminal.Backend, err)
 	}
 	defer backend.Close()
 	terminal.RegisterShellExecute(toolRegistry, backend)
@@ -145,11 +145,11 @@ func runREPL(ctx context.Context, app *App) error {
 	// into the REPL lifecycle.
 	extMem, err := memprovider.New(app.Config.Memory, memprovider.WithStorage(app.Storage))
 	if err != nil {
-		fmt.Fprintf(os.Stderr, "hermes: memory provider: %v\n", err)
+		fmt.Fprintf(os.Stderr, "hermind: memory provider: %v\n", err)
 	}
 	if extMem != nil {
 		if err := extMem.Initialize(ctx, sessionID); err != nil {
-			fmt.Fprintf(os.Stderr, "hermes: memory provider %s init: %v\n", extMem.Name(), err)
+			fmt.Fprintf(os.Stderr, "hermind: memory provider %s init: %v\n", extMem.Name(), err)
 		} else {
 			extMem.RegisterTools(toolRegistry)
 			defer func() {
@@ -208,7 +208,7 @@ func runREPL(ctx context.Context, app *App) error {
 		}
 
 		if err := mcpManager.Start(ctx, serverCfgs); err != nil {
-			fmt.Fprintf(os.Stderr, "hermes: mcp warning: %v\n", err)
+			fmt.Fprintf(os.Stderr, "hermind: mcp warning: %v\n", err)
 		}
 		defer mcpManager.Close()
 	}
@@ -225,7 +225,7 @@ func runREPL(ctx context.Context, app *App) error {
 		Model:       displayModel,
 	})
 	if err != nil {
-		return fmt.Errorf("hermes: tui: %w", err)
+		return fmt.Errorf("hermind: tui: %w", err)
 	}
 	return nil
 }
@@ -238,23 +238,23 @@ func ensureStorage(app *App) error {
 	path := app.Config.Storage.SQLitePath
 	if path == "" {
 		home, _ := os.UserHomeDir()
-		path = filepath.Join(home, ".hermes", "state.db")
+		path = filepath.Join(home, ".hermind", "state.db")
 	}
 
 	// Ensure the parent directory exists
 	if dir := filepath.Dir(path); dir != "" {
 		if err := os.MkdirAll(dir, 0o755); err != nil {
-			return fmt.Errorf("hermes: create db dir: %w", err)
+			return fmt.Errorf("hermind: create db dir: %w", err)
 		}
 	}
 
 	store, err := sqlite.Open(path)
 	if err != nil {
-		return fmt.Errorf("hermes: open storage: %w", err)
+		return fmt.Errorf("hermind: open storage: %w", err)
 	}
 	if err := store.Migrate(); err != nil {
 		_ = store.Close()
-		return fmt.Errorf("hermes: migrate: %w", err)
+		return fmt.Errorf("hermind: migrate: %w", err)
 	}
 	app.Storage = store
 	return nil
@@ -289,7 +289,7 @@ func buildPrimaryProvider(cfg *config.Config) (provider.Provider, string, error)
 	}
 
 	if pCfg.APIKey == "" {
-		return nil, "", fmt.Errorf("hermes: %s provider is not configured. Set api_key in ~/.hermes/config.yaml or ANTHROPIC_API_KEY env var", primaryName)
+		return nil, "", fmt.Errorf("hermind: %s provider is not configured. Set api_key in ~/.hermind/config.yaml or ANTHROPIC_API_KEY env var", primaryName)
 	}
 
 	// Default the model field from cfg.Model
@@ -299,7 +299,7 @@ func buildPrimaryProvider(cfg *config.Config) (provider.Provider, string, error)
 
 	p, err := factory.New(pCfg)
 	if err != nil {
-		return nil, "", fmt.Errorf("hermes: create provider: %w", err)
+		return nil, "", fmt.Errorf("hermind: create provider: %w", err)
 	}
 	return p, primaryName, nil
 }
