@@ -73,3 +73,45 @@ func mustLoad(t *testing.T, src string) *Doc {
 	}
 	return d
 }
+
+func TestSetExistingScalar(t *testing.T) {
+	doc := mustLoad(t, "testdata/commented.yaml")
+	if err := doc.Set("providers.anthropic.api_key", "NEW"); err != nil {
+		t.Fatal(err)
+	}
+	v, ok := doc.Get("providers.anthropic.api_key")
+	if !ok || v != "NEW" {
+		t.Fatalf("got (%q,%v)", v, ok)
+	}
+	if err := doc.Save(); err != nil {
+		t.Fatal(err)
+	}
+	b, _ := os.ReadFile(doc.Path())
+	if !strings.Contains(string(b), "# top comment") {
+		t.Error("top comment lost")
+	}
+	if !strings.Contains(string(b), "api_key: NEW") {
+		t.Errorf("new value missing:\n%s", b)
+	}
+}
+
+func TestSetCreatesIntermediateMaps(t *testing.T) {
+	doc := mustLoad(t, "testdata/commented.yaml")
+	if err := doc.Set("agent.compression.threshold", "0.6"); err != nil {
+		t.Fatal(err)
+	}
+	v, ok := doc.Get("agent.compression.threshold")
+	if !ok || v != "0.6" {
+		t.Fatalf("got (%q,%v)", v, ok)
+	}
+}
+
+func TestRemove(t *testing.T) {
+	doc := mustLoad(t, "testdata/commented.yaml")
+	if err := doc.Remove("providers.anthropic.api_key"); err != nil {
+		t.Fatal(err)
+	}
+	if _, ok := doc.Get("providers.anthropic.api_key"); ok {
+		t.Error("still present")
+	}
+}
