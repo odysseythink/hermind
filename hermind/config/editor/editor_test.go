@@ -115,3 +115,14 @@ func TestRemove(t *testing.T) {
 		t.Error("still present")
 	}
 }
+
+func TestSetBlockAddsNewMapEntry(t *testing.T) {
+	doc := mustLoad(t, "testdata/commented.yaml")
+	frag := "provider: openai\napi_key: sk-xxx\nmodel: gpt-4o\n"
+	if err := doc.SetBlock("providers.openai", frag); err != nil {
+		t.Fatal(err)
+	}
+	if v, _ := doc.Get("providers.openai.model"); v != "gpt-4o" {
+		t.Errorf("got %q", v)
+	}
+}

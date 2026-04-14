@@ -83,6 +83,51 @@ func (d *Doc) Remove(dotPath string) error {
 	return nil
 }
 
+// SetBlock parses a YAML mapping fragment and attaches it as the value at
+// dotPath, replacing anything already there.
+func (d *Doc) SetBlock(dotPath, fragment string) error {
+	var tmp yaml.Node
+	if err := yaml.Unmarshal([]byte(fragment), &tmp); err != nil {
+		return fmt.Errorf("editor: SetBlock %s: parse fragment: %w", dotPath, err)
+	}
+	if tmp.Kind != yaml.DocumentNode || len(tmp.Content) == 0 {
+		return fmt.Errorf("editor: SetBlock %s: empty fragment", dotPath)
+	}
+	newNode := tmp.Content[0]
+
+	cur := d.documentContent()
+	if cur == nil {
+		d.root.Content = []*yaml.Node{{Kind: yaml.MappingNode, Tag: "!!map"}}
+		cur = d.root.Content[0]
+	}
+	segs := strings.Split(dotPath, ".")
+	for i, seg := range segs {
+		last := i == len(segs)-1
+		if cur.Kind != yaml.MappingNode {
+			return fmt.Errorf("editor: SetBlock %s: non-map in path", dotPath)
+		}
+		idx := indexOfKey(cur, seg)
+		if last {
+			k := &yaml.Node{Kind: yaml.ScalarNode, Tag: "!!str", Value: seg}
+			if idx < 0 {
+				cur.Content = append(cur.Content, k, newNode)
+			} else {
+				cur.Content[idx+1] = newNode
+			}
+			return nil
+		}
+		if idx < 0 {
+			k := &yaml.Node{Kind: yaml.ScalarNode, Tag: "!!str", Value: seg}
+			v := &yaml.Node{Kind: yaml.MappingNode, Tag: "!!map"}
+			cur.Content = append(cur.Content, k, v)
+			cur = v
+		} else {
+			cur = cur.Content[idx+1]
+		}
+	}
+	return nil
+}
+
 func indexOfKey(mapNode *yaml.Node, key string) int {
 	for i := 0; i < len(mapNode.Content); i += 2 {
 		if mapNode.Content[i].Value == key {
