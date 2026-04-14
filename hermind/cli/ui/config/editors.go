@@ -37,6 +37,28 @@ func newFieldEditor(f editor.Field, current string) fieldEditor {
 // commit converts the editor state back into a value and writes it to doc.
 // Returns user-visible error string or empty on success.
 func (fe fieldEditor) commit(doc *editor.Doc) string {
+	if strings.HasPrefix(fe.field.Label, "new ") {
+		name := strings.TrimSpace(fe.input.Value())
+		if name == "" {
+			return "name required"
+		}
+		if fe.field.Path == "providers" {
+			return writeBlock(doc, fe.field.Path+"."+name, newProviderBlock(name))
+		}
+		if fe.field.Path == "mcp.servers" {
+			return writeBlock(doc, fe.field.Path+"."+name, newMCPServerBlock())
+		}
+	}
+	if strings.HasPrefix(fe.field.Label, "del ") {
+		name := strings.TrimSpace(fe.input.Value())
+		if name == "" {
+			return "name required"
+		}
+		if err := doc.Remove(fe.field.Path + "." + name); err != nil {
+			return err.Error()
+		}
+		return ""
+	}
 	switch fe.field.Kind {
 	case editor.KindBool:
 		return writeField(doc, fe.field, strings.TrimSpace(fe.input.Value()))
@@ -57,6 +79,23 @@ func (fe fieldEditor) commit(doc *editor.Doc) string {
 	default: // String / Secret
 		return writeField(doc, fe.field, fe.input.Value())
 	}
+}
+
+// newProviderBlock returns the YAML fragment for a blank provider entry.
+func newProviderBlock(name string) string {
+	return "provider: " + name + "\napi_key: \"\"\nmodel: \"\"\n"
+}
+
+// newMCPServerBlock returns the YAML fragment for a blank MCP server entry.
+func newMCPServerBlock() string {
+	return "command: \"\"\nargs: []\n"
+}
+
+func writeBlock(doc *editor.Doc, path, frag string) string {
+	if err := doc.SetBlock(path, frag); err != nil {
+		return err.Error()
+	}
+	return ""
 }
 
 func writeField(doc *editor.Doc, f editor.Field, v string) string {

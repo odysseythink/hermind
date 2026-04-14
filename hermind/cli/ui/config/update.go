@@ -1,6 +1,7 @@
 package configui
 
 import (
+	"github.com/charmbracelet/bubbles/textinput"
 	tea "github.com/charmbracelet/bubbletea"
 	"github.com/odysseythink/hermind/config/editor"
 )
@@ -55,6 +56,36 @@ func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 				m.dirty = false
 				m.status = "saved. restart hermind to apply."
 			}
+		case "a":
+			fields := m.fieldsInCurrentSection()
+			if m.fieldIdx >= len(fields) || fields[m.fieldIdx].Kind != editor.KindList {
+				return m, nil
+			}
+			f := fields[m.fieldIdx]
+			ti := textinput.New()
+			ti.Placeholder = "name (e.g. openai)"
+			ti.Focus()
+			m.ed = &fieldEditor{
+				field: editor.Field{Path: f.Path, Kind: editor.KindString, Label: "new " + f.Label},
+				input: ti,
+			}
+			m.editing = true
+			m.status = "enter new item key, enter to confirm"
+		case "d":
+			fields := m.fieldsInCurrentSection()
+			if m.fieldIdx >= len(fields) || fields[m.fieldIdx].Kind != editor.KindList {
+				return m, nil
+			}
+			f := fields[m.fieldIdx]
+			ti := textinput.New()
+			ti.Placeholder = "name to delete"
+			ti.Focus()
+			m.ed = &fieldEditor{
+				field: editor.Field{Path: f.Path, Kind: editor.KindString, Label: "del " + f.Label},
+				input: ti,
+			}
+			m.editing = true
+			m.status = "enter item key to delete, enter to confirm"
 		}
 	}
 	return m, nil

@@ -137,6 +137,20 @@ func indexOfKey(mapNode *yaml.Node, key string) int {
 	return -1
 }
 
+// MapKeys returns the keys of the mapping at dotPath, or nil if the path
+// is missing or not a mapping.
+func (d *Doc) MapKeys(dotPath string) []string {
+	n := d.lookupNode(dotPath)
+	if n == nil || n.Kind != yaml.MappingNode {
+		return nil
+	}
+	out := make([]string, 0, len(n.Content)/2)
+	for i := 0; i < len(n.Content); i += 2 {
+		out = append(out, n.Content[i].Value)
+	}
+	return out
+}
+
 func scalarFromAny(v any) *yaml.Node {
 	n := &yaml.Node{Kind: yaml.ScalarNode}
 	switch x := v.(type) {

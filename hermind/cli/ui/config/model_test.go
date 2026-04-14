@@ -35,6 +35,60 @@ func TestTabAdvancesSection(t *testing.T) {
 	}
 }
 
+func TestAddProvider(t *testing.T) {
+	dir := t.TempDir()
+	p := filepath.Join(dir, "config.yaml")
+	os.WriteFile(p, []byte("providers:\n  anthropic:\n    api_key: k\n"), 0o644)
+	m, _ := NewModel(p)
+
+	// Navigate to Providers section.
+	for m.CurrentSection() != "Providers" {
+		m2, _ := m.Update(tea.KeyMsg{Type: tea.KeyTab})
+		m = m2.(Model)
+	}
+
+	// 'a' opens the "new item" editor.
+	m2, _ := m.Update(tea.KeyMsg{Type: tea.KeyRunes, Runes: []rune("a")})
+	m = m2.(Model)
+
+	// Type "openai" and press Enter.
+	for _, r := range "openai" {
+		m2, _ = m.Update(tea.KeyMsg{Type: tea.KeyRunes, Runes: []rune{r}})
+		m = m2.(Model)
+	}
+	m2, _ = m.Update(tea.KeyMsg{Type: tea.KeyEnter})
+	m = m2.(Model)
+
+	if _, ok := m.doc.Get("providers.openai.provider"); !ok {
+		t.Error("new provider not created")
+	}
+}
+
+func TestDeleteProvider(t *testing.T) {
+	dir := t.TempDir()
+	p := filepath.Join(dir, "config.yaml")
+	os.WriteFile(p, []byte("providers:\n  openai:\n    api_key: k\n"), 0o644)
+	m, _ := NewModel(p)
+
+	for m.CurrentSection() != "Providers" {
+		m2, _ := m.Update(tea.KeyMsg{Type: tea.KeyTab})
+		m = m2.(Model)
+	}
+
+	m2, _ := m.Update(tea.KeyMsg{Type: tea.KeyRunes, Runes: []rune("d")})
+	m = m2.(Model)
+	for _, r := range "openai" {
+		m2, _ = m.Update(tea.KeyMsg{Type: tea.KeyRunes, Runes: []rune{r}})
+		m = m2.(Model)
+	}
+	m2, _ = m.Update(tea.KeyMsg{Type: tea.KeyEnter})
+	m = m2.(Model)
+
+	if _, ok := m.doc.Get("providers.openai.api_key"); ok {
+		t.Error("provider still present after delete")
+	}
+}
+
 func TestEditStringFieldWritesDoc(t *testing.T) {
 	dir := t.TempDir()
 	p := filepath.Join(dir, "config.yaml")

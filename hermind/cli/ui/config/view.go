@@ -28,6 +28,13 @@ func (m Model) View() string {
 		if i == m.fieldIdx {
 			marker = "> "
 		}
+		if f.Kind == editor.KindList {
+			fmt.Fprintf(&b, "%s%-28s [a: add, d: delete]\n", marker, f.Label+":")
+			for _, item := range m.doc.MapKeys(f.Path) {
+				fmt.Fprintf(&b, "    - %s\n", item)
+			}
+			continue
+		}
 		val, _ := m.doc.Get(f.Path)
 		if f.Kind == editor.KindSecret && val != "" {
 			val = "••••"
