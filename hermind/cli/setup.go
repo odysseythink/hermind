@@ -14,7 +14,7 @@ import (
 func newSetupCmd(app *App) *cobra.Command {
 	return &cobra.Command{
 		Use:   "setup",
-		Short: "Interactive configuration wizard",
+		Short: "Scriptable configuration writer (prefer `hermind config` for interactive use)",
 		RunE: func(cmd *cobra.Command, args []string) error {
 			return runSetupInteractive(bufio.NewReader(os.Stdin))
 		},
@@ -28,6 +28,7 @@ func newSetupCmd(app *App) *cobra.Command {
 func runSetupInteractive(reader *bufio.Reader) error {
 	fmt.Println("hermind setup — interactive configuration wizard")
 	fmt.Println("This writes ~/.hermind/config.yaml. Press Enter to accept defaults.")
+	fmt.Println("Tip: `hermind config` is the interactive TUI editor for an existing config.")
 	fmt.Println()
 
 	provider := prompt(reader, "Primary provider [anthropic]", "anthropic")
