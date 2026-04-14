@@ -20,13 +20,13 @@ var (
 // NewRootCmd builds the cobra command tree.
 func NewRootCmd(app *App) *cobra.Command {
 	root := &cobra.Command{
-		Use:           "hermes",
-		Short:         "Hermes Agent — Go port of the hermes AI agent framework",
+		Use:           "hermind",
+		Short:         "Hermind — Go port of the hermes AI agent framework",
 		SilenceUsage:  true,
 		SilenceErrors: true,
 		Version:       Version,
 	}
-	root.SetVersionTemplate("hermes-agent {{.Version}}\n")
+	root.SetVersionTemplate("hermind {{.Version}}\n")
 
 	root.AddCommand(
 		newRunCmd(app),
@@ -58,7 +58,7 @@ func newVersionCmd() *cobra.Command {
 		Short: "Print version info",
 		RunE: func(cmd *cobra.Command, args []string) error {
 			fmt.Fprintf(cmd.OutOrStdout(),
-				"hermes-agent %s\n  commit:     %s\n  built:      %s\n  go:         %s\n",
+				"hermind %s\n  commit:     %s\n  built:      %s\n  go:         %s\n",
 				Version,
 				coalesce(Commit, "unknown"),
 				coalesce(BuildDate, "unknown"),

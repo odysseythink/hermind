@@ -83,7 +83,7 @@ func (ef *enabledSkillsFile) remove(name string) {
 	ef.Names = out
 }
 
-// newPluginsCmd creates the "hermes plugins" subcommand — an alias
+// newPluginsCmd creates the "hermind plugins" subcommand — an alias
 // for skill enable/disable with a different verb that matches the
 // Python CLI.
 func newPluginsCmd(app *App) *cobra.Command {

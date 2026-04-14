@@ -17,14 +17,14 @@ import (
 	"github.com/spf13/cobra"
 )
 
-// newUpgradeCmd creates the "hermes upgrade" command. It queries the
+// newUpgradeCmd creates the "hermind upgrade" command. It queries the
 // GitHub Releases API for the latest tag, downloads the matching
-// archive for the host OS/arch, extracts the hermes binary, and
+// archive for the host OS/arch, extracts the hermind binary, and
 // atomically replaces the current executable via rename.
 func newUpgradeCmd(app *App) *cobra.Command {
 	cmd := &cobra.Command{
 		Use:   "upgrade",
-		Short: "Download and install the latest hermes release",
+		Short: "Download and install the latest hermind release",
 		RunE: func(cmd *cobra.Command, args []string) error {
 			return runUpgrade(cmd.Context())
 		},
@@ -78,8 +78,8 @@ func runUpgrade(ctx context.Context) error {
 		return fmt.Errorf("upgrade: no asset for %s/%s (expected %s)", runtime.GOOS, arch, assetName)
 	}
 
-	fmt.Printf("downloading hermes %s (%s_%s)...\n", rel.TagName, runtime.GOOS, arch)
-	tmpDir, err := os.MkdirTemp("", "hermes-upgrade-*")
+	fmt.Printf("downloading hermind %s (%s_%s)...\n", rel.TagName, runtime.GOOS, arch)
+	tmpDir, err := os.MkdirTemp("", "hermind-upgrade-*")
 	if err != nil {
 		return err
 	}
@@ -106,8 +106,8 @@ func runUpgrade(ctx context.Context) error {
 	}
 	f.Close()
 
-	// Extract hermes binary from the tar.gz.
-	binPath, err := extractHermes(archivePath, tmpDir)
+	// Extract hermind binary from the tar.gz.
+	binPath, err := extractHermind(archivePath, tmpDir)
 	if err != nil {
 		return fmt.Errorf("upgrade: extract: %w", err)
 	}
@@ -141,24 +141,24 @@ func runUpgrade(ctx context.Context) error {
 			return err
 		}
 	}
-	fmt.Printf("hermes upgraded to %s\n", rel.TagName)
+	fmt.Printf("hermind upgraded to %s\n", rel.TagName)
 	return nil
 }
 
 // archiveNameFor returns the canonical archive name for a given
-// hermes release tag + host platform. Mirrors .goreleaser.yml.
+// hermind release tag + host platform. Mirrors .goreleaser.yml.
 func archiveNameFor(tag, goos, goarch string) (string, string) {
 	verNoV := strings.TrimPrefix(tag, "v")
 	archLabel := goarch
 	if goarch == "amd64" {
 		archLabel = "x86_64"
 	}
-	return fmt.Sprintf("hermes_%s_%s_%s.tar.gz", verNoV, goos, archLabel), archLabel
+	return fmt.Sprintf("hermind_%s_%s_%s.tar.gz", verNoV, goos, archLabel), archLabel
 }
 
-// extractHermes opens a .tar.gz and writes the "hermes" binary to
+// extractHermind opens a .tar.gz and writes the "hermind" binary to
 // outDir. Returns the extracted file path.
-func extractHermes(archivePath, outDir string) (string, error) {
+func extractHermind(archivePath, outDir string) (string, error) {
 	f, err := os.Open(archivePath)
 	if err != nil {
 		return "", err
@@ -178,10 +178,10 @@ func extractHermes(archivePath, outDir string) (string, error) {
 		if err != nil {
 			return "", err
 		}
-		if filepath.Base(hdr.Name) != "hermes" {
+		if filepath.Base(hdr.Name) != "hermind" {
 			continue
 		}
-		dst := filepath.Join(outDir, "hermes")
+		dst := filepath.Join(outDir, "hermind")
 		out, err := os.Create(dst)
 		if err != nil {
 			return "", err
@@ -196,7 +196,7 @@ func extractHermes(archivePath, outDir string) (string, error) {
 		}
 		return dst, nil
 	}
-	return "", fmt.Errorf("no hermes binary in archive")
+	return "", fmt.Errorf("no hermind binary in archive")
 }
 
 func copyFile(src, dst string) error {

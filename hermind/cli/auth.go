@@ -52,7 +52,7 @@ func (cf *credentialsFile) save() error {
 	return os.WriteFile(cf.Path, buf, 0o600)
 }
 
-// newAuthCmd creates the "hermes auth" subcommand tree.
+// newAuthCmd creates the "hermind auth" subcommand tree.
 func newAuthCmd(app *App) *cobra.Command {
 	cmd := &cobra.Command{
 		Use:   "auth",

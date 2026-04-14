@@ -9,7 +9,7 @@ import (
 	"gopkg.in/yaml.v3"
 )
 
-// knownModels is a small built-in catalog for `hermes models list`.
+// knownModels is a small built-in catalog for `hermind models list`.
 // It is intentionally static — the full `models_dev.py` catalog from
 // the Python reference is out of scope for Phase 11b.
 var knownModels = map[string][]string{

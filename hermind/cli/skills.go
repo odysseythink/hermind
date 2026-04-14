@@ -8,11 +8,11 @@ import (
 	"github.com/spf13/cobra"
 )
 
-// newSkillsCmd creates the "hermes skills" subcommand tree.
+// newSkillsCmd creates the "hermind skills" subcommand tree.
 func newSkillsCmd(app *App) *cobra.Command {
 	cmd := &cobra.Command{
 		Use:   "skills",
-		Short: "Manage hermes skill packages",
+		Short: "Manage hermind skill packages",
 	}
 	cmd.AddCommand(newSkillsListCmd(app))
 	cmd.AddCommand(newSkillsEnableCmd(app))

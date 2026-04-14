@@ -24,7 +24,7 @@ import (
 	"github.com/spf13/cobra"
 )
 
-// newGatewayCmd creates the "hermes gateway" subcommand.
+// newGatewayCmd creates the "hermind gateway" subcommand.
 func newGatewayCmd(app *App) *cobra.Command {
 	return &cobra.Command{
 		Use:   "gateway",

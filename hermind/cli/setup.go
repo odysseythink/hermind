@@ -12,7 +12,7 @@ import (
 	"gopkg.in/yaml.v3"
 )
 
-// newSetupCmd creates the "hermes setup" wizard.
+// newSetupCmd creates the "hermind setup" wizard.
 func newSetupCmd(app *App) *cobra.Command {
 	return &cobra.Command{
 		Use:   "setup",
@@ -26,7 +26,7 @@ func newSetupCmd(app *App) *cobra.Command {
 // runSetupInteractive walks the user through minimum config and
 // writes ~/.hermind/config.yaml.
 func runSetupInteractive(reader *bufio.Reader) error {
-	fmt.Println("hermes setup — interactive configuration wizard")
+	fmt.Println("hermind setup — interactive configuration wizard")
 	fmt.Println("This writes ~/.hermind/config.yaml. Press Enter to accept defaults.")
 	fmt.Println()
 
@@ -65,7 +65,7 @@ func runSetupInteractive(reader *bufio.Reader) error {
 		return err
 	}
 	fmt.Printf("\nwrote %s\n", cfgPath)
-	fmt.Println("run `hermes doctor` to verify your setup.")
+	fmt.Println("run `hermind doctor` to verify your setup.")
 	return nil
 }
 

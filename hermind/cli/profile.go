@@ -120,7 +120,7 @@ func newProfileSwitchCmd() *cobra.Command {
 			name := args[0]
 			dir := filepath.Join(profileRoot(), name)
 			if _, err := os.Stat(dir); err != nil {
-				return fmt.Errorf("profile %q does not exist (run `hermes profile create %s` first)", name, name)
+				return fmt.Errorf("profile %q does not exist (run `hermind profile create %s` first)", name, name)
 			}
 			if err := os.WriteFile(activeProfileFile(), []byte(name+"\n"), 0o644); err != nil {
 				return err

@@ -13,7 +13,7 @@ import (
 	"github.com/spf13/cobra"
 )
 
-// newDoctorCmd creates the "hermes doctor" health-check command.
+// newDoctorCmd creates the "hermind doctor" health-check command.
 func newDoctorCmd(app *App) *cobra.Command {
 	return &cobra.Command{
 		Use:   "doctor",
