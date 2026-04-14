@@ -34,6 +34,7 @@ func NewRootCmd(app *App) *cobra.Command {
 		newCronCmd(app),
 		newSkillsCmd(app),
 		newSetupCmd(app),
+		newConfigCmd(app),
 		newDoctorCmd(app),
 		newAuthCmd(app),
 		newModelsCmd(app),
