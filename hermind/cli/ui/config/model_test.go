@@ -40,12 +40,23 @@ func TestEditStringFieldWritesDoc(t *testing.T) {
 	p := filepath.Join(dir, "config.yaml")
 	os.WriteFile(p, []byte("model: old\n"), 0o644)
 	m, _ := NewModel(p)
-	// navigate to "model" field (first field of "Model" section, default)
-	m2, _ := m.Update(tea.KeyMsg{Type: tea.KeyEnter}) // enter edit
+
+	// Enter edit mode on the "model" field.
+	m2, _ := m.Update(tea.KeyMsg{Type: tea.KeyEnter})
+
+	// Clear the existing value: 3 backspaces to delete "old".
+	for i := 0; i < 3; i++ {
+		m2, _ = m2.(Model).Update(tea.KeyMsg{Type: tea.KeyBackspace})
+	}
+
+	// Type the replacement.
 	for _, r := range "new-model" {
 		m2, _ = m2.(Model).Update(tea.KeyMsg{Type: tea.KeyRunes, Runes: []rune{r}})
 	}
-	m2, _ = m2.(Model).Update(tea.KeyMsg{Type: tea.KeyEnter}) // commit
+
+	// Commit.
+	m2, _ = m2.(Model).Update(tea.KeyMsg{Type: tea.KeyEnter})
+
 	got, _ := m2.(Model).doc.Get("model")
 	if got != "new-model" {
 		t.Errorf("got %q, want %q", got, "new-model")

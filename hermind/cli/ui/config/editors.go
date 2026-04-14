@@ -17,7 +17,8 @@ type fieldEditor struct {
 
 func newFieldEditor(f editor.Field, current string) fieldEditor {
 	ti := textinput.New()
-	ti.Placeholder = current // show current value as hint; input starts empty
+	ti.SetValue(current)
+	ti.CursorEnd()
 	ti.Focus()
 	if f.Kind == editor.KindSecret {
 		ti.EchoMode = textinput.EchoPassword
