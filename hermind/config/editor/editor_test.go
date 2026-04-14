@@ -35,3 +35,41 @@ func TestLoadMissingFileReturnsEmptyDoc(t *testing.T) {
 	if doc == nil { t.Fatal("Load returned nil doc") }
 	if doc.Path() == "" { t.Error("Path() empty") }
 }
+
+func TestGet(t *testing.T) {
+	doc := mustLoad(t, "testdata/commented.yaml")
+	cases := []struct {
+		path string
+		want string
+		ok   bool
+	}{
+		{"model", "anthropic/claude-opus-4-6", true},
+		{"providers.anthropic.api_key", "abc", true},
+		{"missing", "", false},
+		{"providers.anthropic.missing", "", false},
+	}
+	for _, tc := range cases {
+		got, ok := doc.Get(tc.path)
+		if ok != tc.ok || got != tc.want {
+			t.Errorf("Get(%q) = (%q, %v); want (%q, %v)", tc.path, got, ok, tc.want, tc.ok)
+		}
+	}
+}
+
+func mustLoad(t *testing.T, src string) *Doc {
+	t.Helper()
+	data, err := os.ReadFile(src)
+	if err != nil {
+		t.Fatal(err)
+	}
+	dir := t.TempDir()
+	p := filepath.Join(dir, "config.yaml")
+	if err := os.WriteFile(p, data, 0o644); err != nil {
+		t.Fatal(err)
+	}
+	d, err := Load(p)
+	if err != nil {
+		t.Fatal(err)
+	}
+	return d
+}
