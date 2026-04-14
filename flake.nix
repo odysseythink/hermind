@@ -15,7 +15,7 @@
         packages.default = pkgs.buildGoModule {
           pname = "hermind";
           inherit version;
-          src = ./hermind;
+          src = ./.;
           # vendorHash should be set via `nix hash path` after the
           # first build — the lock file below is the placeholder.
           vendorHash = null;

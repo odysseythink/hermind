@@ -13,15 +13,15 @@ ARG COMMIT=unknown
 ARG BUILD_DATE=unknown
 
 WORKDIR /src
-COPY hermind/go.mod hermind/go.sum ./hermind/
-RUN --mount=type=cache,target=/go/pkg/mod go mod download -C hermind
+COPY go.mod go.sum ./
+RUN --mount=type=cache,target=/go/pkg/mod go mod download
 
-COPY hermind ./hermind
+COPY . .
 
 RUN --mount=type=cache,target=/root/.cache/go-build \
     --mount=type=cache,target=/go/pkg/mod \
     CGO_ENABLED=0 GOOS=linux \
-    go build -C hermind \
+    go build \
       -ldflags "-s -w \
         -X main.Version=${VERSION} \
         -X main.Commit=${COMMIT} \

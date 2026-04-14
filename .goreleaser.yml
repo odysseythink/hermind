@@ -4,14 +4,13 @@ project_name: hermind
 
 before:
   hooks:
-    - go -C hermind mod tidy
-    - go -C hermind test ./...
+    - go mod tidy
+    - go test ./...
 
 builds:
   - id: hermind
     main: ./cmd/hermind
     binary: hermind
-    dir: hermind
     env:
       - CGO_ENABLED=0
     goos:
