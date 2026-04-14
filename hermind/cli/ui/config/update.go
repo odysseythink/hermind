@@ -2,6 +2,7 @@ package configui
 
 import (
 	tea "github.com/charmbracelet/bubbletea"
+	"github.com/odysseythink/hermind/config/editor"
 )
 
 // Update implements tea.Model.
@@ -31,6 +32,17 @@ func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 			m.fieldIdx++
 		}
 	case tea.KeyEnter:
+		fields := m.fieldsInCurrentSection()
+		if m.fieldIdx >= len(fields) {
+			return m, nil
+		}
+		f := fields[m.fieldIdx]
+		if f.Kind == editor.KindList {
+			return m, nil // list editing is Task 8
+		}
+		cur, _ := m.doc.Get(f.Path)
+		fe := newFieldEditor(f, cur)
+		m.ed = &fe
 		m.editing = true
 	case tea.KeyRunes:
 		switch string(key.Runes) {
@@ -48,10 +60,66 @@ func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 	return m, nil
 }
 
-// updateEditing is filled in by Task 7 (field editors). For now, Esc cancels.
 func (m Model) updateEditing(key tea.KeyMsg) (tea.Model, tea.Cmd) {
 	if key.Type == tea.KeyEsc {
 		m.editing = false
+		m.ed = nil
+		return m, nil
+	}
+	if m.ed == nil {
+		return m, nil
+	}
+
+	switch m.ed.field.Kind {
+	case editor.KindEnum:
+		switch key.Type {
+		case tea.KeyLeft, tea.KeyUp:
+			if m.ed.enumIdx > 0 {
+				m.ed.enumIdx--
+			}
+		case tea.KeyRight, tea.KeyDown:
+			if m.ed.enumIdx < len(m.ed.field.Enum)-1 {
+				m.ed.enumIdx++
+			}
+		case tea.KeyEnter:
+			if errMsg := m.ed.commit(m.doc); errMsg != "" {
+				m.status = errMsg
+			} else {
+				m.dirty = true
+				m.editing = false
+				m.ed = nil
+			}
+		}
+	case editor.KindBool:
+		if key.Type == tea.KeyEnter || key.Type == tea.KeySpace {
+			cur := m.ed.input.Value()
+			next := "true"
+			if cur == "true" {
+				next = "false"
+			}
+			m.ed.input.SetValue(next)
+			if errMsg := m.ed.commit(m.doc); errMsg != "" {
+				m.status = errMsg
+			} else {
+				m.dirty = true
+				m.editing = false
+				m.ed = nil
+			}
+		}
+	default:
+		if key.Type == tea.KeyEnter {
+			if errMsg := m.ed.commit(m.doc); errMsg != "" {
+				m.status = errMsg
+			} else {
+				m.dirty = true
+				m.editing = false
+				m.ed = nil
+			}
+			return m, nil
+		}
+		var cmd tea.Cmd
+		m.ed.input, cmd = m.ed.input.Update(key)
+		return m, cmd
 	}
 	return m, nil
 }

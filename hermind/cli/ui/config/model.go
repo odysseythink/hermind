@@ -13,6 +13,7 @@ type Model struct {
 	sectionIdx int
 	fieldIdx   int
 	editing    bool
+	ed         *fieldEditor
 	dirty      bool
 	status     string
 }

@@ -34,3 +34,20 @@ func TestTabAdvancesSection(t *testing.T) {
 		t.Error("tab did not advance section")
 	}
 }
+
+func TestEditStringFieldWritesDoc(t *testing.T) {
+	dir := t.TempDir()
+	p := filepath.Join(dir, "config.yaml")
+	os.WriteFile(p, []byte("model: old\n"), 0o644)
+	m, _ := NewModel(p)
+	// navigate to "model" field (first field of "Model" section, default)
+	m2, _ := m.Update(tea.KeyMsg{Type: tea.KeyEnter}) // enter edit
+	for _, r := range "new-model" {
+		m2, _ = m2.(Model).Update(tea.KeyMsg{Type: tea.KeyRunes, Runes: []rune{r}})
+	}
+	m2, _ = m2.(Model).Update(tea.KeyMsg{Type: tea.KeyEnter}) // commit
+	got, _ := m2.(Model).doc.Get("model")
+	if got != "new-model" {
+		t.Errorf("got %q, want %q", got, "new-model")
+	}
+}
