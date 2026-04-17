@@ -3,6 +3,7 @@ package cli
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"os"
 	"path/filepath"
@@ -36,10 +37,18 @@ func runREPL(ctx context.Context, app *App) error {
 		return err
 	}
 
-	// Build the primary provider via factory
+	// Build the primary provider via factory. If no API key is configured,
+	// fall back to a stub provider so the REPL still starts — the user can
+	// then run `hermind config` (or /config in the REPL) to add credentials.
 	primaryProvider, primaryName, err := buildPrimaryProvider(app.Config)
 	if err != nil {
-		return err
+		if errors.Is(err, errMissingAPIKey) {
+			fmt.Fprintf(os.Stderr, "%v\n", err)
+			fmt.Fprintln(os.Stderr, "hermind: starting in degraded mode. Chat will fail until you configure a provider.")
+			primaryProvider = newStubProvider(primaryName)
+		} else {
+			return err
+		}
 	}
 	_ = primaryName
 
@@ -289,7 +298,7 @@ func buildPrimaryProvider(cfg *config.Config) (provider.Provider, string, error)
 	}
 
 	if pCfg.APIKey == "" {
-		return nil, "", fmt.Errorf("hermind: %s provider is not configured. Set api_key in ~/.hermind/config.yaml or ANTHROPIC_API_KEY env var", primaryName)
+		return nil, primaryName, fmt.Errorf("%w: provider %q. Set api_key in ~/.hermind/config.yaml or ANTHROPIC_API_KEY env var", errMissingAPIKey, primaryName)
 	}
 
 	// Default the model field from cfg.Model
