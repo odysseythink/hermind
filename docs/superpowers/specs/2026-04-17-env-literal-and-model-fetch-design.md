@@ -217,19 +217,26 @@ color class — no server roundtrip. This makes the button activate
 When the Get button is clicked, the handler:
 
 1. Calls `document.activeElement?.blur()` to force any pending `onchange`
-   on other inputs to fire.
-2. Calls `await persistProviderField(p.key, 'api_key', apiKeyInput.value)`
-   to guarantee the server's in-memory doc has the current api_key value
-   before the fetch. (Also persists base_url and provider type — any
-   unblurred fields would otherwise go to the server stale.) Simplest
-   approach: explicitly `await persistProviderField` for each of the
-   four provider fields with the current input values. Four small
-   noop-or-real persists, guaranteed fresh state. UX cost: a couple of
-   `unsaved changes` status flickers; acceptable.
+   on the currently focused input to fire. This triggers the existing
+   `persistProviderField` path for whichever field the user was editing.
+2. **Does not iterate and re-persist every input on the card.** The
+   `api_key` input's displayed value may be the `"••••"` mask sentinel
+   returned by `/api/providers` GET; blindly persisting that would
+   overwrite the real key in the in-memory doc with four dot characters.
+   The safe path is to rely on the browser's native
+   `blur → onchange → persistProviderField` chain: only fields the user
+   actually edited fire `onchange` with a non-sentinel value.
 3. Fetches `POST /api/providers/models` with `{key}`.
 4. On success, clears the datalist's existing `<option>` children and
    appends one `<option value="...">` per returned model ID.
 5. On error, renders `.inline-error` under the row.
+
+**Race window.** Between `blur()` and the fetch, the browser has
+dispatched `onchange` but `persistProviderField`'s POST may not have
+round-tripped. On loopback this is ~a few ms; a user clicking Get
+immediately after typing may see a stale-credentials error (e.g., 401)
+and retry. We consider this acceptable and prefer it to the api_key
+overwrite hazard of the alternative.
 
 #### Unsupported-provider hardcoded set
 
