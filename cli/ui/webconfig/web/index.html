@@ -1,17 +1,30 @@
 <!doctype html>
-<html>
+<html lang="en">
 <head>
   <meta charset="utf-8">
+  <meta name="color-scheme" content="light dark">
   <title>hermind config</title>
   <link rel="stylesheet" href="/app.css">
 </head>
 <body>
-  <aside id="sections"></aside>
+  <header class="topbar">
+    <div class="brand">
+      <span class="logo">⬡</span>
+      <span class="title">hermind config</span>
+    </div>
+    <span id="config-path" class="path"></span>
+    <span id="topbar-dot" class="dot idle"></span>
+  </header>
+  <aside id="sections" aria-label="Sections"></aside>
   <main id="form"></main>
   <footer>
-    <button id="save">Save</button>
-    <button id="save-exit">Save &amp; Exit</button>
-    <span id="status"></span>
+    <span id="status" class="status idle" role="status">
+      <span class="dot"></span><span class="msg"></span>
+    </span>
+    <div class="actions">
+      <button id="save" class="btn secondary">Save</button>
+      <button id="save-exit" class="btn primary">Save &amp; Exit</button>
+    </div>
   </footer>
   <script src="/app.js"></script>
 </body>

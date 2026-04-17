@@ -29,14 +29,29 @@ function renderNav(sections) {
 function renderForm() {
   const main = document.getElementById('form');
   main.innerHTML = '';
+  const panel = document.createElement('section');
+  panel.className = 'panel';
+  const header = document.createElement('header');
+  header.className = 'panel-header';
+  const title = document.createElement('h2');
+  title.className = 'section-title';
+  title.textContent = currentSection;
+  header.appendChild(title);
+  panel.appendChild(header);
   schema.filter(f => f.section === currentSection).forEach(f => {
     const wrap = document.createElement('label');
     const lbl = document.createElement('span'); lbl.className = 'lbl'; lbl.textContent = f.label;
     wrap.appendChild(lbl);
     wrap.appendChild(renderField(f));
-    if (f.help) { const h = document.createElement('span'); h.className = 'help'; h.textContent = f.help; wrap.appendChild(h); }
-    main.appendChild(wrap);
+    if (f.help) {
+      const help = document.createElement('span');
+      help.className = 'help';
+      help.textContent = f.help;
+      wrap.appendChild(help);
+    }
+    panel.appendChild(wrap);
   });
+  main.appendChild(panel);
 }
 
 // Kind constants mirror Go's iota order in schema.go:
@@ -58,13 +73,25 @@ function renderField(f) {
   }
   if (f.kind === 5) {
     const box = document.createElement('span');
+    box.className = 'secret-wrap';
     const inp = document.createElement('input'); inp.type = 'password'; inp.value = cur;
-    const btn = document.createElement('button'); btn.textContent = '👁'; btn.type = 'button';
+    const btn = document.createElement('button');
+    btn.type = 'button';
+    btn.className = 'reveal-btn';
+    btn.textContent = 'Show';
     btn.onclick = async () => {
       if (inp.type === 'password') {
         const r = await fetch('/api/reveal', {method:'POST', body: JSON.stringify({path: f.path})});
-        if (r.ok) { const b = await r.json(); inp.value = b.value; inp.type = 'text'; }
-      } else { inp.type = 'password'; }
+        if (r.ok) {
+          const b = await r.json();
+          inp.value = b.value;
+          inp.type = 'text';
+          btn.textContent = 'Hide';
+        }
+      } else {
+        inp.type = 'password';
+        btn.textContent = 'Show';
+      }
     };
     inp.onchange = () => persist(f.path, inp.value);
     box.appendChild(inp); box.appendChild(btn);
@@ -72,8 +99,8 @@ function renderField(f) {
   }
   if (f.kind === 6) {
     const note = document.createElement('span');
+    note.className = 'list-note';
     note.textContent = '(edit via YAML or TUI)';
-    note.style.color = '#999';
     return note;
   }
   const inp = document.createElement('input');
@@ -94,17 +121,33 @@ async function persist(path, value) {
     headers: {'Content-Type': 'application/json'},
     body: JSON.stringify({path, value})
   });
-  if (!r.ok) { status('error: ' + await r.text()); return; }
+  if (!r.ok) { status('error: ' + await r.text(), 'error'); return; }
   values[path] = value;
-  status('edited (unsaved)');
+  status('unsaved changes', 'unsaved');
 }
 
 async function save(exit) {
   const r = await fetch('/api/save', {method:'POST'});
-  if (!r.ok) { status('save failed'); return; }
-  status('saved — restart hermind to apply');
+  if (!r.ok) { status('save failed', 'error'); return; }
+  status('saved — restart hermind to apply', 'saved');
   if (exit) await fetch('/api/shutdown', {method:'POST'});
 }
 
-function status(s) { document.getElementById('status').textContent = s; }
+let _flashTimer = null;
+function status(s, state) {
+  const st = state || 'idle';
+  const el = document.getElementById('status');
+  el.querySelector('.msg').textContent = s;
+  el.className = 'status ' + st;
+  const topDot = document.getElementById('topbar-dot');
+  if (topDot) topDot.className = 'dot ' + st;
+  if (st === 'error') {
+    const f = document.querySelector('footer');
+    if (f) {
+      f.classList.add('flash-error');
+      clearTimeout(_flashTimer);
+      _flashTimer = setTimeout(() => f.classList.remove('flash-error'), 1000);
+    }
+  }
+}
 boot();
