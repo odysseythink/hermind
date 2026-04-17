@@ -98,3 +98,17 @@ type ModelInfo struct {
 	SupportsCaching   bool
 	SupportsReasoning bool
 }
+
+// ModelLister is an optional capability for providers that expose a
+// models-listing endpoint. Webconfig consumers do a type assertion
+// (`lister, ok := p.(ModelLister)`) before offering model discovery.
+// Providers whose backend does not expose model listing simply do not
+// implement this interface; callers should handle the negative assert.
+type ModelLister interface {
+	// ListModels returns the model IDs advertised by the provider.
+	// Ordering is provider-defined (typically the server's response
+	// order preserved). An empty slice is a valid result. Errors
+	// carry the underlying HTTP status or transport error; callers
+	// should surface them without further wrapping.
+	ListModels(ctx context.Context) ([]string, error)
+}

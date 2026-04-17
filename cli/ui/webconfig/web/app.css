@@ -247,6 +247,43 @@ main#form {
   margin-top: 16px;
 }
 
+.model-row {
+  position: relative;
+  display: flex;
+  align-items: stretch;
+  gap: 8px;
+}
+.model-row input {
+  flex: 1;
+}
+.get-models-btn {
+  background: transparent;
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  padding: 0 12px;
+  font: inherit;
+  font-size: 13px;
+  color: var(--muted);
+  cursor: default;
+  transition: color 120ms ease, border-color 120ms ease;
+}
+.get-models-btn.active {
+  color: var(--accent);
+  cursor: pointer;
+}
+.get-models-btn.active:hover {
+  border-color: var(--accent);
+}
+.get-models-btn:disabled {
+  opacity: 0.7;
+}
+.inline-error {
+  display: block;
+  margin-top: 4px;
+  font-size: 13px;
+  color: var(--error);
+}
+
 /* List placeholder */
 .list-note {
   display: inline-block;

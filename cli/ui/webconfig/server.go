@@ -39,6 +39,7 @@ func (s *Server) Handler() http.Handler {
 	mux.HandleFunc("/api/schema", s.handleSchema)
 	mux.HandleFunc("/api/config", s.handleConfig)
 	mux.HandleFunc("/api/providers", s.handleProviders)
+	mux.HandleFunc("/api/providers/models", s.handleProvidersModels)
 	mux.HandleFunc("/api/save", s.handleSave)
 	mux.HandleFunc("/api/reveal", s.handleReveal)
 	mux.HandleFunc("/api/shutdown", s.handleShutdown)

@@ -126,7 +126,7 @@ function renderProviderCard(p) {
   card.appendChild(providerRow('Provider type', p, 'provider', 'text'));
   card.appendChild(providerRow('Base URL', p, 'base_url', 'text'));
   card.appendChild(providerRow('API key', p, 'api_key', 'secret'));
-  card.appendChild(providerRow('Model', p, 'model', 'text'));
+  card.appendChild(providerRow('Model', p, 'model', 'model'));
   return card;
 }
 
@@ -161,9 +161,34 @@ function providerRow(label, p, field, kind) {
         btn.textContent = 'Show';
       }
     };
+    inp.oninput = () => updateGetBtn(p.key, inp.value);
     inp.onchange = () => persistProviderField(p.key, field, inp.value);
     box.appendChild(inp); box.appendChild(btn);
     wrap.appendChild(box);
+  } else if (kind === 'model') {
+    const row = document.createElement('span');
+    row.className = 'model-row';
+    const inp = document.createElement('input');
+    inp.type = 'text';
+    inp.value = p[field] || '';
+    inp.setAttribute('list', 'models-' + p.key);
+    inp.onchange = () => persistProviderField(p.key, field, inp.value);
+    const dl = document.createElement('datalist');
+    dl.id = 'models-' + p.key;
+    row.appendChild(inp);
+    row.appendChild(dl);
+    if (!UNSUPPORTED_LIST_MODELS.has(p.provider)) {
+      const btn = document.createElement('button');
+      btn.type = 'button';
+      btn.className = 'get-models-btn';
+      btn.id = 'get-btn-' + p.key;
+      btn.textContent = 'Get';
+      const hasKey = (p.api_key && p.api_key.length > 0);
+      if (hasKey) btn.classList.add('active');
+      btn.onclick = () => fetchModels(p, dl, btn, row);
+      row.appendChild(btn);
+    }
+    wrap.appendChild(row);
   } else {
     const inp = document.createElement('input');
     inp.type = 'text';
@@ -182,6 +207,77 @@ async function persistProviderField(key, field, value) {
   });
   if (!r.ok) { status('error: ' + await r.text(), 'error'); return; }
   status('unsaved changes', 'unsaved');
+}
+
+// Providers whose backend doesn't implement provider.ModelLister.
+// Kept in sync with server-side type assertions.
+const UNSUPPORTED_LIST_MODELS = new Set(['zhipu', 'wenxin']);
+
+// updateGetBtn is called from the api_key input's oninput handler so
+// the Get button reacts live (no server roundtrip).
+function updateGetBtn(key, apiKeyValue) {
+  const btn = document.getElementById('get-btn-' + key);
+  if (!btn) return;
+  if (apiKeyValue && apiKeyValue.length > 0) {
+    btn.classList.add('active');
+  } else {
+    btn.classList.remove('active');
+  }
+}
+
+async function fetchModels(p, datalist, btn, row) {
+  if (!btn.classList.contains('active')) return;
+  row.querySelectorAll('.inline-error').forEach(el => el.remove());
+  const prevText = btn.textContent;
+  btn.textContent = 'Loading…';
+  btn.disabled = true;
+  // Blur any active input so its onchange fires and persistProviderField
+  // commits the current value. We do NOT iterate every input on the card:
+  // the api_key field's displayed value may be the "••••" mask sentinel
+  // that came back from /api/providers, and persisting that would overwrite
+  // the real key in the in-memory doc. Rely on the browser's natural
+  // blur→onchange→persist chain; if the persist hasn't round-tripped by the
+  // time we fetch, the user retries. The race window is ~a few ms on
+  // loopback.
+  if (document.activeElement && typeof document.activeElement.blur === 'function') {
+    document.activeElement.blur();
+  }
+  try {
+    const r = await fetch('/api/providers/models', {
+      method: 'POST',
+      headers: {'Content-Type': 'application/json'},
+      body: JSON.stringify({key: p.key}),
+    });
+    if (!r.ok) {
+      const msg = await r.text();
+      const err = document.createElement('span');
+      err.className = 'inline-error';
+      err.textContent = msg.trim();
+      row.appendChild(err);
+      btn.textContent = prevText;
+      btn.disabled = false;
+      return;
+    }
+    const body = await r.json();
+    while (datalist.firstChild) datalist.removeChild(datalist.firstChild);
+    for (const id of body.models || []) {
+      const opt = document.createElement('option');
+      opt.value = id;
+      datalist.appendChild(opt);
+    }
+    btn.textContent = 'Got ' + (body.models || []).length;
+    setTimeout(() => {
+      btn.textContent = prevText;
+      btn.disabled = false;
+    }, 1000);
+  } catch (e) {
+    const err = document.createElement('span');
+    err.className = 'inline-error';
+    err.textContent = String(e);
+    row.appendChild(err);
+    btn.textContent = prevText;
+    btn.disabled = false;
+  }
 }
 
 // Kind constants mirror Go's iota order in schema.go:

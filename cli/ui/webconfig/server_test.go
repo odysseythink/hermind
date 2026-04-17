@@ -72,7 +72,10 @@ func TestGetConfigMasksSecrets(t *testing.T) {
 	}
 	ts := httptest.NewServer(s.Handler())
 	defer ts.Close()
-	resp, _ := http.Get(ts.URL + "/api/config")
+	resp, err := http.Get(ts.URL + "/api/config")
+	if err != nil {
+		t.Fatal(err)
+	}
 	defer resp.Body.Close()
 	buf, _ := io.ReadAll(resp.Body)
 	if bytes.Contains(buf, []byte("supersecret")) {
@@ -246,7 +249,10 @@ func TestProvidersAddSetDelete(t *testing.T) {
 	if r := post(map[string]any{"op": "delete", "key": "openai"}); r.StatusCode != http.StatusNoContent {
 		t.Fatalf("delete: got %d", r.StatusCode)
 	}
-	resp, _ = http.Get(ts.URL + "/api/providers")
+	resp, err = http.Get(ts.URL + "/api/providers")
+	if err != nil {
+		t.Fatal(err)
+	}
 	_ = json.NewDecoder(resp.Body).Decode(&list)
 	resp.Body.Close()
 	if len(list) != 0 {
@@ -313,4 +319,103 @@ func TestServeRespectsContextCancel(t *testing.T) {
 	case <-time.After(5 * time.Second):
 		t.Fatal("Serve did not return within 5s of ctx cancel")
 	}
+}
+
+func TestProvidersModelsHappyPath(t *testing.T) {
+	// Canned provider /models endpoint.
+	providerSrv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		if r.URL.Path != "/models" {
+			http.NotFound(w, r)
+			return
+		}
+		_ = json.NewEncoder(w).Encode(map[string]any{
+			"data": []map[string]string{
+				{"id": "aa"},
+				{"id": "bb"},
+			},
+		})
+	}))
+	defer providerSrv.Close()
+
+	dir := t.TempDir()
+	p := filepath.Join(dir, "config.yaml")
+	yamlBody := []byte("providers:\n  test:\n    provider: openai\n    base_url: " + providerSrv.URL + "\n    api_key: sk-test\n    model: aa\n")
+	if err := os.WriteFile(p, yamlBody, 0o644); err != nil {
+		t.Fatal(err)
+	}
+	s, err := New(p)
+	if err != nil {
+		t.Fatal(err)
+	}
+	ts := httptest.NewServer(s.Handler())
+	defer ts.Close()
+
+	body, _ := json.Marshal(map[string]string{"key": "test"})
+	resp, err := http.Post(ts.URL+"/api/providers/models", "application/json", bytes.NewReader(body))
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer resp.Body.Close()
+	if resp.StatusCode != http.StatusOK {
+		t.Fatalf("got %d: %s", resp.StatusCode, readBody(resp))
+	}
+	var out struct {
+		Models []string `json:"models"`
+	}
+	if err := json.NewDecoder(resp.Body).Decode(&out); err != nil {
+		t.Fatal(err)
+	}
+	if len(out.Models) != 2 || out.Models[0] != "aa" || out.Models[1] != "bb" {
+		t.Errorf("unexpected models: %+v", out.Models)
+	}
+}
+
+func TestProvidersModelsUnsupportedType(t *testing.T) {
+	dir := t.TempDir()
+	p := filepath.Join(dir, "config.yaml")
+	// api_key must be "<key_id>.<secret>" for zhipu's signJWT to succeed; only
+	// then does factory.New return a provider and we reach the ModelLister
+	// type assertion (which is what this test exercises — zhipu does not
+	// implement provider.ModelLister).
+	os.WriteFile(p, []byte("providers:\n  test:\n    provider: zhipu\n    api_key: abc.def\n"), 0o644)
+	s, err := New(p)
+	if err != nil {
+		t.Fatal(err)
+	}
+	ts := httptest.NewServer(s.Handler())
+	defer ts.Close()
+
+	body, _ := json.Marshal(map[string]string{"key": "test"})
+	resp, err := http.Post(ts.URL+"/api/providers/models", "application/json", bytes.NewReader(body))
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer resp.Body.Close()
+	if resp.StatusCode != http.StatusBadRequest {
+		t.Fatalf("expected 400, got %d", resp.StatusCode)
+	}
+	respBody := readBody(resp)
+	if !strings.Contains(respBody, "does not support model listing") {
+		t.Errorf("expected ModelLister rejection, got: %s", respBody)
+	}
+}
+
+func TestProvidersModelsOriginCheck(t *testing.T) {
+	ts, _ := newServer(t)
+	body, _ := json.Marshal(map[string]string{"key": "test"})
+	req, _ := http.NewRequest("POST", ts.URL+"/api/providers/models", bytes.NewReader(body))
+	req.Header.Set("Origin", "https://evil.example.com")
+	resp, err := http.DefaultClient.Do(req)
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer resp.Body.Close()
+	if resp.StatusCode != http.StatusForbidden {
+		t.Errorf("expected 403, got %d", resp.StatusCode)
+	}
+}
+
+func readBody(resp *http.Response) string {
+	b, _ := io.ReadAll(resp.Body)
+	return string(b)
 }

@@ -3,12 +3,16 @@ package webconfig
 import (
 	"context"
 	"encoding/json"
+	"fmt"
 	"net/http"
 	"net/url"
 	"strings"
 	"time"
 
+	"github.com/odysseythink/hermind/config"
 	"github.com/odysseythink/hermind/config/editor"
+	"github.com/odysseythink/hermind/provider"
+	"github.com/odysseythink/hermind/provider/factory"
 )
 
 // schemaField is the JSON-serialisable view of editor.Field (omits Validate).
@@ -245,6 +249,63 @@ func validProviderField(f string) bool {
 		return true
 	}
 	return false
+}
+
+// handleProvidersModels queries the provider's /models endpoint using
+// credentials from the in-memory doc and returns the list of model IDs.
+// Requires loopback origin (same defense as /api/reveal) since it uses
+// the user's live API key against third-party services.
+func (s *Server) handleProvidersModels(w http.ResponseWriter, r *http.Request) {
+	if r.Method != http.MethodPost {
+		http.Error(w, "method not allowed", http.StatusMethodNotAllowed)
+		return
+	}
+	if !isLocalOrigin(r) {
+		http.Error(w, "cross-origin denied", http.StatusForbidden)
+		return
+	}
+	var body struct {
+		Key string `json:"key"`
+	}
+	if err := json.NewDecoder(r.Body).Decode(&body); err != nil {
+		http.Error(w, err.Error(), http.StatusBadRequest)
+		return
+	}
+	if !validProviderKey(body.Key) {
+		http.Error(w, "invalid key", http.StatusBadRequest)
+		return
+	}
+
+	providerType, _ := s.doc.Get("providers." + body.Key + ".provider")
+	baseURL, _ := s.doc.Get("providers." + body.Key + ".base_url")
+	apiKey, _ := s.doc.Get("providers." + body.Key + ".api_key")
+	model, _ := s.doc.Get("providers." + body.Key + ".model")
+
+	cfg := config.ProviderConfig{
+		Provider: providerType,
+		BaseURL:  baseURL,
+		APIKey:   apiKey,
+		Model:    model,
+	}
+	p, err := factory.New(cfg)
+	if err != nil {
+		http.Error(w, err.Error(), http.StatusBadRequest)
+		return
+	}
+	lister, ok := p.(provider.ModelLister)
+	if !ok {
+		http.Error(w, fmt.Sprintf("provider type %q does not support model listing", providerType), http.StatusBadRequest)
+		return
+	}
+
+	ctx, cancel := context.WithTimeout(r.Context(), 10*time.Second)
+	defer cancel()
+	models, err := lister.ListModels(ctx)
+	if err != nil {
+		http.Error(w, err.Error(), http.StatusBadGateway)
+		return
+	}
+	writeJSON(w, map[string]any{"models": models})
 }
 
 func (s *Server) handleShutdown(w http.ResponseWriter, r *http.Request) {
