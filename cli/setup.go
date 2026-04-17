@@ -32,7 +32,7 @@ func runSetupInteractive(reader *bufio.Reader) error {
 	fmt.Println()
 
 	provider := prompt(reader, "Primary provider [anthropic]", "anthropic")
-	apiKey := prompt(reader, fmt.Sprintf("%s api key (leave blank to use env var)", provider), "")
+	apiKey := prompt(reader, fmt.Sprintf("%s api key (leave blank to snapshot from env)", provider), "")
 	model := prompt(reader, "Default model [claude-opus-4-6]", "claude-opus-4-6")
 	terminalBackend := prompt(reader, "Terminal backend [local]", "local")
 	storagePath := prompt(reader, "SQLite path [~/.hermind/state.db]", "~/.hermind/state.db")
