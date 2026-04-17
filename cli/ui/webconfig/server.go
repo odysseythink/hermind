@@ -3,6 +3,7 @@
 package webconfig
 
 import (
+	"context"
 	"embed"
 	"errors"
 	"io/fs"
@@ -43,8 +44,9 @@ func (s *Server) Handler() http.Handler {
 	return mux
 }
 
-// Serve binds addr and serves until shutdown is requested.
-func Serve(path, addr string) error {
+// Serve binds addr and serves until ctx is cancelled or the in-browser
+// "Save & Exit" action calls /api/shutdown.
+func Serve(ctx context.Context, path, addr string) error {
 	s, err := New(path)
 	if err != nil {
 		return err
@@ -54,10 +56,26 @@ func Serve(path, addr string) error {
 		Handler:           s.Handler(),
 		ReadHeaderTimeout: 10 * time.Second,
 	}
-	err = s.srv.ListenAndServe()
-	if errors.Is(err, http.ErrServerClosed) {
+
+	errCh := make(chan error, 1)
+	go func() {
+		err := s.srv.ListenAndServe()
+		if errors.Is(err, http.ErrServerClosed) {
+			errCh <- nil
+			return
+		}
+		errCh <- err
+	}()
+
+	select {
+	case <-ctx.Done():
+		shutdownCtx, cancel := context.WithTimeout(context.Background(), 2*time.Second)
+		defer cancel()
+		_ = s.srv.Shutdown(shutdownCtx)
+		<-errCh
 		return nil
+	case err := <-errCh:
+		return err
 	}
-	return err
 }
 

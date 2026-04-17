@@ -2,13 +2,16 @@ package webconfig
 
 import (
 	"bytes"
+	"context"
 	"encoding/json"
 	"io"
+	"net"
 	"net/http"
 	"net/http/httptest"
 	"os"
 	"path/filepath"
 	"testing"
+	"time"
 )
 
 func newServer(t *testing.T) (*httptest.Server, string) {
@@ -158,5 +161,50 @@ func TestRevealRejectsCrossOrigin(t *testing.T) {
 	}
 	if resp.StatusCode != 403 {
 		t.Errorf("expected 403, got %d", resp.StatusCode)
+	}
+}
+
+// TestServeRespectsContextCancel ensures Ctrl-C / SIGTERM from the CLI layer
+// reaches the HTTP server via ctx cancellation, instead of leaving
+// ListenAndServe blocked forever.
+func TestServeRespectsContextCancel(t *testing.T) {
+	dir := t.TempDir()
+	p := filepath.Join(dir, "config.yaml")
+	if err := os.WriteFile(p, []byte("model: old\n"), 0o644); err != nil {
+		t.Fatal(err)
+	}
+
+	ln, err := net.Listen("tcp", "127.0.0.1:0")
+	if err != nil {
+		t.Fatal(err)
+	}
+	addr := ln.Addr().String()
+	_ = ln.Close()
+
+	ctx, cancel := context.WithCancel(context.Background())
+	defer cancel()
+
+	errCh := make(chan error, 1)
+	go func() { errCh <- Serve(ctx, p, addr) }()
+
+	deadline := time.Now().Add(2 * time.Second)
+	for time.Now().Before(deadline) {
+		conn, err := net.DialTimeout("tcp", addr, 100*time.Millisecond)
+		if err == nil {
+			_ = conn.Close()
+			break
+		}
+		time.Sleep(20 * time.Millisecond)
+	}
+
+	cancel()
+
+	select {
+	case err := <-errCh:
+		if err != nil {
+			t.Fatalf("Serve returned error after ctx cancel: %v", err)
+		}
+	case <-time.After(5 * time.Second):
+		t.Fatal("Serve did not return within 5s of ctx cancel")
 	}
 }

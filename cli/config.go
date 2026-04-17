@@ -1,6 +1,7 @@
 package cli
 
 import (
+	"context"
 	"fmt"
 	"os"
 	"path/filepath"
@@ -22,7 +23,7 @@ func newConfigCmd(app *App) *cobra.Command {
 				return err
 			}
 			if web {
-				return serveWebConfig(path, port)
+				return serveWebConfig(cmd.Context(), path, port)
 			}
 			return configui.Run(path)
 		},
@@ -40,10 +41,10 @@ func defaultConfigPath() (string, error) {
 	return filepath.Join(home, ".hermind", "config.yaml"), nil
 }
 
-func serveWebConfig(path string, port int) error {
+func serveWebConfig(ctx context.Context, path string, port int) error {
 	addr := fmt.Sprintf("127.0.0.1:%d", port)
 	url := "http://" + addr
 	fmt.Fprintf(os.Stderr, "config editor: %s\n", url)
 	go func() { _ = webconfig.OpenBrowser(url) }()
-	return webconfig.Serve(path, addr)
+	return webconfig.Serve(ctx, path, addr)
 }
