@@ -6,7 +6,6 @@ import (
 	"log/slog"
 	"os/exec"
 	"sync"
-	"syscall"
 	"time"
 
 	"github.com/google/uuid"
@@ -41,7 +40,7 @@ func NewManager() *Manager {
 func (m *Manager) Start(ctx context.Context, command string, args []string) (string, error) {
 	id := uuid.New().String()[:8]
 	cmd := exec.CommandContext(ctx, command, args...)
-	cmd.SysProcAttr = &syscall.SysProcAttr{Setpgid: true}
+	applyProcGroup(cmd)
 
 	if err := cmd.Start(); err != nil {
 		return "", fmt.Errorf("rl: start %s: %w", command, err)
@@ -107,7 +106,7 @@ func (m *Manager) Stop(runID string) error {
 	}
 
 	if r.cmd.Process != nil {
-		_ = syscall.Kill(-r.cmd.Process.Pid, syscall.SIGTERM)
+		_ = terminateGroup(r.cmd)
 	}
 
 	select {
@@ -117,7 +116,7 @@ func (m *Manager) Stop(runID string) error {
 	}
 
 	if r.cmd.Process != nil {
-		_ = syscall.Kill(-r.cmd.Process.Pid, syscall.SIGKILL)
+		_ = killGroup(r.cmd)
 	}
 
 	<-r.done
