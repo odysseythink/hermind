@@ -26,6 +26,18 @@ function renderNav(sections) {
   });
 }
 
+// Hide fields under `<section>.<sub>.*` when a sibling `<section>.provider` enum
+// exists and does not equal `<sub>`. Keeps the form focused on the currently
+// selected memory/browser provider instead of listing every provider's keys.
+function isVisible(f) {
+  const parts = f.path.split('.');
+  if (parts.length < 3) return true;
+  const providerPath = parts[0] + '.provider';
+  const providerField = schema.find(x => x.path === providerPath && x.kind === 4);
+  if (!providerField) return true;
+  return (values[providerPath] ?? '') === parts[1];
+}
+
 function renderForm() {
   const main = document.getElementById('form');
   main.innerHTML = '';
@@ -39,6 +51,7 @@ function renderForm() {
   header.appendChild(title);
   panel.appendChild(header);
   schema.filter(f => f.section === currentSection).forEach(f => {
+    if (!isVisible(f)) return;
     const wrap = document.createElement('label');
     const lbl = document.createElement('span'); lbl.className = 'lbl'; lbl.textContent = f.label;
     wrap.appendChild(lbl);
@@ -62,7 +75,10 @@ function renderField(f) {
     const sel = document.createElement('select');
     (f.enum || []).forEach(v => { const o = document.createElement('option'); o.value = v; o.textContent = v || '(none)'; sel.appendChild(o); });
     sel.value = cur;
-    sel.onchange = () => persist(f.path, sel.value);
+    sel.onchange = async () => {
+      await persist(f.path, sel.value);
+      if (f.path.endsWith('.provider')) renderForm();
+    };
     return sel;
   }
   if (f.kind === 3) {
