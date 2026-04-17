@@ -50,39 +50,6 @@ func TestLoadFromMissingFileReturnsDefaults(t *testing.T) {
 	assert.Equal(t, Default().Model, cfg.Model)
 }
 
-func TestEnvVarExpansion(t *testing.T) {
-	t.Setenv("HERMIND_TEST_KEY", "sk-from-env")
-	dir := t.TempDir()
-	yamlPath := filepath.Join(dir, "config.yaml")
-	err := os.WriteFile(yamlPath, []byte(`
-providers:
-  anthropic:
-    provider: anthropic
-    api_key: env:HERMIND_TEST_KEY
-`), 0o644)
-	require.NoError(t, err)
-
-	cfg, err := LoadFromPath(yamlPath)
-	require.NoError(t, err)
-	assert.Equal(t, "sk-from-env", cfg.Providers["anthropic"].APIKey)
-}
-
-func TestEnvVarExpansionRejectsEmpty(t *testing.T) {
-	dir := t.TempDir()
-	yamlPath := filepath.Join(dir, "config.yaml")
-	err := os.WriteFile(yamlPath, []byte(`
-providers:
-  anthropic:
-    provider: anthropic
-    api_key: "env:"
-`), 0o644)
-	require.NoError(t, err)
-
-	_, err = LoadFromPath(yamlPath)
-	assert.Error(t, err)
-	assert.Contains(t, err.Error(), "empty env variable")
-}
-
 func TestLoadFromYAMLParsesTerminalConfig(t *testing.T) {
 	dir := t.TempDir()
 	yamlPath := filepath.Join(dir, "config.yaml")
@@ -121,8 +88,6 @@ terminal:
 }
 
 func TestLoadFromYAMLParsesMCPServers(t *testing.T) {
-	t.Setenv("GITHUB_TOKEN", "gh-secret")
-
 	dir := t.TempDir()
 	yamlPath := filepath.Join(dir, "config.yaml")
 	err := os.WriteFile(yamlPath, []byte(`
@@ -132,7 +97,7 @@ mcp:
       command: npx
       args: [-y, "@modelcontextprotocol/server-github"]
       env:
-        GITHUB_PERSONAL_ACCESS_TOKEN: env:GITHUB_TOKEN
+        GITHUB_PERSONAL_ACCESS_TOKEN: gh-secret-literal
     filesystem:
       command: npx
       args: [-y, "@modelcontextprotocol/server-filesystem", "/tmp"]
@@ -144,7 +109,7 @@ mcp:
 	require.NoError(t, err)
 	require.Contains(t, cfg.MCP.Servers, "github")
 	assert.Equal(t, "npx", cfg.MCP.Servers["github"].Command)
-	assert.Equal(t, "gh-secret", cfg.MCP.Servers["github"].Env["GITHUB_PERSONAL_ACCESS_TOKEN"])
+	assert.Equal(t, "gh-secret-literal", cfg.MCP.Servers["github"].Env["GITHUB_PERSONAL_ACCESS_TOKEN"])
 	assert.True(t, cfg.MCP.Servers["github"].IsEnabled())
 
 	require.Contains(t, cfg.MCP.Servers, "filesystem")
@@ -177,4 +142,23 @@ fallback_providers:
 	assert.Equal(t, "deepseek", cfg.FallbackProviders[0].Provider)
 	assert.Equal(t, "sk-deepseek", cfg.FallbackProviders[0].APIKey)
 	assert.Equal(t, "openai", cfg.FallbackProviders[1].Provider)
+}
+
+func TestLoadPreservesLiteralEnvString(t *testing.T) {
+	// After dropping env:VAR expansion, a config value that happens to start
+	// with "env:" must round-trip as a literal string, not trigger lookup.
+	t.Setenv("HERMIND_TEST_KEY", "should-not-be-used")
+	dir := t.TempDir()
+	yamlPath := filepath.Join(dir, "config.yaml")
+	err := os.WriteFile(yamlPath, []byte(`
+providers:
+  anthropic:
+    provider: anthropic
+    api_key: env:HERMIND_TEST_KEY
+`), 0o644)
+	require.NoError(t, err)
+
+	cfg, err := LoadFromPath(yamlPath)
+	require.NoError(t, err)
+	assert.Equal(t, "env:HERMIND_TEST_KEY", cfg.Providers["anthropic"].APIKey)
 }

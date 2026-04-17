@@ -45,9 +45,6 @@ func LoadFromPath(path string) (*Config, error) {
 		return nil, fmt.Errorf("config: parse %s: %w", path, err)
 	}
 
-	if err := expandEnvVars(cfg); err != nil {
-		return nil, err
-	}
 	resolveDefaults(cfg)
 	return cfg, nil
 }
@@ -66,65 +63,6 @@ func expandPath(p string) (string, error) {
 		return home, nil
 	}
 	return filepath.Join(home, strings.TrimPrefix(p, "~/")), nil
-}
-
-// expandEnvVars replaces "env:VAR_NAME" references in api keys with the env value.
-func expandEnvVars(cfg *Config) error {
-	// Primary providers
-	for name, p := range cfg.Providers {
-		if strings.HasPrefix(p.APIKey, "env:") {
-			varName := strings.TrimPrefix(p.APIKey, "env:")
-			if varName == "" {
-				return fmt.Errorf("config: provider %q has empty env variable reference", name)
-			}
-			p.APIKey = os.Getenv(varName)
-			cfg.Providers[name] = p
-		}
-	}
-	// Fallback providers
-	for i, p := range cfg.FallbackProviders {
-		if strings.HasPrefix(p.APIKey, "env:") {
-			varName := strings.TrimPrefix(p.APIKey, "env:")
-			if varName == "" {
-				return fmt.Errorf("config: fallback provider %d has empty env variable reference", i)
-			}
-			p.APIKey = os.Getenv(varName)
-			cfg.FallbackProviders[i] = p
-		}
-	}
-	// Terminal tokens
-	if strings.HasPrefix(cfg.Terminal.ModalToken, "env:") {
-		varName := strings.TrimPrefix(cfg.Terminal.ModalToken, "env:")
-		if varName == "" {
-			return fmt.Errorf("config: terminal.modal_token has empty env variable reference")
-		}
-		cfg.Terminal.ModalToken = os.Getenv(varName)
-	}
-	if strings.HasPrefix(cfg.Terminal.DaytonaToken, "env:") {
-		varName := strings.TrimPrefix(cfg.Terminal.DaytonaToken, "env:")
-		if varName == "" {
-			return fmt.Errorf("config: terminal.daytona_token has empty env variable reference")
-		}
-		cfg.Terminal.DaytonaToken = os.Getenv(varName)
-	}
-	// MCP server env vars
-	for name, s := range cfg.MCP.Servers {
-		changed := false
-		for k, v := range s.Env {
-			if strings.HasPrefix(v, "env:") {
-				varName := strings.TrimPrefix(v, "env:")
-				if varName == "" {
-					return fmt.Errorf("config: mcp server %q env var %q has empty env reference", name, k)
-				}
-				s.Env[k] = os.Getenv(varName)
-				changed = true
-			}
-		}
-		if changed {
-			cfg.MCP.Servers[name] = s
-		}
-	}
-	return nil
 }
 
 // resolveDefaults fills in missing values that depend on environment.
