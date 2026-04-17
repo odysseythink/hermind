@@ -38,6 +38,7 @@ func (s *Server) Handler() http.Handler {
 	mux.Handle("/", http.FileServer(http.FS(static)))
 	mux.HandleFunc("/api/schema", s.handleSchema)
 	mux.HandleFunc("/api/config", s.handleConfig)
+	mux.HandleFunc("/api/providers", s.handleProviders)
 	mux.HandleFunc("/api/save", s.handleSave)
 	mux.HandleFunc("/api/reveal", s.handleReveal)
 	mux.HandleFunc("/api/shutdown", s.handleShutdown)

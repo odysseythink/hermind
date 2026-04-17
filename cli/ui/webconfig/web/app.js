@@ -38,7 +38,7 @@ function isVisible(f) {
   return (values[providerPath] ?? '') === parts[1];
 }
 
-function renderForm() {
+async function renderForm() {
   const main = document.getElementById('form');
   main.innerHTML = '';
   const panel = document.createElement('section');
@@ -50,6 +50,11 @@ function renderForm() {
   title.textContent = currentSection;
   header.appendChild(title);
   panel.appendChild(header);
+  main.appendChild(panel);
+  if (currentSection === 'Providers') {
+    await renderProviders(panel);
+    return;
+  }
   schema.filter(f => f.section === currentSection).forEach(f => {
     if (!isVisible(f)) return;
     const wrap = document.createElement('label');
@@ -64,7 +69,119 @@ function renderForm() {
     }
     panel.appendChild(wrap);
   });
-  main.appendChild(panel);
+}
+
+async function renderProviders(panel) {
+  const r = await fetch('/api/providers');
+  if (!r.ok) { status('error: ' + await r.text(), 'error'); return; }
+  const list = await r.json();
+  list.forEach(p => panel.appendChild(renderProviderCard(p)));
+  const addBtn = document.createElement('button');
+  addBtn.type = 'button';
+  addBtn.className = 'btn secondary provider-add';
+  addBtn.textContent = '+ Add provider';
+  addBtn.onclick = async () => {
+    const key = (prompt('Provider key (letters, digits, _ or -):') || '').trim();
+    if (!key) return;
+    const resp = await fetch('/api/providers', {
+      method: 'POST',
+      headers: {'Content-Type': 'application/json'},
+      body: JSON.stringify({op: 'add', key}),
+    });
+    if (!resp.ok) { status('error: ' + await resp.text(), 'error'); return; }
+    status('unsaved changes', 'unsaved');
+    renderForm();
+  };
+  panel.appendChild(addBtn);
+}
+
+function renderProviderCard(p) {
+  const card = document.createElement('div');
+  card.className = 'provider-card';
+
+  const keyRow = document.createElement('div');
+  keyRow.className = 'provider-key-row';
+  const keyLabel = document.createElement('span');
+  keyLabel.className = 'provider-key';
+  keyLabel.textContent = p.key;
+  keyRow.appendChild(keyLabel);
+  const del = document.createElement('button');
+  del.type = 'button';
+  del.className = 'btn secondary provider-delete';
+  del.textContent = 'Delete';
+  del.onclick = async () => {
+    if (!confirm('Remove provider "' + p.key + '"?')) return;
+    const resp = await fetch('/api/providers', {
+      method: 'POST',
+      headers: {'Content-Type': 'application/json'},
+      body: JSON.stringify({op: 'delete', key: p.key}),
+    });
+    if (!resp.ok) { status('error: ' + await resp.text(), 'error'); return; }
+    status('unsaved changes', 'unsaved');
+    renderForm();
+  };
+  keyRow.appendChild(del);
+  card.appendChild(keyRow);
+
+  card.appendChild(providerRow('Provider type', p, 'provider', 'text'));
+  card.appendChild(providerRow('Base URL', p, 'base_url', 'text'));
+  card.appendChild(providerRow('API key', p, 'api_key', 'secret'));
+  card.appendChild(providerRow('Model', p, 'model', 'text'));
+  return card;
+}
+
+function providerRow(label, p, field, kind) {
+  const wrap = document.createElement('label');
+  const lbl = document.createElement('span'); lbl.className = 'lbl'; lbl.textContent = label;
+  wrap.appendChild(lbl);
+  if (kind === 'secret') {
+    const box = document.createElement('span');
+    box.className = 'secret-wrap';
+    const inp = document.createElement('input');
+    inp.type = 'password';
+    inp.value = p[field] || '';
+    const btn = document.createElement('button');
+    btn.type = 'button';
+    btn.className = 'reveal-btn';
+    btn.textContent = 'Show';
+    btn.onclick = async () => {
+      if (inp.type === 'password') {
+        const r = await fetch('/api/reveal', {
+          method: 'POST',
+          body: JSON.stringify({path: 'providers.' + p.key + '.api_key'}),
+        });
+        if (r.ok) {
+          const b = await r.json();
+          inp.value = b.value;
+          inp.type = 'text';
+          btn.textContent = 'Hide';
+        }
+      } else {
+        inp.type = 'password';
+        btn.textContent = 'Show';
+      }
+    };
+    inp.onchange = () => persistProviderField(p.key, field, inp.value);
+    box.appendChild(inp); box.appendChild(btn);
+    wrap.appendChild(box);
+  } else {
+    const inp = document.createElement('input');
+    inp.type = 'text';
+    inp.value = p[field] || '';
+    inp.onchange = () => persistProviderField(p.key, field, inp.value);
+    wrap.appendChild(inp);
+  }
+  return wrap;
+}
+
+async function persistProviderField(key, field, value) {
+  const r = await fetch('/api/providers', {
+    method: 'POST',
+    headers: {'Content-Type': 'application/json'},
+    body: JSON.stringify({op: 'set', key, field, value}),
+  });
+  if (!r.ok) { status('error: ' + await r.text(), 'error'); return; }
+  status('unsaved changes', 'unsaved');
 }
 
 // Kind constants mirror Go's iota order in schema.go:

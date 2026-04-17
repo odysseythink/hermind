@@ -10,6 +10,7 @@ import (
 	"net/http/httptest"
 	"os"
 	"path/filepath"
+	"strings"
 	"testing"
 	"time"
 )
@@ -161,6 +162,111 @@ func TestRevealRejectsCrossOrigin(t *testing.T) {
 	}
 	if resp.StatusCode != 403 {
 		t.Errorf("expected 403, got %d", resp.StatusCode)
+	}
+}
+
+func TestProvidersGETMasksAPIKey(t *testing.T) {
+	dir := t.TempDir()
+	p := filepath.Join(dir, "config.yaml")
+	os.WriteFile(p, []byte("providers:\n  anthropic:\n    provider: anthropic\n    api_key: sk-secret\n    model: claude-opus-4-6\n"), 0o644)
+	s, err := New(p)
+	if err != nil {
+		t.Fatal(err)
+	}
+	ts := httptest.NewServer(s.Handler())
+	defer ts.Close()
+
+	resp, err := http.Get(ts.URL + "/api/providers")
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer resp.Body.Close()
+	var list []map[string]string
+	if err := json.NewDecoder(resp.Body).Decode(&list); err != nil {
+		t.Fatal(err)
+	}
+	if len(list) != 1 || list[0]["key"] != "anthropic" {
+		t.Fatalf("got %+v", list)
+	}
+	if list[0]["api_key"] != "••••" {
+		t.Errorf("api_key not masked: %q", list[0]["api_key"])
+	}
+	if list[0]["model"] != "claude-opus-4-6" {
+		t.Errorf("model lost: %q", list[0]["model"])
+	}
+}
+
+func TestProvidersAddSetDelete(t *testing.T) {
+	ts, _ := newServer(t)
+
+	post := func(body map[string]any) *http.Response {
+		b, _ := json.Marshal(body)
+		resp, err := http.Post(ts.URL+"/api/providers", "application/json", bytes.NewReader(b))
+		if err != nil {
+			t.Fatal(err)
+		}
+		return resp
+	}
+
+	// Add
+	if r := post(map[string]any{"op": "add", "key": "openai"}); r.StatusCode != http.StatusNoContent {
+		t.Fatalf("add: got %d", r.StatusCode)
+	}
+	// Set api_key
+	if r := post(map[string]any{"op": "set", "key": "openai", "field": "api_key", "value": "sk-123"}); r.StatusCode != http.StatusNoContent {
+		t.Fatalf("set: got %d", r.StatusCode)
+	}
+
+	// GET shows masked key
+	resp, err := http.Get(ts.URL + "/api/providers")
+	if err != nil {
+		t.Fatal(err)
+	}
+	var list []map[string]string
+	_ = json.NewDecoder(resp.Body).Decode(&list)
+	resp.Body.Close()
+	if len(list) != 1 || list[0]["key"] != "openai" || list[0]["api_key"] != "••••" {
+		t.Fatalf("unexpected state: %+v", list)
+	}
+
+	// Reveal returns the real key
+	revBody, _ := json.Marshal(map[string]string{"path": "providers.openai.api_key"})
+	resp, err = http.Post(ts.URL+"/api/reveal", "application/json", bytes.NewReader(revBody))
+	if err != nil {
+		t.Fatal(err)
+	}
+	var rev map[string]string
+	_ = json.NewDecoder(resp.Body).Decode(&rev)
+	resp.Body.Close()
+	if rev["value"] != "sk-123" {
+		t.Errorf("reveal: got %q", rev["value"])
+	}
+
+	// Delete
+	if r := post(map[string]any{"op": "delete", "key": "openai"}); r.StatusCode != http.StatusNoContent {
+		t.Fatalf("delete: got %d", r.StatusCode)
+	}
+	resp, _ = http.Get(ts.URL + "/api/providers")
+	_ = json.NewDecoder(resp.Body).Decode(&list)
+	resp.Body.Close()
+	if len(list) != 0 {
+		t.Errorf("expected empty, got %+v", list)
+	}
+}
+
+func TestProvidersRejectsInvalidKey(t *testing.T) {
+	ts, _ := newServer(t)
+	cases := []string{"", "bad key", "../etc", "a.b", "a/b", strings.Repeat("x", 65)}
+	for _, k := range cases {
+		b, _ := json.Marshal(map[string]any{"op": "add", "key": k})
+		resp, err := http.Post(ts.URL+"/api/providers", "application/json", bytes.NewReader(b))
+		if err != nil {
+			t.Fatal(err)
+		}
+		resp.Body.Close()
+		if resp.StatusCode != http.StatusBadRequest {
+			t.Errorf("key %q: expected 400, got %d", k, resp.StatusCode)
+		}
 	}
 }
 

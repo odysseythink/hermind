@@ -218,6 +218,35 @@ main#form {
   border-radius: 4px;
 }
 
+/* Provider card */
+.provider-card {
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  padding: 16px 20px;
+  margin: 16px 0;
+  background: var(--surface);
+}
+.provider-key-row {
+  display: flex;
+  align-items: center;
+  margin-bottom: 8px;
+}
+.provider-key {
+  font-family: var(--font-mono);
+  font-size: 14px;
+  font-weight: 500;
+  color: var(--text);
+}
+.provider-delete {
+  margin-left: auto;
+  height: 28px;
+  padding: 0 10px;
+  font-size: 13px;
+}
+.provider-add {
+  margin-top: 16px;
+}
+
 /* List placeholder */
 .list-note {
   display: inline-block;

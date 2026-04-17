@@ -5,6 +5,7 @@ import (
 	"encoding/json"
 	"net/http"
 	"net/url"
+	"strings"
 	"time"
 
 	"github.com/odysseythink/hermind/config/editor"
@@ -147,7 +148,103 @@ func (s *Server) handleReveal(w http.ResponseWriter, r *http.Request) {
 			return
 		}
 	}
+	// Dynamic secret: providers.<key>.api_key.
+	if parts := strings.Split(body.Path, "."); len(parts) == 3 &&
+		parts[0] == "providers" && parts[2] == "api_key" && validProviderKey(parts[1]) {
+		v, _ := s.doc.Get(body.Path)
+		writeJSON(w, map[string]string{"value": v})
+		return
+	}
 	http.Error(w, "not a secret field", http.StatusBadRequest)
+}
+
+// handleProviders exposes the providers map as a small CRUD endpoint.
+// Accepts three ops on POST: add (seed empty record), set (write one field),
+// delete (remove the whole key).
+func (s *Server) handleProviders(w http.ResponseWriter, r *http.Request) {
+	switch r.Method {
+	case http.MethodGet:
+		keys := s.doc.MapKeys("providers")
+		out := make([]map[string]string, 0, len(keys))
+		for _, k := range keys {
+			entry := map[string]string{"key": k}
+			for _, f := range []string{"provider", "base_url", "api_key", "model"} {
+				v, _ := s.doc.Get("providers." + k + "." + f)
+				if f == "api_key" && v != "" {
+					v = "••••"
+				}
+				entry[f] = v
+			}
+			out = append(out, entry)
+		}
+		writeJSON(w, out)
+	case http.MethodPost:
+		var body struct {
+			Op    string `json:"op"`
+			Key   string `json:"key"`
+			Field string `json:"field,omitempty"`
+			Value string `json:"value,omitempty"`
+		}
+		if err := json.NewDecoder(r.Body).Decode(&body); err != nil {
+			http.Error(w, err.Error(), http.StatusBadRequest)
+			return
+		}
+		if !validProviderKey(body.Key) {
+			http.Error(w, "invalid key", http.StatusBadRequest)
+			return
+		}
+		switch body.Op {
+		case "add":
+			// Seed with provider="" so the map entry exists; frontend can fill
+			// in fields individually via op=set afterwards.
+			if err := s.doc.Set("providers."+body.Key+".provider", ""); err != nil {
+				http.Error(w, err.Error(), http.StatusBadRequest)
+				return
+			}
+		case "delete":
+			if err := s.doc.Remove("providers." + body.Key); err != nil {
+				http.Error(w, err.Error(), http.StatusBadRequest)
+				return
+			}
+		case "set":
+			if !validProviderField(body.Field) {
+				http.Error(w, "invalid field", http.StatusBadRequest)
+				return
+			}
+			if err := s.doc.Set("providers."+body.Key+"."+body.Field, body.Value); err != nil {
+				http.Error(w, err.Error(), http.StatusBadRequest)
+				return
+			}
+		default:
+			http.Error(w, "unknown op", http.StatusBadRequest)
+			return
+		}
+		w.WriteHeader(http.StatusNoContent)
+	default:
+		http.Error(w, "method not allowed", http.StatusMethodNotAllowed)
+	}
+}
+
+func validProviderKey(k string) bool {
+	if k == "" || len(k) > 64 {
+		return false
+	}
+	for _, r := range k {
+		ok := r == '_' || r == '-' ||
+			(r >= 'a' && r <= 'z') || (r >= 'A' && r <= 'Z') || (r >= '0' && r <= '9')
+		if !ok {
+			return false
+		}
+	}
+	return true
+}
+
+func validProviderField(f string) bool {
+	switch f {
+	case "provider", "base_url", "api_key", "model":
+		return true
+	}
+	return false
 }
 
 func (s *Server) handleShutdown(w http.ResponseWriter, r *http.Request) {
