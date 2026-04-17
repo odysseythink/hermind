@@ -64,6 +64,9 @@ type Model struct {
 	// Quit flag — set when the user invokes /exit
 	quitting bool
 
+	// Slash-command completion popup. Nil when hidden.
+	completion *completionState
+
 	// dispatch is the function that launches an Engine goroutine for a
 	// given user message. Installed by Run() after construction so that
 	// the goroutine can reach the *tea.Program instance.

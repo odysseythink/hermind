@@ -21,6 +21,26 @@ func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		m.input.SetWidth(msg.Width - 2)
 
 	case tea.KeyMsg:
+		// Slash-command completion popup takes priority for navigation
+		// keys. When the popup is hidden these keys fall through to the
+		// normal handlers below.
+		if m.completion != nil {
+			switch msg.String() {
+			case "tab":
+				m.acceptCompletion()
+				return m, nil
+			case "up":
+				m.moveCompletion(-1)
+				return m, nil
+			case "down":
+				m.moveCompletion(1)
+				return m, nil
+			case "esc":
+				m.dismissCompletion()
+				return m, nil
+			}
+		}
+
 		switch msg.String() {
 		case "ctrl+c":
 			// Ctrl+C: interrupt current op or exit if idle
@@ -129,6 +149,10 @@ func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 	cmds = append(cmds, cmd)
 	m.viewport, cmd = m.viewport.Update(msg)
 	cmds = append(cmds, cmd)
+
+	// Refresh slash-command completion based on the current input value.
+	// Cheap: runs a prefix scan over <10 commands each keystroke.
+	m.updateCompletion()
 
 	return m, tea.Batch(cmds...)
 }

@@ -33,11 +33,16 @@ func (m *Model) handleSlashCommand(input string) (bool, tea.Cmd) {
 
 	case "help":
 		m.appendRenderedLine(m.skin.Accent.Render("Commands:"))
-		m.appendRenderedLine(m.skin.Muted.Render("  /help     show this help"))
-		m.appendRenderedLine(m.skin.Muted.Render("  /exit     save session and exit"))
-		m.appendRenderedLine(m.skin.Muted.Render("  /clear    clear conversation"))
-		m.appendRenderedLine(m.skin.Muted.Render("  /model    show active model"))
-		m.appendRenderedLine(m.skin.Muted.Render("  /cost     show session cost"))
+		maxName := 0
+		for _, c := range slashCommands {
+			if len(c.Name) > maxName {
+				maxName = len(c.Name)
+			}
+		}
+		for _, c := range slashCommands {
+			pad := strings.Repeat(" ", maxName-len(c.Name)+2)
+			m.appendRenderedLine(m.skin.Muted.Render("  /" + c.Name + pad + c.Description))
+		}
 		return true, nil
 
 	case "model":

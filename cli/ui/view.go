@@ -24,11 +24,15 @@ func (m Model) View() string {
 	contextBar := m.renderContextBar()
 	statusBar := m.renderStatusBar()
 	input := m.renderInput()
+	completion := m.renderCompletion()
 
-	// Calculate viewport height: total - banner - context - input - status - separators
+	// Calculate viewport height: total - banner - context - input - status - separators - popup
 	bannerLines := strings.Count(banner, "\n") + 1
 	inputLines := strings.Count(input, "\n") + 1
 	reserved := bannerLines + 1 /*context*/ + inputLines + 1 /*status*/ + 3 /*separators*/
+	if completion != "" {
+		reserved += m.completionLineCount()
+	}
 	vpHeight := m.height - reserved
 	if vpHeight < 3 {
 		vpHeight = 3
@@ -38,17 +42,24 @@ func (m Model) View() string {
 
 	sep := m.skin.Border.Render(strings.Repeat("─", max(1, m.width)))
 
-	// Assemble
-	return strings.Join([]string{
+	// Assemble. Completion popup sits between the viewport separator and
+	// the input — makes it look like a dropdown hovering above the input.
+	segments := []string{
 		banner,
 		contextBar,
 		sep,
 		m.viewport.View(),
 		sep,
+	}
+	if completion != "" {
+		segments = append(segments, completion)
+	}
+	segments = append(segments,
 		input,
 		sep,
 		statusBar,
-	}, "\n")
+	)
+	return strings.Join(segments, "\n")
 }
 
 // renderInput returns the styled input component.
