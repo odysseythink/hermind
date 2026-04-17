@@ -1,5 +1,5 @@
 # Makefile
-.PHONY: build test lint clean
+.PHONY: build test lint clean release-snapshot
 
 VERSION   := $(shell git describe --tags --always --dirty 2>/dev/null || echo "dev")
 COMMIT    := $(shell git rev-parse --short HEAD 2>/dev/null || echo "unknown")
@@ -17,3 +17,12 @@ lint:
 
 clean:
 	rm -rf bin/
+
+release-snapshot:
+	@command -v goreleaser >/dev/null 2>&1 || { \
+	  echo "error: goreleaser not found. Install with one of:"; \
+	  echo "  brew install goreleaser"; \
+	  echo "  go install github.com/goreleaser/goreleaser/v2@latest"; \
+	  exit 1; \
+	}
+	goreleaser release --snapshot --skip=publish --clean
