@@ -14,9 +14,13 @@ func renderAssistantText(text string, skin Skin) string {
 	if text == "" {
 		return ""
 	}
-	// Use glamour's auto style (picks dark/light based on terminal).
-	// For the Minimal skin, use the ascii style.
-	style := "auto"
+	// Hard-code the style. glamour's "auto" mode queries the terminal's
+	// background color (OSC 11) and cursor position (CSI CPR) via termenv
+	// to pick dark vs. light. Those queries return responses on stdin
+	// while bubbletea is in the altScreen, and the bytes leak into the
+	// textarea as garbage like `]11;rgb:..." and `[<row>;<col>R`. Using
+	// a fixed style keeps glamour from touching the terminal.
+	style := "dark"
 	if skin.Name == "minimal" {
 		style = "ascii"
 	}
