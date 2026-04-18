@@ -46,7 +46,7 @@ func (m *Model) handleSlashCommand(input string) (bool, tea.Cmd) {
 		return true, nil
 
 	case "model":
-		m.appendRenderedLine(m.skin.Muted.Render("model: ") + m.skin.Accent.Render(m.getRuntime().Model))
+		m.appendRenderedLine(m.skin.Muted.Render("model: ") + m.skin.Accent.Render(m.model))
 		return true, nil
 
 	case "cost":

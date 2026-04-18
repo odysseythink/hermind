@@ -9,6 +9,7 @@ import (
 	tea "github.com/charmbracelet/bubbletea"
 	"github.com/odysseythink/hermind/config"
 	"github.com/odysseythink/hermind/message"
+	"github.com/odysseythink/hermind/provider"
 	"github.com/odysseythink/hermind/storage"
 	"github.com/odysseythink/hermind/tool"
 )
@@ -25,12 +26,14 @@ const (
 // Model holds all TUI state. Single instance per REPL session.
 type Model struct {
 	// Resources (injected at construction, never mutated)
-	cfg        *config.Config
-	storage    storage.Storage
-	toolReg    *tool.Registry
-	skin       Skin
-	sessionID  string
-	getRuntime func() RuntimeSnapshot
+	cfg       *config.Config
+	storage   storage.Storage
+	provider  provider.Provider
+	toolReg   *tool.Registry
+	agentCfg  config.AgentConfig
+	skin      Skin
+	sessionID string
+	model     string
 
 	// bubbletea components
 	viewport viewport.Model
@@ -78,12 +81,14 @@ type streamingToolState struct {
 
 // ModelConfig holds the dependencies needed to construct a Model.
 type ModelConfig struct {
-	Config     *config.Config
-	Storage    storage.Storage
-	ToolReg    *tool.Registry
-	Skin       Skin
-	SessionID  string
-	GetRuntime func() RuntimeSnapshot
+	Config    *config.Config
+	Storage   storage.Storage
+	Provider  provider.Provider
+	ToolReg   *tool.Registry
+	AgentCfg  config.AgentConfig
+	Skin      Skin
+	SessionID string
+	Model     string
 }
 
 // NewModel constructs a fresh Model.
@@ -99,17 +104,19 @@ func NewModel(mc ModelConfig) Model {
 	vp := viewport.New(80, 20)
 
 	return Model{
-		cfg:        mc.Config,
-		storage:    mc.Storage,
-		toolReg:    mc.ToolReg,
-		skin:       mc.Skin,
-		sessionID:  mc.SessionID,
-		getRuntime: mc.GetRuntime,
-		viewport:   vp,
-		input:      ta,
-		state:      StateIdle,
-		width:      80,
-		height:     24,
+		cfg:       mc.Config,
+		storage:   mc.Storage,
+		provider:  mc.Provider,
+		toolReg:   mc.ToolReg,
+		agentCfg:  mc.AgentCfg,
+		skin:      mc.Skin,
+		sessionID: mc.SessionID,
+		model:     mc.Model,
+		viewport:  vp,
+		input:     ta,
+		state:     StateIdle,
+		width:     80,
+		height:    24,
 	}
 }
 
