@@ -5,9 +5,11 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"log/slog"
 	"os"
 	"path/filepath"
 	"strings"
+	"sync/atomic"
 	"time"
 
 	"github.com/google/uuid"
@@ -79,22 +81,55 @@ func runREPL(ctx context.Context, app *App) error {
 
 	// Auxiliary provider for context compression, vision summarization, etc.
 	// If not configured, compression is a no-op.
-	var auxProvider provider.Provider
-	if app.Config.Auxiliary.APIKey != "" || app.Config.Auxiliary.Provider != "" {
-		auxCfg := config.ProviderConfig{
-			Provider: app.Config.Auxiliary.Provider,
-			BaseURL:  app.Config.Auxiliary.BaseURL,
-			APIKey:   app.Config.Auxiliary.APIKey,
-			Model:    app.Config.Auxiliary.Model,
+	auxProvider := buildAuxProvider(app.Config)
+
+	// Runtime pointer — swapped by the config-file reloader. The TUI
+	// dispatcher reads from this on every user message, so a config save
+	// (via web UI, TUI editor, or manual YAML edit) is picked up on the
+	// next turn without restarting the REPL.
+	var runtimeRef atomic.Pointer[ui.RuntimeSnapshot]
+	runtimeRef.Store(&ui.RuntimeSnapshot{
+		Provider:    p,
+		AuxProvider: auxProvider,
+		Model:       displayModel,
+		AgentCfg:    app.Config.Agent,
+	})
+	getRuntime := func() ui.RuntimeSnapshot { return *runtimeRef.Load() }
+
+	// Start the reloader. Rebuild restitutes primary + fallback + aux +
+	// model + agent-cfg from a freshly-parsed config; everything else
+	// (tools, storage, MCP, terminal) stays on the initial instances.
+	configPath, _ := defaultConfigPath()
+	startRuntimeReloader(ctx, configPath, &runtimeRef, func(cfg *config.Config) (*ui.RuntimeSnapshot, error) {
+		newPrimary, _, err := buildPrimaryProvider(cfg)
+		if err != nil {
+			return nil, err
 		}
-		if auxCfg.Provider == "" {
-			// Default to the same provider as primary
-			auxCfg.Provider = "anthropic"
+		newProviders := []provider.Provider{newPrimary}
+		for i, fbCfg := range cfg.FallbackProviders {
+			if fbCfg.APIKey == "" {
+				continue
+			}
+			fb, err := factory.New(fbCfg)
+			if err != nil {
+				slog.WarnContext(ctx, "reload: fallback provider failed", "idx", i, "err", err)
+				continue
+			}
+			newProviders = append(newProviders, fb)
 		}
-		if auxP, err := factory.New(auxCfg); err == nil {
-			auxProvider = auxP
+		var chained provider.Provider
+		if len(newProviders) == 1 {
+			chained = newProviders[0]
+		} else {
+			chained = provider.NewFallbackChain(newProviders)
 		}
-	}
+		return &ui.RuntimeSnapshot{
+			Provider:    chained,
+			AuxProvider: buildAuxProvider(cfg),
+			Model:       defaultModelFromString(cfg.Model),
+			AgentCfg:    cfg.Agent,
+		}, nil
+	})
 
 	// Register built-in tools
 	toolRegistry := tool.NewRegistry()
@@ -169,16 +204,18 @@ func runREPL(ctx context.Context, app *App) error {
 		}
 	}
 
-	// Delegate tool — the runner spawns a fresh Engine per call
+	// Delegate tool — the runner spawns a fresh Engine per call. Reads
+	// runtimeRef so subagent calls use the live-reloaded provider/model.
 	delegate.RegisterDelegate(toolRegistry, func(ctx context.Context, task, extra string, maxTurns int) (*delegate.SubagentResult, error) {
 		// Reuse the same registry; rely on prompt guidance to tell the subagent
 		// not to call delegate. Plan 6b can add filter-based registries if
 		// recursion becomes a real problem.
+		rt := getRuntime()
 		subEngine := agent.NewEngineWithToolsAndAux(
-			p, auxProvider, app.Storage, toolRegistry,
+			rt.Provider, rt.AuxProvider, app.Storage, toolRegistry,
 			config.AgentConfig{
 				MaxTurns:    maxTurns,
-				Compression: app.Config.Agent.Compression,
+				Compression: rt.AgentCfg.Compression,
 			},
 			"subagent",
 		)
@@ -186,7 +223,7 @@ func runREPL(ctx context.Context, app *App) error {
 		result, err := subEngine.RunConversation(ctx, &agent.RunOptions{
 			UserMessage: task + "\n\n" + extra,
 			SessionID:   sessionID + "-sub",
-			Model:       displayModel,
+			Model:       rt.Model,
 		})
 		if err != nil {
 			return nil, err
@@ -224,14 +261,11 @@ func runREPL(ctx context.Context, app *App) error {
 
 	// Hand off to the bubbletea TUI.
 	err = ui.Run(ctx, ui.RunOptions{
-		Config:      app.Config,
-		Storage:     app.Storage,
-		Provider:    p,
-		AuxProvider: auxProvider,
-		ToolReg:     toolRegistry,
-		AgentCfg:    app.Config.Agent,
-		SessionID:   sessionID,
-		Model:       displayModel,
+		Config:     app.Config,
+		Storage:    app.Storage,
+		ToolReg:    toolRegistry,
+		SessionID:  sessionID,
+		GetRuntime: getRuntime,
 	})
 	if err != nil {
 		return fmt.Errorf("hermind: tui: %w", err)
@@ -319,4 +353,28 @@ func defaultModelFromString(s string) string {
 		return s[idx+1:]
 	}
 	return s
+}
+
+// buildAuxProvider builds the auxiliary provider used for compression and
+// vision summarization. Returns nil if unconfigured — callers treat nil as
+// "no auxiliary available" (compression becomes a no-op, vision tool not
+// registered).
+func buildAuxProvider(cfg *config.Config) provider.Provider {
+	if cfg.Auxiliary.APIKey == "" && cfg.Auxiliary.Provider == "" {
+		return nil
+	}
+	auxCfg := config.ProviderConfig{
+		Provider: cfg.Auxiliary.Provider,
+		BaseURL:  cfg.Auxiliary.BaseURL,
+		APIKey:   cfg.Auxiliary.APIKey,
+		Model:    cfg.Auxiliary.Model,
+	}
+	if auxCfg.Provider == "" {
+		auxCfg.Provider = "anthropic"
+	}
+	p, err := factory.New(auxCfg)
+	if err != nil {
+		return nil
+	}
+	return p
 }

@@ -14,16 +14,26 @@ import (
 	"github.com/odysseythink/hermind/tool"
 )
 
+// RuntimeSnapshot is the set of config-derived values that live-reload
+// can swap between user messages. Callers return a fresh snapshot every
+// time GetRuntime is invoked.
+type RuntimeSnapshot struct {
+	Provider    provider.Provider
+	AuxProvider provider.Provider
+	Model       string
+	AgentCfg    config.AgentConfig
+}
+
 // RunOptions holds the dependencies required to start a TUI REPL.
 type RunOptions struct {
-	Config      *config.Config
-	Storage     storage.Storage
-	Provider    provider.Provider
-	AuxProvider provider.Provider // may be nil
-	ToolReg     *tool.Registry
-	AgentCfg    config.AgentConfig
-	SessionID   string
-	Model       string
+	Config    *config.Config
+	Storage   storage.Storage
+	ToolReg   *tool.Registry
+	SessionID string
+	// GetRuntime returns the current provider/model/agent-cfg set. Called
+	// once per user message (dispatcher) and on every View render (for the
+	// model-name in the header). Must be safe for concurrent use.
+	GetRuntime func() RuntimeSnapshot
 }
 
 // Run starts the bubbletea TUI. Blocks until the user exits.
@@ -33,14 +43,12 @@ func Run(ctx context.Context, opts RunOptions) error {
 	skin := DetectSkin()
 
 	m := NewModel(ModelConfig{
-		Config:    opts.Config,
-		Storage:   opts.Storage,
-		Provider:  opts.Provider,
-		ToolReg:   opts.ToolReg,
-		AgentCfg:  opts.AgentCfg,
-		Skin:      skin,
-		SessionID: opts.SessionID,
-		Model:     opts.Model,
+		Config:     opts.Config,
+		Storage:    opts.Storage,
+		ToolReg:    opts.ToolReg,
+		Skin:       skin,
+		SessionID:  opts.SessionID,
+		GetRuntime: opts.GetRuntime,
 	})
 
 	// Create the bubbletea program using a pointer so we can pass it to the
@@ -50,12 +58,14 @@ func Run(ctx context.Context, opts RunOptions) error {
 
 	// The dispatcher: called from Update when the user submits a message.
 	// It spawns a goroutine that runs the Engine and posts tea.Msg values
-	// via program.Send.
+	// via program.Send. Reads the current runtime per invocation so that a
+	// config reload mid-session applies to the next message.
 	dispatcher := func(userInput string, history []message.Message) {
 		go func() {
+			rt := opts.GetRuntime()
 			engine := agent.NewEngineWithToolsAndAux(
-				opts.Provider, opts.AuxProvider, opts.Storage, opts.ToolReg,
-				opts.AgentCfg, "cli",
+				rt.Provider, rt.AuxProvider, opts.Storage, opts.ToolReg,
+				rt.AgentCfg, "cli",
 			)
 			engine.SetStreamDeltaCallback(func(d *provider.StreamDelta) {
 				program.Send(streamDeltaMsg{Delta: d})
@@ -71,7 +81,7 @@ func Run(ctx context.Context, opts RunOptions) error {
 				UserMessage: userInput,
 				History:     history,
 				SessionID:   opts.SessionID,
-				Model:       opts.Model,
+				Model:       rt.Model,
 			})
 			if err != nil {
 				program.Send(convErrorMsg{Err: err})

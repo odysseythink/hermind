@@ -358,7 +358,7 @@ async function persist(path, value) {
 async function save(exit) {
   const r = await fetch('/api/save', {method:'POST'});
   if (!r.ok) { status('save failed', 'error'); return; }
-  status('saved — restart hermind to apply', 'saved');
+  status('saved — applied on next message', 'saved');
   if (exit) await fetch('/api/shutdown', {method:'POST'});
 }
 

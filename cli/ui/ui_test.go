@@ -17,10 +17,14 @@ import (
 func newTestModel() Model {
 	return NewModel(ModelConfig{
 		Config:    &config.Config{},
-		AgentCfg:  config.AgentConfig{MaxTurns: 10},
 		Skin:      MinimalSkin(),
 		SessionID: "test-session",
-		Model:     "test-model",
+		GetRuntime: func() RuntimeSnapshot {
+			return RuntimeSnapshot{
+				Model:    "test-model",
+				AgentCfg: config.AgentConfig{MaxTurns: 10},
+			}
+		},
 	})
 }
 

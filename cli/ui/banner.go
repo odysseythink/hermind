@@ -16,7 +16,7 @@ func (m Model) renderBanner() string {
 
 // renderContextBar returns the "claude-opus-4-6 · session abc12345" line.
 func (m Model) renderContextBar() string {
-	return m.skin.Muted.Render("  " + m.model + "  ·  session " + shortSessionID(m.sessionID))
+	return m.skin.Muted.Render("  " + m.getRuntime().Model + "  ·  session " + shortSessionID(m.sessionID))
 }
 
 // shortSessionID returns the first 8 characters of a session UUID.
