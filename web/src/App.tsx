@@ -1,10 +1,16 @@
-import { useEffect, useMemo, useReducer } from 'react';
-import { apiFetch } from './api/client';
+import { useCallback, useEffect, useMemo, useReducer } from 'react';
+import { apiFetch, ApiError } from './api/client';
 import {
+  ApplyResultSchema,
   ConfigResponseSchema,
   PlatformsSchemaResponseSchema,
 } from './api/schemas';
-import { initialState, listInstances, reducer } from './state';
+import {
+  dirtyCount as selectDirtyCount,
+  initialState,
+  listInstances,
+  reducer,
+} from './state';
 import TopBar from './components/TopBar';
 import Sidebar from './components/Sidebar';
 import Footer from './components/Footer';
@@ -13,6 +19,7 @@ import Editor from './components/Editor';
 export default function App() {
   const [state, dispatch] = useReducer(reducer, initialState);
 
+  // Boot: schema + config in parallel.
   useEffect(() => {
     const ctrl = new AbortController();
     (async () => {
@@ -41,6 +48,27 @@ export default function App() {
     return () => ctrl.abort();
   }, []);
 
+  // Hash persistence: write on every selectedKey change after boot.
+  useEffect(() => {
+    if (state.status === 'booting') return;
+    const wanted = '#' + (state.selectedKey ?? '');
+    if (window.location.hash !== wanted) {
+      if (state.selectedKey) {
+        window.location.hash = state.selectedKey;
+      } else if (window.location.hash) {
+        history.replaceState(null, '', window.location.pathname + window.location.search);
+      }
+    }
+  }, [state.selectedKey, state.status]);
+
+  useEffect(() => {
+    if (state.status !== 'ready' || state.selectedKey !== null) return;
+    const fromHash = window.location.hash.replace(/^#/, '');
+    if (fromHash && state.config.gateway?.platforms?.[fromHash]) {
+      dispatch({ type: 'select', key: fromHash });
+    }
+  }, [state.status, state.selectedKey, state.config.gateway?.platforms]);
+
   const instances = useMemo(() => {
     const plats = state.config.gateway?.platforms ?? {};
     return listInstances(state).map(key => ({
@@ -48,12 +76,57 @@ export default function App() {
       type: plats[key]?.type ?? '',
       enabled: plats[key]?.enabled ?? false,
     }));
-  }, [state]);
+  }, [state.config.gateway?.platforms]);
 
-  // Dirty count: Stage 3 doesn't yet have field-level edits, so this
-  // is a placeholder 0. Stage 4 computes a real structural diff.
-  const dirtyCount = 0;
+  const dirtyKeys = useMemo(
+    () => collectDirtyKeys(state),
+    [state.config.gateway?.platforms, state.originalConfig.gateway?.platforms],
+  );
+
+  const dirty = selectDirtyCount(state);
   const busy = state.status === 'saving' || state.status === 'applying';
+
+  const onSave = useCallback(async () => {
+    dispatch({ type: 'save/start' });
+    try {
+      await apiFetch('/api/config', {
+        method: 'PUT',
+        body: { config: state.config },
+      });
+      dispatch({ type: 'save/done' });
+    } catch (err) {
+      const msg = toErrMsg(err);
+      dispatch({ type: 'save/done', error: msg });
+    }
+  }, [state.config]);
+
+  const onSaveAndApply = useCallback(async () => {
+    dispatch({ type: 'save/start' });
+    try {
+      await apiFetch('/api/config', {
+        method: 'PUT',
+        body: { config: state.config },
+      });
+      dispatch({ type: 'save/done' });
+    } catch (err) {
+      dispatch({ type: 'save/done', error: toErrMsg(err) });
+      return;
+    }
+    dispatch({ type: 'apply/start' });
+    try {
+      const res = await apiFetch('/api/platforms/apply', {
+        method: 'POST',
+        schema: ApplyResultSchema,
+      });
+      if (res.ok) {
+        dispatch({ type: 'apply/done' });
+      } else {
+        dispatch({ type: 'apply/done', error: res.error ?? 'apply failed' });
+      }
+    } catch (err) {
+      dispatch({ type: 'apply/done', error: toErrMsg(err) });
+    }
+  }, [state.config]);
 
   if (state.status === 'booting') {
     return <div style={{ padding: '2rem' }}>Loading…</div>;
@@ -66,40 +139,75 @@ export default function App() {
     );
   }
 
+  const selectedInstance = state.selectedKey
+    ? state.config.gateway?.platforms?.[state.selectedKey] ?? null
+    : null;
+  const selectedDescriptor = selectedInstance
+    ? state.descriptors.find(d => d.type === selectedInstance.type) ?? null
+    : null;
+
   return (
     <div className="app-shell">
-      <TopBar dirtyCount={dirtyCount} status={state.status} />
+      <TopBar dirtyCount={dirty} status={state.status} />
       <Sidebar
         instances={instances}
         selectedKey={state.selectedKey}
         descriptors={state.descriptors}
+        dirtyKeys={dirtyKeys}
         onSelect={key => dispatch({ type: 'select', key })}
-        onNewInstance={() => console.log('TODO: new instance (Stage 4)')}
+        onNewInstance={() => console.log('TODO: new instance (Stage 4b)')}
       />
       <main>
         <Editor
           selectedKey={state.selectedKey}
-          instance={
-            state.selectedKey
-              ? state.config.gateway?.platforms?.[state.selectedKey] ?? null
-              : null
+          instance={selectedInstance}
+          descriptor={selectedDescriptor}
+          onField={(field, value) =>
+            state.selectedKey &&
+            dispatch({ type: 'edit/field', key: state.selectedKey, field, value })
           }
-          descriptor={
-            state.selectedKey && state.config.gateway?.platforms?.[state.selectedKey]
-              ? state.descriptors.find(
-                  d => d.type === state.config.gateway!.platforms![state.selectedKey!]!.type,
-                ) ?? null
-              : null
+          onToggleEnabled={enabled =>
+            state.selectedKey &&
+            dispatch({ type: 'edit/enabled', key: state.selectedKey, enabled })
+          }
+          onDelete={() =>
+            state.selectedKey &&
+            dispatch({ type: 'instance/delete', key: state.selectedKey })
           }
         />
       </main>
       <Footer
-        dirtyCount={dirtyCount}
+        dirtyCount={dirty}
         flash={state.flash}
         busy={busy}
-        onSave={() => console.log('TODO: save (Stage 4)')}
-        onSaveAndApply={() => console.log('TODO: save & apply (Stage 4)')}
+        onSave={onSave}
+        onSaveAndApply={onSaveAndApply}
       />
     </div>
   );
+}
+
+function toErrMsg(err: unknown): string {
+  if (err instanceof ApiError) {
+    if (typeof err.body === 'object' && err.body !== null && 'error' in err.body) {
+      const e = (err.body as { error?: unknown }).error;
+      if (typeof e === 'string') return e;
+    }
+    return `HTTP ${err.status}`;
+  }
+  return err instanceof Error ? err.message : String(err);
+}
+
+function collectDirtyKeys(state: {
+  config: { gateway?: { platforms?: Record<string, unknown> } };
+  originalConfig: { gateway?: { platforms?: Record<string, unknown> } };
+}): Set<string> {
+  const a = state.config.gateway?.platforms ?? {};
+  const b = state.originalConfig.gateway?.platforms ?? {};
+  const keys = new Set<string>([...Object.keys(a), ...Object.keys(b)]);
+  const out = new Set<string>();
+  for (const k of keys) {
+    if (JSON.stringify(a[k]) !== JSON.stringify(b[k])) out.add(k);
+  }
+  return out;
 }
