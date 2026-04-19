@@ -2,14 +2,14 @@
 
 **Date:** 2026-04-19
 **Status:** Draft — awaiting user review
-**Scope:** Replace the placeholder at `api/webroot/` with a functional web UI that configures all 12 messaging-platform gateway adapters.
+**Scope:** Replace the placeholder at `api/webroot/` with a functional web UI that configures all 19 gateway adapters currently wired in `cli/gateway.go::buildPlatform` (messaging platforms plus the generic webhook / API-server / ACP transports).
 
 ---
 
 ## 1. Goals
 
 - Let a user add, edit, enable/disable, test and apply gateway platform configurations from a browser — without hand-editing YAML or restarting the hermind process.
-- Cover every adapter the current factory exposes (12 platforms).
+- Cover every adapter the current factory exposes (19 types).
 - Keep the single user / local-host / Bearer-token security model. No multi-user, no RBAC.
 
 ## 2. Non-goals
@@ -26,7 +26,7 @@
 hermind/
 ├── gateway/platforms/
 │   ├── registry.go              (new)  FieldKind, FieldSpec, Descriptor, Register/Get/All
-│   ├── descriptor_<type>.go     (new)  one per adapter; init() registers itself
+│   ├── descriptor_<type>.go     (new)  one per adapter (19 of them); init() registers itself
 │   └── <adapter>.go             (existing, untouched except for one init() call)
 ├── cli/gateway.go               (edit) buildPlatform switch → registry lookup; unknown type → hard error
 ├── api/
@@ -97,7 +97,14 @@ return d.Build(cfg.Options)
 
 Previously an unknown type was logged and skipped; it now fails the gateway build. This is a small behavior change covered by a test.
 
-**Descriptor coverage (MVP):** telegram, discord_bot, slack_events, matrix, signal, whatsapp, mattermost_bot, email, sms, homeassistant, webhook, api_server.
+**Descriptor coverage (MVP):** every type currently in `buildPlatform` — 19 total. Grouped for orientation:
+
+- Bidirectional IM (7): `telegram`, `discord_bot`, `slack_events`, `matrix`, `signal`, `whatsapp`, `mattermost_bot`.
+- Generic transports (3): `webhook`, `api_server`, `acp`.
+- Outbound-only webhook adapters (6, all take a single `webhook_url`): `slack`, `discord`, `mattermost`, `feishu`, `dingtalk`, `wecom`.
+- Out-of-band notification (3): `email`, `sms`, `homeassistant`.
+
+Covering all 19 avoids a regression from the "unknown type → hard error" change: existing YAMLs referencing any legacy type continue to load.
 
 **`Test` implementation sketch per type:**
 
@@ -306,7 +313,7 @@ App
 
 Five independently-shippable PRs; each leaves hermind in a working state.
 
-1. **Platform registry** (§4): registry, 12 descriptors, rewrite `buildPlatform`, tests. No REST/UI change.
+1. **Platform registry** (§4): registry, 19 descriptors, rewrite `buildPlatform`, tests. No REST/UI change.
 2. **REST endpoints** (§5 §6 §7): schema / reveal / test / apply, plus config redact+merge. `curl` can drive the full flow.
 3. **Frontend skeleton** (§8 TopBar/Sidebar/Footer with empty Editor): new Vite project, embed wiring, replaces placeholder.
 4. **Editor + controls**: FieldList, SecretInput, TestConnection, NewInstanceDialog. Feature-complete.
