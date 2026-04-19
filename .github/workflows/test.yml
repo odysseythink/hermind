@@ -7,7 +7,7 @@ on:
     branches: [main]
 
 jobs:
-  test:
+  go:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
@@ -31,3 +31,49 @@ jobs:
         uses: golangci/golangci-lint-action@v6
         with:
           version: latest
+
+  web:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Set up Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+
+      - name: Enable pnpm via corepack
+        run: corepack enable && corepack prepare pnpm@10.29.3 --activate
+
+      - name: Install web deps
+        working-directory: web
+        run: pnpm install --frozen-lockfile
+
+      - name: Type-check
+        working-directory: web
+        run: pnpm type-check
+
+      - name: Unit tests
+        working-directory: web
+        run: pnpm test:ci
+
+      - name: Lint
+        working-directory: web
+        run: pnpm lint
+
+      - name: Build
+        working-directory: web
+        run: pnpm build
+
+      - name: Assert api/webroot is in sync
+        run: |
+          # Swap the build output into api/webroot and ensure it matches
+          # the committed artifact. If it doesn't, a developer edited web/
+          # without running `make web` and committing the rebuilt bundle.
+          find api/webroot -mindepth 1 -delete
+          cp -R web/dist/. api/webroot/
+          if ! git diff --quiet api/webroot/; then
+            echo "::error::api/webroot/ is out of date. Run 'make web' locally and commit the result."
+            git diff --stat api/webroot/
+            exit 1
+          fi
