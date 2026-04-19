@@ -1,0 +1,64 @@
+.topbar {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+  padding: 8px 16px;
+  background: var(--bg-topbar, #161b22);
+  border-bottom: 1px solid var(--border, #30363d);
+  height: 48px;
+  box-sizing: border-box;
+}
+
+.brand {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-weight: 600;
+  color: var(--fg, #c9d1d9);
+}
+
+.logo {
+  font-size: 18px;
+  color: var(--accent, #58a6ff);
+}
+
+.spacer { flex: 1; }
+
+.status {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  color: var(--fg-muted, #8b949e);
+  font-size: 12px;
+}
+
+.dot {
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+}
+
+.dotIdle { background: var(--ok, #3fb950); }
+.dotDirty { background: var(--warn, #d29922); }
+.dotBusy { background: var(--accent, #58a6ff); animation: pulse 1s infinite; }
+
+@keyframes pulse {
+  0% { opacity: 1; }
+  50% { opacity: 0.4; }
+  100% { opacity: 1; }
+}
+
+.saveBtn {
+  padding: 6px 14px;
+  border-radius: 4px;
+  border: 1px solid var(--border, #30363d);
+  background: var(--accent, #1f6feb);
+  color: white;
+  font-weight: 500;
+  cursor: pointer;
+}
+
+.saveBtn:disabled {
+  opacity: 0.45;
+  cursor: not-allowed;
+}
