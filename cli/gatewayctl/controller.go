@@ -31,10 +31,16 @@ var (
 type Controller struct {
 	cfg *config.Config
 
-	mu      sync.Mutex // guards g + started
-	g       *gateway.Gateway
-	started chan struct{} // closed after Start returned; nil when not running
+	// mu is a short-lived guard over g. Held only while reading or
+	// writing the pointer.
+	mu sync.Mutex
+	g  *gateway.Gateway
 
+	// applyMu serializes Apply with itself and with Shutdown. Held for
+	// the whole rebuild cycle so Shutdown cannot race a half-swapped
+	// gateway. Running() intentionally does NOT take this lock —
+	// during an in-flight Apply it may briefly report the names of
+	// the gateway being replaced. Acceptable for the UI status strip.
 	applyMu sync.Mutex
 }
 
@@ -46,9 +52,9 @@ func New(cfg *config.Config) *Controller {
 }
 
 // Start builds and runs the initial Gateway in a background goroutine.
-// Returns once Start has entered its wait loop (best-effort). Start is
-// idempotent-ish: calling it twice on an already-running controller
-// returns an error.
+// Calling Start twice on an already-running controller returns an error.
+// Start does not block on Gateway.Start returning — that blocks forever
+// under normal operation.
 func (c *Controller) Start(ctx context.Context) error {
 	c.mu.Lock()
 	defer c.mu.Unlock()
@@ -59,19 +65,10 @@ func (c *Controller) Start(ctx context.Context) error {
 	if err != nil {
 		return err
 	}
-	if len(g.Names()) == 0 {
-		// Nothing to run; store the empty gateway so Apply can populate
-		// it later without a nil check.
-		c.g = g
-		return nil
-	}
 	c.g = g
-	started := make(chan struct{})
-	c.started = started
-	go func() {
-		close(started)
-		_ = g.Start(context.Background())
-	}()
+	if len(g.Names()) > 0 {
+		go func() { _ = g.Start(context.Background()) }()
+	}
 	return nil
 }
 
@@ -85,9 +82,12 @@ func (c *Controller) Running() []string {
 	return c.g.Names()
 }
 
-// Shutdown stops the current Gateway (best-effort) so callers can
-// clean up without leaking goroutines.
+// Shutdown stops the current Gateway. Serialized with Apply via
+// applyMu so it cannot race a half-swapped gateway. Callers should
+// ensure no further Apply calls happen after Shutdown returns.
 func (c *Controller) Shutdown(ctx context.Context) {
+	c.applyMu.Lock()
+	defer c.applyMu.Unlock()
 	c.mu.Lock()
 	g := c.g
 	c.mu.Unlock()
@@ -99,7 +99,9 @@ func (c *Controller) Shutdown(ctx context.Context) {
 // Apply stops the current Gateway, rebuilds it from c.cfg, and starts
 // the new one. A second concurrent Apply returns ErrApplyInProgress.
 // Returns api.ApplyResult so the HTTP handler can write it through
-// directly without a second mapping layer.
+// directly without a second mapping layer. Apply does not wait for
+// the new Gateway to finish starting — Gateway.Start blocks forever
+// under normal operation.
 func (c *Controller) Apply(ctx context.Context) (api.ApplyResult, error) {
 	if !c.applyMu.TryLock() {
 		return api.ApplyResult{}, ErrApplyInProgress
@@ -130,18 +132,12 @@ func (c *Controller) Apply(ctx context.Context) (api.ApplyResult, error) {
 
 	names := built.Names()
 	if len(names) > 0 {
-		started := make(chan struct{})
-		go func() {
-			close(started)
-			_ = built.Start(context.Background())
-		}()
-		<-started
+		go func() { _ = built.Start(context.Background()) }()
 	}
 
 	return api.ApplyResult{
 		OK:        true,
 		Restarted: names,
-		Errors:    map[string]string{},
 		TookMS:    time.Since(start).Milliseconds(),
 	}, nil
 }
