@@ -8,6 +8,7 @@ import (
 	"gopkg.in/yaml.v3"
 
 	"github.com/odysseythink/hermind/config"
+	"github.com/odysseythink/hermind/gateway/platforms"
 )
 
 // handleConfigGet responds to GET /api/config with the current Config
@@ -24,7 +25,42 @@ func (s *Server) handleConfigGet(w http.ResponseWriter, _ *http.Request) {
 		http.Error(w, err.Error(), http.StatusInternalServerError)
 		return
 	}
+	redactSecrets(m)
 	writeJSON(w, ConfigResponse{Config: m})
+}
+
+// redactSecrets walks m["gateway"]["platforms"][*]["options"], consults
+// the platform registry for each entry's Type, and blanks every field
+// whose Kind is FieldSecret. Silently ignores unknown types or missing
+// sections — we're redacting defensively, not validating.
+func redactSecrets(m map[string]any) {
+	gw, _ := m["gateway"].(map[string]any)
+	plats, _ := gw["platforms"].(map[string]any)
+	for _, raw := range plats {
+		inst, ok := raw.(map[string]any)
+		if !ok {
+			continue
+		}
+		typ, _ := inst["type"].(string)
+		if typ == "" {
+			continue
+		}
+		d, ok := platforms.Get(typ)
+		if !ok {
+			continue
+		}
+		opts, _ := inst["options"].(map[string]any)
+		if opts == nil {
+			continue
+		}
+		for _, f := range d.Fields {
+			if f.Kind == platforms.FieldSecret {
+				if _, present := opts[f.Name]; present {
+					opts[f.Name] = ""
+				}
+			}
+		}
+	}
 }
 
 // handleConfigPut accepts {"config": {...}} where the inner object is a
