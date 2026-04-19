@@ -97,7 +97,9 @@ func resetRegistryForTest(t *testing.T) {
 // it will be meaningful once tasks 3–5 populate it; today it runs
 // over an empty registry, which trivially passes.
 func TestDescriptorInvariants(t *testing.T) {
-	for _, d := range All() {
+	descriptors := All()
+	t.Logf("checking %d registered descriptors", len(descriptors))
+	for _, d := range descriptors {
 		d := d
 		t.Run(d.Type, func(t *testing.T) {
 			if d.Type == "" {
@@ -114,6 +116,9 @@ func TestDescriptorInvariants(t *testing.T) {
 			for _, f := range d.Fields {
 				if f.Name == "" {
 					t.Errorf("field has empty Name")
+				}
+				if f.Label == "" {
+					t.Errorf("field %q: Label is empty", f.Name)
 				}
 				if seen[f.Name] {
 					t.Errorf("field %q: duplicate Name", f.Name)

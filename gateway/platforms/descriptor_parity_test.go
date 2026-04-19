@@ -29,6 +29,7 @@ var parityCases = []struct {
 		"username": "u", "password": "p",
 		"from": "from@example.com", "to": "to@example.com",
 	}},
+	// sms: Twilio-shaped options (account_sid / auth_token).
 	{"sms", map[string]string{
 		"account_sid": "ACxxx", "auth_token": "token",
 		"from": "+10000000000", "to": "+10000000001",
@@ -76,5 +77,21 @@ func TestDescriptorParity_CoverageMatchesCaseCount(t *testing.T) {
 	// plus the descriptor files together.
 	if want, got := 19, len(parityCases); got != want {
 		t.Fatalf("parityCases has %d entries, want %d — update parityCases and descriptors in lockstep", got, want)
+	}
+}
+
+// TestDescriptorParity_NoUnknownTypes is the complement to
+// CoverageMatchesCaseCount: any type that self-registers must have a
+// matching entry in parityCases. Catches the drift where someone adds a
+// 20th descriptor but forgets to update the guard slice.
+func TestDescriptorParity_NoUnknownTypes(t *testing.T) {
+	known := map[string]bool{}
+	for _, tc := range parityCases {
+		known[tc.Type] = true
+	}
+	for _, d := range All() {
+		if !known[d.Type] {
+			t.Errorf("registered descriptor %q has no entry in parityCases — add it or remove the descriptor", d.Type)
+		}
 	}
 }
