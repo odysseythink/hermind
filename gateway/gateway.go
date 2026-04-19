@@ -48,9 +48,10 @@ type Gateway struct {
 	channels *ChannelDirectory
 
 	// stopFn cancels the context passed into Start; nil when not running.
-	stopFn   context.CancelFunc
-	stopOnce sync.Once
-	stopMu   sync.Mutex
+	// context.CancelFunc is idempotent, so callers can invoke this any
+	// number of times safely.
+	stopFn context.CancelFunc
+	stopMu sync.Mutex
 }
 
 // SetTracer attaches a tracing.Tracer to this Gateway.
@@ -112,7 +113,6 @@ func (g *Gateway) Start(ctx context.Context) error {
 	defer cancel()
 	g.stopMu.Lock()
 	g.stopFn = cancel
-	g.stopOnce = sync.Once{}
 	g.stopMu.Unlock()
 	errCh := make(chan error, len(g.platforms))
 	var wg sync.WaitGroup
@@ -295,18 +295,16 @@ func modelFromCfg(cfg config.Config) string {
 }
 
 // Stop asks the Gateway to cancel its Start loop. Safe to call from
-// any goroutine and idempotent within a single Start cycle; a second
-// Stop during the same run is a no-op. Respects the caller's ctx for
-// its own deadline but does not wait for Start to return — callers
-// that care should block on the channel they already use with Start.
-func (g *Gateway) Stop(ctx context.Context) error {
+// any goroutine and idempotent — repeated calls are no-ops because
+// context.CancelFunc itself is idempotent. Does not wait for Start
+// to return; callers that care should block on the channel they
+// already use with Start.
+func (g *Gateway) Stop(_ context.Context) error {
 	g.stopMu.Lock()
 	cancel := g.stopFn
-	once := &g.stopOnce
 	g.stopMu.Unlock()
-	if cancel == nil {
-		return nil
+	if cancel != nil {
+		cancel()
 	}
-	once.Do(cancel)
-	return ctx.Err()
+	return nil
 }
