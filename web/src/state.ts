@@ -1,4 +1,5 @@
 import type { Config, PlatformInstance, SchemaDescriptor } from './api/schemas';
+import { GROUPS, type GroupId } from './shell/groups';
 
 export type Status = 'booting' | 'ready' | 'saving' | 'applying' | 'error';
 
@@ -7,13 +8,22 @@ export interface Flash {
   msg: string;
 }
 
+export interface ShellSliceState {
+  activeGroup: GroupId | null;
+  activeSubKey: string | null;
+  expandedGroups: Set<GroupId>;
+}
+
 export interface AppState {
   status: Status;
   descriptors: SchemaDescriptor[];
   config: Config;
   originalConfig: Config;
+  /** Legacy field retained for existing IM code paths.
+   *  Mirrors shell.activeSubKey when shell.activeGroup === 'gateway'. */
   selectedKey: string | null;
   flash: Flash | null;
+  shell: ShellSliceState;
 }
 
 export type Action =
@@ -28,7 +38,10 @@ export type Action =
   | { type: 'edit/field'; key: string; field: string; value: string }
   | { type: 'edit/enabled'; key: string; enabled: boolean }
   | { type: 'instance/delete'; key: string }
-  | { type: 'instance/create'; key: string; platformType: string };
+  | { type: 'instance/create'; key: string; platformType: string }
+  | { type: 'shell/selectGroup'; group: GroupId | null }
+  | { type: 'shell/selectSub'; key: string | null }
+  | { type: 'shell/toggleGroup'; group: GroupId };
 
 export const initialState: AppState = {
   status: 'booting',
@@ -37,6 +50,11 @@ export const initialState: AppState = {
   originalConfig: {},
   selectedKey: null,
   flash: null,
+  shell: {
+    activeGroup: null,
+    activeSubKey: null,
+    expandedGroups: new Set<GroupId>(['gateway']),
+  },
 };
 
 export function reducer(state: AppState, action: Action): AppState {
@@ -98,6 +116,31 @@ export function reducer(state: AppState, action: Action): AppState {
         config: { ...state.config, gateway: { ...(state.config.gateway ?? {}), platforms: plats } },
         selectedKey: action.key,
       };
+    }
+    case 'shell/selectGroup': {
+      const next = {
+        ...state,
+        shell: {
+          ...state.shell,
+          activeGroup: action.group,
+          activeSubKey: null,
+        },
+      };
+      // Keep legacy selectedKey in sync so the existing IM Editor path keeps working
+      return { ...next, selectedKey: null };
+    }
+    case 'shell/selectSub':
+      return {
+        ...state,
+        shell: { ...state.shell, activeSubKey: action.key },
+        selectedKey:
+          state.shell.activeGroup === 'gateway' ? action.key : state.selectedKey,
+      };
+    case 'shell/toggleGroup': {
+      const expanded = new Set(state.shell.expandedGroups);
+      if (expanded.has(action.group)) expanded.delete(action.group);
+      else expanded.add(action.group);
+      return { ...state, shell: { ...state.shell, expandedGroups: expanded } };
     }
   }
 }
@@ -170,4 +213,59 @@ function deleteInstance(config: Config, key: string): Config {
   if (!(key in plats)) return config;
   delete plats[key];
   return { ...config, gateway: { ...(config.gateway ?? {}), platforms: plats } };
+}
+
+/** groupDirty returns true if the config slice for the group differs from
+ *  the originalConfig snapshot. Stage 1: only 'gateway' can be dirty. */
+export function groupDirty(state: AppState, group: GroupId): boolean {
+  if (group === 'gateway') {
+    return dirtyCount(state) > 0;
+  }
+  // For non-gateway groups, compare the relevant configKeys shallowly.
+  const def = GROUPS.find(g => g.id === group);
+  if (!def) return false;
+  const a = state.config as unknown as Record<string, unknown>;
+  const b = state.originalConfig as unknown as Record<string, unknown>;
+  for (const k of def.configKeys) {
+    if (!deepEqual(a[k], b[k])) return true;
+  }
+  return false;
+}
+
+/** dirtyGroups returns the set of groups with unsaved changes. */
+export function dirtyGroups(state: AppState): Set<GroupId> {
+  const out = new Set<GroupId>();
+  for (const g of GROUPS) {
+    if (groupDirty(state, g.id)) out.add(g.id);
+  }
+  return out;
+}
+
+/** totalDirtyCount returns the total number of dirty sub-items across all
+ *  groups. Stage 1: equals dirtyCount (the IM instance diff count); later
+ *  stages may sum per-group sub-counts. */
+export function totalDirtyCount(state: AppState): number {
+  return dirtyCount(state);
+}
+
+function deepEqual(a: unknown, b: unknown): boolean {
+  if (a === b) return true;
+  if (a === null || b === null) return false;
+  if (typeof a !== typeof b) return false;
+  if (typeof a !== 'object') return false;
+  if (Array.isArray(a) || Array.isArray(b)) {
+    if (!Array.isArray(a) || !Array.isArray(b)) return false;
+    if (a.length !== b.length) return false;
+    for (let i = 0; i < a.length; i++) {
+      if (!deepEqual(a[i], b[i])) return false;
+    }
+    return true;
+  }
+  const ao = a as Record<string, unknown>;
+  const bo = b as Record<string, unknown>;
+  const keys = new Set<string>([...Object.keys(ao), ...Object.keys(bo)]);
+  for (const k of keys) {
+    if (!deepEqual(ao[k], bo[k])) return false;
+  }
+  return true;
 }

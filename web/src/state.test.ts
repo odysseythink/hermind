@@ -2,11 +2,16 @@ import { describe, expect, it } from 'vitest';
 import type { Config, PlatformInstance, SchemaDescriptor } from './api/schemas';
 import {
   dirtyCount,
+  dirtyGroups,
+  groupDirty,
   initialState,
   instanceDirty,
   listInstances,
   reducer,
+  totalDirtyCount,
+  type AppState,
 } from './state';
+import type { GroupId } from './shell/groups';
 
 function cfg(plats: Record<string, PlatformInstance>): Config {
   return { gateway: { platforms: plats } };
@@ -168,5 +173,112 @@ describe('selectors', () => {
     expect(instanceDirty(s1, 'k')).toBe(false);
     const s2 = reducer(s1, { type: 'edit/field', key: 'k', field: 'x', value: 'y' });
     expect(instanceDirty(s2, 'k')).toBe(true);
+  });
+});
+
+function boot(state: AppState = initialState): AppState {
+  return reducer(state, {
+    type: 'boot/loaded',
+    descriptors: emptyDescriptors,
+    config: cfg({ a: { type: 't', enabled: true } }),
+  });
+}
+
+describe('shell slice — initial state', () => {
+  it('starts with activeGroup=null, activeSubKey=null, expandedGroups={gateway}', () => {
+    expect(initialState.shell.activeGroup).toBeNull();
+    expect(initialState.shell.activeSubKey).toBeNull();
+    expect(initialState.shell.expandedGroups.has('gateway')).toBe(true);
+    expect(initialState.shell.expandedGroups.size).toBe(1);
+  });
+});
+
+describe('reducer — shell/selectGroup', () => {
+  it('sets activeGroup and clears activeSubKey', () => {
+    const s0 = boot();
+    const s1 = reducer(s0, { type: 'shell/selectGroup', group: 'models' });
+    expect(s1.shell.activeGroup).toBe('models');
+    expect(s1.shell.activeSubKey).toBeNull();
+  });
+
+  it('null group clears both', () => {
+    const s0 = reducer(boot(), { type: 'shell/selectGroup', group: 'gateway' });
+    const s1 = reducer(s0, { type: 'shell/selectSub', key: 'a' });
+    const s2 = reducer(s1, { type: 'shell/selectGroup', group: null });
+    expect(s2.shell.activeGroup).toBeNull();
+    expect(s2.shell.activeSubKey).toBeNull();
+  });
+});
+
+describe('reducer — shell/selectSub', () => {
+  it('sets activeSubKey', () => {
+    const s0 = reducer(boot(), { type: 'shell/selectGroup', group: 'gateway' });
+    const s1 = reducer(s0, { type: 'shell/selectSub', key: 'a' });
+    expect(s1.shell.activeSubKey).toBe('a');
+  });
+});
+
+describe('reducer — shell/toggleGroup', () => {
+  it('adds an expanded group when absent', () => {
+    const s1 = reducer(initialState, { type: 'shell/toggleGroup', group: 'models' });
+    expect(s1.shell.expandedGroups.has('models')).toBe(true);
+  });
+
+  it('removes an expanded group when present', () => {
+    const s1 = reducer(initialState, { type: 'shell/toggleGroup', group: 'gateway' });
+    expect(s1.shell.expandedGroups.has('gateway')).toBe(false);
+  });
+});
+
+describe('groupDirty', () => {
+  it('returns false for a pristine state', () => {
+    const s0 = boot();
+    for (const id of [
+      'models',
+      'gateway',
+      'memory',
+      'skills',
+      'runtime',
+      'advanced',
+      'observability',
+    ] as const satisfies readonly GroupId[]) {
+      expect(groupDirty(s0, id)).toBe(false);
+    }
+  });
+
+  it('returns true for the gateway group after an edit', () => {
+    const s0 = boot();
+    const s1 = reducer(s0, {
+      type: 'edit/field',
+      key: 'a',
+      field: 'token',
+      value: 'x',
+    });
+    expect(groupDirty(s1, 'gateway')).toBe(true);
+    expect(groupDirty(s1, 'models')).toBe(false);
+  });
+});
+
+describe('dirtyGroups + totalDirtyCount', () => {
+  it('lists only gateway as dirty after an edit', () => {
+    const s0 = boot();
+    const s1 = reducer(s0, {
+      type: 'edit/field',
+      key: 'a',
+      field: 'token',
+      value: 'x',
+    });
+    expect(dirtyGroups(s1)).toEqual(new Set<GroupId>(['gateway']));
+  });
+
+  it('totalDirtyCount equals dirtyCount (sum of IM instance diffs) in stage 1', () => {
+    const s0 = boot();
+    const s1 = reducer(s0, {
+      type: 'edit/field',
+      key: 'a',
+      field: 'token',
+      value: 'x',
+    });
+    expect(totalDirtyCount(s1)).toBe(1);
   });
 });
