@@ -27,7 +27,7 @@ release-snapshot:
 	}
 	goreleaser release --snapshot --skip=publish --clean
 
-.PHONY: web web-install web-dev web-clean
+.PHONY: web web-install web-dev web-clean web-test web-lint web-check
 
 web-install:
 	@command -v pnpm >/dev/null 2>&1 || { \
@@ -47,3 +47,23 @@ web-dev: web-install
 
 web-clean:
 	rm -rf web/node_modules web/dist
+
+web-test: web-install
+	cd web && pnpm test
+
+web-lint: web-install
+	cd web && pnpm lint
+
+# web-check is the composite gate CI runs: install deps, type-check,
+# unit tests, lint, build + sync, assert api/webroot/ is up to date.
+# Run locally before pushing to avoid the CI round-trip.
+web-check: web-install
+	cd web && pnpm type-check
+	cd web && pnpm test
+	cd web && pnpm lint
+	$(MAKE) web
+	@if ! git diff --quiet api/webroot/; then \
+	  echo "error: api/webroot/ is out of date. Run 'make web' and commit the result."; \
+	  git diff --stat api/webroot/; \
+	  exit 1; \
+	fi
