@@ -350,7 +350,10 @@ web/src/
 
 ### Framework
 
-Vitest + @testing-library/react + jsdom. No new dependencies.
+Vitest + jsdom are already installed. Component tests require
+`@testing-library/react` and `@testing-library/user-event`, which are
+added as dev dependencies in the first task of the plan. No new
+runtime dependencies.
 
 ### New Test Files
 
