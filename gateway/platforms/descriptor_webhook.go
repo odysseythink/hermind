@@ -11,7 +11,7 @@ func init() {
 			{Name: "url", Label: "URL", Kind: FieldString, Required: true,
 				Help: "HTTPS endpoint to POST each outgoing message to."},
 			{Name: "token", Label: "Bearer Token", Kind: FieldSecret,
-				Help: "Optional; sent as Authorization: Bearer <token>."},
+				Help: "If set, sent as Authorization: Bearer <token>."},
 		},
 		Build: func(opts map[string]string) (gateway.Platform, error) {
 			return NewWebhook(opts["url"], opts["token"]), nil
