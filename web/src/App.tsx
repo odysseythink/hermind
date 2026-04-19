@@ -73,7 +73,11 @@ export default function App() {
       }
     }
     // If parsed.group is null, stay in EmptyState — no dispatch needed.
-  }, [state.status, state.shell.activeGroup]);
+    // platforms is read here but deliberately NOT a dep — this effect is a
+    // one-shot migration on status transition; re-running on platform edits
+    // would re-dispatch selectGroup/selectSub unnecessarily (the inner guard
+    // bails out anyway, but this is faster).
+  }, [state.status, state.shell.activeGroup]); // eslint-disable-line react-hooks/exhaustive-deps
 
   // Sync hash whenever active group/sub changes.
   useEffect(() => {
@@ -106,7 +110,10 @@ export default function App() {
       if (instanceDirty(state, k)) out.add(k);
     }
     return out;
-  }, [state.config.gateway?.platforms, state.originalConfig.gateway?.platforms]);
+    // state is read here (via instanceDirty) but deliberately narrowed to only
+    // the platform slices it accesses — this memo doesn't need to re-run on
+    // other state changes like activeGroup or flash.
+  }, [state.config.gateway?.platforms, state.originalConfig.gateway?.platforms]); // eslint-disable-line react-hooks/exhaustive-deps
 
   const dirtyGroupIds = useMemo(() => selectDirtyGroups(state), [state]);
   const dirty = totalDirtyCount(state);
