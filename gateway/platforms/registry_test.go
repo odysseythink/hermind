@@ -91,3 +91,44 @@ func resetRegistryForTest(t *testing.T) {
 	registry = map[string]Descriptor{}
 	t.Cleanup(func() { registry = saved })
 }
+
+// TestDescriptorInvariants enforces properties every production
+// descriptor must satisfy. The test reads from the real registry, so
+// it will be meaningful once tasks 3–5 populate it; today it runs
+// over an empty registry, which trivially passes.
+func TestDescriptorInvariants(t *testing.T) {
+	for _, d := range All() {
+		d := d
+		t.Run(d.Type, func(t *testing.T) {
+			if d.Type == "" {
+				t.Fatal("Type is empty")
+			}
+			if d.DisplayName == "" {
+				t.Errorf("DisplayName is empty")
+			}
+			if d.Build == nil {
+				t.Errorf("Build is nil")
+			}
+
+			seen := map[string]bool{}
+			for _, f := range d.Fields {
+				if f.Name == "" {
+					t.Errorf("field has empty Name")
+				}
+				if seen[f.Name] {
+					t.Errorf("field %q: duplicate Name", f.Name)
+				}
+				seen[f.Name] = true
+				if f.Kind == FieldUnknown {
+					t.Errorf("field %q: Kind left at FieldUnknown sentinel — set it explicitly", f.Name)
+				}
+				if f.Required && f.Default != nil {
+					t.Errorf("field %q: Required && Default != nil", f.Name)
+				}
+				if f.Kind == FieldEnum && len(f.Enum) == 0 {
+					t.Errorf("field %q: FieldEnum with no Enum values", f.Name)
+				}
+			}
+		})
+	}
+}
