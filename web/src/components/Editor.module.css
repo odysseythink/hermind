@@ -59,3 +59,35 @@
   color: var(--muted);
   font-size: 13px;
 }
+.headerSpacer {
+  flex: 1;
+}
+.enabledToggle {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 13px;
+}
+.enabledToggle input[type='checkbox'] {
+  width: 16px;
+  height: 16px;
+  accent-color: var(--accent);
+  cursor: pointer;
+}
+.dangerZone {
+  border-top: 1px solid var(--border);
+  margin-top: 32px;
+  padding-top: 16px;
+}
+.deleteBtn {
+  appearance: none;
+  background: transparent;
+  color: var(--error);
+  border: 1px solid var(--border);
+  border-radius: 6px;
+  padding: 6px 12px;
+  font: inherit;
+  font-size: 12px;
+  cursor: pointer;
+}
+.deleteBtn:hover { background: var(--hover-tint); }

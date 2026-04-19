@@ -1,13 +1,24 @@
 import styles from './Editor.module.css';
 import type { PlatformInstance, SchemaDescriptor } from '../api/schemas';
+import FieldList from './FieldList';
 
 export interface EditorProps {
   selectedKey: string | null;
   instance: PlatformInstance | null;
   descriptor: SchemaDescriptor | null;
+  onField: (field: string, value: string) => void;
+  onToggleEnabled: (enabled: boolean) => void;
+  onDelete: () => void;
 }
 
-export default function Editor({ selectedKey, instance, descriptor }: EditorProps) {
+export default function Editor({
+  selectedKey,
+  instance,
+  descriptor,
+  onField,
+  onToggleEnabled,
+  onDelete,
+}: EditorProps) {
   if (!selectedKey || !instance) {
     return (
       <div className={styles.wrapper}>
@@ -15,7 +26,7 @@ export default function Editor({ selectedKey, instance, descriptor }: EditorProp
           <h2 className={styles.emptyTitle}>No instance selected</h2>
           <p className={styles.emptyBody}>
             Pick an instance from the sidebar, or click <em>+ New instance</em>
-            to create one. Field editors land in Stage 4.
+            to create one.
           </p>
         </div>
       </div>
@@ -31,6 +42,15 @@ export default function Editor({ selectedKey, instance, descriptor }: EditorProp
             which has no registered descriptor. Update the YAML directly or
             delete this instance.
           </p>
+          <button
+            type="button"
+            className={styles.deleteBtn}
+            onClick={() => {
+              if (window.confirm(`Delete instance "${selectedKey}"?`)) onDelete();
+            }}
+          >
+            Delete instance
+          </button>
         </div>
       </div>
     );
@@ -41,14 +61,34 @@ export default function Editor({ selectedKey, instance, descriptor }: EditorProp
         <header className={styles.panelHeader}>
           <h2 className={styles.title}>{selectedKey}</h2>
           <span className={styles.typeTag}>{descriptor.display_name}</span>
+          <span className={styles.headerSpacer} />
+          <label className={styles.enabledToggle}>
+            <input
+              type="checkbox"
+              checked={instance.enabled ?? false}
+              onChange={e => onToggleEnabled(e.currentTarget.checked)}
+            />
+            Enabled
+          </label>
         </header>
         {descriptor.summary && (
           <p className={styles.summary}>{descriptor.summary}</p>
         )}
-        <div className={styles.stagePlaceholder}>
-          Field editors land in Stage 4 —
-          this descriptor has {descriptor.fields.length} field
-          {descriptor.fields.length === 1 ? '' : 's'} to render.
+        <FieldList
+          descriptor={descriptor}
+          options={instance.options ?? {}}
+          onChange={onField}
+        />
+        <div className={styles.dangerZone}>
+          <button
+            type="button"
+            className={styles.deleteBtn}
+            onClick={() => {
+              if (window.confirm(`Delete instance "${selectedKey}"?`)) onDelete();
+            }}
+          >
+            Delete instance
+          </button>
         </div>
       </section>
     </div>
