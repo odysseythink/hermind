@@ -43,6 +43,8 @@ func NewRootCmd(app *App) *cobra.Command {
 		newUpgradeCmd(app),
 		newRLCmd(app),
 		newMCPCmd(app),
+		newACPCmd(app),
+		newBatchCmd(app),
 		newWebCmd(app),
 		newVersionCmd(),
 	)
