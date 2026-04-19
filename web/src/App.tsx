@@ -8,6 +8,7 @@ import {
 import {
   dirtyCount as selectDirtyCount,
   initialState,
+  instanceDirty,
   listInstances,
   reducer,
 } from './state';
@@ -51,10 +52,11 @@ export default function App() {
   // Hash persistence: write on every selectedKey change after boot.
   useEffect(() => {
     if (state.status === 'booting') return;
-    const wanted = '#' + (state.selectedKey ?? '');
+    const encoded = state.selectedKey ? encodeURIComponent(state.selectedKey) : '';
+    const wanted = encoded ? '#' + encoded : '';
     if (window.location.hash !== wanted) {
-      if (state.selectedKey) {
-        window.location.hash = state.selectedKey;
+      if (encoded) {
+        window.location.hash = encoded;
       } else if (window.location.hash) {
         history.replaceState(null, '', window.location.pathname + window.location.search);
       }
@@ -63,7 +65,13 @@ export default function App() {
 
   useEffect(() => {
     if (state.status !== 'ready' || state.selectedKey !== null) return;
-    const fromHash = window.location.hash.replace(/^#/, '');
+    const raw = window.location.hash.replace(/^#/, '');
+    let fromHash = '';
+    try {
+      fromHash = decodeURIComponent(raw);
+    } catch {
+      fromHash = raw;
+    }
     if (fromHash && state.config.gateway?.platforms?.[fromHash]) {
       dispatch({ type: 'select', key: fromHash });
     }
@@ -78,10 +86,16 @@ export default function App() {
     }));
   }, [state.config.gateway?.platforms]);
 
-  const dirtyKeys = useMemo(
-    () => collectDirtyKeys(state),
-    [state.config.gateway?.platforms, state.originalConfig.gateway?.platforms],
-  );
+  const dirtyKeys = useMemo(() => {
+    const a = state.config.gateway?.platforms ?? {};
+    const b = state.originalConfig.gateway?.platforms ?? {};
+    const keys = new Set([...Object.keys(a), ...Object.keys(b)]);
+    const out = new Set<string>();
+    for (const k of keys) {
+      if (instanceDirty(state, k)) out.add(k);
+    }
+    return out;
+  }, [state]);
 
   const dirty = selectDirtyCount(state);
   const busy = state.status === 'saving' || state.status === 'applying';
@@ -196,18 +210,4 @@ function toErrMsg(err: unknown): string {
     return `HTTP ${err.status}`;
   }
   return err instanceof Error ? err.message : String(err);
-}
-
-function collectDirtyKeys(state: {
-  config: { gateway?: { platforms?: Record<string, unknown> } };
-  originalConfig: { gateway?: { platforms?: Record<string, unknown> } };
-}): Set<string> {
-  const a = state.config.gateway?.platforms ?? {};
-  const b = state.originalConfig.gateway?.platforms ?? {};
-  const keys = new Set<string>([...Object.keys(a), ...Object.keys(b)]);
-  const out = new Set<string>();
-  for (const k of keys) {
-    if (JSON.stringify(a[k]) !== JSON.stringify(b[k])) out.add(k);
-  }
-  return out;
 }
