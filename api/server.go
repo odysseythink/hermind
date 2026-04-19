@@ -1,8 +1,10 @@
 package api
 
 import (
+	"context"
 	"embed"
 	"encoding/json"
+	"errors"
 	"fmt"
 	"io/fs"
 	"net/http"
@@ -17,6 +19,31 @@ import (
 
 //go:embed webroot/*
 var webroot embed.FS
+
+// GatewayController is the subset of cli/gatewayctl.Controller that
+// the REST layer consumes. Keeping it as an interface avoids a cyclic
+// import (cli depends on api, not the other way around) and lets
+// handler tests stub it.
+type GatewayController interface {
+	// Apply performs a stop-rebuild-start cycle on the underlying
+	// gateway subsystem. Returns ErrApplyInProgress if an Apply is
+	// already running.
+	Apply(ctx context.Context) (ApplyResult, error)
+
+	// TestPlatform runs the platform's descriptor.Test for key.
+	// Errors are surfaced verbatim; callers inspect the value for
+	// user-facing mapping (ErrTestNotImplemented / ErrUnknownPlatformKey).
+	TestPlatform(ctx context.Context, key string) error
+}
+
+// Sentinel errors shared between the API handlers and the controller
+// implementation (cli/gatewayctl aliases these). Handlers use
+// errors.Is against them regardless of which side returned the error.
+var (
+	ErrApplyInProgress    = errors.New("apply already in progress")
+	ErrTestNotImplemented = errors.New("test not implemented for this platform type")
+	ErrUnknownPlatformKey = errors.New("unknown platform key")
+)
 
 // ServerOpts bundles server-wide state.
 type ServerOpts struct {
@@ -43,6 +70,10 @@ type ServerOpts struct {
 	// returns a no-op that accepts and drops events. Set to a real
 	// StreamHub (e.g. NewMemoryStreamHub) when streaming is wanted.
 	Streams StreamHub
+
+	// Controller manages the gateway lifecycle. nil means the four
+	// /api/platforms/* endpoints return 503 Service Unavailable.
+	Controller GatewayController
 }
 
 // Server is the API server.

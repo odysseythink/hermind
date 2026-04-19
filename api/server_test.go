@@ -128,6 +128,21 @@ func contains(s, sub string) bool {
 	return false
 }
 
+func TestNewServer_ControllerOptional(t *testing.T) {
+	cfg := &config.Config{}
+	srv, err := NewServer(&ServerOpts{
+		Config: cfg,
+		Token:  "test-token",
+		// Controller: nil — acceptable, the platform endpoints will 503.
+	})
+	if err != nil {
+		t.Fatalf("NewServer with nil Controller: %v", err)
+	}
+	if srv == nil {
+		t.Fatal("NewServer returned nil")
+	}
+}
+
 func TestToolsList_EmptyDefault(t *testing.T) {
 	s := newTestServer(t)
 	rr := httptest.NewRecorder()

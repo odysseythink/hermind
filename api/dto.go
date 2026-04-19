@@ -111,3 +111,61 @@ type ProviderDTO struct {
 type ProvidersResponse struct {
 	Providers []ProviderDTO `json:"providers"`
 }
+
+// SchemaFieldDTO describes one field of a platform descriptor.
+type SchemaFieldDTO struct {
+	Name     string   `json:"name"`
+	Label    string   `json:"label"`
+	Help     string   `json:"help,omitempty"`
+	Kind     string   `json:"kind"`
+	Required bool     `json:"required,omitempty"`
+	Default  any      `json:"default,omitempty"`
+	Enum     []string `json:"enum,omitempty"`
+}
+
+// SchemaDescriptorDTO is one descriptor in the schema response.
+type SchemaDescriptorDTO struct {
+	Type        string           `json:"type"`
+	DisplayName string           `json:"display_name"`
+	Summary     string           `json:"summary,omitempty"`
+	Fields      []SchemaFieldDTO `json:"fields"`
+}
+
+// PlatformsSchemaResponse is the payload for GET /api/platforms/schema.
+type PlatformsSchemaResponse struct {
+	Descriptors []SchemaDescriptorDTO `json:"descriptors"`
+}
+
+// RevealRequest is the body of POST /api/platforms/{key}/reveal.
+type RevealRequest struct {
+	Field string `json:"field"`
+}
+
+// RevealResponse is the success payload for reveal.
+type RevealResponse struct {
+	Value string `json:"value"`
+}
+
+// ErrorResponse is the generic error payload.
+type ErrorResponse struct {
+	Error string `json:"error"`
+}
+
+// PlatformTestResponse is the payload for POST /api/platforms/{key}/test.
+// ok=true on success; on failure, both ok=false and error are set.
+type PlatformTestResponse struct {
+	OK    bool   `json:"ok"`
+	Error string `json:"error,omitempty"`
+}
+
+// ApplyResult is the payload for POST /api/platforms/apply and also
+// the return type of the GatewayController.Apply method. Shared so
+// the controller can hand a value straight to the handler without an
+// intermediate mapping.
+type ApplyResult struct {
+	OK        bool              `json:"ok"`
+	Restarted []string          `json:"restarted,omitempty"`
+	Errors    map[string]string `json:"errors,omitempty"`
+	TookMS    int64             `json:"took_ms"`
+	Error     string            `json:"error,omitempty"` // only on ok=false
+}
