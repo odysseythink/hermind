@@ -57,3 +57,14 @@ export const ApplyResultSchema = z.object({
   error: z.string().optional(),
 });
 export type ApplyResult = z.infer<typeof ApplyResultSchema>;
+
+export const PlatformTestResponseSchema = z.object({
+  ok: z.boolean(),
+  error: z.string().optional(),
+});
+export type PlatformTestResponse = z.infer<typeof PlatformTestResponseSchema>;
+
+export const RevealResponseSchema = z.object({
+  value: z.string(),
+});
+export type RevealResponse = z.infer<typeof RevealResponseSchema>;
