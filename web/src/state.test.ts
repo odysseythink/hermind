@@ -1,4 +1,4 @@
-import { describe, expect, it } from 'vitest';
+import { describe, expect, it, beforeEach } from 'vitest';
 import type { Config, PlatformInstance, SchemaDescriptor } from './api/schemas';
 import {
   dirtyCount,
@@ -12,6 +12,7 @@ import {
   type AppState,
 } from './state';
 import type { GroupId } from './shell/groups';
+import { STORAGE_KEY } from './shell/persistence';
 
 function cfg(plats: Record<string, PlatformInstance>): Config {
   return { gateway: { platforms: plats } };
@@ -185,11 +186,14 @@ function boot(state: AppState = initialState): AppState {
 }
 
 describe('shell slice — initial state', () => {
-  it('starts with activeGroup=null, activeSubKey=null, expandedGroups={gateway}', () => {
+  beforeEach(() => {
+    localStorage.clear();
+  });
+
+  it('starts with activeGroup=null, activeSubKey=null, and gateway expanded by default', () => {
     expect(initialState.shell.activeGroup).toBeNull();
     expect(initialState.shell.activeSubKey).toBeNull();
     expect(initialState.shell.expandedGroups.has('gateway')).toBe(true);
-    expect(initialState.shell.expandedGroups.size).toBe(1);
   });
 });
 
@@ -301,5 +305,15 @@ describe('dirtyGroups + totalDirtyCount', () => {
       value: 'x',
     });
     expect(totalDirtyCount(s1)).toBe(1);
+  });
+});
+
+describe('reducer — shell/toggleGroup persistence', () => {
+  beforeEach(() => localStorage.clear());
+
+  it('writes to localStorage on toggle', () => {
+    const s1 = reducer(initialState, { type: 'shell/toggleGroup', group: 'models' });
+    expect(JSON.parse(localStorage.getItem(STORAGE_KEY) ?? '[]')).toContain('models');
+    expect(s1.shell.expandedGroups.has('models')).toBe(true);
   });
 });

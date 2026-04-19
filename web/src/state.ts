@@ -1,5 +1,6 @@
 import type { Config, PlatformInstance, SchemaDescriptor } from './api/schemas';
 import { GROUPS, type GroupId } from './shell/groups';
+import { loadExpandedGroups, saveExpandedGroups } from './shell/persistence';
 
 export type Status = 'booting' | 'ready' | 'saving' | 'applying' | 'error';
 
@@ -53,7 +54,7 @@ export const initialState: AppState = {
   shell: {
     activeGroup: null,
     activeSubKey: null,
-    expandedGroups: new Set<GroupId>(['gateway']),
+    expandedGroups: loadExpandedGroups(),
   },
 };
 
@@ -140,6 +141,7 @@ export function reducer(state: AppState, action: Action): AppState {
       const expanded = new Set(state.shell.expandedGroups);
       if (expanded.has(action.group)) expanded.delete(action.group);
       else expanded.add(action.group);
+      saveExpandedGroups(expanded);
       return { ...state, shell: { ...state.shell, expandedGroups: expanded } };
     }
   }
