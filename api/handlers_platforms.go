@@ -2,6 +2,7 @@ package api
 
 import (
 	"encoding/json"
+	"errors"
 	"net/http"
 
 	"github.com/go-chi/chi/v5"
@@ -67,4 +68,26 @@ func (s *Server) handlePlatformReveal(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	writeJSON(w, RevealResponse{Value: pc.Options[req.Field]})
+}
+
+func (s *Server) handlePlatformTest(w http.ResponseWriter, r *http.Request) {
+	if s.opts.Controller == nil {
+		writeJSONStatus(w, http.StatusServiceUnavailable,
+			ErrorResponse{Error: "gateway controller not configured"})
+		return
+	}
+	key := chi.URLParam(r, "key")
+	err := s.opts.Controller.TestPlatform(r.Context(), key)
+	switch {
+	case err == nil:
+		writeJSON(w, PlatformTestResponse{OK: true})
+	case errors.Is(err, ErrTestNotImplemented):
+		writeJSONStatus(w, http.StatusNotImplemented,
+			ErrorResponse{Error: "test not implemented for this platform type"})
+	case errors.Is(err, ErrUnknownPlatformKey):
+		writeJSONStatus(w, http.StatusNotFound,
+			ErrorResponse{Error: "unknown platform key"})
+	default:
+		writeJSON(w, PlatformTestResponse{OK: false, Error: err.Error()})
+	}
 }

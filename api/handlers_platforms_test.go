@@ -1,7 +1,9 @@
 package api_test
 
 import (
+	"context"
 	"encoding/json"
+	"errors"
 	"net/http"
 	"net/http/httptest"
 	"strings"
@@ -159,5 +161,86 @@ func TestPlatformReveal_404OnUnknownKey(t *testing.T) {
 	srv.Router().ServeHTTP(w, req)
 	if w.Code != http.StatusNotFound {
 		t.Errorf("status = %d, want 404", w.Code)
+	}
+}
+
+type stubController struct {
+	testErr    error
+	applyCalls int
+	applyRes   api.ApplyResult
+	applyErr   error
+}
+
+func (s *stubController) TestPlatform(_ context.Context, _ string) error {
+	return s.testErr
+}
+func (s *stubController) Apply(_ context.Context) (api.ApplyResult, error) {
+	s.applyCalls++
+	return s.applyRes, s.applyErr
+}
+
+func TestPlatformTest_NilControllerReturns503(t *testing.T) {
+	srv, _ := api.NewServer(&api.ServerOpts{Config: &config.Config{}, Token: "test-token"})
+	req := httptest.NewRequest("POST", "/api/platforms/any/test", nil)
+	req.Header.Set("Authorization", "Bearer test-token")
+	w := httptest.NewRecorder()
+	srv.Router().ServeHTTP(w, req)
+	if w.Code != http.StatusServiceUnavailable {
+		t.Errorf("status = %d, want 503", w.Code)
+	}
+}
+
+func TestPlatformTest_NotImplementedReturns501(t *testing.T) {
+	ctrl := &stubController{testErr: api.ErrTestNotImplemented}
+	srv, _ := api.NewServer(&api.ServerOpts{
+		Config: &config.Config{}, Token: "test-token", Controller: ctrl,
+	})
+	req := httptest.NewRequest("POST", "/api/platforms/any/test", nil)
+	req.Header.Set("Authorization", "Bearer test-token")
+	w := httptest.NewRecorder()
+	srv.Router().ServeHTTP(w, req)
+	if w.Code != http.StatusNotImplemented {
+		t.Errorf("status = %d, want 501", w.Code)
+	}
+}
+
+func TestPlatformTest_SuccessReturnsOK(t *testing.T) {
+	ctrl := &stubController{testErr: nil}
+	srv, _ := api.NewServer(&api.ServerOpts{
+		Config: &config.Config{}, Token: "test-token", Controller: ctrl,
+	})
+	req := httptest.NewRequest("POST", "/api/platforms/any/test", nil)
+	req.Header.Set("Authorization", "Bearer test-token")
+	w := httptest.NewRecorder()
+	srv.Router().ServeHTTP(w, req)
+	if w.Code != http.StatusOK {
+		t.Fatalf("status = %d, body = %s", w.Code, w.Body.String())
+	}
+	var body api.PlatformTestResponse
+	_ = json.Unmarshal(w.Body.Bytes(), &body)
+	if !body.OK {
+		t.Errorf("body.OK = false, error = %q", body.Error)
+	}
+}
+
+func TestPlatformTest_FailureReturnsOKFalse(t *testing.T) {
+	ctrl := &stubController{testErr: errors.New("auth failed: bad token")}
+	srv, _ := api.NewServer(&api.ServerOpts{
+		Config: &config.Config{}, Token: "test-token", Controller: ctrl,
+	})
+	req := httptest.NewRequest("POST", "/api/platforms/any/test", nil)
+	req.Header.Set("Authorization", "Bearer test-token")
+	w := httptest.NewRecorder()
+	srv.Router().ServeHTTP(w, req)
+	if w.Code != http.StatusOK {
+		t.Fatalf("status = %d", w.Code)
+	}
+	var body api.PlatformTestResponse
+	_ = json.Unmarshal(w.Body.Bytes(), &body)
+	if body.OK {
+		t.Error("body.OK = true, want false")
+	}
+	if !strings.Contains(body.Error, "auth failed") {
+		t.Errorf("body.Error = %q, want substring 'auth failed'", body.Error)
 	}
 }
