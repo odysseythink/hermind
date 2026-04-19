@@ -1,10 +1,12 @@
 import styles from './Editor.module.css';
 import type { PlatformInstance, SchemaDescriptor } from '../api/schemas';
 import FieldList from './FieldList';
+import TestConnection from './TestConnection';
 
 export interface EditorProps {
   selectedKey: string | null;
   instance: PlatformInstance | null;
+  originalInstance: PlatformInstance | null;
   descriptor: SchemaDescriptor | null;
   onField: (field: string, value: string) => void;
   onToggleEnabled: (enabled: boolean) => void;
@@ -14,6 +16,7 @@ export interface EditorProps {
 export default function Editor({
   selectedKey,
   instance,
+  originalInstance,
   descriptor,
   onField,
   onToggleEnabled,
@@ -55,6 +58,14 @@ export default function Editor({
       </div>
     );
   }
+
+  const originalOptions = originalInstance?.options ?? {};
+  const options = instance.options ?? {};
+  const instanceIsDirty =
+    !originalInstance ||
+    (originalInstance.enabled ?? false) !== (instance.enabled ?? false) ||
+    optionsDiffer(options, originalOptions);
+
   return (
     <div className={styles.wrapper}>
       <section className={styles.panel}>
@@ -76,9 +87,12 @@ export default function Editor({
         )}
         <FieldList
           descriptor={descriptor}
-          options={instance.options ?? {}}
+          options={options}
+          originalOptions={originalOptions}
+          instanceKey={selectedKey}
           onChange={onField}
         />
+        <TestConnection instanceKey={selectedKey} dirty={instanceIsDirty} />
         <div className={styles.dangerZone}>
           <button
             type="button"
@@ -93,4 +107,12 @@ export default function Editor({
       </section>
     </div>
   );
+}
+
+function optionsDiffer(a: Record<string, string>, b: Record<string, string>): boolean {
+  const keys = new Set<string>([...Object.keys(a), ...Object.keys(b)]);
+  for (const k of keys) {
+    if ((a[k] ?? '') !== (b[k] ?? '')) return true;
+  }
+  return false;
 }
