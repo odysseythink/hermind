@@ -10,6 +10,7 @@ export interface FieldListProps {
   options: Record<string, string>;
   originalOptions: Record<string, string>;
   instanceKey: string;
+  instanceIsNew: boolean;
   onChange: (field: string, value: string) => void;
 }
 
@@ -18,6 +19,7 @@ export default function FieldList({
   options,
   originalOptions,
   instanceKey,
+  instanceIsNew,
   onChange,
 }: FieldListProps) {
   return (
@@ -40,7 +42,7 @@ export default function FieldList({
                 field={field}
                 value={value}
                 instanceKey={instanceKey}
-                dirty={value !== originalValue}
+                dirty={instanceIsNew || value !== originalValue}
                 onChange={onFieldChange}
               />
             );

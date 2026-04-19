@@ -90,6 +90,7 @@ export default function Editor({
           options={options}
           originalOptions={originalOptions}
           instanceKey={selectedKey}
+          instanceIsNew={!originalInstance}
           onChange={onField}
         />
         <TestConnection instanceKey={selectedKey} dirty={instanceIsDirty} />
