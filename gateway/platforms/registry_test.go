@@ -69,6 +69,9 @@ func TestRegister_DuplicateTypeOverwrites(t *testing.T) {
 	if got.DisplayName != "second" {
 		t.Errorf("after overwrite, DisplayName = %q, want %q", got.DisplayName, "second")
 	}
+	if n := len(All()); n != 1 {
+		t.Errorf("len(All()) = %d, want 1 after overwrite", n)
+	}
 }
 
 func mustBuildStub(name string) func(map[string]string) (gateway.Platform, error) {
@@ -79,6 +82,9 @@ func mustBuildStub(name string) func(map[string]string) (gateway.Platform, error
 
 // resetRegistryForTest swaps in a fresh map for the current test and
 // restores the original after t finishes.
+//
+// NOTE: Do not call t.Parallel() in any test that uses this helper —
+// it mutates the package-level registry map and is not goroutine-safe.
 func resetRegistryForTest(t *testing.T) {
 	t.Helper()
 	saved := registry

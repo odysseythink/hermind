@@ -17,7 +17,11 @@ import (
 type FieldKind int
 
 const (
-	FieldString FieldKind = iota
+	// FieldUnknown is the zero value; descriptor authors must set Kind
+	// explicitly to a meaningful value. The TestDescriptorInvariants
+	// guard (Task 2) will reject any field left at FieldUnknown.
+	FieldUnknown FieldKind = iota
+	FieldString
 	FieldInt
 	FieldBool
 	FieldSecret
@@ -28,6 +32,8 @@ const (
 // "secret", etc.). Stage 2 uses this for the schema endpoint.
 func (k FieldKind) String() string {
 	switch k {
+	case FieldUnknown:
+		return "unknown"
 	case FieldString:
 		return "string"
 	case FieldInt:
@@ -59,9 +65,9 @@ type FieldSpec struct {
 // lightweight handshake for the /api/platforms/test endpoint; it may
 // be nil until stage 2 populates it.
 type Descriptor struct {
-	Type        string
-	DisplayName string
-	Summary     string
+	Type        string       // stable identifier, e.g. "telegram"; matches PlatformConfig.Type
+	DisplayName string       // human-readable name shown in the UI
+	Summary     string       // one-line description; optional
 	Fields      []FieldSpec
 	Build       func(opts map[string]string) (gateway.Platform, error)
 	Test        func(ctx context.Context, opts map[string]string) error
