@@ -12,7 +12,7 @@ import globals from 'globals';
 export default [
   {
     files: ['src/**/*.{ts,tsx}'],
-    ignores: ['dist/**', 'node_modules/**'],
+    ignores: ['dist/**', 'node_modules/**', '*.config.js', '*.config.ts'],
     languageOptions: {
       parser: tsParser,
       parserOptions: {
