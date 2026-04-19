@@ -4,3 +4,9 @@ dist/
 *.out
 coverage.txt
 .env
+
+# Frontend (Stage 3)
+web/node_modules
+web/dist
+web/.env.local
+.DS_Store

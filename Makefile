@@ -26,3 +26,24 @@ release-snapshot:
 	  exit 1; \
 	}
 	goreleaser release --snapshot --skip=publish --clean
+
+.PHONY: web web-install web-dev web-clean
+
+web-install:
+	@command -v pnpm >/dev/null 2>&1 || { \
+	  echo "error: pnpm not found. With Node 20+: corepack enable && corepack prepare pnpm@9 --activate"; \
+	  exit 1; \
+	}
+	cd web && (pnpm install --frozen-lockfile || pnpm install)
+
+web: web-install
+	cd web && pnpm build
+	find api/webroot -mindepth 1 -delete
+	cp -R web/dist/. api/webroot/
+
+web-dev: web-install
+	@test -f web/.env.local || cp web/.env.example web/.env.local
+	cd web && pnpm dev
+
+web-clean:
+	rm -rf web/node_modules web/dist
