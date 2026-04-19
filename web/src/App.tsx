@@ -16,6 +16,7 @@ import TopBar from './components/TopBar';
 import Sidebar from './components/Sidebar';
 import Footer from './components/Footer';
 import Editor from './components/Editor';
+import NewInstanceDialog from './components/NewInstanceDialog';
 
 export default function App() {
   const [state, dispatch] = useReducer(reducer, initialState);
@@ -201,19 +202,15 @@ export default function App() {
         onSaveAndApply={onSaveAndApply}
       />
       {newDialogOpen && (
-        <div style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.5)' }}>
-          {/* Placeholder — NewInstanceDialog lands in task 6 */}
-          <button
-            type="button"
-            onClick={() => setNewDialogOpen(false)}
-            style={{ position: 'absolute', top: 16, right: 16 }}
-          >
-            close
-          </button>
-          <p style={{ color: 'white', padding: '2rem' }}>
-            NewInstanceDialog coming in task 6.
-          </p>
-        </div>
+        <NewInstanceDialog
+          descriptors={state.descriptors}
+          existingKeys={new Set(Object.keys(state.config.gateway?.platforms ?? {}))}
+          onCancel={() => setNewDialogOpen(false)}
+          onCreate={(key, platformType) => {
+            dispatch({ type: 'instance/create', key, platformType });
+            setNewDialogOpen(false);
+          }}
+        />
       )}
     </div>
   );

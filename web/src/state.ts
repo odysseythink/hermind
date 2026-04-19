@@ -27,7 +27,8 @@ export type Action =
   | { type: 'apply/done'; error?: string }
   | { type: 'edit/field'; key: string; field: string; value: string }
   | { type: 'edit/enabled'; key: string; enabled: boolean }
-  | { type: 'instance/delete'; key: string };
+  | { type: 'instance/delete'; key: string }
+  | { type: 'instance/create'; key: string; platformType: string };
 
 export const initialState: AppState = {
   status: 'booting',
@@ -85,6 +86,19 @@ export function reducer(state: AppState, action: Action): AppState {
         config: deleteInstance(state.config, action.key),
         selectedKey: state.selectedKey === action.key ? null : state.selectedKey,
       };
+    case 'instance/create': {
+      const plats = { ...(state.config.gateway?.platforms ?? {}) };
+      plats[action.key] = {
+        enabled: true,
+        type: action.platformType,
+        options: {},
+      };
+      return {
+        ...state,
+        config: { ...state.config, gateway: { ...(state.config.gateway ?? {}), platforms: plats } },
+        selectedKey: action.key,
+      };
+    }
   }
 }
 
