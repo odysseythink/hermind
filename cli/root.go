@@ -28,7 +28,6 @@ func NewRootCmd(app *App) *cobra.Command {
 	}
 	root.SetVersionTemplate("hermind {{.Version}}\n")
 
-	webCmd := newWebCmd(app)
 	root.AddCommand(
 		newRunCmd(app),
 		newGatewayCmd(app),
@@ -44,13 +43,14 @@ func NewRootCmd(app *App) *cobra.Command {
 		newUpgradeCmd(app),
 		newRLCmd(app),
 		newMCPCmd(app),
-		webCmd,
+		newWebCmd(app),
 		newVersionCmd(),
 	)
 
-	// Default subcommand: if no args, start the web UI. The REPL is still
-	// reachable via `hermind run`.
-	root.RunE = webCmd.RunE
+	// Default subcommand: if no args, run the REPL
+	root.RunE = func(cmd *cobra.Command, args []string) error {
+		return runREPL(cmd.Context(), app)
+	}
 
 	return root
 }
