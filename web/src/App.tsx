@@ -6,22 +6,26 @@ import {
   PlatformsSchemaResponseSchema,
 } from './api/schemas';
 import {
-  dirtyCount as selectDirtyCount,
+  dirtyGroups as selectDirtyGroups,
   initialState,
   instanceDirty,
   listInstances,
   reducer,
+  totalDirtyCount,
 } from './state';
-import TopBar from './components/TopBar';
-import Sidebar from './components/Sidebar';
+import { migrateLegacyHash, parseHash, stringifyHash } from './shell/hash';
+import type { GroupId } from './shell/groups';
+import TopBar from './components/shell/TopBar';
+import Sidebar from './components/shell/Sidebar';
+import ContentPanel from './components/shell/ContentPanel';
 import Footer from './components/Footer';
-import Editor from './components/Editor';
 import NewInstanceDialog from './components/NewInstanceDialog';
 
 export default function App() {
   const [state, dispatch] = useReducer(reducer, initialState);
   const [newDialogOpen, setNewDialogOpen] = useState(false);
 
+  // Boot: fetch schema + config
   useEffect(() => {
     const ctrl = new AbortController();
     (async () => {
@@ -50,32 +54,39 @@ export default function App() {
     return () => ctrl.abort();
   }, []);
 
+  // Resolve initial hash (including legacy migration) once config is available.
+  useEffect(() => {
+    if (state.status !== 'ready') return;
+    if (state.shell.activeGroup !== null) return;
+    const currentHash = window.location.hash;
+    const platforms = Object.keys(state.config.gateway?.platforms ?? {});
+    const migrated = migrateLegacyHash(currentHash, platforms);
+    const effective = migrated ?? currentHash;
+    if (migrated) {
+      history.replaceState(null, '', window.location.pathname + window.location.search + migrated);
+    }
+    const parsed = parseHash(effective);
+    if (parsed.group) {
+      dispatch({ type: 'shell/selectGroup', group: parsed.group });
+      if (parsed.sub && parsed.group === 'gateway') {
+        dispatch({ type: 'shell/selectSub', key: parsed.sub });
+      }
+    }
+    // If parsed.group is null, stay in EmptyState — no dispatch needed.
+  }, [state.status, state.shell.activeGroup, state.config.gateway?.platforms]);
+
+  // Sync hash whenever active group/sub changes.
   useEffect(() => {
     if (state.status === 'booting') return;
-    const encoded = state.selectedKey ? encodeURIComponent(state.selectedKey) : '';
-    const wanted = encoded ? '#' + encoded : '';
+    const wanted = stringifyHash(state.shell.activeGroup, state.shell.activeSubKey);
     if (window.location.hash !== wanted) {
-      if (encoded) {
-        window.location.hash = encoded;
+      if (wanted) {
+        history.replaceState(null, '', window.location.pathname + window.location.search + wanted);
       } else if (window.location.hash) {
         history.replaceState(null, '', window.location.pathname + window.location.search);
       }
     }
-  }, [state.selectedKey, state.status]);
-
-  useEffect(() => {
-    if (state.status !== 'ready' || state.selectedKey !== null) return;
-    const raw = window.location.hash.replace(/^#/, '');
-    let fromHash = '';
-    try {
-      fromHash = decodeURIComponent(raw);
-    } catch {
-      fromHash = raw;
-    }
-    if (fromHash && state.config.gateway?.platforms?.[fromHash]) {
-      dispatch({ type: 'select', key: fromHash });
-    }
-  }, [state.status, state.selectedKey, state.config.gateway?.platforms]);
+  }, [state.shell.activeGroup, state.shell.activeSubKey, state.status]);
 
   const instances = useMemo(() => {
     const plats = state.config.gateway?.platforms ?? {};
@@ -86,7 +97,7 @@ export default function App() {
     }));
   }, [state]);
 
-  const dirtyKeys = useMemo(() => {
+  const dirtyInstanceKeys = useMemo(() => {
     const a = state.config.gateway?.platforms ?? {};
     const b = state.originalConfig.gateway?.platforms ?? {};
     const keys = new Set([...Object.keys(a), ...Object.keys(b)]);
@@ -97,7 +108,8 @@ export default function App() {
     return out;
   }, [state]);
 
-  const dirty = selectDirtyCount(state);
+  const dirtyGroupIds = useMemo(() => selectDirtyGroups(state), [state]);
+  const dirty = totalDirtyCount(state);
   const busy = state.status === 'saving' || state.status === 'applying';
 
   const onSave = useCallback(async () => {
@@ -109,23 +121,11 @@ export default function App() {
       });
       dispatch({ type: 'save/done' });
     } catch (err) {
-      const msg = toErrMsg(err);
-      dispatch({ type: 'save/done', error: msg });
+      dispatch({ type: 'save/done', error: toErrMsg(err) });
     }
   }, [state.config]);
 
-  const onSaveAndApply = useCallback(async () => {
-    dispatch({ type: 'save/start' });
-    try {
-      await apiFetch('/api/config', {
-        method: 'PUT',
-        body: { config: state.config },
-      });
-      dispatch({ type: 'save/done' });
-    } catch (err) {
-      dispatch({ type: 'save/done', error: toErrMsg(err) });
-      return;
-    }
+  const onApplyGateway = useCallback(async () => {
     dispatch({ type: 'apply/start' });
     try {
       const res = await apiFetch('/api/platforms/apply', {
@@ -140,7 +140,7 @@ export default function App() {
     } catch (err) {
       dispatch({ type: 'apply/done', error: toErrMsg(err) });
     }
-  }, [state.config]);
+  }, []);
 
   if (state.status === 'booting') {
     return <div style={{ padding: '2rem' }}>Loading…</div>;
@@ -153,11 +153,12 @@ export default function App() {
     );
   }
 
-  const selectedInstance = state.selectedKey
-    ? state.config.gateway?.platforms?.[state.selectedKey] ?? null
+  const selectedKey = state.shell.activeSubKey;
+  const selectedInstance = selectedKey
+    ? state.config.gateway?.platforms?.[selectedKey] ?? null
     : null;
-  const selectedOriginal = state.selectedKey
-    ? state.originalConfig.gateway?.platforms?.[state.selectedKey] ?? null
+  const selectedOriginal = selectedKey
+    ? state.originalConfig.gateway?.platforms?.[selectedKey] ?? null
     : null;
   const selectedDescriptor = selectedInstance
     ? state.descriptors.find(d => d.type === selectedInstance.type) ?? null
@@ -165,42 +166,48 @@ export default function App() {
 
   return (
     <div className="app-shell">
-      <TopBar dirtyCount={dirty} status={state.status} />
+      <TopBar dirtyCount={dirty} status={state.status} onSave={onSave} />
       <Sidebar
+        activeGroup={state.shell.activeGroup}
+        activeSubKey={state.shell.activeSubKey}
+        expandedGroups={state.shell.expandedGroups}
+        dirtyGroups={dirtyGroupIds}
         instances={instances}
-        selectedKey={state.selectedKey}
+        selectedKey={selectedKey}
         descriptors={state.descriptors}
-        dirtyKeys={dirtyKeys}
-        onSelect={key => dispatch({ type: 'select', key })}
+        dirtyInstanceKeys={dirtyInstanceKeys}
+        onSelectGroup={(id: GroupId) => dispatch({ type: 'shell/selectGroup', group: id })}
+        onSelectSub={(key: string) => {
+          dispatch({ type: 'shell/selectGroup', group: 'gateway' });
+          dispatch({ type: 'shell/selectSub', key });
+        }}
+        onToggleGroup={(id: GroupId) => dispatch({ type: 'shell/toggleGroup', group: id })}
         onNewInstance={() => setNewDialogOpen(true)}
       />
       <main>
-        <Editor
-          selectedKey={state.selectedKey}
+        <ContentPanel
+          activeGroup={state.shell.activeGroup}
+          config={state.config}
+          selectedKey={selectedKey}
           instance={selectedInstance}
           originalInstance={selectedOriginal}
           descriptor={selectedDescriptor}
+          dirtyGateway={dirtyGroupIds.has('gateway')}
+          busy={busy}
           onField={(field, value) =>
-            state.selectedKey &&
-            dispatch({ type: 'edit/field', key: state.selectedKey, field, value })
+            selectedKey &&
+            dispatch({ type: 'edit/field', key: selectedKey, field, value })
           }
           onToggleEnabled={enabled =>
-            state.selectedKey &&
-            dispatch({ type: 'edit/enabled', key: state.selectedKey, enabled })
+            selectedKey &&
+            dispatch({ type: 'edit/enabled', key: selectedKey, enabled })
           }
-          onDelete={() =>
-            state.selectedKey &&
-            dispatch({ type: 'instance/delete', key: state.selectedKey })
-          }
+          onDelete={() => selectedKey && dispatch({ type: 'instance/delete', key: selectedKey })}
+          onApply={onApplyGateway}
+          onSelectGroup={(id: GroupId) => dispatch({ type: 'shell/selectGroup', group: id })}
         />
       </main>
-      <Footer
-        dirtyCount={dirty}
-        flash={state.flash}
-        busy={busy}
-        onSave={onSave}
-        onSaveAndApply={onSaveAndApply}
-      />
+      <Footer flash={state.flash} />
       {newDialogOpen && (
         <NewInstanceDialog
           descriptors={state.descriptors}
@@ -208,6 +215,8 @@ export default function App() {
           onCancel={() => setNewDialogOpen(false)}
           onCreate={(key, platformType) => {
             dispatch({ type: 'instance/create', key, platformType });
+            dispatch({ type: 'shell/selectGroup', group: 'gateway' });
+            dispatch({ type: 'shell/selectSub', key });
             setNewDialogOpen(false);
           }}
         />
