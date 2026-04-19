@@ -89,10 +89,39 @@ func (s *Server) handleConfigPut(w http.ResponseWriter, r *http.Request) {
 		http.Error(w, "invalid config payload: "+err.Error(), http.StatusBadRequest)
 		return
 	}
+	preserveSecrets(&updated, s.opts.Config)
 	if err := config.SaveToPath(s.opts.ConfigPath, &updated); err != nil {
 		http.Error(w, err.Error(), http.StatusInternalServerError)
 		return
 	}
 	*s.opts.Config = updated
 	writeJSON(w, OKResponse{OK: true})
+}
+
+// preserveSecrets copies every FieldSecret from current into updated
+// whenever updated's value is "". Keys missing from current (new
+// instances) are left with whatever the caller supplied.
+func preserveSecrets(updated, current *config.Config) {
+	for key, newPC := range updated.Gateway.Platforms {
+		curPC, ok := current.Gateway.Platforms[key]
+		if !ok {
+			continue
+		}
+		d, ok := platforms.Get(newPC.Type)
+		if !ok {
+			continue
+		}
+		if newPC.Options == nil {
+			newPC.Options = map[string]string{}
+		}
+		for _, f := range d.Fields {
+			if f.Kind != platforms.FieldSecret {
+				continue
+			}
+			if newPC.Options[f.Name] == "" {
+				newPC.Options[f.Name] = curPC.Options[f.Name]
+			}
+		}
+		updated.Gateway.Platforms[key] = newPC
+	}
 }

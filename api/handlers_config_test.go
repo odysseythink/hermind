@@ -4,6 +4,8 @@ import (
 	"encoding/json"
 	"net/http"
 	"net/http/httptest"
+	"path/filepath"
+	"strings"
 	"testing"
 
 	"github.com/odysseythink/hermind/config"
@@ -58,5 +60,81 @@ func TestHandleConfigGet_RedactsSecretFields(t *testing.T) {
 	}
 	if got := options["token"]; got != "" {
 		t.Errorf("options.token = %v, want \"\" (redacted)", got)
+	}
+}
+
+func TestHandleConfigPut_PreservesUnchangedSecret(t *testing.T) {
+	tmp := t.TempDir()
+	path := filepath.Join(tmp, "config.yaml")
+	cfg := &config.Config{}
+	cfg.Gateway.Platforms = map[string]config.PlatformConfig{
+		"tg_main": {
+			Enabled: true,
+			Type:    "telegram",
+			Options: map[string]string{"token": "live-token"},
+		},
+	}
+	if err := config.SaveToPath(path, cfg); err != nil {
+		t.Fatalf("seed config: %v", err)
+	}
+	srv, err := NewServer(&ServerOpts{
+		Config:     cfg,
+		ConfigPath: path,
+		Token:      "test-token",
+	})
+	if err != nil {
+		t.Fatalf("NewServer: %v", err)
+	}
+
+	put := `{"config":{"gateway":{"platforms":{"tg_main":{"enabled":true,"type":"telegram","options":{"token":""}}}}}}`
+	req := httptest.NewRequest("PUT", "/api/config", strings.NewReader(put))
+	req.Header.Set("Authorization", "Bearer test-token")
+	req.Header.Set("Content-Type", "application/json")
+	w := httptest.NewRecorder()
+	srv.Router().ServeHTTP(w, req)
+
+	if w.Code != http.StatusOK {
+		t.Fatalf("status = %d, body = %s", w.Code, w.Body.String())
+	}
+	if got := cfg.Gateway.Platforms["tg_main"].Options["token"]; got != "live-token" {
+		t.Errorf("in-memory token = %q, want %q (preserved)", got, "live-token")
+	}
+}
+
+func TestHandleConfigPut_OverwritesSecretWhenProvided(t *testing.T) {
+	tmp := t.TempDir()
+	path := filepath.Join(tmp, "config.yaml")
+	cfg := &config.Config{}
+	cfg.Gateway.Platforms = map[string]config.PlatformConfig{
+		"tg_main": {
+			Enabled: true,
+			Type:    "telegram",
+			Options: map[string]string{"token": "old-token"},
+		},
+	}
+	if err := config.SaveToPath(path, cfg); err != nil {
+		t.Fatalf("seed config: %v", err)
+	}
+	srv, err := NewServer(&ServerOpts{
+		Config:     cfg,
+		ConfigPath: path,
+		Token:      "test-token",
+	})
+	if err != nil {
+		t.Fatalf("NewServer: %v", err)
+	}
+
+	put := `{"config":{"gateway":{"platforms":{"tg_main":{"enabled":true,"type":"telegram","options":{"token":"new-token"}}}}}}`
+	req := httptest.NewRequest("PUT", "/api/config", strings.NewReader(put))
+	req.Header.Set("Authorization", "Bearer test-token")
+	req.Header.Set("Content-Type", "application/json")
+	w := httptest.NewRecorder()
+	srv.Router().ServeHTTP(w, req)
+
+	if w.Code != http.StatusOK {
+		t.Fatalf("status = %d, body = %s", w.Code, w.Body.String())
+	}
+	if got := cfg.Gateway.Platforms["tg_main"].Options["token"]; got != "new-token" {
+		t.Errorf("in-memory token = %q, want %q (overwritten)", got, "new-token")
 	}
 }
