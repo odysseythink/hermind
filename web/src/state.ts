@@ -60,7 +60,7 @@ export function reducer(state: AppState, action: Action): AppState {
     case 'save/done':
       return action.error
         ? { ...state, status: 'ready', flash: { kind: 'err', msg: action.error } }
-        : { ...state, status: 'ready', flash: { kind: 'ok', msg: 'Saved.' } };
+        : { ...state, status: 'ready', originalConfig: state.config, flash: { kind: 'ok', msg: 'Saved.' } };
     case 'apply/start':
       return { ...state, status: 'applying', flash: null };
     case 'apply/done':
