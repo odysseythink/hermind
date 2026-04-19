@@ -1,6 +1,10 @@
 package platforms
 
-import "github.com/odysseythink/hermind/gateway"
+import (
+	"context"
+
+	"github.com/odysseythink/hermind/gateway"
+)
 
 func init() {
 	Register(Descriptor{
@@ -15,6 +19,9 @@ func init() {
 		},
 		Build: func(opts map[string]string) (gateway.Platform, error) {
 			return NewACP(opts["addr"], opts["token"]), nil
+		},
+		Test: func(ctx context.Context, opts map[string]string) error {
+			return testListen(ctx, opts["addr"])
 		},
 	})
 }
