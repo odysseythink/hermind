@@ -1,6 +1,11 @@
 package platforms
 
-import "github.com/odysseythink/hermind/gateway"
+import (
+	"context"
+	"fmt"
+
+	"github.com/odysseythink/hermind/gateway"
+)
 
 func init() {
 	Register(Descriptor{
@@ -15,5 +20,17 @@ func init() {
 		Build: func(opts map[string]string) (gateway.Platform, error) {
 			return NewDiscordBot(opts["token"], opts["channel_id"]), nil
 		},
+		Test: func(ctx context.Context, opts map[string]string) error {
+			return testDiscordBot(ctx, opts["token"], "https://discord.com/api/v10")
+		},
+	})
+}
+
+func testDiscordBot(ctx context.Context, token, baseURL string) error {
+	if token == "" {
+		return fmt.Errorf("discord_bot: token is empty")
+	}
+	return httpProbe(ctx, "GET", baseURL+"/users/@me", map[string]string{
+		"Authorization": "Bot " + token,
 	})
 }

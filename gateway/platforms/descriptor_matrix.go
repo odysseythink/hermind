@@ -1,6 +1,12 @@
 package platforms
 
-import "github.com/odysseythink/hermind/gateway"
+import (
+	"context"
+	"fmt"
+	"strings"
+
+	"github.com/odysseythink/hermind/gateway"
+)
 
 func init() {
 	Register(Descriptor{
@@ -17,5 +23,18 @@ func init() {
 		Build: func(opts map[string]string) (gateway.Platform, error) {
 			return NewMatrix(opts["home_server"], opts["access_token"], opts["room_id"]), nil
 		},
+		Test: func(ctx context.Context, opts map[string]string) error {
+			return testMatrix(ctx, opts["home_server"], opts["access_token"])
+		},
+	})
+}
+
+func testMatrix(ctx context.Context, homeServer, accessToken string) error {
+	if homeServer == "" || accessToken == "" {
+		return fmt.Errorf("matrix: home_server and access_token are required")
+	}
+	base := strings.TrimRight(homeServer, "/")
+	return httpProbe(ctx, "GET", base+"/_matrix/client/v3/account/whoami", map[string]string{
+		"Authorization": "Bearer " + accessToken,
 	})
 }

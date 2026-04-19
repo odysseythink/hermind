@@ -1,6 +1,11 @@
 package platforms
 
-import "github.com/odysseythink/hermind/gateway"
+import (
+	"context"
+	"fmt"
+
+	"github.com/odysseythink/hermind/gateway"
+)
 
 func init() {
 	Register(Descriptor{
@@ -16,5 +21,17 @@ func init() {
 		Build: func(opts map[string]string) (gateway.Platform, error) {
 			return NewSlackEvents(opts["addr"], opts["bot_token"]), nil
 		},
+		Test: func(ctx context.Context, opts map[string]string) error {
+			return testSlackEvents(ctx, opts["bot_token"], "https://slack.com")
+		},
+	})
+}
+
+func testSlackEvents(ctx context.Context, botToken, baseURL string) error {
+	if botToken == "" {
+		return fmt.Errorf("slack_events: bot_token is empty")
+	}
+	return httpProbe(ctx, "POST", baseURL+"/api/auth.test", map[string]string{
+		"Authorization": "Bearer " + botToken,
 	})
 }
