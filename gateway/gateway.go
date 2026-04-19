@@ -46,6 +46,11 @@ type Gateway struct {
 	hooks *Hooks
 	// Channel directory — optional.
 	channels *ChannelDirectory
+
+	// stopFn cancels the context passed into Start; nil when not running.
+	stopFn   context.CancelFunc
+	stopOnce sync.Once
+	stopMu   sync.Mutex
 }
 
 // SetTracer attaches a tracing.Tracer to this Gateway.
@@ -103,6 +108,12 @@ func (g *Gateway) Start(ctx context.Context) error {
 	if len(g.platforms) == 0 {
 		return fmt.Errorf("gateway: no platforms registered")
 	}
+	ctx, cancel := context.WithCancel(ctx)
+	defer cancel()
+	g.stopMu.Lock()
+	g.stopFn = cancel
+	g.stopOnce = sync.Once{}
+	g.stopMu.Unlock()
 	errCh := make(chan error, len(g.platforms))
 	var wg sync.WaitGroup
 
@@ -281,4 +292,21 @@ func modelFromCfg(cfg config.Config) string {
 		return cfg.Model[idx+1:]
 	}
 	return cfg.Model
+}
+
+// Stop asks the Gateway to cancel its Start loop. Safe to call from
+// any goroutine and idempotent within a single Start cycle; a second
+// Stop during the same run is a no-op. Respects the caller's ctx for
+// its own deadline but does not wait for Start to return — callers
+// that care should block on the channel they already use with Start.
+func (g *Gateway) Stop(ctx context.Context) error {
+	g.stopMu.Lock()
+	cancel := g.stopFn
+	once := &g.stopOnce
+	g.stopMu.Unlock()
+	if cancel == nil {
+		return nil
+	}
+	once.Do(cancel)
+	return ctx.Err()
 }

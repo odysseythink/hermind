@@ -240,3 +240,43 @@ func TestGatewayRoutesMessageAndReplies(t *testing.T) {
 		t.Errorf("unexpected reply: %q", fp.replies[0].Text)
 	}
 }
+
+func TestGateway_StopUnblocksStart(t *testing.T) {
+	g := NewGateway(config.Config{}, nil, nil, nil, nil)
+	g.Register(newStopTestPlatform("p1"))
+
+	startErr := make(chan error, 1)
+	go func() {
+		startErr <- g.Start(context.Background())
+	}()
+
+	// Give Start a moment to enter its wait loop.
+	time.Sleep(20 * time.Millisecond)
+
+	stopCtx, cancel := context.WithTimeout(context.Background(), time.Second)
+	defer cancel()
+	if err := g.Stop(stopCtx); err != nil {
+		t.Fatalf("Stop returned error: %v", err)
+	}
+
+	select {
+	case err := <-startErr:
+		if err != nil && err != context.Canceled {
+			t.Errorf("Start returned %v, want nil or context.Canceled", err)
+		}
+	case <-time.After(time.Second):
+		t.Fatal("Start did not return within 1s of Stop")
+	}
+}
+
+// stopTestPlatform is a minimal Platform that blocks in Run until ctx
+// is cancelled, then returns ctx.Err().
+type stopTestPlatform struct{ name string }
+
+func newStopTestPlatform(name string) *stopTestPlatform { return &stopTestPlatform{name: name} }
+func (p *stopTestPlatform) Name() string                 { return p.name }
+func (p *stopTestPlatform) Run(ctx context.Context, _ MessageHandler) error {
+	<-ctx.Done()
+	return ctx.Err()
+}
+func (p *stopTestPlatform) SendReply(_ context.Context, _ OutgoingMessage) error { return nil }
