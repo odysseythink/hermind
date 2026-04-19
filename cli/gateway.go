@@ -69,7 +69,17 @@ func runGateway(ctx context.Context, app *App) error {
 		defer termBackend.Close()
 	}
 
-	g := gateway.NewGateway(*app.Config, primary, aux, app.Storage, reg)
+	built, err := BuildGateway(BuildGatewayDeps{
+		Config:  *app.Config,
+		Primary: primary,
+		Aux:     aux,
+		Storage: app.Storage,
+		Tools:   reg,
+	})
+	if err != nil {
+		return err
+	}
+	g := built
 
 	// Optional tracing.
 	if app.Config.Tracing.Enabled {
@@ -111,18 +121,6 @@ func runGateway(ctx context.Context, app *App) error {
 			defer cancel()
 			_ = metricsSrv.Shutdown(shutdownCtx)
 		}()
-	}
-
-	for name, pc := range app.Config.Gateway.Platforms {
-		if !pc.Enabled {
-			continue
-		}
-		plat, err := buildPlatform(name, pc)
-		if err != nil {
-			fmt.Fprintf(os.Stderr, "gateway: skipping %s: %v\n", name, err)
-			continue
-		}
-		g.Register(plat)
 	}
 
 	runCtx, cancel := context.WithCancel(ctx)

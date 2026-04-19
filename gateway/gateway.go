@@ -5,6 +5,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"log/slog"
+	"sort"
 	"strings"
 	"sync"
 	"time"
@@ -101,6 +102,17 @@ func (g *Gateway) SetMetrics(reg *metrics.Registry) {
 // Register adds a platform adapter. Duplicate names replace prior entries.
 func (g *Gateway) Register(p Platform) {
 	g.platforms[p.Name()] = p
+}
+
+// Names returns the sorted list of registered platform names. Used by
+// tests and by Controller for the "restarted" apply response.
+func (g *Gateway) Names() []string {
+	out := make([]string, 0, len(g.platforms))
+	for name := range g.platforms {
+		out = append(out, name)
+	}
+	sort.Strings(out)
+	return out
 }
 
 // Start runs all registered platforms in their own goroutines and
