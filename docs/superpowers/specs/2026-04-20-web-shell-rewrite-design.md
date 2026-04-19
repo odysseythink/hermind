@@ -269,7 +269,7 @@ Per-group planned-stage mapping:
 | Advanced      | 7        | `mcp`, `browser`, `cron`                               |
 | Observability | 3        | `logging`, `metrics`, `tracing`                        |
 
-The per-group summary functions live in `web/src/shell/summaries.ts` —
+The per-group summary functions live in `web/src/shell/summaries.tsx` —
 one exported function per group, each taking the full `Config` and
 returning a `ReactNode` (typically a short `<dl>` of key facts).
 Examples:
@@ -311,12 +311,14 @@ web/src/
 │   ├── FieldList.tsx                        unchanged
 │   ├── NewInstanceDialog.tsx                unchanged
 │   ├── TestConnection.tsx                   unchanged
-│   ├── Footer.tsx                           unchanged
+│   ├── Footer.tsx                           simplified: Save/Apply buttons removed, flash-only
+│   ├── Footer.module.css                    simplified: button rules removed
 │   └── fields/                              unchanged
 └── shell/                                   new
     ├── groups.ts                            single source of truth for group metadata
     ├── hash.ts                              hash parse/stringify + legacy migration
-    └── summaries.ts                         per-group read-only summary functions
+    ├── summaries.tsx                        per-group read-only summary renderers (JSX)
+    └── persistence.ts                       localStorage helpers for expandedGroups
 ```
 
 ### Key Boundaries
