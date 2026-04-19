@@ -105,3 +105,17 @@ Open it in a browser.
 ```bash
 rm -rf /tmp/hermind-smoke
 ```
+
+## Stage 1 · Shell rewrite
+
+- Sidebar shows all seven groups: Models, Gateway, Memory, Skills, Runtime, Advanced, Observability.
+- Gateway is expanded on first load; all others are collapsed.
+- Clicking a non-Gateway group label shows a "Coming soon — stage N" panel with a read-only summary and an "Edit via CLI" note.
+- Legacy deep link: visiting `/#feishu-bot-main` (with `feishu-bot-main` configured) auto-rewrites the URL to `/#gateway/feishu-bot-main` and selects that instance.
+- Unknown legacy hashes fall back to the empty state.
+- The TopBar Save button is disabled when clean and shows `Save · N changes` when dirty.
+- There is no global `Save and Apply` button.
+- Gateway panel has its own `Apply` button in the breadcrumb row.
+- Apply is disabled while gateway slice is dirty; tooltip reads "Save first, then apply".
+- Reload preserves the expanded/collapsed state of each group (localStorage key `hermind.shell.expandedGroups`).
+- Empty state (no hash, no saved selection) shows a 7-card landing grid; clicking a card opens that group.
