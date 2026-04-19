@@ -4,6 +4,7 @@ import (
 	"encoding/json"
 	"net/http"
 	"net/http/httptest"
+	"strings"
 	"testing"
 
 	"github.com/odysseythink/hermind/api"
@@ -101,5 +102,62 @@ func TestPlatformsSchema_RequiresAuth(t *testing.T) {
 	srv.Router().ServeHTTP(w, req)
 	if w.Code != http.StatusUnauthorized {
 		t.Errorf("status = %d, want 401", w.Code)
+	}
+}
+
+func TestPlatformReveal_ReturnsSecretValue(t *testing.T) {
+	cfg := &config.Config{}
+	cfg.Gateway.Platforms = map[string]config.PlatformConfig{
+		"tg_main": {
+			Enabled: true, Type: "telegram",
+			Options: map[string]string{"token": "live-token"},
+		},
+	}
+	srv, _ := api.NewServer(&api.ServerOpts{Config: cfg, Token: "test-token"})
+	req := httptest.NewRequest("POST", "/api/platforms/tg_main/reveal", strings.NewReader(`{"field":"token"}`))
+	req.Header.Set("Authorization", "Bearer test-token")
+	req.Header.Set("Content-Type", "application/json")
+	w := httptest.NewRecorder()
+	srv.Router().ServeHTTP(w, req)
+
+	if w.Code != http.StatusOK {
+		t.Fatalf("status = %d, body = %s", w.Code, w.Body.String())
+	}
+	var body api.RevealResponse
+	if err := json.Unmarshal(w.Body.Bytes(), &body); err != nil {
+		t.Fatalf("parse: %v", err)
+	}
+	if body.Value != "live-token" {
+		t.Errorf("value = %q, want %q", body.Value, "live-token")
+	}
+}
+
+func TestPlatformReveal_RejectsNonSecretField(t *testing.T) {
+	cfg := &config.Config{}
+	cfg.Gateway.Platforms = map[string]config.PlatformConfig{
+		"slack_ops": {
+			Enabled: true, Type: "slack_events",
+			Options: map[string]string{"addr": ":9000", "bot_token": "xoxb-y"},
+		},
+	}
+	srv, _ := api.NewServer(&api.ServerOpts{Config: cfg, Token: "test-token"})
+	req := httptest.NewRequest("POST", "/api/platforms/slack_ops/reveal", strings.NewReader(`{"field":"addr"}`))
+	req.Header.Set("Authorization", "Bearer test-token")
+	w := httptest.NewRecorder()
+	srv.Router().ServeHTTP(w, req)
+	if w.Code != http.StatusBadRequest {
+		t.Fatalf("status = %d, want 400", w.Code)
+	}
+}
+
+func TestPlatformReveal_404OnUnknownKey(t *testing.T) {
+	cfg := &config.Config{}
+	srv, _ := api.NewServer(&api.ServerOpts{Config: cfg, Token: "test-token"})
+	req := httptest.NewRequest("POST", "/api/platforms/missing/reveal", strings.NewReader(`{"field":"token"}`))
+	req.Header.Set("Authorization", "Bearer test-token")
+	w := httptest.NewRecorder()
+	srv.Router().ServeHTTP(w, req)
+	if w.Code != http.StatusNotFound {
+		t.Errorf("status = %d, want 404", w.Code)
 	}
 }

@@ -145,6 +145,7 @@ func (s *Server) buildRouter() chi.Router {
 		r.Get("/skills", s.handleSkillsList)
 		r.Get("/providers", s.handleProvidersList)
 		r.Get("/platforms/schema", s.handlePlatformsSchema)
+		r.Post("/platforms/{key}/reveal", s.handlePlatformReveal)
 	})
 
 	// Static landing page / frontend shell.
@@ -192,5 +193,12 @@ func (s *Server) handleStatic(w http.ResponseWriter, r *http.Request) {
 // the Content-Type and encoder configuration.
 func writeJSON(w http.ResponseWriter, v interface{}) {
 	w.Header().Set("Content-Type", "application/json")
+	_ = json.NewEncoder(w).Encode(v)
+}
+
+// writeJSONStatus is like writeJSON but sets a non-200 status code first.
+func writeJSONStatus(w http.ResponseWriter, code int, v interface{}) {
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(code)
 	_ = json.NewEncoder(w).Encode(v)
 }
