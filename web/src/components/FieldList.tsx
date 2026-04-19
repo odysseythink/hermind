@@ -3,18 +3,28 @@ import TextInput from './fields/TextInput';
 import NumberInput from './fields/NumberInput';
 import BoolToggle from './fields/BoolToggle';
 import EnumSelect from './fields/EnumSelect';
+import SecretInput from './fields/SecretInput';
 
 export interface FieldListProps {
   descriptor: SchemaDescriptor;
   options: Record<string, string>;
+  originalOptions: Record<string, string>;
+  instanceKey: string;
   onChange: (field: string, value: string) => void;
 }
 
-export default function FieldList({ descriptor, options, onChange }: FieldListProps) {
+export default function FieldList({
+  descriptor,
+  options,
+  originalOptions,
+  instanceKey,
+  onChange,
+}: FieldListProps) {
   return (
     <div>
       {descriptor.fields.map(field => {
         const value = options[field.name] ?? '';
+        const originalValue = originalOptions[field.name] ?? '';
         const onFieldChange = (v: string) => onChange(field.name, v);
         switch (field.kind) {
           case 'int':
@@ -24,9 +34,16 @@ export default function FieldList({ descriptor, options, onChange }: FieldListPr
           case 'enum':
             return <EnumSelect key={field.name} field={field} value={value} onChange={onFieldChange} />;
           case 'secret':
-            // Stage 4a: secrets render as plain text inputs. Stage 4b
-            // swaps in SecretInput with /reveal.
-            return <TextInput key={field.name} field={field} value={value} onChange={onFieldChange} />;
+            return (
+              <SecretInput
+                key={field.name}
+                field={field}
+                value={value}
+                instanceKey={instanceKey}
+                dirty={value !== originalValue}
+                onChange={onFieldChange}
+              />
+            );
           case 'string':
           default:
             return <TextInput key={field.name} field={field} value={value} onChange={onFieldChange} />;
