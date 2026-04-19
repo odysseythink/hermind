@@ -1,0 +1,34 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <title>hermind web</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <style>
+    body { font-family: system-ui, sans-serif; max-width: 720px; margin: 2em auto; padding: 0 1em; }
+    code { background: #f4f4f4; padding: 0.1em 0.3em; border-radius: 3px; }
+    pre { background: #f4f4f4; padding: 0.8em; border-radius: 4px; overflow: auto; }
+  </style>
+</head>
+<body>
+  <h1>hermind web</h1>
+  <p>REST API surface running. The React frontend is not yet bundled; this
+  page is a placeholder so <code>GET /</code> is never a 404.</p>
+
+  <h2>Probes</h2>
+  <ul>
+    <li><a href="/api/status">/api/status</a> (public)</li>
+    <li><a href="/api/model/info">/api/model/info</a> (public)</li>
+    <li><a href="/api/sessions?t={{TOKEN}}">/api/sessions</a> (authed)</li>
+    <li><a href="/api/config?t={{TOKEN}}">/api/config</a> (authed)</li>
+  </ul>
+
+  <h2>Token</h2>
+  <p>This server's session token is regenerated on every boot and never
+  persisted to disk.</p>
+  <pre id="token">{{TOKEN}}</pre>
+  <script>
+    window.HERMIND = { token: "{{TOKEN}}" };
+  </script>
+</body>
+</html>

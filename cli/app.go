@@ -13,8 +13,9 @@ import (
 
 // App bundles the shared resources (config, storage) across cobra commands.
 type App struct {
-	Config  *config.Config
-	Storage storage.Storage
+	Config     *config.Config
+	ConfigPath string // absolute path the config was loaded from
+	Storage    storage.Storage
 }
 
 // NewApp constructs an App by loading config. Storage is opened lazily
@@ -36,7 +37,7 @@ func NewApp() (*App, error) {
 	if err != nil {
 		return nil, err
 	}
-	return &App{Config: cfg}, nil
+	return &App{Config: cfg, ConfigPath: path}, nil
 }
 
 // Close releases all held resources.

@@ -18,6 +18,19 @@ type Config struct {
 	Logging           LoggingConfig             `yaml:"logging,omitempty"`
 	Metrics           MetricsConfig             `yaml:"metrics,omitempty"`
 	Tracing           TracingConfig             `yaml:"tracing,omitempty"`
+	Skills            SkillsConfig              `yaml:"skills,omitempty"`
+}
+
+// SkillsConfig records user skill enable/disable selections. It mirrors
+// the Python hermes config layout so the same config.yaml works for both.
+// An empty struct means "every discovered skill is active".
+type SkillsConfig struct {
+	// Disabled is the list of skill names disabled on every platform.
+	Disabled []string `yaml:"disabled,omitempty"`
+	// PlatformDisabled is a per-platform override layered on top of Disabled.
+	// Keys match the string passed to the CLI/REPL/gateway startup path
+	// (e.g. "cli", "gateway", "cron").
+	PlatformDisabled map[string][]string `yaml:"platform_disabled,omitempty"`
 }
 
 // CronConfig holds cron scheduler configuration.
