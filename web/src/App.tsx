@@ -84,7 +84,7 @@ export default function App() {
       type: plats[key]?.type ?? '',
       enabled: plats[key]?.enabled ?? false,
     }));
-  }, [state.config.gateway?.platforms]);
+  }, [state]);
 
   const dirtyKeys = useMemo(() => {
     const a = state.config.gateway?.platforms ?? {};
