@@ -20,8 +20,8 @@ func TestBuildGateway_EmptyConfigBuildsEmptyGateway(t *testing.T) {
 func TestBuildGateway_RegistersEnabledPlatforms(t *testing.T) {
 	cfg := config.Config{}
 	cfg.Gateway.Platforms = map[string]config.PlatformConfig{
-		"tg_main": {Enabled: true, Type: "telegram", Options: map[string]string{"token": "t"}},
-		"off":     {Enabled: false, Type: "telegram", Options: map[string]string{"token": "t"}},
+		"telegram": {Enabled: true, Type: "telegram", Options: map[string]string{"token": "t"}},
+		"off":      {Enabled: false, Type: "telegram", Options: map[string]string{"token": "t"}},
 	}
 	g, err := BuildGateway(BuildGatewayDeps{Config: cfg})
 	if err != nil {

@@ -69,7 +69,7 @@ func runGateway(ctx context.Context, app *App) error {
 		defer termBackend.Close()
 	}
 
-	built, err := BuildGateway(BuildGatewayDeps{
+	g, err := BuildGateway(BuildGatewayDeps{
 		Config:  *app.Config,
 		Primary: primary,
 		Aux:     aux,
@@ -79,7 +79,6 @@ func runGateway(ctx context.Context, app *App) error {
 	if err != nil {
 		return err
 	}
-	g := built
 
 	// Optional tracing.
 	if app.Config.Tracing.Enabled {
