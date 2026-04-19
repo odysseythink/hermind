@@ -144,6 +144,7 @@ func (s *Server) buildRouter() chi.Router {
 		r.Get("/tools", s.handleToolsList)
 		r.Get("/skills", s.handleSkillsList)
 		r.Get("/providers", s.handleProvidersList)
+		r.Get("/platforms/schema", s.handlePlatformsSchema)
 	})
 
 	// Static landing page / frontend shell.
