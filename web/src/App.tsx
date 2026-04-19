@@ -73,7 +73,7 @@ export default function App() {
       }
     }
     // If parsed.group is null, stay in EmptyState — no dispatch needed.
-  }, [state.status, state.shell.activeGroup, state.config.gateway?.platforms]);
+  }, [state.status, state.shell.activeGroup]);
 
   // Sync hash whenever active group/sub changes.
   useEffect(() => {
@@ -106,7 +106,7 @@ export default function App() {
       if (instanceDirty(state, k)) out.add(k);
     }
     return out;
-  }, [state]);
+  }, [state.config.gateway?.platforms, state.originalConfig.gateway?.platforms]);
 
   const dirtyGroupIds = useMemo(() => selectDirtyGroups(state), [state]);
   const dirty = totalDirtyCount(state);
