@@ -8,6 +8,7 @@ import { initialState, listInstances, reducer } from './state';
 import TopBar from './components/TopBar';
 import Sidebar from './components/Sidebar';
 import Footer from './components/Footer';
+import Editor from './components/Editor';
 
 export default function App() {
   const [state, dispatch] = useReducer(reducer, initialState);
@@ -76,11 +77,21 @@ export default function App() {
         onNewInstance={() => console.log('TODO: new instance (Stage 4)')}
       />
       <main>
-        {state.selectedKey
-          ? <div style={{ padding: '2rem' }}>Editor for {state.selectedKey} — fields land in Stage 4.</div>
-          : <div style={{ padding: '2rem', color: 'var(--muted)' }}>
-              Select an instance from the sidebar, or click + New instance.
-            </div>}
+        <Editor
+          selectedKey={state.selectedKey}
+          instance={
+            state.selectedKey
+              ? state.config.gateway?.platforms?.[state.selectedKey] ?? null
+              : null
+          }
+          descriptor={
+            state.selectedKey && state.config.gateway?.platforms?.[state.selectedKey]
+              ? state.descriptors.find(
+                  d => d.type === state.config.gateway!.platforms![state.selectedKey!]!.type,
+                ) ?? null
+              : null
+          }
+        />
       </main>
       <Footer
         dirtyCount={dirtyCount}
