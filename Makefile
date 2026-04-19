@@ -1,5 +1,5 @@
 # Makefile
-.PHONY: build test lint clean release-snapshot
+.PHONY: build test lint clean release-snapshot all
 
 VERSION   := $(shell git describe --tags --always --dirty 2>/dev/null || echo "dev")
 COMMIT    := $(shell git rev-parse --short HEAD 2>/dev/null || echo "unknown")
@@ -8,6 +8,11 @@ LDFLAGS   := -X main.Version=$(VERSION) -X main.Commit=$(COMMIT) -X main.BuildDa
 
 build:
 	go build -ldflags "$(LDFLAGS)" -o bin/hermind ./cmd/hermind
+
+# Full-stack build: frontend (pnpm build → api/webroot/) then backend.
+# Use this after editing anything under web/. If you only touched Go code,
+# `make build` alone is enough because api/webroot/ is a committed artifact.
+all: web build
 
 test:
 	go test -race -cover ./...
