@@ -208,6 +208,14 @@ describe('reducer — shell/selectGroup', () => {
     expect(s2.shell.activeGroup).toBeNull();
     expect(s2.shell.activeSubKey).toBeNull();
   });
+
+  it('clears the legacy selectedKey field', () => {
+    const s0 = reducer(boot(), { type: 'shell/selectGroup', group: 'gateway' });
+    const s1 = reducer(s0, { type: 'shell/selectSub', key: 'a' });
+    expect(s1.selectedKey).toBe('a'); // mirror active
+    const s2 = reducer(s1, { type: 'shell/selectGroup', group: 'models' });
+    expect(s2.selectedKey).toBeNull();
+  });
 });
 
 describe('reducer — shell/selectSub', () => {
@@ -215,6 +223,19 @@ describe('reducer — shell/selectSub', () => {
     const s0 = reducer(boot(), { type: 'shell/selectGroup', group: 'gateway' });
     const s1 = reducer(s0, { type: 'shell/selectSub', key: 'a' });
     expect(s1.shell.activeSubKey).toBe('a');
+  });
+
+  it('mirrors activeSubKey to legacy selectedKey only when activeGroup is gateway', () => {
+    // gateway active — mirror
+    const sGateway = reducer(boot(), { type: 'shell/selectGroup', group: 'gateway' });
+    const sGwPick = reducer(sGateway, { type: 'shell/selectSub', key: 'a' });
+    expect(sGwPick.selectedKey).toBe('a');
+
+    // models active — do NOT touch selectedKey (which was cleared by the group switch)
+    const sModels = reducer(sGwPick, { type: 'shell/selectGroup', group: 'models' });
+    expect(sModels.selectedKey).toBeNull();
+    const sModelsPick = reducer(sModels, { type: 'shell/selectSub', key: 'x' });
+    expect(sModelsPick.selectedKey).toBeNull(); // preserved, not mirrored
   });
 });
 
