@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useMemo, useReducer } from 'react';
+import { useCallback, useEffect, useMemo, useReducer, useState } from 'react';
 import { apiFetch, ApiError } from './api/client';
 import {
   ApplyResultSchema,
@@ -19,8 +19,8 @@ import Editor from './components/Editor';
 
 export default function App() {
   const [state, dispatch] = useReducer(reducer, initialState);
+  const [newDialogOpen, setNewDialogOpen] = useState(false);
 
-  // Boot: schema + config in parallel.
   useEffect(() => {
     const ctrl = new AbortController();
     (async () => {
@@ -49,7 +49,6 @@ export default function App() {
     return () => ctrl.abort();
   }, []);
 
-  // Hash persistence: write on every selectedKey change after boot.
   useEffect(() => {
     if (state.status === 'booting') return;
     const encoded = state.selectedKey ? encodeURIComponent(state.selectedKey) : '';
@@ -156,6 +155,9 @@ export default function App() {
   const selectedInstance = state.selectedKey
     ? state.config.gateway?.platforms?.[state.selectedKey] ?? null
     : null;
+  const selectedOriginal = state.selectedKey
+    ? state.originalConfig.gateway?.platforms?.[state.selectedKey] ?? null
+    : null;
   const selectedDescriptor = selectedInstance
     ? state.descriptors.find(d => d.type === selectedInstance.type) ?? null
     : null;
@@ -169,12 +171,13 @@ export default function App() {
         descriptors={state.descriptors}
         dirtyKeys={dirtyKeys}
         onSelect={key => dispatch({ type: 'select', key })}
-        onNewInstance={() => console.log('TODO: new instance (Stage 4b)')}
+        onNewInstance={() => setNewDialogOpen(true)}
       />
       <main>
         <Editor
           selectedKey={state.selectedKey}
           instance={selectedInstance}
+          originalInstance={selectedOriginal}
           descriptor={selectedDescriptor}
           onField={(field, value) =>
             state.selectedKey &&
@@ -197,6 +200,21 @@ export default function App() {
         onSave={onSave}
         onSaveAndApply={onSaveAndApply}
       />
+      {newDialogOpen && (
+        <div style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.5)' }}>
+          {/* Placeholder — NewInstanceDialog lands in task 6 */}
+          <button
+            type="button"
+            onClick={() => setNewDialogOpen(false)}
+            style={{ position: 'absolute', top: 16, right: 16 }}
+          >
+            close
+          </button>
+          <p style={{ color: 'white', padding: '2rem' }}>
+            NewInstanceDialog coming in task 6.
+          </p>
+        </div>
+      )}
     </div>
   );
 }
