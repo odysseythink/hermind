@@ -115,9 +115,9 @@ func (f *flakyProvider) Stream(_ context.Context, req *provider.Request) (provid
 		},
 	}, nil
 }
-func (flakyProvider) ModelInfo(string) *provider.ModelInfo       { return nil }
-func (flakyProvider) EstimateTokens(string, string) (int, error) { return 0, nil }
-func (flakyProvider) Available() bool                            { return true }
+func (*flakyProvider) ModelInfo(string) *provider.ModelInfo       { return nil }
+func (*flakyProvider) EstimateTokens(string, string) (int, error) { return 0, nil }
+func (*flakyProvider) Available() bool                            { return true }
 
 func TestGatewayTracerRecordsSpan(t *testing.T) {
 	exp := tracing.NewMemoryExporter()
