@@ -244,3 +244,75 @@ func TestPlatformTest_FailureReturnsOKFalse(t *testing.T) {
 		t.Errorf("body.Error = %q, want substring 'auth failed'", body.Error)
 	}
 }
+
+func TestPlatformsApply_NilControllerReturns503(t *testing.T) {
+	srv, _ := api.NewServer(&api.ServerOpts{Config: &config.Config{}, Token: "test-token"})
+	req := httptest.NewRequest("POST", "/api/platforms/apply", nil)
+	req.Header.Set("Authorization", "Bearer test-token")
+	w := httptest.NewRecorder()
+	srv.Router().ServeHTTP(w, req)
+	if w.Code != http.StatusServiceUnavailable {
+		t.Errorf("status = %d, want 503", w.Code)
+	}
+}
+
+func TestPlatformsApply_SuccessReturnsPayload(t *testing.T) {
+	ctrl := &stubController{
+		applyRes: api.ApplyResult{OK: true, Restarted: []string{"tg_main"}, TookMS: 42},
+	}
+	srv, _ := api.NewServer(&api.ServerOpts{
+		Config: &config.Config{}, Token: "test-token", Controller: ctrl,
+	})
+	req := httptest.NewRequest("POST", "/api/platforms/apply", nil)
+	req.Header.Set("Authorization", "Bearer test-token")
+	w := httptest.NewRecorder()
+	srv.Router().ServeHTTP(w, req)
+
+	if w.Code != http.StatusOK {
+		t.Fatalf("status = %d", w.Code)
+	}
+	var body api.ApplyResult
+	_ = json.Unmarshal(w.Body.Bytes(), &body)
+	if !body.OK || len(body.Restarted) != 1 || body.Restarted[0] != "tg_main" {
+		t.Errorf("body = %+v", body)
+	}
+	if ctrl.applyCalls != 1 {
+		t.Errorf("applyCalls = %d, want 1", ctrl.applyCalls)
+	}
+}
+
+func TestPlatformsApply_ConcurrentReturns409(t *testing.T) {
+	ctrl := &stubController{applyErr: api.ErrApplyInProgress}
+	srv, _ := api.NewServer(&api.ServerOpts{
+		Config: &config.Config{}, Token: "test-token", Controller: ctrl,
+	})
+	req := httptest.NewRequest("POST", "/api/platforms/apply", nil)
+	req.Header.Set("Authorization", "Bearer test-token")
+	w := httptest.NewRecorder()
+	srv.Router().ServeHTTP(w, req)
+	if w.Code != http.StatusConflict {
+		t.Errorf("status = %d, want 409", w.Code)
+	}
+}
+
+func TestPlatformsApply_GenericErrorReturnsOKFalse(t *testing.T) {
+	ctrl := &stubController{applyErr: errors.New("rebuild failed: config parse error")}
+	srv, _ := api.NewServer(&api.ServerOpts{
+		Config: &config.Config{}, Token: "test-token", Controller: ctrl,
+	})
+	req := httptest.NewRequest("POST", "/api/platforms/apply", nil)
+	req.Header.Set("Authorization", "Bearer test-token")
+	w := httptest.NewRecorder()
+	srv.Router().ServeHTTP(w, req)
+	if w.Code != http.StatusOK {
+		t.Fatalf("status = %d", w.Code)
+	}
+	var body api.ApplyResult
+	_ = json.Unmarshal(w.Body.Bytes(), &body)
+	if body.OK {
+		t.Error("body.OK = true, want false")
+	}
+	if !strings.Contains(body.Error, "rebuild failed") {
+		t.Errorf("body.Error = %q", body.Error)
+	}
+}

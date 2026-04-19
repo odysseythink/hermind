@@ -91,3 +91,21 @@ func (s *Server) handlePlatformTest(w http.ResponseWriter, r *http.Request) {
 		writeJSON(w, PlatformTestResponse{OK: false, Error: err.Error()})
 	}
 }
+
+func (s *Server) handlePlatformsApply(w http.ResponseWriter, r *http.Request) {
+	if s.opts.Controller == nil {
+		writeJSONStatus(w, http.StatusServiceUnavailable,
+			ErrorResponse{Error: "gateway controller not configured"})
+		return
+	}
+	res, err := s.opts.Controller.Apply(r.Context())
+	switch {
+	case err == nil:
+		writeJSON(w, res)
+	case errors.Is(err, ErrApplyInProgress):
+		writeJSONStatus(w, http.StatusConflict,
+			ErrorResponse{Error: "apply already in progress"})
+	default:
+		writeJSON(w, ApplyResult{OK: false, Error: err.Error(), TookMS: res.TookMS})
+	}
+}
