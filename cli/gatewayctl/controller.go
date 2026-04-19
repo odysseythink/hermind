@@ -11,7 +11,6 @@ import (
 	"time"
 
 	"github.com/odysseythink/hermind/api"
-	"github.com/odysseythink/hermind/cli"
 	"github.com/odysseythink/hermind/config"
 	"github.com/odysseythink/hermind/gateway"
 	"github.com/odysseythink/hermind/gateway/platforms"
@@ -26,10 +25,14 @@ var (
 	ErrTestNotImplemented = api.ErrTestNotImplemented
 )
 
+// GatewayBuilder builds a Gateway from a config. Typically set to cli.BuildGateway.
+type GatewayBuilder func(cfg config.Config) (*gateway.Gateway, error)
+
 // Controller manages the lifecycle of a single gateway.Gateway using
 // the mutable config pointer it was given at construction time.
 type Controller struct {
-	cfg *config.Config
+	cfg     *config.Config
+	builder GatewayBuilder
 
 	// mu is a short-lived guard over g. Held only while reading or
 	// writing the pointer.
@@ -44,11 +47,11 @@ type Controller struct {
 	applyMu sync.Mutex
 }
 
-// New returns a Controller bound to the given config pointer. The
-// pointer is used live — callers must not swap it out and must
+// New returns a Controller bound to the given config pointer and builder function.
+// The config pointer is used live — callers must not swap it out and must
 // serialize mutations through PUT /api/config.
-func New(cfg *config.Config) *Controller {
-	return &Controller{cfg: cfg}
+func New(cfg *config.Config, builder GatewayBuilder) *Controller {
+	return &Controller{cfg: cfg, builder: builder}
 }
 
 // Start builds and runs the initial Gateway in a background goroutine.
@@ -61,7 +64,7 @@ func (c *Controller) Start(ctx context.Context) error {
 	if c.g != nil {
 		return errors.New("controller: already started")
 	}
-	g, err := cli.BuildGateway(cli.BuildGatewayDeps{Config: *c.cfg})
+	g, err := c.builder(*c.cfg)
 	if err != nil {
 		return err
 	}
@@ -120,7 +123,7 @@ func (c *Controller) Apply(ctx context.Context) (api.ApplyResult, error) {
 		cancel()
 	}
 
-	built, err := cli.BuildGateway(cli.BuildGatewayDeps{Config: *c.cfg})
+	built, err := c.builder(*c.cfg)
 	if err != nil {
 		return api.ApplyResult{OK: false, TookMS: time.Since(start).Milliseconds()},
 			fmt.Errorf("rebuild: %w", err)

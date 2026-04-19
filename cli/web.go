@@ -12,6 +12,9 @@ import (
 	"github.com/spf13/cobra"
 
 	"github.com/odysseythink/hermind/api"
+	"github.com/odysseythink/hermind/cli/gatewayctl"
+	"github.com/odysseythink/hermind/config"
+	"github.com/odysseythink/hermind/gateway"
 )
 
 // newWebCmd builds the `hermind web` subcommand. It starts the REST API
@@ -37,6 +40,18 @@ landing page so the browser can authenticate automatically.`,
 				return err
 			}
 
+			ctrl := gatewayctl.New(app.Config, func(cfg config.Config) (*gateway.Gateway, error) {
+				return BuildGateway(BuildGatewayDeps{Config: cfg})
+			})
+			if err := ctrl.Start(cmd.Context()); err != nil {
+				return fmt.Errorf("web: start gateway controller: %w", err)
+			}
+			defer func() {
+				shutCtx, c2 := context.WithTimeout(context.Background(), 2*time.Second)
+				defer c2()
+				ctrl.Shutdown(shutCtx)
+			}()
+
 			token, err := api.GenerateToken()
 			if err != nil {
 				return fmt.Errorf("web: generate token: %w", err)
@@ -54,6 +69,7 @@ landing page so the browser can authenticate automatically.`,
 				Token:      token,
 				Version:    Version,
 				Streams:    streams,
+				Controller: ctrl,
 			})
 			if err != nil {
 				return err

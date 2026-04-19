@@ -3,6 +3,7 @@ package gatewayctl_test
 import (
 	"context"
 	"errors"
+	"fmt"
 	"sync"
 	"testing"
 	"time"
@@ -14,9 +15,36 @@ import (
 	"github.com/odysseythink/hermind/gateway/platforms"
 )
 
+// buildTestGateway builds a gateway from a config using only the
+// test stubs defined in stub_test.go. Used by controller tests.
+func buildTestGateway(cfg config.Config) (*gateway.Gateway, error) {
+	g := gateway.NewGateway(cfg, nil, nil, nil, nil)
+	for name, pc := range cfg.Gateway.Platforms {
+		if !pc.Enabled {
+			continue
+		}
+		plat, err := buildTestPlatform(name, pc)
+		if err != nil {
+			return nil, fmt.Errorf("gateway platform %q: %w", name, err)
+		}
+		g.Register(plat)
+	}
+	return g, nil
+}
+
+// buildTestPlatform mirrors the logic from cli.buildPlatform but uses
+// only test stubs.
+func buildTestPlatform(name string, pc config.PlatformConfig) (gateway.Platform, error) {
+	desc, ok := platforms.Get(pc.Type)
+	if !ok {
+		return nil, fmt.Errorf("unknown platform type: %s", pc.Type)
+	}
+	return desc.Build(pc.Options)
+}
+
 func TestController_ApplyRestartsGateway(t *testing.T) {
 	cfg := stubCfg("stub_a")
-	ctrl := gatewayctl.New(&cfg)
+	ctrl := gatewayctl.New(&cfg, buildTestGateway)
 
 	if err := ctrl.Start(context.Background()); err != nil {
 		t.Fatalf("Start: %v", err)
@@ -49,7 +77,7 @@ func TestController_ApplyRestartsGateway(t *testing.T) {
 
 func TestController_ApplyConcurrent409(t *testing.T) {
 	cfg := stubCfg("stub_a")
-	ctrl := gatewayctl.New(&cfg)
+	ctrl := gatewayctl.New(&cfg, buildTestGateway)
 	if err := ctrl.Start(context.Background()); err != nil {
 		t.Fatalf("Start: %v", err)
 	}
@@ -102,7 +130,7 @@ func TestController_ApplyConcurrent409(t *testing.T) {
 
 func TestController_TestPlatform(t *testing.T) {
 	cfg := stubCfg("stub_a")
-	ctrl := gatewayctl.New(&cfg)
+	ctrl := gatewayctl.New(&cfg, buildTestGateway)
 
 	if err := ctrl.TestPlatform(context.Background(), "stub_a"); !errors.Is(err, gatewayctl.ErrTestNotImplemented) {
 		t.Errorf("TestPlatform(stub without Test): got %v, want ErrTestNotImplemented", err)
@@ -130,7 +158,7 @@ func TestController_TestPlatformCallsDescriptorTest(t *testing.T) {
 	cfg.Gateway.Platforms = map[string]config.PlatformConfig{
 		"probed": {Enabled: true, Type: "stub_testable", Options: map[string]string{"name": "probed"}},
 	}
-	ctrl := gatewayctl.New(&cfg)
+	ctrl := gatewayctl.New(&cfg, buildTestGateway)
 
 	if err := ctrl.TestPlatform(context.Background(), "probed"); !errors.Is(err, sentinel) {
 		t.Errorf("TestPlatform: got %v, want %v", err, sentinel)
