@@ -137,64 +137,17 @@ func runGateway(ctx context.Context, app *App) error {
 }
 
 // buildPlatform instantiates a platform adapter from its config entry.
+// The type is taken from pc.Type, or falls back to the map key when pc.Type
+// is empty. Lookup is delegated to the gateway/platforms registry; each
+// adapter self-registers via a descriptor_<type>.go init().
 func buildPlatform(name string, pc config.PlatformConfig) (gateway.Platform, error) {
 	t := strings.ToLower(pc.Type)
 	if t == "" {
 		t = strings.ToLower(name)
 	}
-	switch t {
-	case "api_server":
-		return platforms.NewAPIServer(pc.Options["addr"]), nil
-	case "webhook":
-		return platforms.NewWebhook(pc.Options["url"], pc.Options["token"]), nil
-	case "telegram":
-		return platforms.NewTelegram(pc.Options["token"]), nil
-	case "acp":
-		return platforms.NewACP(pc.Options["addr"], pc.Options["token"]), nil
-	case "slack":
-		return platforms.NewSlack(pc.Options["webhook_url"]), nil
-	case "discord":
-		return platforms.NewDiscord(pc.Options["webhook_url"]), nil
-	case "mattermost":
-		return platforms.NewMattermost(pc.Options["webhook_url"]), nil
-	case "feishu":
-		return platforms.NewFeishu(pc.Options["webhook_url"]), nil
-	case "dingtalk":
-		return platforms.NewDingTalk(pc.Options["webhook_url"]), nil
-	case "wecom":
-		return platforms.NewWeCom(pc.Options["webhook_url"]), nil
-	case "email":
-		return platforms.NewEmail(
-			pc.Options["host"], pc.Options["port"],
-			pc.Options["username"], pc.Options["password"],
-			pc.Options["from"], pc.Options["to"],
-		), nil
-	case "sms":
-		return platforms.NewSMS(
-			pc.Options["account_sid"], pc.Options["auth_token"],
-			pc.Options["from"], pc.Options["to"],
-		), nil
-	case "signal":
-		return platforms.NewSignal(pc.Options["base_url"], pc.Options["account"]), nil
-	case "whatsapp":
-		return platforms.NewWhatsApp(pc.Options["phone_id"], pc.Options["access_token"]), nil
-	case "matrix":
-		return platforms.NewMatrix(
-			pc.Options["home_server"], pc.Options["access_token"], pc.Options["room_id"],
-		), nil
-	case "homeassistant":
-		return platforms.NewHomeAssistant(
-			pc.Options["base_url"], pc.Options["access_token"], pc.Options["service"],
-		), nil
-	case "slack_events":
-		return platforms.NewSlackEvents(pc.Options["addr"], pc.Options["bot_token"]), nil
-	case "discord_bot":
-		return platforms.NewDiscordBot(pc.Options["token"], pc.Options["channel_id"]), nil
-	case "mattermost_bot":
-		return platforms.NewMattermostBot(
-			pc.Options["base_url"], pc.Options["token"], pc.Options["channel_id"],
-		), nil
-	default:
+	d, ok := platforms.Get(t)
+	if !ok {
 		return nil, fmt.Errorf("unknown platform type %q", t)
 	}
+	return d.Build(pc.Options)
 }
