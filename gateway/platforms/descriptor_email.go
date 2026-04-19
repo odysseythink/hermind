@@ -60,10 +60,11 @@ func testEmail(ctx context.Context, host, port, user, pass string) error {
 	if err != nil {
 		return fmt.Errorf("dial: %w", err)
 	}
-	defer conn.Close()
 
 	client, err := smtp.NewClient(conn, host)
 	if err != nil {
+		// NewClient failed before taking ownership of conn — close it ourselves.
+		conn.Close()
 		return fmt.Errorf("smtp client: %w", err)
 	}
 	defer client.Quit()

@@ -38,3 +38,22 @@ func TestMatrix_TrimsTrailingSlashOnHomeServer(t *testing.T) {
 		t.Errorf("path = %q (double slash?)", gotPath)
 	}
 }
+
+func TestMatrix_MissingCreds(t *testing.T) {
+	if err := testMatrix(context.Background(), "", "tok"); err == nil {
+		t.Error("expected error for empty home_server")
+	}
+	if err := testMatrix(context.Background(), "http://x", ""); err == nil {
+		t.Error("expected error for empty access_token")
+	}
+}
+
+func TestMatrix_Unauthorized(t *testing.T) {
+	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, _ *http.Request) {
+		http.Error(w, `{"errcode":"M_UNKNOWN_TOKEN"}`, http.StatusUnauthorized)
+	}))
+	defer srv.Close()
+	if err := testMatrix(context.Background(), srv.URL, "bad"); err == nil {
+		t.Error("expected error on 401")
+	}
+}
