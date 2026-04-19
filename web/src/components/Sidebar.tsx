@@ -5,6 +5,7 @@ export interface SidebarProps {
   instances: Array<{ key: string; type: string; enabled: boolean }>;
   selectedKey: string | null;
   descriptors: SchemaDescriptor[];
+  dirtyKeys: Set<string>;
   onSelect: (key: string) => void;
   onNewInstance: () => void;
 }
@@ -13,6 +14,7 @@ export default function Sidebar({
   instances,
   selectedKey,
   descriptors,
+  dirtyKeys,
   onSelect,
   onNewInstance,
 }: SidebarProps) {
@@ -30,7 +32,10 @@ export default function Sidebar({
           className={`${styles.item} ${inst.key === selectedKey ? styles.active : ''} ${!inst.enabled ? styles.dimmed : ''}`}
           onClick={() => onSelect(inst.key)}
         >
-          <span className={styles.itemKey}>{inst.key}</span>
+          <span className={styles.itemRow}>
+            <span className={styles.itemKey}>{inst.key}</span>
+            {dirtyKeys.has(inst.key) && <span className={styles.dirtyDot} title="Unsaved changes" />}
+          </span>
           <span className={styles.itemType}>
             {displayNames.get(inst.type) ?? inst.type}
             {!inst.enabled && <span className={styles.offBadge}>off</span>}
