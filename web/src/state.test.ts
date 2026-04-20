@@ -317,3 +317,42 @@ describe('reducer — shell/toggleGroup persistence', () => {
     expect(s1.shell.expandedGroups.has('models')).toBe(true);
   });
 });
+
+describe('edit/config-field', () => {
+  const base: AppState = {
+    ...initialState,
+    status: 'ready',
+    config: { storage: { driver: 'sqlite', sqlite_path: '/var/db/x.sqlite' } },
+    originalConfig: { storage: { driver: 'sqlite', sqlite_path: '/var/db/x.sqlite' } },
+  };
+
+  it('sets a field on an existing section', () => {
+    const next = reducer(base, {
+      type: 'edit/config-field', sectionKey: 'storage', field: 'driver', value: 'postgres',
+    });
+    expect(next.config.storage).toEqual({
+      driver: 'postgres',
+      sqlite_path: '/var/db/x.sqlite',
+    });
+    // Immutability: original state is untouched.
+    expect(base.config.storage).toEqual({
+      driver: 'sqlite',
+      sqlite_path: '/var/db/x.sqlite',
+    });
+  });
+
+  it('creates the section object when missing', () => {
+    const empty = { ...base, config: {} };
+    const next = reducer(empty, {
+      type: 'edit/config-field', sectionKey: 'storage', field: 'driver', value: 'postgres',
+    });
+    expect(next.config.storage).toEqual({ driver: 'postgres' });
+  });
+
+  it('marks the owning group dirty', () => {
+    const next = reducer(base, {
+      type: 'edit/config-field', sectionKey: 'storage', field: 'driver', value: 'postgres',
+    });
+    expect(groupDirty(next, 'runtime')).toBe(true);
+  });
+});

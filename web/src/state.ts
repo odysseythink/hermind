@@ -42,7 +42,8 @@ export type Action =
   | { type: 'instance/create'; key: string; platformType: string }
   | { type: 'shell/selectGroup'; group: GroupId | null }
   | { type: 'shell/selectSub'; key: string | null }
-  | { type: 'shell/toggleGroup'; group: GroupId };
+  | { type: 'shell/toggleGroup'; group: GroupId }
+  | { type: 'edit/config-field'; sectionKey: string; field: string; value: unknown };
 
 export const initialState: AppState = {
   status: 'booting',
@@ -143,6 +144,17 @@ export function reducer(state: AppState, action: Action): AppState {
       else expanded.add(action.group);
       saveExpandedGroups(expanded);
       return { ...state, shell: { ...state.shell, expandedGroups: expanded } };
+    }
+    case 'edit/config-field': {
+      const cfg = state.config as unknown as Record<string, unknown>;
+      const prev = (cfg[action.sectionKey] as Record<string, unknown> | undefined) ?? {};
+      return {
+        ...state,
+        config: {
+          ...state.config,
+          [action.sectionKey]: { ...prev, [action.field]: action.value },
+        } as typeof state.config,
+      };
     }
   }
 }
