@@ -47,8 +47,12 @@ func (s *Server) handleConfigSchema(w http.ResponseWriter, _ *http.Request) {
 // shapeString converts a descriptor.SectionShape to the JSON-wire string.
 // ShapeMap (zero value) returns "" so the DTO's omitempty tag drops the key.
 func shapeString(s descriptor.SectionShape) string {
-	if s == descriptor.ShapeScalar {
+	switch s {
+	case descriptor.ShapeScalar:
 		return "scalar"
+	case descriptor.ShapeKeyedMap:
+		return "keyed_map"
+	default:
+		return ""
 	}
-	return ""
 }
