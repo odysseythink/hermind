@@ -52,6 +52,8 @@ func shapeString(s descriptor.SectionShape) string {
 		return "scalar"
 	case descriptor.ShapeKeyedMap:
 		return "keyed_map"
+	case descriptor.ShapeList:
+		return "list"
 	default:
 		return ""
 	}

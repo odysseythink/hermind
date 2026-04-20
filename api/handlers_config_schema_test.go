@@ -243,6 +243,60 @@ func TestConfigSchema_IncludesStage4aSections(t *testing.T) {
 	}
 }
 
+func TestConfigSchema_EmitsListShapeString(t *testing.T) {
+	// Seed a ShapeList section directly via Register so this test doesn't
+	// depend on Task 4's fallback_providers descriptor having landed.
+	const key = "__test_schema_list"
+	descriptor.Register(descriptor.Section{
+		Key:     key,
+		Label:   "Test",
+		GroupID: "runtime",
+		Shape:   descriptor.ShapeList,
+		Fields: []descriptor.FieldSpec{
+			{Name: "provider", Label: "Type", Kind: descriptor.FieldEnum,
+				Required: true, Enum: []string{"a", "b"}},
+			{Name: "api_key", Label: "API key", Kind: descriptor.FieldSecret},
+		},
+	})
+	// The registry is process-global. The "__" prefix isolates this seed
+	// from production sections, and its 2 fields satisfy TestSectionInvariants
+	// (1 provider-enum, len>0).
+
+	srv, err := api.NewServer(&api.ServerOpts{
+		Config: &config.Config{},
+		Token:  "test-token",
+	})
+	if err != nil {
+		t.Fatalf("NewServer: %v", err)
+	}
+	req := httptest.NewRequest("GET", "/api/config/schema", nil)
+	req.Header.Set("Authorization", "Bearer test-token")
+	w := httptest.NewRecorder()
+	srv.Router().ServeHTTP(w, req)
+
+	if w.Code != http.StatusOK {
+		t.Fatalf("status = %d", w.Code)
+	}
+	var body struct {
+		Sections []map[string]any `json:"sections"`
+	}
+	if err := json.Unmarshal(w.Body.Bytes(), &body); err != nil {
+		t.Fatalf("parse: %v", err)
+	}
+	var found bool
+	for _, sec := range body.Sections {
+		if k, _ := sec["key"].(string); k == key {
+			found = true
+			if shape, _ := sec["shape"].(string); shape != "list" {
+				t.Errorf("shape = %q, want %q", shape, "list")
+			}
+		}
+	}
+	if !found {
+		t.Fatalf("seeded section %q not present in response", key)
+	}
+}
+
 func TestConfigSchema_EmitsKeyedMapShapeString(t *testing.T) {
 	// Seed a ShapeKeyedMap section directly via Register so this test doesn't
 	// depend on Task 4's providers descriptor having landed.
