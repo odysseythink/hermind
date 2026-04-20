@@ -4,6 +4,7 @@ import (
 	"encoding/json"
 	"io"
 	"net/http"
+	"strings"
 
 	"gopkg.in/yaml.v3"
 
@@ -132,8 +133,12 @@ func redactSectionSecrets(m map[string]any) {
 			if f.Kind != descriptor.FieldSecret {
 				continue
 			}
-			if _, present := blob[f.Name]; present {
-				blob[f.Name] = ""
+			parent, leaf, found := walkPath(blob, f.Name)
+			if !found {
+				continue
+			}
+			if _, present := parent[leaf]; present {
+				parent[leaf] = ""
 			}
 		}
 	}
@@ -322,18 +327,26 @@ func preserveSectionSecrets(updated, current *config.Config) {
 			if f.Kind != descriptor.FieldSecret {
 				continue
 			}
-			newVal, _ := upd[f.Name].(string)
+			updParent, leaf, updFound := walkPath(upd, f.Name)
+			if !updFound {
+				continue
+			}
+			newVal, _ := updParent[leaf].(string)
 			if newVal != "" {
 				continue
 			}
 			if cur == nil {
 				continue
 			}
-			prevVal, _ := cur[f.Name].(string)
+			curParent, _, curFound := walkPath(cur, f.Name)
+			if !curFound {
+				continue
+			}
+			prevVal, _ := curParent[leaf].(string)
 			if prevVal == "" {
 				continue
 			}
-			upd[f.Name] = prevVal
+			updParent[leaf] = prevVal
 			changed = true
 		}
 		if changed {
@@ -430,5 +443,56 @@ func PreserveSectionSecretsForTest(updated, current map[string]any) {
 			}
 			continue
 		}
+		// ShapeMap branch — mirrors production preserveSectionSecrets' final block.
+		upd, ok := updated[sec.Key].(map[string]any)
+		if !ok {
+			continue
+		}
+		cur, _ := current[sec.Key].(map[string]any)
+		for _, f := range sec.Fields {
+			if f.Kind != descriptor.FieldSecret {
+				continue
+			}
+			updParent, leaf, updFound := walkPath(upd, f.Name)
+			if !updFound {
+				continue
+			}
+			newVal, _ := updParent[leaf].(string)
+			if newVal != "" {
+				continue
+			}
+			if cur == nil {
+				continue
+			}
+			curParent, _, curFound := walkPath(cur, f.Name)
+			if !curFound {
+				continue
+			}
+			prevVal, _ := curParent[leaf].(string)
+			if prevVal == "" {
+				continue
+			}
+			updParent[leaf] = prevVal
+		}
 	}
+}
+
+// walkPath follows dotted keys down m, returning the leaf's parent map and
+// the final key. ok=false means the path is missing at some intermediate
+// level (not the last key); callers skip that field. Flat paths (no dot)
+// return (m, path, true) so callers need no special case.
+func walkPath(m map[string]any, path string) (parent map[string]any, leaf string, ok bool) {
+	keys := strings.Split(path, ".")
+	cur := m
+	for i, k := range keys {
+		if i == len(keys)-1 {
+			return cur, k, true
+		}
+		next, isMap := cur[k].(map[string]any)
+		if !isMap {
+			return nil, "", false
+		}
+		cur = next
+	}
+	return nil, "", false // unreachable when keys is non-empty
 }

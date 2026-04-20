@@ -449,3 +449,67 @@ func TestConfigGet_RedactsProvidersApiKey_Integration(t *testing.T) {
 		t.Errorf("anthropic_main.model = %v, want claude-opus-4-7", inst["model"])
 	}
 }
+
+func TestRedactSectionSecrets_DottedPath(t *testing.T) {
+	const key = "dotted_redact_test"
+	descriptor.Register(descriptor.Section{
+		Key:     key,
+		Label:   "Dotted Redact",
+		GroupID: "runtime",
+		Fields: []descriptor.FieldSpec{
+			{Name: "provider", Label: "Provider", Kind: descriptor.FieldEnum,
+				Enum: []string{"", "a"}},
+			{Name: "a.api_key", Label: "A API key", Kind: descriptor.FieldSecret},
+		},
+	})
+	t.Cleanup(func() { descriptor.Unregister(key) })
+
+	blob := map[string]any{
+		key: map[string]any{
+			"provider": "a",
+			"a": map[string]any{
+				"api_key": "sk-dotted-secret",
+			},
+		},
+	}
+	RedactSectionSecretsForTest(blob)
+	outer, _ := blob[key].(map[string]any)
+	inner, _ := outer["a"].(map[string]any)
+	if inner["api_key"] != "" {
+		t.Errorf("%s.a.api_key = %q, want \"\" (redacted)", key, inner["api_key"])
+	}
+}
+
+func TestPreserveSectionSecrets_DottedPath(t *testing.T) {
+	const key = "dotted_preserve_test"
+	descriptor.Register(descriptor.Section{
+		Key:     key,
+		Label:   "Dotted Preserve",
+		GroupID: "runtime",
+		Fields: []descriptor.FieldSpec{
+			{Name: "provider", Label: "Provider", Kind: descriptor.FieldEnum,
+				Enum: []string{"", "a"}},
+			{Name: "a.api_key", Label: "A API key", Kind: descriptor.FieldSecret},
+		},
+	})
+	t.Cleanup(func() { descriptor.Unregister(key) })
+
+	current := map[string]any{
+		key: map[string]any{
+			"provider": "a",
+			"a":        map[string]any{"api_key": "sk-real"},
+		},
+	}
+	updated := map[string]any{
+		key: map[string]any{
+			"provider": "a",
+			"a":        map[string]any{"api_key": ""}, // blanked by redact
+		},
+	}
+	PreserveSectionSecretsForTest(updated, current)
+	outer, _ := updated[key].(map[string]any)
+	inner, _ := outer["a"].(map[string]any)
+	if inner["api_key"] != "sk-real" {
+		t.Errorf("%s.a.api_key = %q, want %q (restored)", key, inner["api_key"], "sk-real")
+	}
+}

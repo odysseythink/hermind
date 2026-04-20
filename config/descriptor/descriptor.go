@@ -138,3 +138,10 @@ func All() []Section {
 	sort.Slice(out, func(i, j int) bool { return out[i].Key < out[j].Key })
 	return out
 }
+
+// Unregister removes the section at key. It's intended for tests that
+// register an ad-hoc descriptor and need to tear it down afterward so
+// subsequent tests see a clean registry.
+func Unregister(key string) {
+	delete(registry, key)
+}
