@@ -8,6 +8,7 @@ import (
 	"gopkg.in/yaml.v3"
 
 	"github.com/odysseythink/hermind/config"
+	"github.com/odysseythink/hermind/config/descriptor"
 	"github.com/odysseythink/hermind/gateway/platforms"
 )
 
@@ -29,11 +30,21 @@ func (s *Server) handleConfigGet(w http.ResponseWriter, _ *http.Request) {
 	writeJSON(w, ConfigResponse{Config: m})
 }
 
-// redactSecrets walks m["gateway"]["platforms"][*]["options"], consults
-// the platform registry for each entry's Type, and blanks every field
-// whose Kind is FieldSecret. Silently ignores unknown types or missing
-// sections — we're redacting defensively, not validating.
+// redactSecrets blanks every secret field in m, covering two universes:
+//
+//  1. gateway.platforms[*].options — fields of Kind FieldSecret on the
+//     platform descriptor registered in gateway/platforms.
+//  2. m[section.Key][field.Name] — fields of Kind FieldSecret on every
+//     config section registered in config/descriptor.
+//
+// Silently ignores unknown types, missing keys, or non-map values —
+// we're redacting defensively, not validating.
 func redactSecrets(m map[string]any) {
+	redactPlatformSecrets(m)
+	redactSectionSecrets(m)
+}
+
+func redactPlatformSecrets(m map[string]any) {
 	gw, _ := m["gateway"].(map[string]any)
 	plats, _ := gw["platforms"].(map[string]any)
 	for _, raw := range plats {
@@ -58,6 +69,23 @@ func redactSecrets(m map[string]any) {
 				if _, present := opts[f.Name]; present {
 					opts[f.Name] = ""
 				}
+			}
+		}
+	}
+}
+
+func redactSectionSecrets(m map[string]any) {
+	for _, sec := range descriptor.All() {
+		blob, ok := m[sec.Key].(map[string]any)
+		if !ok {
+			continue
+		}
+		for _, f := range sec.Fields {
+			if f.Kind != descriptor.FieldSecret {
+				continue
+			}
+			if _, present := blob[f.Name]; present {
+				blob[f.Name] = ""
 			}
 		}
 	}

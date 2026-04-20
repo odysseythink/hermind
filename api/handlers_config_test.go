@@ -138,3 +138,43 @@ func TestHandleConfigPut_OverwritesSecretWhenProvided(t *testing.T) {
 		t.Errorf("in-memory token = %q, want %q (overwritten)", got, "new-token")
 	}
 }
+
+func TestHandleConfigGet_RedactsSectionSecretFields(t *testing.T) {
+	cfg := &config.Config{}
+	cfg.Storage.Driver = "postgres"
+	cfg.Storage.PostgresURL = "postgres://user:pass@host/db"
+
+	srv, err := NewServer(&ServerOpts{
+		Config: cfg,
+		Token:  "test-token",
+	})
+	if err != nil {
+		t.Fatalf("NewServer: %v", err)
+	}
+
+	req := httptest.NewRequest("GET", "/api/config", nil)
+	req.Header.Set("Authorization", "Bearer test-token")
+	w := httptest.NewRecorder()
+	srv.Router().ServeHTTP(w, req)
+
+	if w.Code != http.StatusOK {
+		t.Fatalf("status = %d", w.Code)
+	}
+	var body struct {
+		Config map[string]any `json:"config"`
+	}
+	if err := json.Unmarshal(w.Body.Bytes(), &body); err != nil {
+		t.Fatalf("parse: %v", err)
+	}
+	storage, ok := body.Config["storage"].(map[string]any)
+	if !ok {
+		t.Fatalf("storage section missing: %+v", body.Config)
+	}
+	if got := storage["postgres_url"]; got != "" {
+		t.Errorf("postgres_url = %v, want blank (redacted)", got)
+	}
+	// Sanity check: non-secret fields are NOT blanked.
+	if got := storage["driver"]; got != "postgres" {
+		t.Errorf("driver = %v, want \"postgres\"", got)
+	}
+}
