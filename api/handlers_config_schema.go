@@ -30,6 +30,12 @@ func (s *Server) handleConfigSchema(w http.ResponseWriter, _ *http.Request) {
 					Equals: f.VisibleWhen.Equals,
 				}
 			}
+			if f.DatalistSource != nil {
+				dto.DatalistSource = &DatalistSourceDTO{
+					Section: f.DatalistSource.Section,
+					Field:   f.DatalistSource.Field,
+				}
+			}
 			fields = append(fields, dto)
 		}
 		out.Sections = append(out.Sections, ConfigSectionDTO{

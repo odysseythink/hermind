@@ -176,16 +176,23 @@ type PredicateDTO struct {
 	Equals any    `json:"equals"`
 }
 
+// DatalistSourceDTO is the JSON shape of descriptor.DatalistSource.
+type DatalistSourceDTO struct {
+	Section string `json:"section"`
+	Field   string `json:"field"`
+}
+
 // ConfigFieldDTO is one field of a ConfigSectionDTO.
 type ConfigFieldDTO struct {
-	Name        string        `json:"name"`
-	Label       string        `json:"label"`
-	Help        string        `json:"help,omitempty"`
-	Kind        string        `json:"kind"`
-	Required    bool          `json:"required,omitempty"`
-	Default     any           `json:"default,omitempty"`
-	Enum        []string      `json:"enum,omitempty"`
-	VisibleWhen *PredicateDTO `json:"visible_when,omitempty"`
+	Name           string             `json:"name"`
+	Label          string             `json:"label"`
+	Help           string             `json:"help,omitempty"`
+	Kind           string             `json:"kind"`
+	Required       bool               `json:"required,omitempty"`
+	Default        any                `json:"default,omitempty"`
+	Enum           []string           `json:"enum,omitempty"`
+	VisibleWhen    *PredicateDTO      `json:"visible_when,omitempty"`
+	DatalistSource *DatalistSourceDTO `json:"datalist_source,omitempty"`
 }
 
 // ConfigSectionDTO is one section in the config schema response.

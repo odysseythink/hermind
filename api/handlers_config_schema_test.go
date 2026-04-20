@@ -298,6 +298,110 @@ func TestConfigSchema_IncludesStage4cSections(t *testing.T) {
 	}
 }
 
+func TestConfigSchema_EmitsDatalistSource(t *testing.T) {
+	const key = "__test_schema_datalist"
+	descriptor.Register(descriptor.Section{
+		Key:     key,
+		Label:   "Test",
+		GroupID: "runtime",
+		Shape:   descriptor.ShapeScalar,
+		Fields: []descriptor.FieldSpec{
+			{
+				Name:  "pick_model",
+				Label: "Pick model",
+				Kind:  descriptor.FieldString,
+				DatalistSource: &descriptor.DatalistSource{
+					Section: "providers",
+					Field:   "model",
+				},
+			},
+		},
+	})
+
+	srv, err := api.NewServer(&api.ServerOpts{
+		Config: &config.Config{},
+		Token:  "test-token",
+	})
+	if err != nil {
+		t.Fatalf("NewServer: %v", err)
+	}
+	req := httptest.NewRequest("GET", "/api/config/schema", nil)
+	req.Header.Set("Authorization", "Bearer test-token")
+	w := httptest.NewRecorder()
+	srv.Router().ServeHTTP(w, req)
+
+	if w.Code != http.StatusOK {
+		t.Fatalf("status = %d", w.Code)
+	}
+	var body struct {
+		Sections []struct {
+			Key    string `json:"key"`
+			Fields []struct {
+				Name           string         `json:"name"`
+				DatalistSource map[string]any `json:"datalist_source"`
+			} `json:"fields"`
+		} `json:"sections"`
+	}
+	if err := json.Unmarshal(w.Body.Bytes(), &body); err != nil {
+		t.Fatalf("parse: %v", err)
+	}
+
+	var found bool
+	for _, sec := range body.Sections {
+		if sec.Key != key {
+			continue
+		}
+		for _, f := range sec.Fields {
+			if f.Name != "pick_model" {
+				continue
+			}
+			found = true
+			if f.DatalistSource == nil {
+				t.Error("datalist_source missing from emitted field")
+				return
+			}
+			if f.DatalistSource["section"] != "providers" {
+				t.Errorf("datalist_source.section = %v, want \"providers\"", f.DatalistSource["section"])
+			}
+			if f.DatalistSource["field"] != "model" {
+				t.Errorf("datalist_source.field = %v, want \"model\"", f.DatalistSource["field"])
+			}
+		}
+	}
+	if !found {
+		t.Fatalf("seeded section %q not present in response", key)
+	}
+}
+
+func TestConfigSchema_OmitsDatalistSourceByDefault(t *testing.T) {
+	srv, _ := api.NewServer(&api.ServerOpts{
+		Config: &config.Config{},
+		Token:  "test-token",
+	})
+	req := httptest.NewRequest("GET", "/api/config/schema", nil)
+	req.Header.Set("Authorization", "Bearer test-token")
+	w := httptest.NewRecorder()
+	srv.Router().ServeHTTP(w, req)
+
+	var body struct {
+		Sections []map[string]any `json:"sections"`
+	}
+	_ = json.Unmarshal(w.Body.Bytes(), &body)
+	for _, sec := range body.Sections {
+		if sec["key"] != "storage" {
+			continue
+		}
+		fields, _ := sec["fields"].([]any)
+		for _, raw := range fields {
+			f, _ := raw.(map[string]any)
+			if _, present := f["datalist_source"]; present {
+				t.Errorf("storage field %v: datalist_source must be omitted when unset, got %v",
+					f["name"], f["datalist_source"])
+			}
+		}
+	}
+}
+
 func TestConfigSchema_EmitsListShapeString(t *testing.T) {
 	// Seed a ShapeList section directly via Register so this test doesn't
 	// depend on Task 4's fallback_providers descriptor having landed.
