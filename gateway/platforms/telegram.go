@@ -21,6 +21,11 @@ type Telegram struct {
 	token    string
 	baseURL  string
 	client   *http.Client
+	// proxyURL is retained for forward-looking DoH wiring: when DoHTransport
+	// is eventually constructed in the Telegram request path, this value
+	// should be passed to it so the fallback-IP logic honors the configured
+	// proxy. Currently unused outside NewTelegram — consumed by
+	// DoHTransport.proxyURL once wired.
 	proxyURL string
 	offset   int
 }
