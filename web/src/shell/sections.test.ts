@@ -32,14 +32,31 @@ describe('SECTIONS registry', () => {
     }
   });
 
-  it('runtime group exposes storage, agent, terminal in declaration order', () => {
+  it('registers Stage 4a sections: model under models, auxiliary under runtime', () => {
+    const model = findSection('model');
+    expect(model, 'missing model').toBeDefined();
+    expect(model!.groupId).toBe('models');
+    expect(model!.plannedStage).toBe('done');
+
+    const aux = findSection('auxiliary');
+    expect(aux, 'missing auxiliary').toBeDefined();
+    expect(aux!.groupId).toBe('runtime');
+    expect(aux!.plannedStage).toBe('done');
+  });
+
+  it('runtime group exposes storage, agent, auxiliary, terminal in declaration order', () => {
     const runtime = sectionsInGroup('runtime');
-    expect(runtime.map(s => s.key)).toEqual(['storage', 'agent', 'terminal']);
+    expect(runtime.map(s => s.key)).toEqual(['storage', 'agent', 'auxiliary', 'terminal']);
   });
 
   it('observability group exposes logging, metrics, tracing in declaration order', () => {
     const observability = sectionsInGroup('observability');
     expect(observability.map(s => s.key)).toEqual(['logging', 'metrics', 'tracing']);
+  });
+
+  it('models group exposes model', () => {
+    const models = sectionsInGroup('models');
+    expect(models.map(s => s.key)).toEqual(['model']);
   });
 
   it('sectionsInGroup returns [] for a group with no registered sections', () => {
