@@ -1,3 +1,4 @@
+import { useState } from 'react';
 import styles from './ModelsSidebar.module.css';
 
 export interface ModelsSidebarProps {
@@ -14,6 +15,8 @@ export interface ModelsSidebarProps {
   onSelectFallback: (index: number) => void;
   onAddFallback: () => void;
   onMoveFallback: (index: number, direction: 'up' | 'down') => void;
+  // Stage 4f addition
+  onReorderFallback: (from: number, to: number) => void;
 }
 
 export default function ModelsSidebar({
@@ -29,7 +32,10 @@ export default function ModelsSidebar({
   onSelectFallback,
   onAddFallback,
   onMoveFallback,
+  onReorderFallback,
 }: ModelsSidebarProps) {
+  const [dragFrom, setDragFrom] = useState<number | null>(null);
+  const [dragOver, setDragOver] = useState<number | null>(null);
   return (
     <div className={styles.sidebar}>
       <button
@@ -70,10 +76,40 @@ export default function ModelsSidebar({
         const active = i === activeFallbackIndex;
         const atTop = i === 0;
         const atBottom = i === fallbackProviders.length - 1;
+        const isDragging = dragFrom === i;
+        const isDragOver = dragOver === i && dragFrom !== null && dragFrom !== i;
         return (
           <div
             key={i}
-            className={`${styles.fallbackRow} ${active ? styles.active : ''}`}
+            data-fallback-row
+            draggable
+            onDragStart={e => {
+              setDragFrom(i);
+              e.dataTransfer.effectAllowed = 'move';
+              try { e.dataTransfer.setData('text/plain', String(i)); } catch { /* Firefox */ }
+            }}
+            onDragOver={e => {
+              if (dragFrom === null) return;
+              e.preventDefault();
+              e.dataTransfer.dropEffect = 'move';
+              if (dragOver !== i) setDragOver(i);
+            }}
+            onDragLeave={() => {
+              if (dragOver === i) setDragOver(null);
+            }}
+            onDrop={e => {
+              e.preventDefault();
+              if (dragFrom !== null && dragFrom !== i) {
+                onReorderFallback(dragFrom, i);
+              }
+              setDragFrom(null);
+              setDragOver(null);
+            }}
+            onDragEnd={() => {
+              setDragFrom(null);
+              setDragOver(null);
+            }}
+            className={`${styles.fallbackRow} ${active ? styles.active : ''} ${isDragging ? styles.dragging : ''} ${isDragOver ? styles.dragOver : ''}`}
           >
             <button
               type="button"

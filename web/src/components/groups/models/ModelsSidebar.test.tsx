@@ -1,5 +1,5 @@
 import { describe, it, expect, vi } from 'vitest';
-import { render, screen } from '@testing-library/react';
+import { render, screen, fireEvent } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import type { ComponentProps } from 'react';
 import ModelsSidebar from './ModelsSidebar';
@@ -23,6 +23,7 @@ function baseProps(
     onSelectFallback: vi.fn(),
     onAddFallback: vi.fn(),
     onMoveFallback: vi.fn(),
+    onReorderFallback: vi.fn(),
     ...overrides,
   };
 }
@@ -148,5 +149,59 @@ describe('ModelsSidebar — fallback providers section', () => {
     expect(onMoveFallback).toHaveBeenCalledWith(0, 'down');
     await userEvent.click(screen.getAllByRole('button', { name: /move up/i })[1]);
     expect(onMoveFallback).toHaveBeenCalledWith(1, 'up');
+  });
+
+  it('makes fallback rows draggable', () => {
+    const { container } = render(
+      <ModelsSidebar
+        {...baseProps({
+          fallbackProviders: [{ provider: 'anthropic' }, { provider: 'openai' }],
+        })}
+      />,
+    );
+    const rows = container.querySelectorAll('[data-fallback-row]');
+    expect(rows.length).toBe(2);
+    rows.forEach(row => {
+      expect(row.getAttribute('draggable')).toBe('true');
+    });
+  });
+
+  it('calls onReorderFallback(from, to) on a valid drop', () => {
+    const onReorderFallback = vi.fn();
+    const { container } = render(
+      <ModelsSidebar
+        {...baseProps({
+          fallbackProviders: [
+            { provider: 'anthropic' },
+            { provider: 'openai' },
+            { provider: 'anthropic' },
+          ],
+          onReorderFallback,
+        })}
+      />,
+    );
+    const rows = container.querySelectorAll<HTMLElement>('[data-fallback-row]');
+    const dt = { effectAllowed: '', dropEffect: '', setData: () => {}, getData: () => '' } as unknown as DataTransfer;
+    fireEvent.dragStart(rows[0], { dataTransfer: dt });
+    fireEvent.dragOver(rows[2], { dataTransfer: dt });
+    fireEvent.drop(rows[2], { dataTransfer: dt });
+    expect(onReorderFallback).toHaveBeenCalledWith(0, 2);
+  });
+
+  it('does not fire onReorderFallback on dragEnd without a drop', () => {
+    const onReorderFallback = vi.fn();
+    const { container } = render(
+      <ModelsSidebar
+        {...baseProps({
+          fallbackProviders: [{ provider: 'anthropic' }, { provider: 'openai' }],
+          onReorderFallback,
+        })}
+      />,
+    );
+    const rows = container.querySelectorAll<HTMLElement>('[data-fallback-row]');
+    const dt = { effectAllowed: '', dropEffect: '', setData: () => {}, getData: () => '' } as unknown as DataTransfer;
+    fireEvent.dragStart(rows[0], { dataTransfer: dt });
+    fireEvent.dragEnd(rows[0], { dataTransfer: dt });
+    expect(onReorderFallback).not.toHaveBeenCalled();
   });
 });

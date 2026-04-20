@@ -82,6 +82,20 @@
   display: flex;
   align-items: stretch;
   padding-right: 4px;
+  cursor: grab;
+}
+
+.fallbackRow:active {
+  cursor: grabbing;
+}
+
+.fallbackRow.dragging {
+  opacity: 0.4;
+}
+
+.fallbackRow.dragOver {
+  outline: 2px dashed var(--accent, #FFB800);
+  outline-offset: -2px;
 }
 
 .fallbackRow.active {
