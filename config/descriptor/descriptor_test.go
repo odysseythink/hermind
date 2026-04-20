@@ -125,6 +125,21 @@ func TestSectionInvariants(t *testing.T) {
 			t.Errorf("section %q: ShapeScalar requires exactly 1 field, got %d",
 				s.Key, len(s.Fields))
 		}
+		if s.Shape == ShapeKeyedMap {
+			if len(s.Fields) == 0 {
+				t.Errorf("section %q: ShapeKeyedMap requires at least 1 field", s.Key)
+			}
+			var providerEnums int
+			for _, f := range s.Fields {
+				if f.Name == "provider" && f.Kind == FieldEnum {
+					providerEnums++
+				}
+			}
+			if providerEnums != 1 {
+				t.Errorf("section %q: ShapeKeyedMap requires exactly one FieldEnum named \"provider\" (got %d)",
+					s.Key, providerEnums)
+			}
+		}
 	}
 }
 
@@ -169,5 +184,80 @@ func TestShapeScalarInvariant_FlagsBadFieldCount(t *testing.T) {
 	}
 	if !fired {
 		t.Error("invariant did not flag a ShapeScalar section with 2 fields — infrastructure bug")
+	}
+}
+
+func TestSectionShape_KeyedMapConstantDistinct(t *testing.T) {
+	// ShapeKeyedMap must be distinct from both ShapeMap (zero-value default)
+	// and ShapeScalar (added in Stage 4a). A collision would silently break
+	// the schema DTO's shape-string emission.
+	if ShapeKeyedMap == ShapeMap {
+		t.Error("ShapeKeyedMap equals ShapeMap — they must be distinct")
+	}
+	if ShapeKeyedMap == ShapeScalar {
+		t.Error("ShapeKeyedMap equals ShapeScalar — they must be distinct")
+	}
+}
+
+func TestShapeKeyedMapInvariant_FlagsMissingProviderEnum(t *testing.T) {
+	// Seed a ShapeKeyedMap section without the required provider-enum field
+	// and verify the invariant logic would reject it.
+	key := "__test_keyed_map_no_provider"
+	defer delete(registry, key)
+	Register(Section{
+		Key:     key,
+		Label:   "Test",
+		GroupID: "runtime",
+		Shape:   ShapeKeyedMap,
+		Fields: []FieldSpec{
+			{Name: "base_url", Label: "Base URL", Kind: FieldString},
+		},
+	})
+
+	var fired bool
+	for _, s := range All() {
+		if s.Key != key {
+			continue
+		}
+		if s.Shape != ShapeKeyedMap {
+			continue
+		}
+		var providerEnums int
+		for _, f := range s.Fields {
+			if f.Name == "provider" && f.Kind == FieldEnum {
+				providerEnums++
+			}
+		}
+		if providerEnums != 1 {
+			fired = true
+		}
+	}
+	if !fired {
+		t.Error("invariant did not flag ShapeKeyedMap without a provider-enum field")
+	}
+}
+
+func TestShapeKeyedMapInvariant_FlagsEmptyFields(t *testing.T) {
+	key := "__test_keyed_map_empty_fields"
+	defer delete(registry, key)
+	Register(Section{
+		Key:     key,
+		Label:   "Test",
+		GroupID: "runtime",
+		Shape:   ShapeKeyedMap,
+		Fields:  nil,
+	})
+
+	var fired bool
+	for _, s := range All() {
+		if s.Key != key {
+			continue
+		}
+		if s.Shape == ShapeKeyedMap && len(s.Fields) == 0 {
+			fired = true
+		}
+	}
+	if !fired {
+		t.Error("invariant did not flag ShapeKeyedMap with empty Fields")
 	}
 }

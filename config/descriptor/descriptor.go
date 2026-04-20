@@ -52,6 +52,7 @@ type SectionShape int
 const (
 	ShapeMap SectionShape = iota
 	ShapeScalar
+	ShapeKeyedMap
 )
 
 // Predicate expresses "show this field only when <Field> equals <Equals>".
