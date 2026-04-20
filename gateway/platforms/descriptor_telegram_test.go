@@ -15,7 +15,7 @@ func TestTelegram_Success(t *testing.T) {
 	}))
 	defer srv.Close()
 
-	err := testTelegram(context.Background(), "12345:abcdef", srv.URL)
+	err := testTelegram(context.Background(), "12345:abcdef", "", srv.URL)
 	if err != nil {
 		t.Fatalf("unexpected error: %v", err)
 	}
@@ -30,7 +30,7 @@ func TestTelegram_Unauthorized(t *testing.T) {
 	}))
 	defer srv.Close()
 
-	err := testTelegram(context.Background(), "bad", srv.URL)
+	err := testTelegram(context.Background(), "bad", "", srv.URL)
 	if err == nil {
 		t.Fatal("expected error")
 	}
