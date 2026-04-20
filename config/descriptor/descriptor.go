@@ -42,6 +42,18 @@ func (k FieldKind) String() string {
 	return "unknown"
 }
 
+// SectionShape discriminates how a section's value is laid out in YAML.
+//   - ShapeMap    — value is map[string]any (the default; every Stage 2/3 section).
+//   - ShapeScalar — value is a scalar (string/int/bool); the section's Fields
+//                   slice must contain exactly 1 entry that carries the Kind,
+//                   Label, Help, Required, and Default for the scalar.
+type SectionShape int
+
+const (
+	ShapeMap SectionShape = iota
+	ShapeScalar
+)
+
 // Predicate expresses "show this field only when <Field> equals <Equals>".
 // Stage 2 supports exactly one equality check; boolean algebra is YAGNI.
 type Predicate struct {
@@ -68,6 +80,7 @@ type Section struct {
 	Label   string
 	Summary string
 	GroupID string      // "runtime" — which shell group hosts this section
+	Shape   SectionShape
 	Fields  []FieldSpec
 }
 

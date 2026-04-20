@@ -121,5 +121,53 @@ func TestSectionInvariants(t *testing.T) {
 					s.Key, f.Name, f.VisibleWhen.Field)
 			}
 		}
+		if s.Shape == ShapeScalar && len(s.Fields) != 1 {
+			t.Errorf("section %q: ShapeScalar requires exactly 1 field, got %d",
+				s.Key, len(s.Fields))
+		}
+	}
+}
+
+func TestSectionShape_Constants(t *testing.T) {
+	// ShapeMap must be the zero value so existing sections (storage, agent,
+	// terminal, logging, metrics, tracing) declared without a Shape field
+	// stay map-shaped without touching their Register calls.
+	if ShapeMap != 0 {
+		t.Errorf("ShapeMap = %d, want 0 (zero value)", ShapeMap)
+	}
+	if ShapeScalar == ShapeMap {
+		t.Error("ShapeScalar equals ShapeMap — they must be distinct")
+	}
+}
+
+func TestShapeScalarInvariant_FlagsBadFieldCount(t *testing.T) {
+	// Seed a deliberately broken ShapeScalar section (2 fields instead of 1)
+	// and verify the invariant logic inside TestSectionInvariants would flag
+	// it. Runs the invariant check inline because TestSectionInvariants walks
+	// the registry as-it-was-at-startup, which doesn't include this seed.
+	key := "__test_shape_scalar_bad"
+	defer delete(registry, key)
+	Register(Section{
+		Key:     key,
+		Label:   "Test",
+		GroupID: "runtime",
+		Shape:   ShapeScalar,
+		Fields: []FieldSpec{
+			{Name: "a", Label: "A", Kind: FieldString},
+			{Name: "b", Label: "B", Kind: FieldString},
+		},
+	})
+
+	var fired bool
+	for _, s := range All() {
+		if s.Key != key {
+			continue
+		}
+		if s.Shape == ShapeScalar && len(s.Fields) != 1 {
+			fired = true
+		}
+	}
+	if !fired {
+		t.Error("invariant did not flag a ShapeScalar section with 2 fields — infrastructure bug")
 	}
 }
