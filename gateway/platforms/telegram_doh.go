@@ -96,6 +96,11 @@ type DoHTransport struct {
 	Primary     http.RoundTripper
 	Timeout     time.Duration
 
+	// proxyURL, when non-empty, short-circuits the fallback-IP dial: the proxy
+	// already handles IP-level bypass, so DoH's fallback trick is redundant and
+	// requests are routed through the proxy transport instead.
+	proxyURL string
+
 	mu       sync.Mutex
 	stickyIP string
 }
@@ -144,6 +149,15 @@ func (d *DoHTransport) RoundTrip(req *http.Request) (*http.Response, error) {
 // tryFallbackIP rewrites the request URL host to the fallback IP while
 // preserving the original Host header for TLS SNI.
 func (d *DoHTransport) tryFallbackIP(req *http.Request, ip string) (*http.Response, error) {
+	if d.proxyURL != "" {
+		// With a proxy configured, the proxy handles the IP-level bypass;
+		// the DoH fallback-IP trick is redundant. Route through the proxy.
+		t, err := newTelegramTransport(d.proxyURL)
+		if err != nil {
+			return nil, err
+		}
+		return t.RoundTrip(req)
+	}
 	clone := req.Clone(req.Context())
 	origHost := clone.URL.Host
 	clone.URL.Host = ip

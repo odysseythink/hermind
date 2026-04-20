@@ -18,10 +18,11 @@ import (
 
 // Telegram is a Telegram Bot API adapter using long-polling.
 type Telegram struct {
-	token   string
-	baseURL string
-	client  *http.Client
-	offset  int
+	token    string
+	baseURL  string
+	client   *http.Client
+	proxyURL string
+	offset   int
 }
 
 func NewTelegram(token, proxyURL string) (*Telegram, error) {
@@ -30,9 +31,10 @@ func NewTelegram(token, proxyURL string) (*Telegram, error) {
 		return nil, err
 	}
 	return &Telegram{
-		token:   token,
-		baseURL: "https://api.telegram.org",
-		client:  client,
+		token:    token,
+		baseURL:  "https://api.telegram.org",
+		client:   client,
+		proxyURL: proxyURL,
 	}, nil
 }
 
