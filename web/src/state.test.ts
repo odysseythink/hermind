@@ -257,8 +257,9 @@ describe('reducer — shell/selectSub', () => {
 
 describe('reducer — shell/toggleGroup', () => {
   it('adds an expanded group when absent', () => {
-    const s1 = reducer(initialState, { type: 'shell/toggleGroup', group: 'models' });
-    expect(s1.shell.expandedGroups.has('models')).toBe(true);
+    // memory is not in the Stage 4a default expansion set, so toggling adds it.
+    const s1 = reducer(initialState, { type: 'shell/toggleGroup', group: 'memory' });
+    expect(s1.shell.expandedGroups.has('memory')).toBe(true);
   });
 
   it('removes an expanded group when present', () => {
@@ -324,9 +325,11 @@ describe('reducer — shell/toggleGroup persistence', () => {
   beforeEach(() => localStorage.clear());
 
   it('writes to localStorage on toggle', () => {
-    const s1 = reducer(initialState, { type: 'shell/toggleGroup', group: 'models' });
-    expect(JSON.parse(localStorage.getItem(STORAGE_KEY) ?? '[]')).toContain('models');
-    expect(s1.shell.expandedGroups.has('models')).toBe(true);
+    // memory starts collapsed; toggling adds it and persists the v2 state blob.
+    const s1 = reducer(initialState, { type: 'shell/toggleGroup', group: 'memory' });
+    const stored = JSON.parse(localStorage.getItem(STORAGE_KEY) ?? '{}');
+    expect(stored.groups).toContain('memory');
+    expect(s1.shell.expandedGroups.has('memory')).toBe(true);
   });
 });
 
