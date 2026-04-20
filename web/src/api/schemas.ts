@@ -68,3 +68,42 @@ export const RevealResponseSchema = z.object({
   value: z.string(),
 });
 export type RevealResponse = z.infer<typeof RevealResponseSchema>;
+
+// Config section kinds produced by descriptor.FieldKind.String(). Adds
+// 'float' on top of the platform FieldKind set.
+export const ConfigFieldKindSchema = z.enum([
+  'string', 'int', 'bool', 'secret', 'enum', 'float',
+]);
+export type ConfigFieldKind = z.infer<typeof ConfigFieldKindSchema>;
+
+export const ConfigPredicateSchema = z.object({
+  field: z.string(),
+  equals: z.unknown(),
+});
+export type ConfigPredicate = z.infer<typeof ConfigPredicateSchema>;
+
+export const ConfigFieldSchema = z.object({
+  name: z.string(),
+  label: z.string(),
+  help: z.string().optional(),
+  kind: ConfigFieldKindSchema,
+  required: z.boolean().optional(),
+  default: z.unknown().optional(),
+  enum: z.array(z.string()).optional(),
+  visible_when: ConfigPredicateSchema.optional(),
+});
+export type ConfigField = z.infer<typeof ConfigFieldSchema>;
+
+export const ConfigSectionSchema = z.object({
+  key: z.string(),
+  label: z.string(),
+  summary: z.string().optional(),
+  group_id: z.string(),
+  fields: z.array(ConfigFieldSchema),
+});
+export type ConfigSection = z.infer<typeof ConfigSectionSchema>;
+
+export const ConfigSchemaResponseSchema = z.object({
+  sections: z.array(ConfigSectionSchema),
+});
+export type ConfigSchemaResponse = z.infer<typeof ConfigSchemaResponseSchema>;

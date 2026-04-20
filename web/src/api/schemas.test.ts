@@ -2,6 +2,7 @@ import { describe, expect, it } from 'vitest';
 import {
   ApplyResultSchema,
   ConfigResponseSchema,
+  ConfigSchemaResponseSchema,
   FieldKindSchema,
   PlatformTestResponseSchema,
   PlatformsSchemaResponseSchema,
@@ -146,5 +147,44 @@ describe('RevealResponseSchema', () => {
 
   it('rejects a missing value', () => {
     expect(() => RevealResponseSchema.parse({})).toThrow();
+  });
+});
+
+describe('ConfigSchemaResponseSchema', () => {
+  it('accepts a storage section with visible_when', () => {
+    const good = {
+      sections: [
+        {
+          key: 'storage',
+          label: 'Storage',
+          summary: 'Where hermind keeps data.',
+          group_id: 'runtime',
+          fields: [
+            { name: 'driver', label: 'Driver', kind: 'enum',
+              required: true, default: 'sqlite', enum: ['sqlite', 'postgres'] },
+            { name: 'sqlite_path', label: 'SQLite path', kind: 'string',
+              visible_when: { field: 'driver', equals: 'sqlite' } },
+            { name: 'postgres_url', label: 'Postgres URL', kind: 'secret',
+              visible_when: { field: 'driver', equals: 'postgres' } },
+          ],
+        },
+      ],
+    };
+    expect(() => ConfigSchemaResponseSchema.parse(good)).not.toThrow();
+  });
+
+  it('rejects a response missing sections', () => {
+    const bad = { whatever: [] };
+    expect(() => ConfigSchemaResponseSchema.parse(bad)).toThrow();
+  });
+
+  it('rejects a field with unknown kind', () => {
+    const bad = {
+      sections: [
+        { key: 's', label: 'S', group_id: 'runtime',
+          fields: [{ name: 'x', label: 'X', kind: 'mystery' }] },
+      ],
+    };
+    expect(() => ConfigSchemaResponseSchema.parse(bad)).toThrow();
   });
 });
