@@ -102,6 +102,28 @@ func redactSectionSecrets(m map[string]any) {
 			}
 			continue
 		}
+		if sec.Shape == descriptor.ShapeList {
+			// Walk []any of elements, each itself map[string]any.
+			outer, ok := m[sec.Key].([]any)
+			if !ok {
+				continue
+			}
+			for _, raw := range outer {
+				inner, ok := raw.(map[string]any)
+				if !ok {
+					continue
+				}
+				for _, f := range sec.Fields {
+					if f.Kind != descriptor.FieldSecret {
+						continue
+					}
+					if _, present := inner[f.Name]; present {
+						inner[f.Name] = ""
+					}
+				}
+			}
+			continue
+		}
 		blob, ok := m[sec.Key].(map[string]any)
 		if !ok {
 			continue
@@ -254,6 +276,43 @@ func preserveSectionSecrets(updated, current *config.Config) {
 			}
 			continue
 		}
+		if sec.Shape == descriptor.ShapeList {
+			outer, ok := updM[sec.Key].([]any)
+			if !ok {
+				continue
+			}
+			curOuter, _ := curM[sec.Key].([]any)
+			for i, raw := range outer {
+				inner, ok := raw.(map[string]any)
+				if !ok {
+					continue
+				}
+				if i >= len(curOuter) {
+					// Appended element — no prior state to preserve.
+					continue
+				}
+				curInst, _ := curOuter[i].(map[string]any)
+				if curInst == nil {
+					continue
+				}
+				for _, f := range sec.Fields {
+					if f.Kind != descriptor.FieldSecret {
+						continue
+					}
+					newVal, _ := inner[f.Name].(string)
+					if newVal != "" {
+						continue
+					}
+					prevVal, _ := curInst[f.Name].(string)
+					if prevVal == "" {
+						continue
+					}
+					inner[f.Name] = prevVal
+					changed = true
+				}
+			}
+			continue
+		}
 		upd, ok := updM[sec.Key].(map[string]any)
 		if !ok {
 			continue
@@ -304,37 +363,72 @@ func RedactSectionSecretsForTest(m map[string]any) { redactSectionSecrets(m) }
 // helper operates on.
 func PreserveSectionSecretsForTest(updated, current map[string]any) {
 	for _, sec := range descriptor.All() {
-		if sec.Shape != descriptor.ShapeKeyedMap {
-			continue
-		}
-		outer, ok := updated[sec.Key].(map[string]any)
-		if !ok {
-			continue
-		}
-		curOuter, _ := current[sec.Key].(map[string]any)
-		for instKey, raw := range outer {
-			inner, ok := raw.(map[string]any)
+		if sec.Shape == descriptor.ShapeKeyedMap {
+			outer, ok := updated[sec.Key].(map[string]any)
 			if !ok {
 				continue
 			}
-			curInst, _ := curOuter[instKey].(map[string]any)
-			for _, f := range sec.Fields {
-				if f.Kind != descriptor.FieldSecret {
+			curOuter, _ := current[sec.Key].(map[string]any)
+			for instKey, raw := range outer {
+				inner, ok := raw.(map[string]any)
+				if !ok {
 					continue
 				}
-				newVal, _ := inner[f.Name].(string)
-				if newVal != "" {
+				curInst, _ := curOuter[instKey].(map[string]any)
+				for _, f := range sec.Fields {
+					if f.Kind != descriptor.FieldSecret {
+						continue
+					}
+					newVal, _ := inner[f.Name].(string)
+					if newVal != "" {
+						continue
+					}
+					if curInst == nil {
+						continue
+					}
+					prevVal, _ := curInst[f.Name].(string)
+					if prevVal == "" {
+						continue
+					}
+					inner[f.Name] = prevVal
+				}
+			}
+			continue
+		}
+		if sec.Shape == descriptor.ShapeList {
+			outer, ok := updated[sec.Key].([]any)
+			if !ok {
+				continue
+			}
+			curOuter, _ := current[sec.Key].([]any)
+			for i, raw := range outer {
+				inner, ok := raw.(map[string]any)
+				if !ok {
 					continue
 				}
+				if i >= len(curOuter) {
+					continue
+				}
+				curInst, _ := curOuter[i].(map[string]any)
 				if curInst == nil {
 					continue
 				}
-				prevVal, _ := curInst[f.Name].(string)
-				if prevVal == "" {
-					continue
+				for _, f := range sec.Fields {
+					if f.Kind != descriptor.FieldSecret {
+						continue
+					}
+					newVal, _ := inner[f.Name].(string)
+					if newVal != "" {
+						continue
+					}
+					prevVal, _ := curInst[f.Name].(string)
+					if prevVal == "" {
+						continue
+					}
+					inner[f.Name] = prevVal
 				}
-				inner[f.Name] = prevVal
 			}
+			continue
 		}
 	}
 }

@@ -315,6 +315,89 @@ func TestConfigPut_PreservesKeyedMapSecrets(t *testing.T) {
 	}
 }
 
+func TestConfigGet_RedactsListSecrets(t *testing.T) {
+	// Seed a ShapeList section so we don't wait on Task 4's fallback_providers.
+	const key = "__test_redact_list"
+	descriptor.Register(descriptor.Section{
+		Key:     key,
+		Label:   "Test",
+		GroupID: "runtime",
+		Shape:   descriptor.ShapeList,
+		Fields: []descriptor.FieldSpec{
+			{Name: "provider", Label: "Type", Kind: descriptor.FieldEnum,
+				Required: true, Enum: []string{"a"}},
+			{Name: "api_key", Label: "API key", Kind: descriptor.FieldSecret},
+		},
+	})
+
+	blob := map[string]any{
+		key: []any{
+			map[string]any{"provider": "a", "api_key": "sk-one"},
+			map[string]any{"provider": "a", "api_key": "sk-two"},
+		},
+	}
+	RedactSectionSecretsForTest(blob)
+	list, _ := blob[key].([]any)
+	if len(list) != 2 {
+		t.Fatalf("len = %d, want 2", len(list))
+	}
+	for i, raw := range list {
+		inner := raw.(map[string]any)
+		if inner["api_key"] != "" {
+			t.Errorf("[%d] api_key = %q, want blank", i, inner["api_key"])
+		}
+		if inner["provider"] != "a" {
+			t.Errorf("[%d] provider mutated: %q", i, inner["provider"])
+		}
+	}
+}
+
+func TestConfigPut_PreservesListSecretsByIndex(t *testing.T) {
+	// Preserve is strictly by index: updated[i].api_key == "" AND
+	// current[i] has a non-empty api_key → restore current[i].api_key.
+	// If updated has no current counterpart at index i, leave blank.
+	const key = "__test_preserve_list"
+	descriptor.Register(descriptor.Section{
+		Key:     key,
+		Label:   "Test",
+		GroupID: "runtime",
+		Shape:   descriptor.ShapeList,
+		Fields: []descriptor.FieldSpec{
+			{Name: "provider", Label: "Type", Kind: descriptor.FieldEnum,
+				Required: true, Enum: []string{"a", "b"}},
+			{Name: "api_key", Label: "API key", Kind: descriptor.FieldSecret},
+		},
+	})
+
+	current := map[string]any{
+		key: []any{
+			map[string]any{"provider": "a", "api_key": "sk-zero"},
+			map[string]any{"provider": "b", "api_key": "sk-one"},
+		},
+	}
+	updated := map[string]any{
+		key: []any{
+			map[string]any{"provider": "a", "api_key": ""},        // present in current → restore
+			map[string]any{"provider": "b", "api_key": "sk-new"},  // user retyped → keep
+			map[string]any{"provider": "a", "api_key": ""},        // appended, no counterpart → stay blank
+		},
+	}
+	PreserveSectionSecretsForTest(updated, current)
+	got, _ := updated[key].([]any)
+	if len(got) != 3 {
+		t.Fatalf("len = %d, want 3", len(got))
+	}
+	if got[0].(map[string]any)["api_key"] != "sk-zero" {
+		t.Errorf("[0] api_key = %q, want %q", got[0].(map[string]any)["api_key"], "sk-zero")
+	}
+	if got[1].(map[string]any)["api_key"] != "sk-new" {
+		t.Errorf("[1] api_key = %q, want preserved", got[1].(map[string]any)["api_key"])
+	}
+	if got[2].(map[string]any)["api_key"] != "" {
+		t.Errorf("[2] api_key = %q, want blank (no current counterpart)", got[2].(map[string]any)["api_key"])
+	}
+}
+
 func TestConfigGet_RedactsProvidersApiKey_Integration(t *testing.T) {
 	// Integration test: drive through the real HTTP pipeline (handleConfigGet
 	// → yaml.Marshal → yaml.Unmarshal → redactSectionSecrets → writeJSON)
