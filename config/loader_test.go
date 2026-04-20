@@ -144,6 +144,41 @@ fallback_providers:
 	assert.Equal(t, "openai", cfg.FallbackProviders[1].Provider)
 }
 
+func TestLoadFromPath_Skills(t *testing.T) {
+	dir := t.TempDir()
+	path := filepath.Join(dir, "config.yaml")
+	yaml := []byte(`
+model: anthropic/claude-opus-4-6
+providers: {}
+agent:
+  max_turns: 10
+terminal:
+  backend: local
+storage:
+  driver: sqlite
+skills:
+  disabled:
+    - foo
+    - bar
+  platform_disabled:
+    cli: [baz]
+    gateway: [qux]
+`)
+	if err := os.WriteFile(path, yaml, 0o644); err != nil {
+		t.Fatal(err)
+	}
+	cfg, err := LoadFromPath(path)
+	if err != nil {
+		t.Fatalf("load: %v", err)
+	}
+	if len(cfg.Skills.Disabled) != 2 || cfg.Skills.Disabled[0] != "foo" {
+		t.Errorf("disabled = %v", cfg.Skills.Disabled)
+	}
+	if got := cfg.Skills.PlatformDisabled["cli"]; len(got) != 1 || got[0] != "baz" {
+		t.Errorf("platform_disabled[cli] = %v", got)
+	}
+}
+
 func TestLoadPreservesLiteralEnvString(t *testing.T) {
 	// After dropping env:VAR expansion, a config value that happens to start
 	// with "env:" must round-trip as a literal string, not trigger lookup.

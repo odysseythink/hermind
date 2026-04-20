@@ -109,3 +109,32 @@ func TestEndToEndSingleTurn(t *testing.T) {
 	_ = os.Stdout
 	_ = strings.TrimSpace
 }
+
+func TestREPL_RespectsDisabledSkills(t *testing.T) {
+	dir := t.TempDir()
+	t.Setenv("HERMIND_HOME", dir)
+
+	// Seed two skills.
+	for _, n := range []string{"keep", "drop"} {
+		p := filepath.Join(dir, "skills", "cat", n)
+		_ = os.MkdirAll(p, 0o755)
+		body := "---\nname: " + n + "\ndescription: t\n---\nbody"
+		_ = os.WriteFile(filepath.Join(p, "SKILL.md"), []byte(body), 0o644)
+	}
+	// Seed config disabling "drop".
+	cfgPath := filepath.Join(dir, "config.yaml")
+	cfgYAML := []byte("model: test\nskills:\n  disabled: [drop]\n")
+	_ = os.WriteFile(cfgPath, cfgYAML, 0o644)
+
+	app, err := NewApp()
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer app.Close()
+
+	reg, _ := loadSkills(app)
+	active := reg.Active()
+	if len(active) != 1 || active[0].Name != "keep" {
+		t.Errorf("active = %v, want [keep]", active)
+	}
+}

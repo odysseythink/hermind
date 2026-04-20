@@ -1,6 +1,7 @@
 package ui
 
 import (
+	"sort"
 	"strings"
 
 	"github.com/charmbracelet/lipgloss"
@@ -12,8 +13,10 @@ type slashCommand struct {
 	Description string
 }
 
-// slashCommands is the single source of truth for both the completion
-// popup and the `/help` rendering. Keep sorted alphabetically.
+// slashCommands is the set of TUI-only commands that manipulate Model state
+// (conversation buffer, session totals, quit flag) and therefore cannot live
+// in the skills.SlashRegistry. Skill-registered commands are merged on top
+// of this list at runtime via availableSlashCommands.
 var slashCommands = []slashCommand{
 	{"clear", "clear the conversation"},
 	{"cost", "show session cost and token usage"},
@@ -23,6 +26,31 @@ var slashCommands = []slashCommand{
 	{"quit", "alias for /exit"},
 }
 
+// availableSlashCommands returns the TUI-only commands merged with any
+// dynamic commands registered on the SlashRegistry (skills, builtins from
+// the skills package). Result is sorted alphabetically. When the same name
+// is registered in both places the TUI-only entry wins, since it is the
+// one whose handler in slash.go actually has access to Model state.
+func (m *Model) availableSlashCommands() []slashCommand {
+	out := make([]slashCommand, 0, len(slashCommands))
+	seen := make(map[string]bool, len(slashCommands))
+	for _, c := range slashCommands {
+		out = append(out, c)
+		seen[c.Name] = true
+	}
+	if m != nil && m.slashReg != nil {
+		for _, c := range m.slashReg.All() {
+			if seen[c.Name] {
+				continue
+			}
+			out = append(out, slashCommand{Name: c.Name, Description: c.Description})
+			seen[c.Name] = true
+		}
+	}
+	sort.Slice(out, func(i, j int) bool { return out[i].Name < out[j].Name })
+	return out
+}
+
 // completionState is the popup's in-memory state. Nil when the popup is
 // hidden. The controller (Model) owns the pointer; callers do not hold it.
 type completionState struct {
@@ -30,16 +58,23 @@ type completionState struct {
 	selected int
 }
 
-// filterSlashCommands returns the subset of slashCommands whose Name has
-// prefix. An empty prefix returns all commands. Order is preserved.
+// filterSlashCommands returns the subset of the base TUI-only commands
+// whose Name has the given prefix. Retained for tests and callers that
+// don't have a Model handy. An empty prefix returns all commands.
 func filterSlashCommands(prefix string) []slashCommand {
+	return filterFromList(prefix, slashCommands)
+}
+
+// filterFromList filters an arbitrary command slice by name prefix,
+// preserving order. An empty prefix returns a copy of the input.
+func filterFromList(prefix string, cmds []slashCommand) []slashCommand {
 	if prefix == "" {
-		out := make([]slashCommand, len(slashCommands))
-		copy(out, slashCommands)
+		out := make([]slashCommand, len(cmds))
+		copy(out, cmds)
 		return out
 	}
 	var out []slashCommand
-	for _, c := range slashCommands {
+	for _, c := range cmds {
 		if strings.HasPrefix(c.Name, prefix) {
 			out = append(out, c)
 		}
@@ -58,7 +93,7 @@ func (m *Model) updateCompletion() {
 		return
 	}
 	prefix := strings.TrimPrefix(text, "/")
-	matches := filterSlashCommands(prefix)
+	matches := filterFromList(prefix, m.availableSlashCommands())
 	if len(matches) == 0 {
 		m.completion = nil
 		return

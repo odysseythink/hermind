@@ -16,6 +16,7 @@ import (
 	"github.com/odysseythink/hermind/config"
 	"github.com/odysseythink/hermind/provider"
 	"github.com/odysseythink/hermind/provider/factory"
+	"github.com/odysseythink/hermind/skills"
 	"github.com/odysseythink/hermind/storage/sqlite"
 	"github.com/odysseythink/hermind/tool"
 	"github.com/odysseythink/hermind/tool/browser"
@@ -222,6 +223,17 @@ func runREPL(ctx context.Context, app *App) error {
 		defer mcpManager.Close()
 	}
 
+	// Skills: load installed skill packages, build a SlashRegistry with
+	// the standard builtins (/help, /skills, /reset, /model, /profile) and
+	// one command per installed skill that toggles its active state.
+	skillsReg, _ := loadSkills(app)
+	slashReg := skills.NewSlashRegistry()
+	skills.RegisterBuiltins(slashReg, skills.BuiltinHooks{
+		Skills:       skillsReg,
+		CurrentModel: func() string { return displayModel },
+	})
+	skills.RegisterSkills(slashReg, skillsReg)
+
 	// Hand off to the bubbletea TUI.
 	err = ui.Run(ctx, ui.RunOptions{
 		Config:      app.Config,
@@ -229,6 +241,8 @@ func runREPL(ctx context.Context, app *App) error {
 		Provider:    p,
 		AuxProvider: auxProvider,
 		ToolReg:     toolRegistry,
+		SlashReg:    slashReg,
+		SkillsReg:   skillsReg,
 		AgentCfg:    app.Config.Agent,
 		SessionID:   sessionID,
 		Model:       displayModel,

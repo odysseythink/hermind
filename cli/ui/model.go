@@ -10,6 +10,7 @@ import (
 	"github.com/odysseythink/hermind/config"
 	"github.com/odysseythink/hermind/message"
 	"github.com/odysseythink/hermind/provider"
+	"github.com/odysseythink/hermind/skills"
 	"github.com/odysseythink/hermind/storage"
 	"github.com/odysseythink/hermind/tool"
 )
@@ -30,6 +31,7 @@ type Model struct {
 	storage   storage.Storage
 	provider  provider.Provider
 	toolReg   *tool.Registry
+	slashReg  *skills.SlashRegistry // may be nil
 	agentCfg  config.AgentConfig
 	skin      Skin
 	sessionID string
@@ -45,7 +47,9 @@ type Model struct {
 	rendered []string // pre-rendered conversation lines (for viewport)
 
 	// Streaming accumulator for the current in-progress assistant message.
-	streamingText strings.Builder
+	// Pointer so Update's value-receiver copy doesn't trip strings.Builder's
+	// copyCheck after the first WriteString.
+	streamingText *strings.Builder
 	streamingTool *streamingToolState
 
 	// Totals shown in the status bar
@@ -85,6 +89,7 @@ type ModelConfig struct {
 	Storage   storage.Storage
 	Provider  provider.Provider
 	ToolReg   *tool.Registry
+	SlashReg  *skills.SlashRegistry // may be nil
 	AgentCfg  config.AgentConfig
 	Skin      Skin
 	SessionID string
@@ -108,15 +113,17 @@ func NewModel(mc ModelConfig) Model {
 		storage:   mc.Storage,
 		provider:  mc.Provider,
 		toolReg:   mc.ToolReg,
+		slashReg:  mc.SlashReg,
 		agentCfg:  mc.AgentCfg,
 		skin:      mc.Skin,
-		sessionID: mc.SessionID,
-		model:     mc.Model,
-		viewport:  vp,
-		input:     ta,
-		state:     StateIdle,
-		width:     80,
-		height:    24,
+		sessionID:     mc.SessionID,
+		model:         mc.Model,
+		viewport:      vp,
+		input:         ta,
+		streamingText: &strings.Builder{},
+		state:         StateIdle,
+		width:         80,
+		height:        24,
 	}
 }
 

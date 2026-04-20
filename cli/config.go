@@ -34,6 +34,9 @@ func newConfigCmd(app *App) *cobra.Command {
 }
 
 func defaultConfigPath() (string, error) {
+	if v := os.Getenv("HERMIND_HOME"); v != "" {
+		return filepath.Join(v, "config.yaml"), nil
+	}
 	home, err := os.UserHomeDir()
 	if err != nil {
 		return "", err

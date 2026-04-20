@@ -80,3 +80,24 @@ func (r *Registry) Active() []*Skill {
 	sort.Slice(out, func(i, j int) bool { return out[i].Name < out[j].Name })
 	return out
 }
+
+// ApplyConfig sets the registry's active set to "all known skills
+// minus disabled". It replaces whatever was previously active. Names
+// in disabled that don't correspond to a registered skill are silently
+// ignored — this mirrors Python's behavior and keeps startup resilient
+// against stale config entries.
+func (r *Registry) ApplyConfig(disabled []string) {
+	drop := make(map[string]struct{}, len(disabled))
+	for _, n := range disabled {
+		drop[n] = struct{}{}
+	}
+	r.mu.Lock()
+	defer r.mu.Unlock()
+	r.active = make(map[string]bool, len(r.skills))
+	for name := range r.skills {
+		if _, off := drop[name]; off {
+			continue
+		}
+		r.active[name] = true
+	}
+}

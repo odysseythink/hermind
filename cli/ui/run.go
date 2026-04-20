@@ -10,20 +10,23 @@ import (
 	"github.com/odysseythink/hermind/config"
 	"github.com/odysseythink/hermind/message"
 	"github.com/odysseythink/hermind/provider"
+	"github.com/odysseythink/hermind/skills"
 	"github.com/odysseythink/hermind/storage"
 	"github.com/odysseythink/hermind/tool"
 )
 
 // RunOptions holds the dependencies required to start a TUI REPL.
 type RunOptions struct {
-	Config      *config.Config
-	Storage     storage.Storage
-	Provider    provider.Provider
-	AuxProvider provider.Provider // may be nil
-	ToolReg     *tool.Registry
-	AgentCfg    config.AgentConfig
-	SessionID   string
-	Model       string
+	Config       *config.Config
+	Storage      storage.Storage
+	Provider     provider.Provider
+	AuxProvider  provider.Provider // may be nil
+	ToolReg      *tool.Registry
+	SlashReg     *skills.SlashRegistry // may be nil
+	SkillsReg    *skills.Registry      // may be nil; used to inject active bodies into system prompt
+	AgentCfg     config.AgentConfig
+	SessionID    string
+	Model        string
 }
 
 // Run starts the bubbletea TUI. Blocks until the user exits.
@@ -37,6 +40,7 @@ func Run(ctx context.Context, opts RunOptions) error {
 		Storage:   opts.Storage,
 		Provider:  opts.Provider,
 		ToolReg:   opts.ToolReg,
+		SlashReg:  opts.SlashReg,
 		AgentCfg:  opts.AgentCfg,
 		Skin:      skin,
 		SessionID: opts.SessionID,
@@ -57,6 +61,21 @@ func Run(ctx context.Context, opts RunOptions) error {
 				opts.Provider, opts.AuxProvider, opts.Storage, opts.ToolReg,
 				opts.AgentCfg, "cli",
 			)
+			if opts.SkillsReg != nil {
+				skillsReg := opts.SkillsReg
+				engine.SetActiveSkillsProvider(func() []agent.ActiveSkill {
+					active := skillsReg.Active()
+					out := make([]agent.ActiveSkill, 0, len(active))
+					for _, s := range active {
+						out = append(out, agent.ActiveSkill{
+							Name:        s.Name,
+							Description: s.Description,
+							Body:        s.Body,
+						})
+					}
+					return out
+				})
+			}
 			engine.SetStreamDeltaCallback(func(d *provider.StreamDelta) {
 				program.Send(streamDeltaMsg{Delta: d})
 			})

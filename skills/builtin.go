@@ -124,25 +124,38 @@ func RegisterBuiltins(reg *SlashRegistry, hooks BuiltinHooks) {
 	})
 }
 
-// RegisterSkills registers one slash command per entry in reg.All()
-// that has a non-empty Commands list. Skill commands are currently
-// stubs that print a message noting the skill is active.
+// RegisterSkills registers one slash command per installed skill. Each
+// command toggles the skill's active state: running /foo activates the
+// foo skill (subsequent agent turns see its body in the system prompt),
+// and running /foo off deactivates it. When a skill declares extra
+// command aliases via its YAML `commands:` list, those are registered
+// too and behave identically.
 func RegisterSkills(slash *SlashRegistry, skillsReg *Registry) {
+	register := func(cmdName string, skill *Skill) {
+		slash.Register(&SlashCommand{
+			Name:        cmdName,
+			Source:      skill.Name,
+			Description: fmt.Sprintf("[%s] %s", skill.Name, skill.Description),
+			Handler: func(ctx context.Context, args []string) (string, error) {
+				if len(args) > 0 && (args[0] == "off" || args[0] == "deactivate") {
+					skillsReg.Deactivate(skill.Name)
+					return fmt.Sprintf("skill %s: deactivated", skill.Name), nil
+				}
+				if err := skillsReg.Activate(skill.Name); err != nil {
+					return "", err
+				}
+				return fmt.Sprintf("skill %s: activated — its guidance is now in effect", skill.Name), nil
+			},
+		})
+	}
+
 	for _, s := range skillsReg.All() {
+		register(s.Name, s)
 		for _, cmdName := range s.Commands {
-			cmdName := cmdName
-			skill := s
-			slash.Register(&SlashCommand{
-				Name:        cmdName,
-				Source:      s.Name,
-				Description: fmt.Sprintf("[%s] %s", s.Name, s.Description),
-				Handler: func(ctx context.Context, args []string) (string, error) {
-					if len(args) == 0 {
-						return fmt.Sprintf("skill %s: invoke with an argument to run", skill.Name), nil
-					}
-					return fmt.Sprintf("skill %s: received args %v (executor pending Phase 10c)", skill.Name, args), nil
-				},
-			})
+			if cmdName == s.Name {
+				continue
+			}
+			register(cmdName, s)
 		}
 	}
 }
