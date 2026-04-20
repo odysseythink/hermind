@@ -74,3 +74,67 @@ func TestTelegramPollingAndReply(t *testing.T) {
 		t.Errorf("sendMessage hits = %d", sendMessageHits)
 	}
 }
+
+func TestNewTelegramClient_Direct(t *testing.T) {
+	c, err := newTelegramClient("", 10*time.Second)
+	if err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
+	if c.Timeout != 10*time.Second {
+		t.Errorf("Timeout = %v, want 10s", c.Timeout)
+	}
+	if c.Transport != http.DefaultTransport {
+		t.Errorf("Transport = %T, want http.DefaultTransport", c.Transport)
+	}
+}
+
+func TestNewTelegramClient_HTTP(t *testing.T) {
+	const proxyURL = "http://127.0.0.1:8080"
+	c, err := newTelegramClient(proxyURL, 10*time.Second)
+	if err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
+	tr, ok := c.Transport.(*http.Transport)
+	if !ok {
+		t.Fatalf("Transport = %T, want *http.Transport", c.Transport)
+	}
+	if tr.Proxy == nil {
+		t.Fatal("Transport.Proxy is nil — http proxy not wired")
+	}
+	req, _ := http.NewRequest("GET", "https://api.telegram.org/", nil)
+	got, err := tr.Proxy(req)
+	if err != nil {
+		t.Fatalf("Proxy() error: %v", err)
+	}
+	if got == nil || got.String() != proxyURL {
+		t.Errorf("Proxy() = %v, want %q", got, proxyURL)
+	}
+}
+
+func TestNewTelegramClient_SOCKS5(t *testing.T) {
+	const proxyURL = "socks5://127.0.0.1:1080"
+	c, err := newTelegramClient(proxyURL, 10*time.Second)
+	if err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
+	tr, ok := c.Transport.(*http.Transport)
+	if !ok {
+		t.Fatalf("Transport = %T, want *http.Transport", c.Transport)
+	}
+	if tr.DialContext == nil {
+		t.Error("Transport.DialContext is nil — socks5 dialer not wired")
+	}
+	if tr.Proxy != nil {
+		t.Error("Transport.Proxy is non-nil for socks5 — expected DialContext only")
+	}
+}
+
+func TestNewTelegramClient_InvalidScheme(t *testing.T) {
+	_, err := newTelegramClient("ftp://host:21", 10*time.Second)
+	if err == nil {
+		t.Fatal("expected error for ftp scheme, got nil")
+	}
+	if !strings.Contains(err.Error(), "unsupported proxy scheme") {
+		t.Errorf("error = %q, want to contain \"unsupported proxy scheme\"", err.Error())
+	}
+}

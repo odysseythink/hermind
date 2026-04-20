@@ -11,6 +11,8 @@ import (
 	"strconv"
 	"time"
 
+	"golang.org/x/net/proxy"
+
 	"github.com/odysseythink/hermind/gateway"
 )
 
@@ -28,6 +30,44 @@ func NewTelegram(token string) *Telegram {
 		baseURL: "https://api.telegram.org",
 		client:  &http.Client{Timeout: 60 * time.Second},
 	}
+}
+
+// newTelegramTransport returns an http.RoundTripper routed through proxyURL.
+// Empty proxyURL → http.DefaultTransport. Supported schemes: http, https, socks5.
+// Shared between the main Telegram client and DoHTransport's fallback path.
+func newTelegramTransport(proxyURL string) (http.RoundTripper, error) {
+	if proxyURL == "" {
+		return http.DefaultTransport, nil
+	}
+	u, err := url.Parse(proxyURL)
+	if err != nil {
+		return nil, fmt.Errorf("telegram: invalid proxy %q: %w", proxyURL, err)
+	}
+	switch u.Scheme {
+	case "http", "https":
+		return &http.Transport{Proxy: http.ProxyURL(u)}, nil
+	case "socks5":
+		dialer, err := proxy.FromURL(u, proxy.Direct)
+		if err != nil {
+			return nil, fmt.Errorf("telegram: socks5 dial: %w", err)
+		}
+		cd, ok := dialer.(proxy.ContextDialer)
+		if !ok {
+			return nil, fmt.Errorf("telegram: socks5 dialer does not support context")
+		}
+		return &http.Transport{DialContext: cd.DialContext}, nil
+	default:
+		return nil, fmt.Errorf("telegram: unsupported proxy scheme %q (want http/https/socks5)", u.Scheme)
+	}
+}
+
+// newTelegramClient wraps newTelegramTransport with the standard timeout.
+func newTelegramClient(proxyURL string, timeout time.Duration) (*http.Client, error) {
+	t, err := newTelegramTransport(proxyURL)
+	if err != nil {
+		return nil, err
+	}
+	return &http.Client{Transport: t, Timeout: timeout}, nil
 }
 
 // WithBaseURL is used by tests to point at an httptest.Server.
