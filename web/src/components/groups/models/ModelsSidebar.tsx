@@ -7,6 +7,13 @@ export interface ModelsSidebarProps {
   onSelectScalar: (key: string) => void;
   onSelectInstance: (key: string) => void;
   onNewProvider: () => void;
+  // Stage 4c additions
+  fallbackProviders: Array<{ provider: string }>;
+  dirtyFallbackIndices: Set<number>;
+  activeFallbackIndex: number | null;
+  onSelectFallback: (index: number) => void;
+  onAddFallback: () => void;
+  onMoveFallback: (index: number, direction: 'up' | 'down') => void;
 }
 
 export default function ModelsSidebar({
@@ -16,6 +23,12 @@ export default function ModelsSidebar({
   onSelectScalar,
   onSelectInstance,
   onNewProvider,
+  fallbackProviders,
+  dirtyFallbackIndices,
+  activeFallbackIndex,
+  onSelectFallback,
+  onAddFallback,
+  onMoveFallback,
 }: ModelsSidebarProps) {
   return (
     <div className={styles.sidebar}>
@@ -48,6 +61,58 @@ export default function ModelsSidebar({
       ))}
       <button type="button" className={styles.newBtn} onClick={onNewProvider}>
         + New provider
+      </button>
+      <div className={styles.groupHeader}>Fallback Providers</div>
+      {fallbackProviders.length === 0 && (
+        <div className={styles.empty}>No fallback providers configured.</div>
+      )}
+      {fallbackProviders.map((fb, i) => {
+        const active = i === activeFallbackIndex;
+        const atTop = i === 0;
+        const atBottom = i === fallbackProviders.length - 1;
+        return (
+          <div
+            key={i}
+            className={`${styles.fallbackRow} ${active ? styles.active : ''}`}
+          >
+            <button
+              type="button"
+              className={styles.fallbackBody}
+              onClick={() => onSelectFallback(i)}
+            >
+              <span className={styles.fallbackRowInner}>
+                <span className={styles.posBadge}>#{i + 1}</span>
+                <span className={styles.fallbackType}>{fb.provider}</span>
+                {dirtyFallbackIndices.has(i) && (
+                  <span className={styles.dirtyDot} title="Unsaved changes" />
+                )}
+              </span>
+            </button>
+            <div className={styles.fallbackMoveBtns}>
+              <button
+                type="button"
+                className={styles.moveBtn}
+                aria-label="Move up"
+                disabled={atTop}
+                onClick={() => onMoveFallback(i, 'up')}
+              >
+                ↑
+              </button>
+              <button
+                type="button"
+                className={styles.moveBtn}
+                aria-label="Move down"
+                disabled={atBottom}
+                onClick={() => onMoveFallback(i, 'down')}
+              >
+                ↓
+              </button>
+            </div>
+          </div>
+        );
+      })}
+      <button type="button" className={styles.newBtn} onClick={onAddFallback}>
+        + Add fallback
       </button>
     </div>
   );
