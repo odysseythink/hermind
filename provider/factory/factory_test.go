@@ -70,6 +70,31 @@ func TestNewUnknown(t *testing.T) {
 	assert.Error(t, err)
 }
 
+func TestFactory_Copilot(t *testing.T) {
+	p, err := factory.New(config.ProviderConfig{
+		Provider: "copilot",
+		Model:    "copilot",
+	})
+	require.NoError(t, err)
+	assert.Equal(t, "copilot", p.Name())
+}
+
+func TestFactory_Bedrock(t *testing.T) {
+	t.Setenv("AWS_REGION", "us-east-1")
+	t.Setenv("AWS_ACCESS_KEY_ID", "AKIA")
+	t.Setenv("AWS_SECRET_ACCESS_KEY", "secret")
+	t.Setenv("AWS_PROFILE", "")
+	t.Setenv("AWS_CONFIG_FILE", "/dev/null")
+	t.Setenv("AWS_SHARED_CREDENTIALS_FILE", "/dev/null")
+
+	p, err := factory.New(config.ProviderConfig{
+		Provider: "bedrock",
+		Model:    "anthropic.claude-opus-4-v1:0",
+	})
+	require.NoError(t, err)
+	assert.Equal(t, "bedrock", p.Name())
+}
+
 func TestNewAliases(t *testing.T) {
 	// "glm" should map to zhipu
 	p1, err := factory.New(config.ProviderConfig{
