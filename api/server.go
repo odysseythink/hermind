@@ -144,6 +144,7 @@ func (s *Server) buildRouter() chi.Router {
 		r.Get("/tools", s.handleToolsList)
 		r.Get("/skills", s.handleSkillsList)
 		r.Get("/providers", s.handleProvidersList)
+		r.Post("/providers/{name}/models", s.handleProvidersModels)
 		r.Get("/config/schema", s.handleConfigSchema)
 		r.Get("/platforms/schema", s.handlePlatformsSchema)
 		r.Post("/platforms/{key}/reveal", s.handlePlatformReveal)
