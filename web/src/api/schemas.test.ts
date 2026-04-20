@@ -7,6 +7,7 @@ import {
   FieldKindSchema,
   PlatformTestResponseSchema,
   PlatformsSchemaResponseSchema,
+  ProviderModelsResponseSchema,
   RevealResponseSchema,
   SchemaDescriptorSchema,
   SchemaFieldSchema,
@@ -221,6 +222,47 @@ describe('ConfigSectionSchema — shape discriminant', () => {
         shape: 'nested', // unknown
         fields: [{ name: 'a', label: 'A', kind: 'string' }],
       }),
+    ).toThrow();
+  });
+});
+
+describe('ConfigSectionSchema — keyed_map shape', () => {
+  it('accepts shape: "keyed_map"', () => {
+    const parsed = ConfigSectionSchema.parse({
+      key: 'providers',
+      label: 'Providers',
+      group_id: 'models',
+      shape: 'keyed_map',
+      fields: [
+        { name: 'provider', label: 'Provider type', kind: 'enum', required: true,
+          enum: ['anthropic', 'openai'] },
+        { name: 'api_key', label: 'API key', kind: 'secret', required: true },
+      ],
+    });
+    expect(parsed.shape).toBe('keyed_map');
+  });
+});
+
+describe('ProviderModelsResponseSchema', () => {
+  it('accepts a valid models list', () => {
+    const parsed = ProviderModelsResponseSchema.parse({
+      models: ['claude-opus-4-7', 'claude-sonnet-4-6'],
+    });
+    expect(parsed.models).toEqual(['claude-opus-4-7', 'claude-sonnet-4-6']);
+  });
+
+  it('accepts an empty models list', () => {
+    const parsed = ProviderModelsResponseSchema.parse({ models: [] });
+    expect(parsed.models).toEqual([]);
+  });
+
+  it('rejects missing models key', () => {
+    expect(() => ProviderModelsResponseSchema.parse({})).toThrow();
+  });
+
+  it('rejects non-string model entries', () => {
+    expect(() =>
+      ProviderModelsResponseSchema.parse({ models: [1, 2] }),
     ).toThrow();
   });
 });

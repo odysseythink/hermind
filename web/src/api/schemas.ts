@@ -99,7 +99,7 @@ export const ConfigSectionSchema = z.object({
   label: z.string(),
   summary: z.string().optional(),
   group_id: z.string(),
-  shape: z.enum(['map', 'scalar']).optional(), // default (absent) = map
+  shape: z.enum(['map', 'scalar', 'keyed_map']).optional(), // default (absent) = map
   fields: z.array(ConfigFieldSchema),
 });
 export type ConfigSection = z.infer<typeof ConfigSectionSchema>;
@@ -108,3 +108,8 @@ export const ConfigSchemaResponseSchema = z.object({
   sections: z.array(ConfigSectionSchema),
 });
 export type ConfigSchemaResponse = z.infer<typeof ConfigSchemaResponseSchema>;
+
+export const ProviderModelsResponseSchema = z.object({
+  models: z.array(z.string()),
+});
+export type ProviderModelsResponse = z.infer<typeof ProviderModelsResponseSchema>;
