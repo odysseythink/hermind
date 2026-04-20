@@ -168,3 +168,14 @@ rm -rf /tmp/hermind-smoke
 - Click Delete on the main-pane editor, confirm → sidebar row disappears, pane returns to EmptyState. Save — YAML `fallback_providers` shrinks by one.
 - Re-visit an existing fallback. API key field is blanked (GET redacts). Click Save without typing a new key — stored key at the same index is preserved (same contract as `providers.*.api_key`). **Gotcha:** after deleting or reordering fallbacks, the index-based preserve can misalign secrets. Always re-type the API key for any moved or deleted neighbor before saving.
 - With zero fallback entries, the sidebar shows "No fallback providers configured." and the YAML omits the `fallback_providers` key (thanks to `omitempty`).
+
+## Stage 4d · Default Model autocomplete
+
+- Configure at least two providers via the Providers section, each with a distinct `model` value (e.g. `anthropic/claude-opus-4-7`, `openai/gpt-4o`). Save.
+- Navigate to `#models/model`. Click the Model field. The browser's native autocomplete shows both configured model ids as suggestions (exact UI varies by browser — Chrome and Safari render a dropdown; Firefox shows on down-arrow).
+- Type a partial match (e.g. `claude`) — suggestions filter to matching entries.
+- Configure a third provider with a duplicate model id — the datalist still shows each unique id exactly once.
+- Clear the `model` field on one provider and save. That id disappears from the Default Model datalist on next visit.
+- Delete a provider entirely — same effect: its model id no longer surfaces as a suggestion.
+- Add a fallback provider with a model id that is NOT on any primary provider. The Default Model datalist does NOT include it — 4d intentionally scopes the source to `providers` only. (If you need this, the `DatalistSource` could be extended to multiple sources in a later stage.)
+- Every other field in the config UI continues to render as before — only the Default Model field has autocomplete.
