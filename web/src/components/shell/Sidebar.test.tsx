@@ -3,7 +3,7 @@ import { render, screen } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import type { ComponentProps } from 'react';
 import Sidebar from './Sidebar';
-import type { SchemaDescriptor } from '../../api/schemas';
+import type { ConfigSection, SchemaDescriptor } from '../../api/schemas';
 
 const descriptors: SchemaDescriptor[] = [] as SchemaDescriptor[];
 
@@ -18,6 +18,7 @@ function baseProps(
     instances: [],
     selectedKey: null,
     descriptors,
+    configSections: [],
     dirtyInstanceKeys: new Set<string>(),
     onSelectGroup: vi.fn(),
     onSelectSub: vi.fn(),
@@ -76,5 +77,53 @@ describe('Sidebar', () => {
   it('marks Gateway as dirty when dirtyGroups contains gateway', () => {
     render(<Sidebar {...baseProps({ dirtyGroups: new Set(['gateway']) })} />);
     expect(screen.getByTitle(/unsaved/i)).toBeInTheDocument();
+  });
+});
+
+describe('Sidebar — non-gateway groups', () => {
+  const storageSection: ConfigSection = {
+    key: 'storage', label: 'Storage', group_id: 'runtime', fields: [],
+  };
+
+  it('renders registered sections inside expanded non-gateway groups', () => {
+    render(
+      <Sidebar
+        activeGroup="runtime"
+        activeSubKey={null}
+        expandedGroups={new Set(['runtime'])}
+        dirtyGroups={new Set()}
+        instances={[]}
+        selectedKey={null}
+        descriptors={[]}
+        configSections={[storageSection]}
+        dirtyInstanceKeys={new Set()}
+        onSelectGroup={() => {}}
+        onSelectSub={() => {}}
+        onToggleGroup={() => {}}
+        onNewInstance={() => {}}
+      />,
+    );
+    expect(screen.getByRole('button', { name: /storage/i })).toBeInTheDocument();
+  });
+
+  it('shows "Coming soon" in groups with no registered sections', () => {
+    render(
+      <Sidebar
+        activeGroup={null}
+        activeSubKey={null}
+        expandedGroups={new Set(['memory'])}
+        dirtyGroups={new Set()}
+        instances={[]}
+        selectedKey={null}
+        descriptors={[]}
+        configSections={[]}
+        dirtyInstanceKeys={new Set()}
+        onSelectGroup={() => {}}
+        onSelectSub={() => {}}
+        onToggleGroup={() => {}}
+        onNewInstance={() => {}}
+      />,
+    );
+    expect(screen.getByText(/coming soon — stage 5/i)).toBeInTheDocument();
   });
 });

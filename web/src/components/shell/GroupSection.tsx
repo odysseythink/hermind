@@ -22,7 +22,6 @@ export default function GroupSection({
   onSelectGroup,
 }: GroupSectionProps) {
   const def = findGroup(group);
-  const isGateway = group === 'gateway';
   return (
     <div className={styles.section}>
       <div className={styles.header}>
@@ -45,9 +44,7 @@ export default function GroupSection({
       </div>
       {expanded && (
         <div className={styles.children}>
-          {isGateway
-            ? children
-            : <div className={styles.comingSoon}>Coming soon — stage {def.plannedStage}</div>}
+          {children}
         </div>
       )}
     </div>
