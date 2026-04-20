@@ -175,3 +175,70 @@ func TestConfigSchema_OmitsShapeForMapSections(t *testing.T) {
 		}
 	}
 }
+
+func TestConfigSchema_IncludesStage4aSections(t *testing.T) {
+	srv, err := api.NewServer(&api.ServerOpts{
+		Config: &config.Config{},
+		Token:  "test-token",
+	})
+	if err != nil {
+		t.Fatalf("NewServer: %v", err)
+	}
+	req := httptest.NewRequest("GET", "/api/config/schema", nil)
+	req.Header.Set("Authorization", "Bearer test-token")
+	w := httptest.NewRecorder()
+	srv.Router().ServeHTTP(w, req)
+
+	if w.Code != http.StatusOK {
+		t.Fatalf("status = %d", w.Code)
+	}
+	var body api.ConfigSchemaResponse
+	if err := json.Unmarshal(w.Body.Bytes(), &body); err != nil {
+		t.Fatalf("parse: %v", err)
+	}
+
+	var model, auxiliary *api.ConfigSectionDTO
+	for i := range body.Sections {
+		switch body.Sections[i].Key {
+		case "model":
+			model = &body.Sections[i]
+		case "auxiliary":
+			auxiliary = &body.Sections[i]
+		}
+	}
+	if model == nil {
+		t.Fatal("missing section \"model\"")
+	}
+	if auxiliary == nil {
+		t.Fatal("missing section \"auxiliary\"")
+	}
+	if model.GroupID != "models" {
+		t.Errorf("model.group_id = %q, want %q", model.GroupID, "models")
+	}
+	if model.Shape != "scalar" {
+		t.Errorf("model.shape = %q, want %q", model.Shape, "scalar")
+	}
+	if len(model.Fields) != 1 {
+		t.Errorf("model.fields length = %d, want 1", len(model.Fields))
+	}
+	if auxiliary.GroupID != "runtime" {
+		t.Errorf("auxiliary.group_id = %q, want %q", auxiliary.GroupID, "runtime")
+	}
+	if auxiliary.Shape != "" {
+		t.Errorf("auxiliary.shape = %q, want \"\" (map sections omit shape)", auxiliary.Shape)
+	}
+	// api_key must still be blanked for auxiliary via existing redact plumbing
+	var apiKey *api.ConfigFieldDTO
+	for i := range auxiliary.Fields {
+		if auxiliary.Fields[i].Name == "api_key" {
+			apiKey = &auxiliary.Fields[i]
+			break
+		}
+	}
+	if apiKey == nil {
+		t.Fatal("auxiliary.fields missing api_key")
+	}
+	if apiKey.Kind != "secret" {
+		t.Errorf("auxiliary.api_key.kind = %q, want \"secret\"", apiKey.Kind)
+	}
+}
