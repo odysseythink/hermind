@@ -40,8 +40,15 @@ func (e *Engine) RunConversation(ctx context.Context, opts *RunOptions) (*Conver
 		Role:    message.RoleUser,
 		Content: message.TextContent(opts.UserMessage),
 	})
+	if e.memory != nil {
+		e.memory.ObserveTurn(history[len(history)-1])
+	}
 
-	systemPrompt := e.prompt.Build(&PromptOptions{Model: model})
+	var activeSkills []ActiveSkill
+	if e.activeSkills != nil {
+		activeSkills = e.activeSkills()
+	}
+	systemPrompt := e.prompt.Build(&PromptOptions{Model: model, ActiveSkills: activeSkills})
 
 	// Persist the session + the incoming user message (if storage is configured)
 	if e.storage != nil {
@@ -103,6 +110,9 @@ func (e *Engine) RunConversation(ctx context.Context, opts *RunOptions) (*Conver
 		// Append assistant response to history
 		history = append(history, resp.Message)
 		lastResponse = resp.Message
+		if e.memory != nil {
+			e.memory.ObserveTurn(resp.Message)
+		}
 		totalUsage.InputTokens += resp.Usage.InputTokens
 		totalUsage.OutputTokens += resp.Usage.OutputTokens
 		totalUsage.CacheReadTokens += resp.Usage.CacheReadTokens

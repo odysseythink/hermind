@@ -22,10 +22,23 @@ type Engine struct {
 	prompt      *PromptBuilder
 	compressor  *Compressor        // optional, nil means compression disabled
 
+	// Auxiliary sub-capabilities: cheap LLM calls and composed memory
+	// backends. Both are optional; when nil the engine behaves exactly
+	// as before. Callers wire them via NewEngineWithToolsAndAux (which
+	// constructs an AuxClient and an empty MemoryManager when aux is set)
+	// or via SetAuxClient / SetMemoryManager for finer control.
+	aux    *provider.AuxClient
+	memory *MemoryManager
+
 	// Callbacks — optional. Nil means no-op.
 	onStreamDelta func(delta *provider.StreamDelta)
 	onToolStart   func(call message.ContentBlock)                // fired before tool execution
 	onToolResult  func(call message.ContentBlock, result string) // fired after
+
+	// activeSkills returns the skills whose bodies should be prepended to
+	// the system prompt. Called once per turn so the set can change as the
+	// user runs /skill-name commands mid-session. Nil means no skills.
+	activeSkills func() []ActiveSkill
 }
 
 // NewEngine constructs an Engine without tools. Use NewEngineWithTools if
@@ -55,7 +68,58 @@ func NewEngineWithToolsAndAux(p, aux provider.Provider, s storage.Storage, tools
 	if cfg.Compression.Enabled && aux != nil {
 		e.compressor = NewCompressor(cfg.Compression, aux)
 	}
+	if aux != nil {
+		// Aux client: prefer the auxiliary provider, fall back to the
+		// primary model so cheap calls still succeed when the aux side
+		// is misconfigured.
+		e.aux = provider.NewAuxClient([]provider.Provider{aux, p})
+	}
+	// MemoryManager is always constructed — even without backends it
+	// provides a built-in turn-history digest the engine can use.
+	e.memory = NewMemoryManager(nil)
+	if e.aux != nil {
+		e.memory.SetAuxClient(e.aux)
+	}
+	if e.compressor != nil {
+		e.memory.SetCompressor(e.compressor)
+	}
 	return e
+}
+
+// Aux returns the engine's auxiliary client, or nil if no auxiliary
+// provider was supplied. Callers (e.g. MemoryManager, compressor) use
+// this for cheap secondary LLM calls.
+func (e *Engine) Aux() *provider.AuxClient { return e.aux }
+
+// Memory returns the engine's memory manager. It is always non-nil
+// (even without registered backends it provides a turn-history
+// digest). Callers may AddProvider or ObserveTurn on it directly.
+func (e *Engine) Memory() *MemoryManager { return e.memory }
+
+// SetAuxClient overrides the engine's auxiliary client. Intended for
+// callers that build a custom fallback chain (e.g. OpenRouter -> Nous
+// -> Codex -> Anthropic) instead of relying on the default two-provider
+// chain constructed in NewEngineWithToolsAndAux.
+func (e *Engine) SetAuxClient(ac *provider.AuxClient) {
+	e.aux = ac
+	if e.memory != nil {
+		e.memory.SetAuxClient(ac)
+	}
+}
+
+// SetMemoryManager overrides the engine's memory manager. Intended for
+// CLI / gateway bootstrap code that loads config-driven memprovider
+// backends and wants to hand the engine a pre-populated manager.
+func (e *Engine) SetMemoryManager(mm *MemoryManager) {
+	e.memory = mm
+	if mm != nil {
+		if e.aux != nil {
+			mm.SetAuxClient(e.aux)
+		}
+		if e.compressor != nil {
+			mm.SetCompressor(e.compressor)
+		}
+	}
 }
 
 // SetStreamDeltaCallback registers a callback invoked for each streaming delta.
@@ -72,6 +136,13 @@ func (e *Engine) SetToolStartCallback(fn func(call message.ContentBlock)) {
 // SetToolResultCallback registers a callback invoked after each tool execution.
 func (e *Engine) SetToolResultCallback(fn func(call message.ContentBlock, result string)) {
 	e.onToolResult = fn
+}
+
+// SetActiveSkillsProvider registers a callback that returns the currently
+// active skills. The provider is invoked at the start of each turn and the
+// bodies are prepended to the system prompt.
+func (e *Engine) SetActiveSkillsProvider(fn func() []ActiveSkill) {
+	e.activeSkills = fn
 }
 
 // RunOptions parameterizes a conversation run.

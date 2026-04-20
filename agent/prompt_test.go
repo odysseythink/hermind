@@ -10,8 +10,8 @@ import (
 func TestPromptBuilderIncludesIdentity(t *testing.T) {
 	pb := NewPromptBuilder("cli")
 	prompt := pb.Build(&PromptOptions{Model: "claude-opus-4-6"})
-	assert.Contains(t, prompt, "Hermes Agent")
-	assert.Contains(t, prompt, "Nous Research")
+	assert.Contains(t, prompt, "Hermind Agent")
+	assert.Contains(t, prompt, "odysseythink")
 }
 
 func TestPromptBuilderPlatformHint(t *testing.T) {

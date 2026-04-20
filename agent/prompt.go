@@ -1,20 +1,36 @@
 // agent/prompt.go
 package agent
 
-import "strings"
+import (
+	"sort"
+	"strings"
+)
 
 // defaultIdentity is the base personality/identity block.
 // Ported from the Python hermes agent/prompt_builder.py DEFAULT_AGENT_IDENTITY.
-const defaultIdentity = `You are Hermes Agent, created by Nous Research.
+const defaultIdentity = `You are Hermind Agent, created by odysseythink.
 
 You are a helpful, knowledgeable AI assistant. You are direct and efficient.
-You respond with markdown formatting when it aids clarity.`
+You respond with markdown formatting when it aids clarity.
+
+You are running inside the "hermind" CLI. Skill packages for hermind live at
+$HERMIND_HOME/skills (defaults to ~/.hermind/skills). When the user asks you
+to install, add, or write a skill, place the SKILL.md under that path — never
+under ~/.openclaw, ~/.claude, or any other tool's directory.`
+
+// ActiveSkill is a minimal view of a skill that PromptBuilder needs.
+// Defined here so agent does not import the skills package.
+type ActiveSkill struct {
+	Name        string
+	Description string
+	Body        string
+}
 
 // PromptOptions parameterize prompt generation.
-// In later plans this will expand to include memory, skills, context files, etc.
 type PromptOptions struct {
-	Model       string
-	SkipContext bool
+	Model        string
+	SkipContext  bool
+	ActiveSkills []ActiveSkill // prepended under a stable header
 }
 
 // PromptBuilder assembles system prompts for the agent engine.
@@ -30,14 +46,38 @@ func NewPromptBuilder(platform string) *PromptBuilder {
 }
 
 // Build assembles the system prompt. The output is stable for equivalent
-// inputs — this is required for Anthropic prefix caching to work.
+// inputs — this is required for Anthropic prefix caching to work. Skill
+// order is normalized so the same active set always produces the same
+// prefix regardless of map iteration order upstream.
 func (pb *PromptBuilder) Build(opts *PromptOptions) string {
 	var parts []string
 	parts = append(parts, defaultIdentity)
 
-	// Context files, memory guidance, skills guidance, platform hints,
-	// and injection protection are added in later plans.
-	// For Plan 1 we just want a stable minimal prompt.
+	if opts != nil && len(opts.ActiveSkills) > 0 {
+		parts = append(parts, renderActiveSkills(opts.ActiveSkills))
+	}
 
 	return strings.Join(parts, "\n\n")
+}
+
+func renderActiveSkills(active []ActiveSkill) string {
+	sorted := make([]ActiveSkill, len(active))
+	copy(sorted, active)
+	sort.Slice(sorted, func(i, j int) bool { return sorted[i].Name < sorted[j].Name })
+
+	var b strings.Builder
+	b.WriteString("# Active skills\n\n")
+	b.WriteString("The following skills have been activated by the user. Follow their guidance for the rest of the conversation unless deactivated.\n")
+	for _, s := range sorted {
+		b.WriteString("\n## ")
+		b.WriteString(s.Name)
+		if s.Description != "" {
+			b.WriteString(" — ")
+			b.WriteString(s.Description)
+		}
+		b.WriteString("\n\n")
+		b.WriteString(strings.TrimSpace(s.Body))
+		b.WriteString("\n")
+	}
+	return strings.TrimRight(b.String(), "\n")
 }
