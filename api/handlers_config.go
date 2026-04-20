@@ -76,6 +76,13 @@ func redactPlatformSecrets(m map[string]any) {
 
 func redactSectionSecrets(m map[string]any) {
 	for _, sec := range descriptor.All() {
+		if sec.Shape == descriptor.ShapeScalar {
+			// Scalar sections have no nested map to walk. 4a has no
+			// scalar secrets, so the redact path is a no-op; the branch
+			// exists so a future scalar-secret descriptor doesn't fall
+			// through the map-assuming code below.
+			continue
+		}
 		blob, ok := m[sec.Key].(map[string]any)
 		if !ok {
 			continue
@@ -192,6 +199,10 @@ func preserveSectionSecrets(updated, current *config.Config) {
 
 	changed := false
 	for _, sec := range sections {
+		if sec.Shape == descriptor.ShapeScalar {
+			// See redactSectionSecrets — 4a has no scalar secrets.
+			continue
+		}
 		upd, ok := updM[sec.Key].(map[string]any)
 		if !ok {
 			continue

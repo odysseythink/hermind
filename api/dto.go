@@ -194,6 +194,7 @@ type ConfigSectionDTO struct {
 	Label   string           `json:"label"`
 	Summary string           `json:"summary,omitempty"`
 	GroupID string           `json:"group_id"`
+	Shape   string           `json:"shape,omitempty"` // "scalar" for scalar sections; omitted (= "map") for map sections
 	Fields  []ConfigFieldDTO `json:"fields"`
 }
 

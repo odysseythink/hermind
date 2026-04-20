@@ -138,3 +138,40 @@ func TestConfigSchema_IncludesStage3Sections(t *testing.T) {
 		}
 	}
 }
+
+func TestConfigSchema_OmitsShapeForMapSections(t *testing.T) {
+	// ShapeMap (the default zero value) must NOT emit a "shape" key in the
+	// JSON. Protects byte-level backwards compat for Stage 2/3 sections.
+	srv, err := api.NewServer(&api.ServerOpts{
+		Config: &config.Config{},
+		Token:  "test-token",
+	})
+	if err != nil {
+		t.Fatalf("NewServer: %v", err)
+	}
+	req := httptest.NewRequest("GET", "/api/config/schema", nil)
+	req.Header.Set("Authorization", "Bearer test-token")
+	w := httptest.NewRecorder()
+	srv.Router().ServeHTTP(w, req)
+
+	if w.Code != http.StatusOK {
+		t.Fatalf("status = %d", w.Code)
+	}
+	// Parse into a generic map so we can check for the literal absence of
+	// the "shape" key rather than a zero-value string.
+	var body struct {
+		Sections []map[string]any `json:"sections"`
+	}
+	if err := json.Unmarshal(w.Body.Bytes(), &body); err != nil {
+		t.Fatalf("parse: %v", err)
+	}
+	for _, sec := range body.Sections {
+		key, _ := sec["key"].(string)
+		if key == "storage" || key == "agent" || key == "terminal" ||
+			key == "logging" || key == "metrics" || key == "tracing" {
+			if _, present := sec["shape"]; present {
+				t.Errorf("section %q: shape key present, want absent for ShapeMap", key)
+			}
+		}
+	}
+}
