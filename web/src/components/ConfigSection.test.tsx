@@ -1,3 +1,4 @@
+import { useState } from 'react';
 import { describe, it, expect, vi } from 'vitest';
 import { render, screen } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
@@ -60,17 +61,33 @@ describe('ConfigSection', () => {
   it('dispatches onFieldChange with field name + value', async () => {
     const user = userEvent.setup();
     const onFieldChange = vi.fn();
-    render(
-      <ConfigSection
-        section={storage}
-        value={{ driver: 'sqlite', sqlite_path: '' }}
-        originalValue={{ driver: 'sqlite', sqlite_path: '' }}
-        onFieldChange={onFieldChange}
-      />,
-    );
+
+    // Wrapper mirrors the real parent-reducer flow: when ConfigSection
+    // dispatches a change, the parent updates state and re-renders with
+    // the new value. ConfigSection itself is stateless — the reducer is
+    // the single source of truth.
+    function Host() {
+      const [value, setValue] = useState<Record<string, unknown>>({
+        driver: 'sqlite',
+        sqlite_path: '',
+      });
+      return (
+        <ConfigSection
+          section={storage}
+          value={value}
+          originalValue={{ driver: 'sqlite', sqlite_path: '' }}
+          onFieldChange={(name, v) => {
+            setValue(prev => ({ ...prev, [name]: v }));
+            onFieldChange(name, v);
+          }}
+        />
+      );
+    }
+
+    render(<Host />);
     const input = screen.getByLabelText(/sqlite path/i);
     await user.type(input, '/tmp/x.sqlite');
-    // TextInput fires onChange per keystroke; assert last call.
+
     const calls = onFieldChange.mock.calls;
     expect(calls.length).toBeGreaterThan(0);
     expect(calls[calls.length - 1][0]).toBe('sqlite_path');

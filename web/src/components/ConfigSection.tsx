@@ -1,4 +1,3 @@
-import { useState } from 'react';
 import styles from './ConfigSection.module.css';
 import type { ConfigField, ConfigSection as ConfigSectionT, SchemaField } from '../api/schemas';
 import TextInput from './fields/TextInput';
@@ -21,31 +20,25 @@ export default function ConfigSection({
   originalValue,
   onFieldChange,
 }: ConfigSectionProps) {
-  const [edits, setEdits] = useState<Record<string, string>>({});
-
-  const handleFieldChange = (name: string, v: string) => {
-    setEdits(prev => ({ ...prev, [name]: v }));
-    onFieldChange(name, v);
-  };
-
   return (
     <section className={styles.section} aria-label={section.label}>
       <h2 className={styles.title}>{section.label}</h2>
       {section.summary && <p className={styles.summary}>{section.summary}</p>}
       {section.fields.map(f => {
         if (!isVisible(f, value)) return null;
-        const current = edits[f.name] !== undefined ? edits[f.name] : asString(value[f.name]);
+        const current = asString(value[f.name]);
         const original = asString(originalValue[f.name]);
         const schemaField = f as SchemaField;
+        const onChange = (v: string) => onFieldChange(f.name, v);
         switch (f.kind) {
           case 'int':
-            return <NumberInput key={f.name} field={schemaField} value={current} onChange={(v) => handleFieldChange(f.name, v)} />;
+            return <NumberInput key={f.name} field={schemaField} value={current} onChange={onChange} />;
           case 'float':
-            return <FloatInput key={f.name} field={schemaField} value={current} onChange={(v) => handleFieldChange(f.name, v)} />;
+            return <FloatInput key={f.name} field={schemaField} value={current} onChange={onChange} />;
           case 'bool':
-            return <BoolToggle key={f.name} field={schemaField} value={current} onChange={(v) => handleFieldChange(f.name, v)} />;
+            return <BoolToggle key={f.name} field={schemaField} value={current} onChange={onChange} />;
           case 'enum':
-            return <EnumSelect key={f.name} field={schemaField} value={current} onChange={(v) => handleFieldChange(f.name, v)} />;
+            return <EnumSelect key={f.name} field={schemaField} value={current} onChange={onChange} />;
           case 'secret':
             return (
               <SecretInput
@@ -55,12 +48,12 @@ export default function ConfigSection({
                 instanceKey=""
                 dirty={current !== original}
                 disableReveal
-                onChange={(v) => handleFieldChange(f.name, v)}
+                onChange={onChange}
               />
             );
           case 'string':
           default:
-            return <TextInput key={f.name} field={schemaField} value={current} onChange={(v) => handleFieldChange(f.name, v)} />;
+            return <TextInput key={f.name} field={schemaField} value={current} onChange={onChange} />;
         }
       })}
     </section>
