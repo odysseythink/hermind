@@ -80,14 +80,38 @@ func TestPlatformsSchema_TelegramFieldShape(t *testing.T) {
 	if tg == nil {
 		t.Fatal("telegram descriptor not in response")
 	}
-	if len(tg.Fields) != 1 {
-		t.Fatalf("telegram fields = %d, want 1", len(tg.Fields))
+	if len(tg.Fields) != 2 {
+		t.Fatalf("telegram fields = %d, want 2", len(tg.Fields))
 	}
-	if tg.Fields[0].Kind != "secret" {
-		t.Errorf("token kind = %q, want secret", tg.Fields[0].Kind)
+	var tokenField, proxyField *api.SchemaFieldDTO
+	for i := range tg.Fields {
+		switch tg.Fields[i].Name {
+		case "token":
+			tokenField = &tg.Fields[i]
+		case "proxy":
+			proxyField = &tg.Fields[i]
+		}
 	}
-	if !tg.Fields[0].Required {
+	if tokenField == nil {
+		t.Fatal("telegram descriptor missing token field")
+	}
+	if tokenField.Kind != "secret" {
+		t.Errorf("token kind = %q, want secret", tokenField.Kind)
+	}
+	if !tokenField.Required {
 		t.Errorf("token.Required = false, want true")
+	}
+	if proxyField == nil {
+		t.Fatal("telegram descriptor missing proxy field")
+	}
+	if proxyField.Kind != "string" {
+		t.Errorf("proxy kind = %q, want string", proxyField.Kind)
+	}
+	if proxyField.Required {
+		t.Errorf("proxy.Required = true, want false")
+	}
+	if proxyField.Help == "" {
+		t.Errorf("proxy.Help is empty, want help text")
 	}
 }
 
