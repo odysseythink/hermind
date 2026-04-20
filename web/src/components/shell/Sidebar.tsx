@@ -27,6 +27,7 @@ export interface SidebarProps {
   onNewProvider: () => void;
   onAddFallback: () => void;
   onMoveFallback: (index: number, direction: 'up' | 'down') => void;
+  onReorderFallback: (from: number, to: number) => void;
 }
 
 export default function Sidebar(props: SidebarProps) {
@@ -74,6 +75,7 @@ export default function Sidebar(props: SidebarProps) {
               }}
               onAddFallback={props.onAddFallback}
               onMoveFallback={props.onMoveFallback}
+              onReorderFallback={props.onReorderFallback}
             />
           ) : (
             <SectionList

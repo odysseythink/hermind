@@ -292,6 +292,14 @@ export default function App() {
             index,
           })
         }
+        onReorderFallback={(from, to) =>
+          dispatch({
+            type: 'list-instance/move',
+            sectionKey: 'fallback_providers',
+            from,
+            to,
+          })
+        }
       />
       <main>
         <ContentPanel

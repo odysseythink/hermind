@@ -31,6 +31,7 @@ function baseProps(
     onNewProvider: vi.fn(),
     onAddFallback: vi.fn(),
     onMoveFallback: vi.fn(),
+    onReorderFallback: vi.fn(),
     ...overrides,
   };
 }
@@ -115,6 +116,7 @@ describe('Sidebar — non-gateway groups', () => {
         onNewProvider={() => {}}
         onAddFallback={() => {}}
         onMoveFallback={() => {}}
+        onReorderFallback={() => {}}
       />,
     );
     expect(screen.getByRole('button', { name: /storage/i })).toBeInTheDocument();
@@ -143,6 +145,7 @@ describe('Sidebar — non-gateway groups', () => {
         onNewProvider={() => {}}
         onAddFallback={() => {}}
         onMoveFallback={() => {}}
+        onReorderFallback={() => {}}
       />,
     );
     expect(screen.getByText(/coming soon — stage 5/i)).toBeInTheDocument();
