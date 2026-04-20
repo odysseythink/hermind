@@ -331,6 +331,48 @@ func TestShapeListInvariant_FlagsMissingProviderEnum(t *testing.T) {
 	}
 }
 
+func TestFieldSpec_DatalistSourceField(t *testing.T) {
+	// A FieldSpec may carry an optional DatalistSource pointer. Nil by default;
+	// when set, the DTO emission surfaces it and the UI renders a datalist.
+	key := "__test_datalist_source"
+	defer delete(registry, key)
+	Register(Section{
+		Key:     key,
+		Label:   "Test",
+		GroupID: "runtime",
+		Shape:   ShapeScalar,
+		Fields: []FieldSpec{
+			{
+				Name:  "thing",
+				Label: "Thing",
+				Kind:  FieldString,
+				DatalistSource: &DatalistSource{
+					Section: "providers",
+					Field:   "model",
+				},
+			},
+		},
+	})
+	s, _ := Get(key)
+	if len(s.Fields) != 1 {
+		t.Fatalf("got %d fields, want 1", len(s.Fields))
+	}
+	ds := s.Fields[0].DatalistSource
+	if ds == nil {
+		t.Fatal("DatalistSource is nil")
+	}
+	if ds.Section != "providers" || ds.Field != "model" {
+		t.Errorf("DatalistSource = %+v, want {Section: providers, Field: model}", ds)
+	}
+}
+
+func TestFieldSpec_DatalistSourceDefaultsToNil(t *testing.T) {
+	var f FieldSpec
+	if f.DatalistSource != nil {
+		t.Errorf("zero-value DatalistSource = %+v, want nil", f.DatalistSource)
+	}
+}
+
 func TestShapeListInvariant_FlagsEmptyFields(t *testing.T) {
 	key := "__test_list_empty_fields"
 	defer delete(registry, key)

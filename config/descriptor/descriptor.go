@@ -75,6 +75,15 @@ type Predicate struct {
 	Equals any
 }
 
+// DatalistSource points a string-kind field at another section's field so the
+// UI can render an autocomplete datalist populated from that section's
+// currently-configured values. Strictly opt-in; nil means "render as a plain
+// text input". Evaluated client-side against state.config — no new API call.
+type DatalistSource struct {
+	Section string // target section key, e.g. "providers"
+	Field   string // target field name inside each element of that section
+}
+
 // FieldSpec describes one configurable field of a Section.
 type FieldSpec struct {
 	Name        string     // yaml key: "sqlite_path"
@@ -85,6 +94,12 @@ type FieldSpec struct {
 	Default     any        // nil when none
 	Enum        []string   // only for FieldEnum
 	VisibleWhen *Predicate // nil = always visible
+	// DatalistSource is optional. When set on a FieldString field, the UI
+	// renders a native <datalist> populated by iterating state.config[Section]
+	// and collecting each element's Field. Works transparently for both
+	// ShapeKeyedMap (iterates map values) and ShapeList (iterates array
+	// elements) because the renderer detects the container shape at runtime.
+	DatalistSource *DatalistSource
 }
 
 // Section is the schema for one top-level config.Config field
