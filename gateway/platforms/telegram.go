@@ -24,12 +24,16 @@ type Telegram struct {
 	offset  int
 }
 
-func NewTelegram(token string) *Telegram {
+func NewTelegram(token, proxyURL string) (*Telegram, error) {
+	client, err := newTelegramClient(proxyURL, 60*time.Second)
+	if err != nil {
+		return nil, err
+	}
 	return &Telegram{
 		token:   token,
 		baseURL: "https://api.telegram.org",
-		client:  &http.Client{Timeout: 60 * time.Second},
-	}
+		client:  client,
+	}, nil
 }
 
 // newTelegramTransport returns an http.RoundTripper routed through proxyURL.

@@ -17,7 +17,7 @@ func init() {
 				Help: "From @BotFather."},
 		},
 		Build: func(opts map[string]string) (gateway.Platform, error) {
-			return NewTelegram(opts["token"]), nil
+			return NewTelegram(opts["token"], opts["proxy"])
 		},
 		Test: func(ctx context.Context, opts map[string]string) error {
 			return testTelegram(ctx, opts["token"], "https://api.telegram.org")

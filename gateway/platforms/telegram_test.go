@@ -41,7 +41,11 @@ func TestTelegramPollingAndReply(t *testing.T) {
 	}))
 	defer srv.Close()
 
-	tg := NewTelegram("bot-token").WithBaseURL(srv.URL)
+	tg, err := NewTelegram("bot-token", "")
+	if err != nil {
+		t.Fatalf("NewTelegram: %v", err)
+	}
+	tg = tg.WithBaseURL(srv.URL)
 	ctx, cancel := context.WithTimeout(context.Background(), 2*time.Second)
 	defer cancel()
 
