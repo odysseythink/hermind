@@ -413,7 +413,7 @@ describe('boot/loaded carries configSections', () => {
   });
 });
 
-describe("reducer: edit/config-scalar", () => {
+describe('reducer: edit/config-scalar', () => {
   it('sets the scalar value under the given section key', () => {
     const s = { ...initialState, config: { model: 'anthropic/claude-opus-4-6' } as any };
     const next = reducer(s, {
