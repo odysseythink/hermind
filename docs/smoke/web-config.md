@@ -140,3 +140,11 @@ rm -rf /tmp/hermind-smoke
 - **Tracing:** `#observability/tracing` — Enabled toggle gates the File field. Flipping enabled off hides File; the YAML still round-trips the stored `file` because nothing was blanked on the backend (non-secret).
 - **Agent:** `#runtime/agent` — Two int inputs (`max_turns`, `gateway_timeout`). Compression is not editable here (CLI-only); see the deferral note atop `config/descriptor/agent.go`.
 - **Terminal:** `#runtime/terminal` — Backend enum (local, docker, ssh, modal, daytona, singularity) gates per-backend fields. `modal_token` and `daytona_token` are `FieldSecret`; GET blanks them, PUT preserves them when the submitted value is empty (same round-trip behavior as `storage.postgres_url`). `docker_volumes` is intentionally absent — edit it in `config.yaml` until list-field support lands.
+
+## Stage 4a · Default model + Auxiliary provider
+
+- Sidebar shows a new `#models/model` entry under the Models group and a new `#runtime/auxiliary` entry under the Runtime group (between Agent and Terminal).
+- `GET /api/config/schema` returns the `model` section with `shape: "scalar"`. `auxiliary` comes through without a `shape` key (defaults to map).
+- **Default model (`#models/model`):** single text field. Typing a new provider-qualified id and Saving writes a top-level YAML scalar (`model: anthropic/claude-opus-4-7`), NOT a nested object.
+- **Auxiliary (`#runtime/auxiliary`):** four fields — Provider (enum populated from `provider/factory.Types()`), Base URL, API key (`FieldSecret` — blanked on GET, preserved on empty PUT), Model. All four are optional.
+- All four auxiliary fields blank → Save → the whole `auxiliary:` block vanishes from YAML (`omitempty` on every sub-field) and the main provider stays in use at runtime.
