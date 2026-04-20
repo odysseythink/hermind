@@ -5,6 +5,7 @@ import {
   ConfigResponseSchema,
   ConfigSchemaResponseSchema,
   PlatformsSchemaResponseSchema,
+  ProviderModelsResponseSchema,
 } from './api/schemas';
 import {
   dirtyGroups as selectDirtyGroups,
@@ -14,6 +15,7 @@ import {
   reducer,
   totalDirtyCount,
 } from './state';
+import { keyedInstanceDirty } from './shell/keyedInstances';
 import { migrateLegacyHash, parseHash, stringifyHash } from './shell/hash';
 import type { GroupId } from './shell/groups';
 import TopBar from './components/shell/TopBar';
@@ -21,6 +23,7 @@ import Sidebar from './components/shell/Sidebar';
 import ContentPanel from './components/shell/ContentPanel';
 import Footer from './components/Footer';
 import NewInstanceDialog from './components/NewInstanceDialog';
+import NewProviderDialog from './components/groups/models/NewProviderDialog';
 
 export default function App() {
   const [state, dispatch] = useReducer(reducer, initialState);
@@ -121,6 +124,43 @@ export default function App() {
     // other state changes like activeGroup or flash.
   }, [state.config.gateway?.platforms, state.originalConfig.gateway?.platforms]); // eslint-disable-line react-hooks/exhaustive-deps
 
+  const providerInstances = useMemo(() => {
+    const p = ((state.config as Record<string, unknown>).providers as
+      | Record<string, Record<string, unknown>>
+      | undefined) ?? {};
+    return Object.keys(p)
+      .sort()
+      .map(k => ({
+        key: k,
+        type: (p[k].provider as string) ?? '',
+      }));
+  }, [state.config]);
+
+  const dirtyProviderKeys = useMemo(() => {
+    const cur = ((state.config as Record<string, unknown>).providers as
+      | Record<string, unknown>
+      | undefined) ?? {};
+    const orig = ((state.originalConfig as Record<string, unknown>).providers as
+      | Record<string, unknown>
+      | undefined) ?? {};
+    const keys = new Set<string>([...Object.keys(cur), ...Object.keys(orig)]);
+    const out = new Set<string>();
+    for (const k of keys) {
+      if (keyedInstanceDirty(state, 'providers', k)) out.add(k);
+    }
+    return out;
+  }, [state]);
+
+  const [newProviderDialogOpen, setNewProviderDialogOpen] = useState(false);
+
+  const onFetchProviderModels = useCallback(async (instanceKey: string) => {
+    const res = await apiFetch(`/api/providers/${encodeURIComponent(instanceKey)}/models`, {
+      method: 'POST',
+      schema: ProviderModelsResponseSchema,
+    });
+    return res;
+  }, []);
+
   const dirtyGroupIds = useMemo(() => selectDirtyGroups(state), [state]);
   const dirty = totalDirtyCount(state);
   const busy = state.status === 'saving' || state.status === 'applying';
@@ -190,13 +230,13 @@ export default function App() {
         descriptors={state.descriptors}
         configSections={state.configSections}
         dirtyInstanceKeys={dirtyInstanceKeys}
+        providerInstances={providerInstances}
+        dirtyProviderKeys={dirtyProviderKeys}
         onSelectGroup={(id: GroupId) => dispatch({ type: 'shell/selectGroup', group: id })}
-        onSelectSub={(key: string) => {
-          dispatch({ type: 'shell/selectGroup', group: 'gateway' });
-          dispatch({ type: 'shell/selectSub', key });
-        }}
+        onSelectSub={(key: string) => dispatch({ type: 'shell/selectSub', key })}
         onToggleGroup={(id: GroupId) => dispatch({ type: 'shell/toggleGroup', group: id })}
         onNewInstance={() => setNewDialogOpen(true)}
+        onNewProvider={() => setNewProviderDialogOpen(true)}
       />
       <main>
         <ContentPanel
@@ -226,6 +266,14 @@ export default function App() {
           onConfigScalar={(sectionKey, value) =>
             dispatch({ type: 'edit/config-scalar', sectionKey, value })
           }
+          onConfigKeyedField={(sectionKey, instanceKey, field, value) =>
+            dispatch({ type: 'edit/keyed-instance-field', sectionKey, instanceKey, field, value })
+          }
+          onConfigKeyedDelete={(sectionKey, instanceKey) => {
+            dispatch({ type: 'keyed-instance/delete', sectionKey, instanceKey });
+            dispatch({ type: 'shell/selectSub', key: null });
+          }}
+          onFetchModels={onFetchProviderModels}
         />
       </main>
       <Footer flash={state.flash} />
@@ -242,6 +290,36 @@ export default function App() {
           }}
         />
       )}
+      {newProviderDialogOpen && (() => {
+        const section = state.configSections.find(s => s.key === 'providers');
+        const providerField = section?.fields.find(f => f.name === 'provider');
+        const types = (providerField?.enum ?? []) as readonly string[];
+        const existingKeys = new Set(
+          Object.keys(
+            ((state.config as Record<string, unknown>).providers as
+              | Record<string, unknown>
+              | undefined) ?? {},
+          ),
+        );
+        return (
+          <NewProviderDialog
+            providerTypes={types}
+            existingKeys={existingKeys}
+            onCancel={() => setNewProviderDialogOpen(false)}
+            onCreate={(key, providerType) => {
+              dispatch({
+                type: 'keyed-instance/create',
+                sectionKey: 'providers',
+                instanceKey: key,
+                initial: { provider: providerType, base_url: '', api_key: '', model: '' },
+              });
+              dispatch({ type: 'shell/selectGroup', group: 'models' });
+              dispatch({ type: 'shell/selectSub', key });
+              setNewProviderDialogOpen(false);
+            }}
+          />
+        );
+      })()}
     </div>
   );
 }

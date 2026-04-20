@@ -20,10 +20,13 @@ function baseProps(
     descriptors,
     configSections: [],
     dirtyInstanceKeys: new Set<string>(),
+    providerInstances: [],
+    dirtyProviderKeys: new Set<string>(),
     onSelectGroup: vi.fn(),
     onSelectSub: vi.fn(),
     onToggleGroup: vi.fn(),
     onNewInstance: vi.fn(),
+    onNewProvider: vi.fn(),
     ...overrides,
   };
 }
@@ -60,11 +63,11 @@ describe('Sidebar', () => {
     render(
       <Sidebar
         {...baseProps({
-          expandedGroups: new Set(['gateway', 'models']),
+          expandedGroups: new Set(['gateway', 'memory']),
         })}
       />,
     );
-    expect(screen.getByText(/coming soon — stage 3 & 4/i)).toBeInTheDocument();
+    expect(screen.getByText(/coming soon — stage 5/i)).toBeInTheDocument();
   });
 
   it('calls onToggleGroup when an arrow is clicked', async () => {
@@ -97,10 +100,13 @@ describe('Sidebar — non-gateway groups', () => {
         descriptors={[]}
         configSections={[storageSection]}
         dirtyInstanceKeys={new Set()}
+        providerInstances={[]}
+        dirtyProviderKeys={new Set()}
         onSelectGroup={() => {}}
         onSelectSub={() => {}}
         onToggleGroup={() => {}}
         onNewInstance={() => {}}
+        onNewProvider={() => {}}
       />,
     );
     expect(screen.getByRole('button', { name: /storage/i })).toBeInTheDocument();
@@ -118,12 +124,44 @@ describe('Sidebar — non-gateway groups', () => {
         descriptors={[]}
         configSections={[]}
         dirtyInstanceKeys={new Set()}
+        providerInstances={[]}
+        dirtyProviderKeys={new Set()}
         onSelectGroup={() => {}}
         onSelectSub={() => {}}
         onToggleGroup={() => {}}
         onNewInstance={() => {}}
+        onNewProvider={() => {}}
       />,
     );
     expect(screen.getByText(/coming soon — stage 5/i)).toBeInTheDocument();
+  });
+});
+
+describe('Sidebar — models group', () => {
+  it('renders ModelsSidebar for the models group (not SectionList)', () => {
+    const providersSection: ConfigSection = {
+      key: 'providers', label: 'Providers', group_id: 'models', shape: 'keyed_map',
+      fields: [
+        { name: 'provider', label: 'Provider type', kind: 'enum', required: true,
+          enum: ['anthropic'] },
+      ],
+    };
+    const modelSection: ConfigSection = {
+      key: 'model', label: 'Default model', group_id: 'models', shape: 'scalar',
+      fields: [{ name: 'model', label: 'Model', kind: 'string' }],
+    };
+    render(
+      <Sidebar
+        {...baseProps({
+          expandedGroups: new Set(['models']),
+          configSections: [modelSection, providersSection],
+          providerInstances: [{ key: 'anthropic_main', type: 'anthropic' }],
+        })}
+      />,
+    );
+    expect(screen.getByText('Default model')).toBeInTheDocument();
+    expect(screen.getByText('Providers')).toBeInTheDocument();
+    expect(screen.getByText('anthropic_main')).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: /new provider/i })).toBeInTheDocument();
   });
 });

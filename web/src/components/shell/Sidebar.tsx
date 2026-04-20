@@ -3,6 +3,7 @@ import { GROUPS, type GroupId } from '../../shell/groups';
 import GroupSection from './GroupSection';
 import GatewaySidebar from '../groups/gateway/GatewaySidebar';
 import SectionList from './SectionList';
+import ModelsSidebar from '../groups/models/ModelsSidebar';
 import type { ConfigSection, SchemaDescriptor } from '../../api/schemas';
 
 export interface SidebarProps {
@@ -15,10 +16,13 @@ export interface SidebarProps {
   descriptors: SchemaDescriptor[];
   configSections: ConfigSection[];
   dirtyInstanceKeys: Set<string>;
+  providerInstances: Array<{ key: string; type: string }>;
+  dirtyProviderKeys: Set<string>;
   onSelectGroup: (id: GroupId) => void;
   onSelectSub: (key: string) => void;
   onToggleGroup: (id: GroupId) => void;
   onNewInstance: () => void;
+  onNewProvider: () => void;
 }
 
 export default function Sidebar(props: SidebarProps) {
@@ -32,8 +36,26 @@ export default function Sidebar(props: SidebarProps) {
               selectedKey={props.selectedKey}
               descriptors={props.descriptors}
               dirtyKeys={props.dirtyInstanceKeys}
-              onSelect={props.onSelectSub}
+              onSelect={key => {
+                props.onSelectGroup('gateway');
+                props.onSelectSub(key);
+              }}
               onNewInstance={props.onNewInstance}
+            />
+          ) : g.id === 'models' ? (
+            <ModelsSidebar
+              instances={props.providerInstances}
+              activeSubKey={props.activeGroup === 'models' ? props.activeSubKey : null}
+              dirtyKeys={props.dirtyProviderKeys}
+              onSelectScalar={key => {
+                props.onSelectGroup('models');
+                props.onSelectSub(key);
+              }}
+              onSelectInstance={key => {
+                props.onSelectGroup('models');
+                props.onSelectSub(key);
+              }}
+              onNewProvider={props.onNewProvider}
             />
           ) : (
             <SectionList

@@ -30,6 +30,9 @@ function makeProps(
     onSelectGroup: () => {},
     onConfigField: () => {},
     onConfigScalar: () => {},
+    onConfigKeyedField: () => {},
+    onConfigKeyedDelete: () => {},
+    onFetchModels: async () => ({ models: [] }),
     ...overrides,
   };
 }
@@ -87,6 +90,9 @@ describe('ContentPanel — non-gateway section routing', () => {
     onSelectGroup: () => {},
     onConfigField: () => {},
     onConfigScalar: () => {},
+    onConfigKeyedField: () => {},
+    onConfigKeyedDelete: () => {},
+    onFetchModels: async () => ({ models: [] }),
   };
 
   it('renders the ConfigSection for runtime/storage', () => {
@@ -172,5 +178,57 @@ describe('ContentPanel — scalar section routing', () => {
     const [sectionKey, value] = calls[calls.length - 1];
     expect(sectionKey).toBe('model');
     expect(value).toBe('anthropic/claude-opus-4-7');
+  });
+});
+
+describe('ContentPanel — keyed_map section routing', () => {
+  const providersSection: ConfigSection = {
+    key: 'providers',
+    label: 'Providers',
+    group_id: 'models',
+    shape: 'keyed_map',
+    fields: [
+      { name: 'provider', label: 'Provider type', kind: 'enum', required: true,
+        enum: ['anthropic'] },
+      { name: 'api_key', label: 'API key', kind: 'secret', required: true },
+    ],
+  };
+
+  it('renders EmptyState when no activeSubKey is selected', () => {
+    render(
+      <ContentPanel
+        {...makeProps({
+          activeGroup: 'models',
+          activeSubKey: null,
+          configSections: [providersSection],
+        })}
+      />,
+    );
+    // EmptyState renders the "No instance selected" message (or similar).
+    expect(screen.getByText(/select/i)).toBeInTheDocument();
+  });
+
+  it('renders ProviderEditor for a selected keyed-map instance', () => {
+    render(
+      <ContentPanel
+        {...makeProps({
+          activeGroup: 'models',
+          activeSubKey: 'anthropic_main',
+          config: {
+            providers: {
+              anthropic_main: { provider: 'anthropic', api_key: '' },
+            },
+          } as unknown as Config,
+          originalConfig: {
+            providers: {
+              anthropic_main: { provider: 'anthropic', api_key: '' },
+            },
+          } as unknown as Config,
+          configSections: [providersSection],
+        })}
+      />,
+    );
+    expect(screen.getByText(/anthropic_main/i)).toBeInTheDocument();
+    expect(screen.getByLabelText(/api key/i)).toBeInTheDocument();
   });
 });

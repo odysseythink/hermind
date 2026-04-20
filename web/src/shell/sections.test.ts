@@ -54,9 +54,16 @@ describe('SECTIONS registry', () => {
     expect(observability.map(s => s.key)).toEqual(['logging', 'metrics', 'tracing']);
   });
 
-  it('models group exposes model', () => {
+  it('registers Stage 4b section: providers under models', () => {
+    const p = findSection('providers');
+    expect(p, 'missing providers').toBeDefined();
+    expect(p!.groupId).toBe('models');
+    expect(p!.plannedStage).toBe('done');
+  });
+
+  it('models group exposes model then providers in declaration order', () => {
     const models = sectionsInGroup('models');
-    expect(models.map(s => s.key)).toEqual(['model']);
+    expect(models.map(s => s.key)).toEqual(['model', 'providers']);
   });
 
   it('sectionsInGroup returns [] for a group with no registered sections', () => {
