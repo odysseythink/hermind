@@ -135,8 +135,8 @@ rm -rf /tmp/hermind-smoke
 
 - Sidebar now shows three sub-entries inside Runtime (Storage, Agent, Terminal) and three inside Observability (Logging, Metrics, Tracing). Each is clickable and routes to its own editor.
 - `GET /api/config/schema` returns six sections (storage + the five new ones) sorted by key.
-- **Logging:** `#observability/logging` — Level enum defaults to `info`. Change to `debug`, Save, and grep for `logging:\n  level: debug` in `config.yaml`.
+- **Logging:** `#observability/logging` — Level enum defaults to `info`. Change to `debug`, Save, and confirm `config.yaml` contains `level: debug` directly under a `logging:` block.
 - **Metrics:** `#observability/metrics` — Listen address is a plain string. `:9100` round-trips.
 - **Tracing:** `#observability/tracing` — Enabled toggle gates the File field. Flipping enabled off hides File; the YAML still round-trips the stored `file` because nothing was blanked on the backend (non-secret).
-- **Agent:** `#runtime/agent` — Two int inputs (`max_turns`, `gateway_timeout`). Compression is not editable here (CLI-only); the sidebar description still mentions it as a later stage.
+- **Agent:** `#runtime/agent` — Two int inputs (`max_turns`, `gateway_timeout`). Compression is not editable here (CLI-only); see the deferral note atop `config/descriptor/agent.go`.
 - **Terminal:** `#runtime/terminal` — Backend enum (local, docker, ssh, modal, daytona, singularity) gates per-backend fields. `modal_token` and `daytona_token` are `FieldSecret`; GET blanks them, PUT preserves them when the submitted value is empty (same round-trip behavior as `storage.postgres_url`). `docker_volumes` is intentionally absent — edit it in `config.yaml` until list-field support lands.
