@@ -82,6 +82,12 @@ export const ConfigPredicateSchema = z.object({
 });
 export type ConfigPredicate = z.infer<typeof ConfigPredicateSchema>;
 
+export const DatalistSourceSchema = z.object({
+  section: z.string(),
+  field: z.string(),
+});
+export type DatalistSource = z.infer<typeof DatalistSourceSchema>;
+
 export const ConfigFieldSchema = z.object({
   name: z.string(),
   label: z.string(),
@@ -91,6 +97,7 @@ export const ConfigFieldSchema = z.object({
   default: z.unknown().optional(),
   enum: z.array(z.string()).optional(),
   visible_when: ConfigPredicateSchema.optional(),
+  datalist_source: DatalistSourceSchema.optional(),
 });
 export type ConfigField = z.infer<typeof ConfigFieldSchema>;
 

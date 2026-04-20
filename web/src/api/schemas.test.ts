@@ -1,6 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import {
   ApplyResultSchema,
+  ConfigFieldSchema,
   ConfigResponseSchema,
   ConfigSchemaResponseSchema,
   ConfigSectionSchema,
@@ -240,6 +241,38 @@ describe('ConfigSectionSchema — keyed_map shape', () => {
       ],
     });
     expect(parsed.shape).toBe('keyed_map');
+  });
+});
+
+describe('ConfigFieldSchema — datalist_source', () => {
+  it('accepts a valid datalist_source object', () => {
+    const parsed = ConfigFieldSchema.parse({
+      name: 'model',
+      label: 'Model',
+      kind: 'string',
+      datalist_source: { section: 'providers', field: 'model' },
+    });
+    expect(parsed.datalist_source).toEqual({ section: 'providers', field: 'model' });
+  });
+
+  it('defaults to undefined when datalist_source is absent', () => {
+    const parsed = ConfigFieldSchema.parse({
+      name: 'model',
+      label: 'Model',
+      kind: 'string',
+    });
+    expect(parsed.datalist_source).toBeUndefined();
+  });
+
+  it('rejects a malformed datalist_source (missing field)', () => {
+    expect(() =>
+      ConfigFieldSchema.parse({
+        name: 'model',
+        label: 'Model',
+        kind: 'string',
+        datalist_source: { section: 'providers' },
+      }),
+    ).toThrow();
   });
 });
 
