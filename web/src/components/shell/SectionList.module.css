@@ -12,7 +12,12 @@
   padding: 4px 8px;
   border: none;
   background: transparent;
-  color: var(--text, #c9d1d9);
+  /* --fg / --fg-strong / --fg-muted are deliberately sidebar-local. They are
+     NOT defined in styles/theme.css, so the hex fallbacks (light-grey on
+     dark sidebar) always apply regardless of system light/dark preference.
+     Earlier versions used --text, which collides with theme.css and produced
+     dark text on the dark sidebar in light mode. */
+  color: var(--fg, #c9d1d9);
   cursor: pointer;
   border-radius: 3px;
   font-size: 13px;
@@ -24,12 +29,12 @@
 
 .active {
   background: var(--bg-active, #1f6feb33);
-  color: var(--text-strong, #f0f6fc);
+  color: var(--fg-strong, #f0f6fc);
 }
 
 .comingSoon {
   padding: 4px 8px 4px 24px;
   font-size: 12px;
-  color: var(--text-muted, #8b949e);
+  color: var(--fg-muted, #8b949e);
   font-style: italic;
 }
