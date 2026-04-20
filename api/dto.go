@@ -169,3 +169,35 @@ type ApplyResult struct {
 	TookMS    int64             `json:"took_ms"`
 	Error     string            `json:"error,omitempty"` // only on ok=false
 }
+
+// PredicateDTO is the JSON shape of descriptor.Predicate.
+type PredicateDTO struct {
+	Field  string `json:"field"`
+	Equals any    `json:"equals"`
+}
+
+// ConfigFieldDTO is one field of a ConfigSectionDTO.
+type ConfigFieldDTO struct {
+	Name        string        `json:"name"`
+	Label       string        `json:"label"`
+	Help        string        `json:"help,omitempty"`
+	Kind        string        `json:"kind"`
+	Required    bool          `json:"required,omitempty"`
+	Default     any           `json:"default,omitempty"`
+	Enum        []string      `json:"enum,omitempty"`
+	VisibleWhen *PredicateDTO `json:"visible_when,omitempty"`
+}
+
+// ConfigSectionDTO is one section in the config schema response.
+type ConfigSectionDTO struct {
+	Key     string           `json:"key"`
+	Label   string           `json:"label"`
+	Summary string           `json:"summary,omitempty"`
+	GroupID string           `json:"group_id"`
+	Fields  []ConfigFieldDTO `json:"fields"`
+}
+
+// ConfigSchemaResponse is the payload for GET /api/config/schema.
+type ConfigSchemaResponse struct {
+	Sections []ConfigSectionDTO `json:"sections"`
+}
