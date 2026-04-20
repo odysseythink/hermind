@@ -30,3 +30,20 @@ func TestModelSectionRegistered(t *testing.T) {
 		t.Error("Fields[0].Help is empty — the field needs a hint about the provider-qualified format")
 	}
 }
+
+func TestModelSection_DatalistSourcePointsAtProviders(t *testing.T) {
+	s, _ := Get("model")
+	if len(s.Fields) != 1 {
+		t.Fatalf("model.Fields length = %d, want 1", len(s.Fields))
+	}
+	ds := s.Fields[0].DatalistSource
+	if ds == nil {
+		t.Fatal("model field has nil DatalistSource — Stage 4d regression")
+	}
+	if ds.Section != "providers" {
+		t.Errorf("DatalistSource.Section = %q, want %q", ds.Section, "providers")
+	}
+	if ds.Field != "model" {
+		t.Errorf("DatalistSource.Field = %q, want %q", ds.Field, "model")
+	}
+}

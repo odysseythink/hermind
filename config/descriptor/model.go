@@ -14,6 +14,10 @@ func init() {
 				Help:     "Provider-qualified id, e.g. anthropic/claude-opus-4-7.",
 				Kind:     FieldString,
 				Required: true,
+				DatalistSource: &DatalistSource{
+					Section: "providers",
+					Field:   "model",
+				},
 			},
 		},
 	})
