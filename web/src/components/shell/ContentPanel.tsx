@@ -32,6 +32,7 @@ export interface ContentPanelProps {
   onConfigListField: (sectionKey: string, index: number, field: string, value: unknown) => void;
   onConfigListDelete: (sectionKey: string, index: number) => void;
   onConfigListMove: (sectionKey: string, index: number, direction: 'up' | 'down') => void;
+  onFetchFallbackModels: (index: number) => Promise<{ models: string[] }>;
 }
 
 function shallowEqualInstance(
@@ -141,6 +142,7 @@ export default function ContentPanel(props: ContentPanelProps) {
             onDelete={() => props.onConfigListDelete('fallback_providers', index)}
             onMoveUp={() => props.onConfigListMove('fallback_providers', index, 'up')}
             onMoveDown={() => props.onConfigListMove('fallback_providers', index, 'down')}
+            fetchModels={() => props.onFetchFallbackModels(index)}
             config={props.config as unknown as Record<string, unknown>}
           />
         );

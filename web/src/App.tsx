@@ -184,6 +184,14 @@ export default function App() {
     return res;
   }, []);
 
+  const onFetchFallbackModels = useCallback(async (index: number) => {
+    const res = await apiFetch(`/api/fallback_providers/${index}/models`, {
+      method: 'POST',
+      schema: ProviderModelsResponseSchema,
+    });
+    return res;
+  }, []);
+
   const dirtyGroupIds = useMemo(() => selectDirtyGroups(state), [state]);
   const dirty = totalDirtyCount(state);
   const busy = state.status === 'saving' || state.status === 'applying';
@@ -321,6 +329,7 @@ export default function App() {
             dispatch({ type: 'shell/selectSub', key: null });
           }}
           onFetchModels={onFetchProviderModels}
+          onFetchFallbackModels={onFetchFallbackModels}
           onConfigListField={(sectionKey, index, field, value) =>
             dispatch({ type: 'edit/list-instance-field', sectionKey, index, field, value })
           }

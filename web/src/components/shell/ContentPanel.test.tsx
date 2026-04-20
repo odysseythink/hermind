@@ -36,6 +36,7 @@ function makeProps(
     onConfigListField: () => {},
     onConfigListDelete: () => {},
     onConfigListMove: () => {},
+    onFetchFallbackModels: async () => ({ models: [] }),
     ...overrides,
   };
 }
@@ -99,6 +100,7 @@ describe('ContentPanel — non-gateway section routing', () => {
     onConfigListField: () => {},
     onConfigListDelete: () => {},
     onConfigListMove: () => {},
+    onFetchFallbackModels: async () => ({ models: [] }),
   };
 
   it('renders the ConfigSection for runtime/storage', () => {
@@ -291,5 +293,27 @@ describe('ContentPanel — list section routing', () => {
       />,
     );
     expect(screen.queryByText(/fallback #/i)).not.toBeInTheDocument();
+  });
+
+  it('passes onFetchFallbackModels callback through to the editor with the index', async () => {
+    const fetchModels = vi.fn(async () => ({ models: ['m1'] }));
+    render(
+      <ContentPanel
+        {...makeProps({
+          activeGroup: 'models',
+          activeSubKey: 'fallback:0',
+          config: {
+            fallback_providers: [{ provider: 'anthropic', api_key: '' }],
+          } as unknown as Config,
+          originalConfig: {
+            fallback_providers: [{ provider: 'anthropic', api_key: '' }],
+          } as unknown as Config,
+          configSections: [fbSection],
+          onFetchFallbackModels: fetchModels,
+        })}
+      />,
+    );
+    await userEvent.click(screen.getByRole('button', { name: /fetch models/i }));
+    expect(fetchModels).toHaveBeenCalledWith(0);
   });
 });
