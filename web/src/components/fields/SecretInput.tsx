@@ -9,6 +9,7 @@ export interface SecretInputProps {
   value: string;
   instanceKey: string;
   dirty: boolean;
+  disableReveal?: boolean;
   onChange: (value: string) => void;
 }
 
@@ -17,6 +18,7 @@ export default function SecretInput({
   value,
   instanceKey,
   dirty,
+  disableReveal,
   onChange,
 }: SecretInputProps) {
   const [revealed, setRevealed] = useState(false);
@@ -48,7 +50,12 @@ export default function SecretInput({
     }
   }
 
-  const showDisabled = busy || dirty;
+  const showDisabled = busy || dirty || Boolean(disableReveal);
+  const showTitle = disableReveal
+    ? 'Reveal not supported for this field (stage 2)'
+    : dirty
+      ? 'Save changes before revealing the stored value'
+      : undefined;
 
   return (
     <label className={styles.wrap}>
@@ -72,7 +79,7 @@ export default function SecretInput({
           className={styles.revealBtn}
           onClick={onToggle}
           disabled={showDisabled}
-          title={dirty ? 'Save changes before revealing the stored value' : undefined}
+          title={showTitle}
         >
           {busy ? '…' : revealed ? 'Hide' : 'Show'}
         </button>
