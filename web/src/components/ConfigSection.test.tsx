@@ -108,3 +108,71 @@ describe('ConfigSection', () => {
     expect(btn).toHaveAttribute('title', 'Reveal not supported for this field (stage 2)');
   });
 });
+
+const tracing: ConfigSectionT = {
+  key: 'tracing',
+  label: 'Tracing',
+  group_id: 'observability',
+  fields: [
+    { name: 'enabled', label: 'Enabled', kind: 'bool' },
+    {
+      name: 'file',
+      label: 'File',
+      kind: 'string',
+      visible_when: { field: 'enabled', equals: true },
+    },
+  ],
+};
+
+describe('ConfigSection isVisible — bool predicate round-trip', () => {
+  it('shows the File field when enabled is the backend bool true', () => {
+    render(
+      <ConfigSection
+        section={tracing}
+        value={{ enabled: true }}
+        originalValue={{ enabled: true }}
+        onFieldChange={() => {}}
+      />,
+    );
+    expect(screen.getByLabelText(/^File$/)).toBeInTheDocument();
+  });
+
+  it('shows the File field after the BoolToggle stores "true" (string)', () => {
+    render(
+      <ConfigSection
+        section={tracing}
+        value={{ enabled: 'true' }}
+        originalValue={{ enabled: true }}
+        onFieldChange={() => {}}
+      />,
+    );
+    expect(screen.getByLabelText(/^File$/)).toBeInTheDocument();
+  });
+
+  it('hides the File field when enabled is "false" (string)', () => {
+    render(
+      <ConfigSection
+        section={tracing}
+        value={{ enabled: 'false' }}
+        originalValue={{ enabled: true }}
+        onFieldChange={() => {}}
+      />,
+    );
+    expect(screen.queryByLabelText(/^File$/)).toBeNull();
+  });
+
+  it('dispatches the edited enabled value as a string', async () => {
+    const user = userEvent.setup();
+    const onFieldChange = vi.fn();
+    render(
+      <ConfigSection
+        section={tracing}
+        value={{ enabled: true }}
+        originalValue={{ enabled: true }}
+        onFieldChange={onFieldChange}
+      />,
+    );
+    await user.click(screen.getByLabelText(/Enabled/));
+    expect(onFieldChange).toHaveBeenCalledWith('enabled', 'false');
+  });
+});

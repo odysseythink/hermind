@@ -62,7 +62,10 @@ export default function ConfigSection({
 
 function isVisible(f: ConfigField, value: Record<string, unknown>): boolean {
   if (!f.visible_when) return true;
-  return value[f.visible_when.field] === f.visible_when.equals;
+  // Values arrive as real types on boot (bool true, number 42) but
+  // edited values pass through string-coerced field onChange handlers.
+  // Coerce both sides to string so predicates keep matching either way.
+  return String(value[f.visible_when.field]) === String(f.visible_when.equals);
 }
 
 function asString(v: unknown): string {
