@@ -314,3 +314,55 @@ func TestConfigPut_PreservesKeyedMapSecrets(t *testing.T) {
 			inst2["api_key"], "sk-freshly-typed")
 	}
 }
+
+func TestConfigGet_RedactsProvidersApiKey_Integration(t *testing.T) {
+	// Integration test: drive through the real HTTP pipeline (handleConfigGet
+	// → yaml.Marshal → yaml.Unmarshal → redactSectionSecrets → writeJSON)
+	// rather than the map-walk wrapper used in TestConfigGet_RedactsKeyedMapSecrets.
+	// Ensures the yaml round-trip produces the map shape the redact loop assumes.
+	cfg := &config.Config{
+		Providers: map[string]config.ProviderConfig{
+			"anthropic_main": {
+				Provider: "anthropic",
+				APIKey:   "sk-real-secret",
+				Model:    "claude-opus-4-7",
+			},
+		},
+	}
+	srv, err := NewServer(&ServerOpts{Config: cfg, Token: "t"})
+	if err != nil {
+		t.Fatalf("NewServer: %v", err)
+	}
+	req := httptest.NewRequest("GET", "/api/config", nil)
+	req.Header.Set("Authorization", "Bearer t")
+	w := httptest.NewRecorder()
+	srv.Router().ServeHTTP(w, req)
+
+	if w.Code != http.StatusOK {
+		t.Fatalf("status = %d, body = %s", w.Code, w.Body.String())
+	}
+	var body struct {
+		Config map[string]any `json:"config"`
+	}
+	if err := json.Unmarshal(w.Body.Bytes(), &body); err != nil {
+		t.Fatalf("parse: %v", err)
+	}
+	providers, _ := body.Config["providers"].(map[string]any)
+	if providers == nil {
+		t.Fatalf("providers missing from response: %+v", body.Config)
+	}
+	inst, _ := providers["anthropic_main"].(map[string]any)
+	if inst == nil {
+		t.Fatalf("anthropic_main instance missing from response: %+v", providers)
+	}
+	if ak := inst["api_key"]; ak != "" {
+		t.Errorf("anthropic_main.api_key = %v, want blank (redacted)", ak)
+	}
+	// Non-secret fields must be preserved.
+	if inst["provider"] != "anthropic" {
+		t.Errorf("anthropic_main.provider = %v, want anthropic", inst["provider"])
+	}
+	if inst["model"] != "claude-opus-4-7" {
+		t.Errorf("anthropic_main.model = %v, want claude-opus-4-7", inst["model"])
+	}
+}
