@@ -92,3 +92,49 @@ func TestConfigSchema_SectionsSortedByKey(t *testing.T) {
 		}
 	}
 }
+
+func TestConfigSchema_IncludesStage3Sections(t *testing.T) {
+	srv, err := api.NewServer(&api.ServerOpts{
+		Config: &config.Config{},
+		Token:  "test-token",
+	})
+	if err != nil {
+		t.Fatalf("NewServer: %v", err)
+	}
+	req := httptest.NewRequest("GET", "/api/config/schema", nil)
+	req.Header.Set("Authorization", "Bearer test-token")
+	w := httptest.NewRecorder()
+	srv.Router().ServeHTTP(w, req)
+
+	if w.Code != http.StatusOK {
+		t.Fatalf("status = %d", w.Code)
+	}
+	var body api.ConfigSchemaResponse
+	if err := json.Unmarshal(w.Body.Bytes(), &body); err != nil {
+		t.Fatalf("parse: %v", err)
+	}
+
+	want := map[string]string{
+		"logging":  "observability",
+		"metrics":  "observability",
+		"tracing":  "observability",
+		"agent":    "runtime",
+		"terminal": "runtime",
+	}
+	got := map[string]string{}
+	for _, s := range body.Sections {
+		if _, tracked := want[s.Key]; tracked {
+			got[s.Key] = s.GroupID
+		}
+	}
+	for key, group := range want {
+		g, ok := got[key]
+		if !ok {
+			t.Errorf("missing section %q", key)
+			continue
+		}
+		if g != group {
+			t.Errorf("section %q: group_id = %q, want %q", key, g, group)
+		}
+	}
+}
