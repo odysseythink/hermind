@@ -1,0 +1,69 @@
+.editor {
+  padding: 16px 24px;
+}
+
+.header {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding-bottom: 12px;
+  border-bottom: 1px solid var(--border, #30363d);
+  margin-bottom: 16px;
+}
+
+.breadcrumb {
+  flex: 1;
+  color: var(--muted, #8b949e);
+}
+
+.breadcrumb strong {
+  color: var(--text, #c9d1d9);
+  font-weight: 600;
+}
+
+.headerBtns {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.moveBtn {
+  width: 28px;
+  height: 28px;
+  padding: 0;
+  background: transparent;
+  border: 1px solid var(--border, #30363d);
+  border-radius: 3px;
+  color: var(--text, #c9d1d9);
+  cursor: pointer;
+  font-size: 14px;
+  line-height: 1;
+}
+
+.moveBtn:hover:not(:disabled) {
+  background: var(--hover, #21262d);
+  border-color: var(--accent, #FFB800);
+}
+
+.moveBtn:disabled {
+  opacity: 0.35;
+  cursor: not-allowed;
+}
+
+.deleteBtn {
+  padding: 6px 12px;
+  background: transparent;
+  border: 1px solid var(--error, #f85149);
+  border-radius: 3px;
+  color: var(--error, #f85149);
+  cursor: pointer;
+}
+
+.deleteBtn:hover {
+  background: var(--error, #f85149);
+  color: #fff;
+}
+
+.body {
+  margin-bottom: 16px;
+}
