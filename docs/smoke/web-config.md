@@ -119,3 +119,14 @@ rm -rf /tmp/hermind-smoke
 - Apply is disabled while gateway slice is dirty; tooltip reads "Save first, then apply".
 - Reload preserves the expanded/collapsed state of each group (localStorage key `hermind.shell.expandedGroups`).
 - Empty state (no hash, no saved selection) shows a 7-card landing grid; clicking a card opens that group.
+
+## Stage 2 · Schema infrastructure (Storage)
+
+- Visiting `#runtime/storage` renders the Storage editor: a Driver enum select, plus either a SQLite path field (driver=sqlite) or a Postgres URL field (driver=postgres).
+- Changing the Driver value swaps which secondary field is visible; the hidden field's value is not submitted until re-shown.
+- The Postgres URL field is a secret: the Show button is disabled with tooltip "Reveal not supported for this field (stage 2)".
+- `GET /api/config/schema` returns a `sections` array that includes `storage` with its three fields and two visible_when predicates.
+- `GET /api/config` with `storage.driver = postgres` returns `postgres_url` blanked.
+- `PUT /api/config` with `storage.postgres_url = ""` preserves the stored URL (round-trip mirror of platform-secret behavior).
+- Editing any storage field marks the Runtime group dirty (sidebar dot + TopBar `Save · N changes`). Save flushes to disk; the YAML reflects the new driver and the appropriate path/URL field.
+- Routing: the Runtime group in the sidebar lists one entry — Storage. Other non-gateway groups show "Coming soon — stage N" inside their collapsible rows.
