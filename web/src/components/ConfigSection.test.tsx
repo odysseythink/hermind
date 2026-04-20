@@ -176,3 +176,126 @@ describe('ConfigSection isVisible — bool predicate round-trip', () => {
     expect(onFieldChange).toHaveBeenCalledWith('enabled', 'false');
   });
 });
+
+describe('ConfigSection — datalist_source on a string field', () => {
+  const modelSection: ConfigSectionT = {
+    key: 'model',
+    label: 'Default model',
+    group_id: 'models',
+    shape: 'scalar',
+    fields: [
+      {
+        name: 'model',
+        label: 'Model',
+        kind: 'string',
+        required: true,
+        datalist_source: { section: 'providers', field: 'model' },
+      },
+    ],
+  };
+
+  it('passes suggestions collected from a keyed_map section to TextInput', () => {
+    const { container } = render(
+      <ConfigSection
+        section={modelSection}
+        value={{ model: '' }}
+        originalValue={{ model: '' }}
+        onFieldChange={() => {}}
+        config={{
+          providers: {
+            anthropic_main: { provider: 'anthropic', model: 'claude-opus-4-7' },
+            openai_bot: { provider: 'openai', model: 'gpt-4o' },
+          },
+        }}
+      />,
+    );
+    const options = container.querySelectorAll('datalist option');
+    expect(options).toHaveLength(2);
+    const values = Array.from(options).map(o => o.getAttribute('value')).sort();
+    expect(values).toEqual(['claude-opus-4-7', 'gpt-4o']);
+  });
+
+  it('passes suggestions collected from a list section to TextInput', () => {
+    const sectionPointingAtList: ConfigSectionT = {
+      ...modelSection,
+      fields: [
+        {
+          ...modelSection.fields[0],
+          datalist_source: { section: 'fallback_providers', field: 'model' },
+        },
+      ],
+    };
+    const { container } = render(
+      <ConfigSection
+        section={sectionPointingAtList}
+        value={{ model: '' }}
+        originalValue={{ model: '' }}
+        onFieldChange={() => {}}
+        config={{
+          fallback_providers: [
+            { provider: 'anthropic', model: 'claude-sonnet-4-6' },
+            { provider: 'openai', model: 'gpt-4o-mini' },
+          ],
+        }}
+      />,
+    );
+    const values = Array.from(
+      container.querySelectorAll('datalist option'),
+    ).map(o => o.getAttribute('value')).sort();
+    expect(values).toEqual(['claude-sonnet-4-6', 'gpt-4o-mini']);
+  });
+
+  it('deduplicates identical suggestions', () => {
+    const { container } = render(
+      <ConfigSection
+        section={modelSection}
+        value={{ model: '' }}
+        originalValue={{ model: '' }}
+        onFieldChange={() => {}}
+        config={{
+          providers: {
+            a: { provider: 'anthropic', model: 'claude-opus-4-7' },
+            b: { provider: 'anthropic', model: 'claude-opus-4-7' },
+          },
+        }}
+      />,
+    );
+    const options = container.querySelectorAll('datalist option');
+    expect(options).toHaveLength(1);
+  });
+
+  it('skips blank and non-string values', () => {
+    const { container } = render(
+      <ConfigSection
+        section={modelSection}
+        value={{ model: '' }}
+        originalValue={{ model: '' }}
+        onFieldChange={() => {}}
+        config={{
+          providers: {
+            a: { provider: 'anthropic', model: '' },
+            b: { provider: 'openai', model: null },
+            c: { provider: 'openai', model: 'gpt-4o' },
+          },
+        }}
+      />,
+    );
+    const values = Array.from(
+      container.querySelectorAll('datalist option'),
+    ).map(o => o.getAttribute('value'));
+    expect(values).toEqual(['gpt-4o']);
+  });
+
+  it('omits the datalist entirely when the source section is absent', () => {
+    const { container } = render(
+      <ConfigSection
+        section={modelSection}
+        value={{ model: '' }}
+        originalValue={{ model: '' }}
+        onFieldChange={() => {}}
+        config={{}}
+      />,
+    );
+    expect(container.querySelector('datalist')).toBeNull();
+  });
+});

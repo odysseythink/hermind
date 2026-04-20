@@ -13,6 +13,9 @@ export interface ProviderEditorProps {
   onField: (instanceKey: string, field: string, value: unknown) => void;
   onDelete: () => void;
   fetchModels: () => Promise<{ models: string[] }>;
+  /** Full config snapshot — forwarded to ConfigSection so cross-section
+   *  datalist_source hints on provider fields can resolve. Optional. */
+  config?: Record<string, unknown>;
 }
 
 type FetchState =
@@ -82,6 +85,7 @@ export default function ProviderEditor(props: ProviderEditorProps) {
           value={props.value}
           originalValue={props.originalValue}
           onFieldChange={(field, v) => props.onField(props.instanceKey, field, v)}
+          config={props.config}
         />
         <datalist id={datalistId} data-testid="provider-model-datalist">
           {models.map(m => (

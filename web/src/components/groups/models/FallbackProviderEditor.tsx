@@ -14,6 +14,9 @@ export interface FallbackProviderEditorProps {
   onDelete: () => void;
   onMoveUp: () => void;
   onMoveDown: () => void;
+  /** Full config snapshot — forwarded to ConfigSection so cross-section
+   *  datalist_source hints on fallback fields can resolve. Optional. */
+  config?: Record<string, unknown>;
 }
 
 export default function FallbackProviderEditor(props: FallbackProviderEditorProps) {
@@ -59,6 +62,7 @@ export default function FallbackProviderEditor(props: FallbackProviderEditorProp
           value={props.value}
           originalValue={props.originalValue}
           onFieldChange={(field, v) => props.onField(props.index, field, v)}
+          config={props.config}
         />
       </div>
     </section>

@@ -12,6 +12,35 @@ export interface ConfigSectionProps {
   value: Record<string, unknown>;
   originalValue: Record<string, unknown>;
   onFieldChange: (name: string, value: unknown) => void;
+  /** Full config snapshot used to resolve cross-section datalist_source
+   *  hints. Optional — fields without datalist_source never need it. */
+  config?: Record<string, unknown>;
+}
+
+function collectDatalistValues(
+  config: Record<string, unknown> | undefined,
+  sectionKey: string,
+  fieldName: string,
+): string[] {
+  if (!config) return [];
+  const blob = config[sectionKey];
+  const out = new Set<string>();
+  if (Array.isArray(blob)) {
+    for (const el of blob) {
+      if (el && typeof el === 'object') {
+        const v = (el as Record<string, unknown>)[fieldName];
+        if (typeof v === 'string' && v !== '') out.add(v);
+      }
+    }
+  } else if (blob && typeof blob === 'object') {
+    for (const el of Object.values(blob as Record<string, unknown>)) {
+      if (el && typeof el === 'object') {
+        const v = (el as Record<string, unknown>)[fieldName];
+        if (typeof v === 'string' && v !== '') out.add(v);
+      }
+    }
+  }
+  return Array.from(out).sort();
 }
 
 export default function ConfigSection({
@@ -19,6 +48,7 @@ export default function ConfigSection({
   value,
   originalValue,
   onFieldChange,
+  config,
 }: ConfigSectionProps) {
   return (
     <section className={styles.section} aria-label={section.label}>
@@ -52,8 +82,20 @@ export default function ConfigSection({
               />
             );
           case 'string':
-          default:
-            return <TextInput key={f.name} field={schemaField} value={current} onChange={onChange} />;
+          default: {
+            const suggestions = f.datalist_source
+              ? collectDatalistValues(config, f.datalist_source.section, f.datalist_source.field)
+              : undefined;
+            return (
+              <TextInput
+                key={f.name}
+                field={schemaField}
+                value={current}
+                onChange={onChange}
+                datalist={suggestions}
+              />
+            );
+          }
         }
       })}
     </section>

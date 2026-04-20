@@ -82,6 +82,7 @@ export default function ContentPanel(props: ContentPanelProps) {
             value={{ [field.name]: scalar }}
             originalValue={{ [field.name]: originalScalar }}
             onFieldChange={(_name, v) => props.onConfigScalar(section.key, v)}
+            config={props.config as unknown as Record<string, unknown>}
           />
         );
       }
@@ -101,6 +102,7 @@ export default function ContentPanel(props: ContentPanelProps) {
           value={value ?? {}}
           originalValue={original ?? {}}
           onFieldChange={(field, v) => props.onConfigField(section.key, field, v)}
+          config={props.config as unknown as Record<string, unknown>}
         />
       );
     }
@@ -139,6 +141,7 @@ export default function ContentPanel(props: ContentPanelProps) {
             onDelete={() => props.onConfigListDelete('fallback_providers', index)}
             onMoveUp={() => props.onConfigListMove('fallback_providers', index, 'up')}
             onMoveDown={() => props.onConfigListMove('fallback_providers', index, 'down')}
+            config={props.config as unknown as Record<string, unknown>}
           />
         );
       }
@@ -174,6 +177,7 @@ export default function ContentPanel(props: ContentPanelProps) {
             }
             onDelete={() => props.onConfigKeyedDelete('providers', props.activeSubKey!)}
             fetchModels={() => props.onFetchModels(props.activeSubKey!)}
+            config={props.config as unknown as Record<string, unknown>}
           />
         );
       }
