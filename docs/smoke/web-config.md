@@ -158,3 +158,13 @@ rm -rf /tmp/hermind-smoke
 - Re-visit `#models/anthropic_main`. API key field is blanked (GET redacts). Click Save without typing into API key — stored key is preserved (same contract as `storage.postgres_url` and `auxiliary.api_key`).
 - Click Delete, confirm → sidebar row disappears, pane returns to EmptyState. Save — YAML `providers:` block updates (entry removed).
 - `POST /api/providers/<name>/models` returns `{"models": ["id", ...]}` on success. Errors: 404 unknown name, 400 factory rejection, 501 non-ModelLister provider, 502 upstream.
+
+## Stage 4c · Fallback Providers editor
+
+- Sidebar Models group now has a "Fallback Providers" section below Providers, with a `+ Add fallback` button.
+- Click `+ Add fallback` — a new row `#1 <first-provider-type>` appears, URL becomes `#models/fallback:0`, and the main pane shows "Fallback #1" with the 4 fields (provider pre-selected as the first enum value).
+- Edit provider type, base URL, API key, model. Save — toast "Saved". YAML `fallback_providers:` block now has one entry.
+- Click `+ Add fallback` again. Second row `#2 <type>` appears. Click the `↑` on the `#2` row in the sidebar — rows swap in place; URL updates to `#models/fallback:0` tracking the moved element. Main-pane header now shows "Fallback #1" for what was previously #2.
+- Click Delete on the main-pane editor, confirm → sidebar row disappears, pane returns to EmptyState. Save — YAML `fallback_providers` shrinks by one.
+- Re-visit an existing fallback. API key field is blanked (GET redacts). Click Save without typing a new key — stored key at the same index is preserved (same contract as `providers.*.api_key`). **Gotcha:** after deleting or reordering fallbacks, the index-based preserve can misalign secrets. Always re-type the API key for any moved or deleted neighbor before saving.
+- With zero fallback entries, the sidebar shows "No fallback providers configured." and the YAML omits the `fallback_providers` key (thanks to `omitempty`).
