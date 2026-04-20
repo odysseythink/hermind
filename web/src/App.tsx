@@ -223,6 +223,9 @@ export default function App() {
           onConfigField={(sectionKey, field, value) =>
             dispatch({ type: 'edit/config-field', sectionKey, field, value })
           }
+          onConfigScalar={(sectionKey, value) =>
+            dispatch({ type: 'edit/config-scalar', sectionKey, value })
+          }
         />
       </main>
       <Footer flash={state.flash} />

@@ -3,6 +3,7 @@ import {
   ApplyResultSchema,
   ConfigResponseSchema,
   ConfigSchemaResponseSchema,
+  ConfigSectionSchema,
   FieldKindSchema,
   PlatformTestResponseSchema,
   PlatformsSchemaResponseSchema,
@@ -186,5 +187,40 @@ describe('ConfigSchemaResponseSchema', () => {
       ],
     };
     expect(() => ConfigSchemaResponseSchema.parse(bad)).toThrow();
+  });
+});
+
+describe('ConfigSectionSchema — shape discriminant', () => {
+  it('accepts sections without a shape key (defaults to map)', () => {
+    const parsed = ConfigSectionSchema.parse({
+      key: 'storage',
+      label: 'Storage',
+      group_id: 'runtime',
+      fields: [{ name: 'driver', label: 'Driver', kind: 'enum', enum: ['sqlite'] }],
+    });
+    expect(parsed.shape).toBeUndefined();
+  });
+
+  it('accepts shape: "scalar"', () => {
+    const parsed = ConfigSectionSchema.parse({
+      key: 'model',
+      label: 'Default model',
+      group_id: 'models',
+      shape: 'scalar',
+      fields: [{ name: 'model', label: 'Model', kind: 'string' }],
+    });
+    expect(parsed.shape).toBe('scalar');
+  });
+
+  it('rejects unknown shape values', () => {
+    expect(() =>
+      ConfigSectionSchema.parse({
+        key: 'x',
+        label: 'X',
+        group_id: 'runtime',
+        shape: 'nested', // unknown
+        fields: [{ name: 'a', label: 'A', kind: 'string' }],
+      }),
+    ).toThrow();
   });
 });

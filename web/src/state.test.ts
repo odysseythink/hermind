@@ -412,3 +412,27 @@ describe('boot/loaded carries configSections', () => {
     expect(next.configSections[0].key).toBe('storage');
   });
 });
+
+describe("reducer: edit/config-scalar", () => {
+  it('sets the scalar value under the given section key', () => {
+    const s = { ...initialState, config: { model: 'anthropic/claude-opus-4-6' } as any };
+    const next = reducer(s, {
+      type: 'edit/config-scalar',
+      sectionKey: 'model',
+      value: 'anthropic/claude-opus-4-7',
+    });
+    expect((next.config as any).model).toBe('anthropic/claude-opus-4-7');
+  });
+
+  it('does not wrap the scalar in an object', () => {
+    const s = { ...initialState, config: { model: 'x' } as any };
+    const next = reducer(s, {
+      type: 'edit/config-scalar',
+      sectionKey: 'model',
+      value: 'y',
+    });
+    // The scalar must be written as-is; the reducer must NOT turn it into
+    // { model: { model: 'y' } } or similar.
+    expect(typeof (next.config as any).model).toBe('string');
+  });
+});

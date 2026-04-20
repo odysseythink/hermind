@@ -23,6 +23,7 @@ export interface ContentPanelProps {
   onApply: () => void;
   onSelectGroup: (id: GroupId) => void;
   onConfigField: (sectionKey: string, field: string, value: unknown) => void;
+  onConfigScalar: (sectionKey: string, value: unknown) => void;
 }
 
 export default function ContentPanel(props: ContentPanelProps) {
@@ -50,6 +51,19 @@ export default function ContentPanel(props: ContentPanelProps) {
       s => s.key === props.activeSubKey && s.group_id === props.activeGroup,
     );
     if (section) {
+      if (section.shape === 'scalar') {
+        const scalar = (props.config as Record<string, unknown>)[section.key];
+        const originalScalar = (props.originalConfig as Record<string, unknown>)[section.key];
+        const field = section.fields[0];
+        return (
+          <ConfigSection
+            section={section}
+            value={{ [field.name]: scalar }}
+            originalValue={{ [field.name]: originalScalar }}
+            onFieldChange={(_name, v) => props.onConfigScalar(section.key, v)}
+          />
+        );
+      }
       const value = (props.config as Record<string, unknown>)[section.key] as
         | Record<string, unknown>
         | undefined;

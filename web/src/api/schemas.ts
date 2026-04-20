@@ -99,6 +99,7 @@ export const ConfigSectionSchema = z.object({
   label: z.string(),
   summary: z.string().optional(),
   group_id: z.string(),
+  shape: z.enum(['map', 'scalar']).optional(), // default (absent) = map
   fields: z.array(ConfigFieldSchema),
 });
 export type ConfigSection = z.infer<typeof ConfigSectionSchema>;

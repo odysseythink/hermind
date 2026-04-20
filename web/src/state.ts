@@ -44,7 +44,8 @@ export type Action =
   | { type: 'shell/selectGroup'; group: GroupId | null }
   | { type: 'shell/selectSub'; key: string | null }
   | { type: 'shell/toggleGroup'; group: GroupId }
-  | { type: 'edit/config-field'; sectionKey: string; field: string; value: unknown };
+  | { type: 'edit/config-field'; sectionKey: string; field: string; value: unknown }
+  | { type: 'edit/config-scalar'; sectionKey: string; value: unknown };
 
 export const initialState: AppState = {
   status: 'booting',
@@ -156,6 +157,15 @@ export function reducer(state: AppState, action: Action): AppState {
         config: {
           ...state.config,
           [action.sectionKey]: { ...prev, [action.field]: action.value },
+        } as typeof state.config,
+      };
+    }
+    case 'edit/config-scalar': {
+      return {
+        ...state,
+        config: {
+          ...state.config,
+          [action.sectionKey]: action.value,
         } as typeof state.config,
       };
     }
