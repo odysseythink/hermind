@@ -53,7 +53,8 @@ export type Action =
   | { type: 'list-instance/create'; sectionKey: string; initial: Record<string, unknown> }
   | { type: 'list-instance/delete'; sectionKey: string; index: number }
   | { type: 'list-instance/move-up'; sectionKey: string; index: number }
-  | { type: 'list-instance/move-down'; sectionKey: string; index: number };
+  | { type: 'list-instance/move-down'; sectionKey: string; index: number }
+  | { type: 'list-instance/move'; sectionKey: string; from: number; to: number };
 
 export const initialState: AppState = {
   status: 'booting',
@@ -275,6 +276,23 @@ export function reducer(state: AppState, action: Action): AppState {
       if (target < 0 || target >= list.length) return state;
       const nextList = list.slice();
       [nextList[action.index], nextList[target]] = [nextList[target], nextList[action.index]];
+      return {
+        ...state,
+        config: {
+          ...state.config,
+          [action.sectionKey]: nextList,
+        } as typeof state.config,
+      };
+    }
+    case 'list-instance/move': {
+      const cfg = state.config as unknown as Record<string, unknown>;
+      const list = (cfg[action.sectionKey] as Array<Record<string, unknown>> | undefined) ?? [];
+      if (action.from === action.to) return state;
+      if (action.from < 0 || action.from >= list.length) return state;
+      if (action.to < 0 || action.to >= list.length) return state;
+      const nextList = list.slice();
+      const [moved] = nextList.splice(action.from, 1);
+      nextList.splice(action.to, 0, moved);
       return {
         ...state,
         config: {

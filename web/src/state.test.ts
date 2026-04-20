@@ -775,3 +775,81 @@ describe('reducer: list-instance/move-down', () => {
     expect(next).toBe(state);
   });
 });
+
+describe('reducer: list-instance/move', () => {
+  it('moves an element from one index to another via splice', () => {
+    const state = {
+      ...initialState,
+      status: 'ready' as const,
+      config: {
+        fallback_providers: [
+          { provider: 'anthropic', api_key: 'a' },
+          { provider: 'openai', api_key: 'b' },
+          { provider: 'anthropic', api_key: 'c' },
+        ],
+      } as unknown as Config,
+      originalConfig: {
+        fallback_providers: [
+          { provider: 'anthropic', api_key: 'a' },
+          { provider: 'openai', api_key: 'b' },
+          { provider: 'anthropic', api_key: 'c' },
+        ],
+      } as unknown as Config,
+    };
+    const next = reducer(state, {
+      type: 'list-instance/move',
+      sectionKey: 'fallback_providers',
+      from: 0,
+      to: 2,
+    });
+    const list = (next.config as any).fallback_providers as Array<Record<string, unknown>>;
+    expect(list[0].api_key).toBe('b');
+    expect(list[1].api_key).toBe('c');
+    expect(list[2].api_key).toBe('a');
+  });
+
+  it('is a no-op when from === to', () => {
+    const state = {
+      ...initialState,
+      status: 'ready' as const,
+      config: {
+        fallback_providers: [{ provider: 'anthropic', api_key: 'a' }],
+      } as unknown as Config,
+      originalConfig: {
+        fallback_providers: [{ provider: 'anthropic', api_key: 'a' }],
+      } as unknown as Config,
+    };
+    const next = reducer(state, {
+      type: 'list-instance/move',
+      sectionKey: 'fallback_providers',
+      from: 0,
+      to: 0,
+    });
+    expect(next).toBe(state);
+  });
+
+  it('is a no-op when either index is out of bounds', () => {
+    const state = {
+      ...initialState,
+      status: 'ready' as const,
+      config: {
+        fallback_providers: [{ provider: 'anthropic', api_key: 'a' }],
+      } as unknown as Config,
+      originalConfig: {
+        fallback_providers: [{ provider: 'anthropic', api_key: 'a' }],
+      } as unknown as Config,
+    };
+    expect(reducer(state, {
+      type: 'list-instance/move',
+      sectionKey: 'fallback_providers',
+      from: 0,
+      to: 5,
+    })).toBe(state);
+    expect(reducer(state, {
+      type: 'list-instance/move',
+      sectionKey: 'fallback_providers',
+      from: -1,
+      to: 0,
+    })).toBe(state);
+  });
+});
