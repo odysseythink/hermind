@@ -243,6 +243,61 @@ func TestConfigSchema_IncludesStage4aSections(t *testing.T) {
 	}
 }
 
+func TestConfigSchema_IncludesStage4cSections(t *testing.T) {
+	srv, err := api.NewServer(&api.ServerOpts{
+		Config: &config.Config{},
+		Token:  "test-token",
+	})
+	if err != nil {
+		t.Fatalf("NewServer: %v", err)
+	}
+	req := httptest.NewRequest("GET", "/api/config/schema", nil)
+	req.Header.Set("Authorization", "Bearer test-token")
+	w := httptest.NewRecorder()
+	srv.Router().ServeHTTP(w, req)
+
+	if w.Code != http.StatusOK {
+		t.Fatalf("status = %d", w.Code)
+	}
+	var body api.ConfigSchemaResponse
+	if err := json.Unmarshal(w.Body.Bytes(), &body); err != nil {
+		t.Fatalf("parse: %v", err)
+	}
+
+	var fb *api.ConfigSectionDTO
+	for i := range body.Sections {
+		if body.Sections[i].Key == "fallback_providers" {
+			fb = &body.Sections[i]
+			break
+		}
+	}
+	if fb == nil {
+		t.Fatal("fallback_providers section missing from /api/config/schema")
+	}
+	if fb.Shape != "list" {
+		t.Errorf("fallback_providers.shape = %q, want %q", fb.Shape, "list")
+	}
+	if fb.GroupID != "models" {
+		t.Errorf("fallback_providers.group_id = %q, want %q", fb.GroupID, "models")
+	}
+	if len(fb.Fields) != 4 {
+		t.Errorf("fallback_providers.fields length = %d, want 4", len(fb.Fields))
+	}
+	var apiKey *api.ConfigFieldDTO
+	for i := range fb.Fields {
+		if fb.Fields[i].Name == "api_key" {
+			apiKey = &fb.Fields[i]
+			break
+		}
+	}
+	if apiKey == nil {
+		t.Fatal("fallback_providers.fields missing api_key")
+	}
+	if apiKey.Kind != "secret" {
+		t.Errorf("fallback_providers.api_key.kind = %q, want \"secret\"", apiKey.Kind)
+	}
+}
+
 func TestConfigSchema_EmitsListShapeString(t *testing.T) {
 	// Seed a ShapeList section directly via Register so this test doesn't
 	// depend on Task 4's fallback_providers descriptor having landed.
