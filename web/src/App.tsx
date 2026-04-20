@@ -74,7 +74,7 @@ export default function App() {
     const parsed = parseHash(effective);
     if (parsed.group) {
       dispatch({ type: 'shell/selectGroup', group: parsed.group });
-      if (parsed.sub && parsed.group === 'gateway') {
+      if (parsed.sub) {
         dispatch({ type: 'shell/selectSub', key: parsed.sub });
       }
     }
@@ -188,6 +188,7 @@ export default function App() {
         instances={instances}
         selectedKey={selectedKey}
         descriptors={state.descriptors}
+        configSections={state.configSections}
         dirtyInstanceKeys={dirtyInstanceKeys}
         onSelectGroup={(id: GroupId) => dispatch({ type: 'shell/selectGroup', group: id })}
         onSelectSub={(key: string) => {
@@ -200,7 +201,10 @@ export default function App() {
       <main>
         <ContentPanel
           activeGroup={state.shell.activeGroup}
+          activeSubKey={state.shell.activeSubKey}
           config={state.config}
+          originalConfig={state.originalConfig}
+          configSections={state.configSections}
           selectedKey={selectedKey}
           instance={selectedInstance}
           originalInstance={selectedOriginal}
@@ -208,16 +212,17 @@ export default function App() {
           dirtyGateway={dirtyGroupIds.has('gateway')}
           busy={busy}
           onField={(field, value) =>
-            selectedKey &&
-            dispatch({ type: 'edit/field', key: selectedKey, field, value })
+            selectedKey && dispatch({ type: 'edit/field', key: selectedKey, field, value })
           }
           onToggleEnabled={enabled =>
-            selectedKey &&
-            dispatch({ type: 'edit/enabled', key: selectedKey, enabled })
+            selectedKey && dispatch({ type: 'edit/enabled', key: selectedKey, enabled })
           }
           onDelete={() => selectedKey && dispatch({ type: 'instance/delete', key: selectedKey })}
           onApply={onApplyGateway}
           onSelectGroup={(id: GroupId) => dispatch({ type: 'shell/selectGroup', group: id })}
+          onConfigField={(sectionKey, field, value) =>
+            dispatch({ type: 'edit/config-field', sectionKey, field, value })
+          }
         />
       </main>
       <Footer flash={state.flash} />
