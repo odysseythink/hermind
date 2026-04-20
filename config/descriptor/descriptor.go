@@ -52,12 +52,20 @@ func (k FieldKind) String() string {
 //                     value; exactly one FieldEnum named "provider" must serve
 //                     as the type discriminator consumed by the UI's
 //                     new-instance dialog and by any per-instance redaction.
+//   - ShapeList     — value is []map[string]any (ordered list of uniform
+//                     struct elements, e.g. fallback_providers). Fields
+//                     describe one element; exactly one FieldEnum named
+//                     "provider" must serve as the type discriminator.
+//                     Preservation of secret fields is strictly by index —
+//                     reorder or delete invalidates the secret-carry for the
+//                     affected rows.
 type SectionShape int
 
 const (
 	ShapeMap SectionShape = iota
 	ShapeScalar
 	ShapeKeyedMap
+	ShapeList
 )
 
 // Predicate expresses "show this field only when <Field> equals <Equals>".

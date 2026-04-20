@@ -140,6 +140,21 @@ func TestSectionInvariants(t *testing.T) {
 					s.Key, providerEnums)
 			}
 		}
+		if s.Shape == ShapeList {
+			if len(s.Fields) == 0 {
+				t.Errorf("section %q: ShapeList requires at least 1 field", s.Key)
+			}
+			var providerEnums int
+			for _, f := range s.Fields {
+				if f.Name == "provider" && f.Kind == FieldEnum {
+					providerEnums++
+				}
+			}
+			if providerEnums != 1 {
+				t.Errorf("section %q: ShapeList requires exactly one FieldEnum named \"provider\" (got %d)",
+					s.Key, providerEnums)
+			}
+		}
 	}
 }
 
@@ -259,5 +274,84 @@ func TestShapeKeyedMapInvariant_FlagsEmptyFields(t *testing.T) {
 	}
 	if !fired {
 		t.Error("invariant did not flag ShapeKeyedMap with empty Fields")
+	}
+}
+
+func TestSectionShape_ListConstantDistinct(t *testing.T) {
+	// ShapeList must be distinct from ShapeMap (zero value), ShapeScalar
+	// (Stage 4a), and ShapeKeyedMap (Stage 4b). A collision would silently
+	// break the schema DTO's shape-string emission.
+	if ShapeList == ShapeMap {
+		t.Error("ShapeList equals ShapeMap — they must be distinct")
+	}
+	if ShapeList == ShapeScalar {
+		t.Error("ShapeList equals ShapeScalar — they must be distinct")
+	}
+	if ShapeList == ShapeKeyedMap {
+		t.Error("ShapeList equals ShapeKeyedMap — they must be distinct")
+	}
+}
+
+func TestShapeListInvariant_FlagsMissingProviderEnum(t *testing.T) {
+	// Seed a ShapeList section without a provider-type discriminator and
+	// verify the invariant logic would reject it. fallback_providers
+	// mandates a provider enum the same way providers (4b) does.
+	key := "__test_list_no_provider"
+	defer delete(registry, key)
+	Register(Section{
+		Key:     key,
+		Label:   "Test",
+		GroupID: "runtime",
+		Shape:   ShapeList,
+		Fields: []FieldSpec{
+			{Name: "base_url", Label: "Base URL", Kind: FieldString},
+		},
+	})
+
+	var fired bool
+	for _, s := range All() {
+		if s.Key != key {
+			continue
+		}
+		if s.Shape != ShapeList {
+			continue
+		}
+		var providerEnums int
+		for _, f := range s.Fields {
+			if f.Name == "provider" && f.Kind == FieldEnum {
+				providerEnums++
+			}
+		}
+		if providerEnums != 1 {
+			fired = true
+		}
+	}
+	if !fired {
+		t.Error("invariant did not flag ShapeList without a provider-enum field")
+	}
+}
+
+func TestShapeListInvariant_FlagsEmptyFields(t *testing.T) {
+	key := "__test_list_empty_fields"
+	defer delete(registry, key)
+	Register(Section{
+		Key:     key,
+		Label:   "Test",
+		GroupID: "runtime",
+		Shape:   ShapeList,
+		Fields:  nil,
+	})
+
+	var fired bool
+	for _, s := range All() {
+		if s.Key != key {
+			continue
+		}
+		if s.Shape == ShapeList && len(s.Fields) == 0 {
+			fired = true
+		}
+	}
+	if !fired {
+		t.Error("invariant did not flag ShapeList with empty Fields")
 	}
 }
