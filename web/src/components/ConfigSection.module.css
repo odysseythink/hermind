@@ -1,0 +1,16 @@
+.section {
+  padding: 16px 24px;
+  max-width: 640px;
+}
+
+.title {
+  font-size: 18px;
+  font-weight: 600;
+  margin: 0 0 4px 0;
+}
+
+.summary {
+  color: var(--text-muted, #8b949e);
+  font-size: 13px;
+  margin: 0 0 16px 0;
+}
