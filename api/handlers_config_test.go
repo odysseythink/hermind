@@ -178,3 +178,38 @@ func TestHandleConfigGet_RedactsSectionSecretFields(t *testing.T) {
 		t.Errorf("driver = %v, want \"postgres\"", got)
 	}
 }
+
+func TestHandleConfigPut_PreservesSectionSecretOnBlank(t *testing.T) {
+	cfg := &config.Config{}
+	cfg.Storage.Driver = "postgres"
+	cfg.Storage.PostgresURL = "postgres://user:pass@host/db"
+
+	tmp := t.TempDir()
+	path := filepath.Join(tmp, "config.yaml")
+
+	srv, err := NewServer(&ServerOpts{
+		Config:     cfg,
+		ConfigPath: path,
+		Token:      "test-token",
+	})
+	if err != nil {
+		t.Fatalf("NewServer: %v", err)
+	}
+
+	// The frontend ships back the redacted blank for postgres_url; the
+	// rest of the config round-trips unchanged.
+	putBody := strings.NewReader(`{"config":{"storage":{"driver":"postgres","postgres_url":""}}}`)
+	req := httptest.NewRequest("PUT", "/api/config", putBody)
+	req.Header.Set("Authorization", "Bearer test-token")
+	req.Header.Set("Content-Type", "application/json")
+	w := httptest.NewRecorder()
+	srv.Router().ServeHTTP(w, req)
+
+	if w.Code != http.StatusOK {
+		t.Fatalf("PUT status = %d, body = %s", w.Code, w.Body.String())
+	}
+
+	if got := cfg.Storage.PostgresURL; got != "postgres://user:pass@host/db" {
+		t.Errorf("PostgresURL = %q, want preserved secret", got)
+	}
+}

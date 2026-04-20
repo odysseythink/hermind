@@ -126,10 +126,16 @@ func (s *Server) handleConfigPut(w http.ResponseWriter, r *http.Request) {
 	writeJSON(w, OKResponse{OK: true})
 }
 
-// preserveSecrets copies every FieldSecret from current into updated
-// whenever updated's value is "". Keys missing from current (new
-// instances) are left with whatever the caller supplied.
+// preserveSecrets copies every blank secret in updated back from current,
+// covering both platform secrets (gateway.platforms[*].options) and
+// section secrets registered in config/descriptor. Keys missing from
+// current (new platforms, new providers, …) are left as-is.
 func preserveSecrets(updated, current *config.Config) {
+	preservePlatformSecrets(updated, current)
+	preserveSectionSecrets(updated, current)
+}
+
+func preservePlatformSecrets(updated, current *config.Config) {
 	for key, newPC := range updated.Gateway.Platforms {
 		curPC, ok := current.Gateway.Platforms[key]
 		if !ok {
@@ -152,4 +158,74 @@ func preserveSecrets(updated, current *config.Config) {
 		}
 		updated.Gateway.Platforms[key] = newPC
 	}
+}
+
+// preserveSectionSecrets round-trips blanks for every FieldSecret on a
+// registered section. The mapping from (section key, field name) to the
+// Go struct field is done via a YAML round-trip: marshal both configs
+// into map[string]any, mutate updated's map, re-unmarshal back into
+// updated. This avoids reflection-over-struct-tags gymnastics at the
+// cost of two marshal/unmarshal cycles — acceptable because PUT is cold.
+func preserveSectionSecrets(updated, current *config.Config) {
+	sections := descriptor.All()
+	if len(sections) == 0 {
+		return
+	}
+	// Detect any secret field that's blank in updated — cheap reflection
+	// would also work, but YAML round-trip keeps this keyed on yaml tags,
+	// same as the rest of the config handler.
+	updBytes, err := yaml.Marshal(updated)
+	if err != nil {
+		return
+	}
+	curBytes, err := yaml.Marshal(current)
+	if err != nil {
+		return
+	}
+	var updM, curM map[string]any
+	if err := yaml.Unmarshal(updBytes, &updM); err != nil {
+		return
+	}
+	if err := yaml.Unmarshal(curBytes, &curM); err != nil {
+		return
+	}
+
+	changed := false
+	for _, sec := range sections {
+		upd, ok := updM[sec.Key].(map[string]any)
+		if !ok {
+			continue
+		}
+		cur, _ := curM[sec.Key].(map[string]any)
+		for _, f := range sec.Fields {
+			if f.Kind != descriptor.FieldSecret {
+				continue
+			}
+			newVal, _ := upd[f.Name].(string)
+			if newVal != "" {
+				continue
+			}
+			if cur == nil {
+				continue
+			}
+			prevVal, _ := cur[f.Name].(string)
+			if prevVal == "" {
+				continue
+			}
+			upd[f.Name] = prevVal
+			changed = true
+		}
+		if changed {
+			updM[sec.Key] = upd
+		}
+	}
+	if !changed {
+		return
+	}
+
+	reBytes, err := yaml.Marshal(updM)
+	if err != nil {
+		return
+	}
+	_ = yaml.Unmarshal(reBytes, updated)
 }
