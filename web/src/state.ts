@@ -255,11 +255,15 @@ export function dirtyGroups(state: AppState): Set<GroupId> {
   return out;
 }
 
-/** totalDirtyCount returns the total number of dirty sub-items across all
- *  groups. Stage 1: equals dirtyCount (the IM instance diff count); later
- *  stages may sum per-group sub-counts. */
+/** totalDirtyCount returns how many units have unsaved changes: the
+ *  per-instance gateway diff count plus one per dirty non-gateway group. */
 export function totalDirtyCount(state: AppState): number {
-  return dirtyCount(state);
+  let n = dirtyCount(state);
+  for (const g of GROUPS) {
+    if (g.id === 'gateway') continue;
+    if (groupDirty(state, g.id)) n++;
+  }
+  return n;
 }
 
 function deepEqual(a: unknown, b: unknown): boolean {

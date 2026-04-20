@@ -356,3 +356,31 @@ describe('edit/config-field', () => {
     expect(groupDirty(next, 'runtime')).toBe(true);
   });
 });
+
+describe('totalDirtyCount with non-gateway edits', () => {
+  it('returns 1 when only a section is dirty', () => {
+    const s: AppState = {
+      ...initialState,
+      status: 'ready',
+      config: { storage: { driver: 'postgres' } },
+      originalConfig: { storage: { driver: 'sqlite' } },
+    };
+    expect(totalDirtyCount(s)).toBe(1);
+  });
+
+  it('sums gateway dirty + non-gateway dirty groups', () => {
+    const s: AppState = {
+      ...initialState,
+      status: 'ready',
+      config: {
+        storage: { driver: 'postgres' },
+        gateway: { platforms: { tg: { enabled: true, type: 'telegram', options: { token: 'new' } } } },
+      },
+      originalConfig: {
+        storage: { driver: 'sqlite' },
+        gateway: { platforms: { tg: { enabled: true, type: 'telegram', options: { token: 'old' } } } },
+      },
+    };
+    expect(totalDirtyCount(s)).toBe(2);
+  });
+});
