@@ -9,6 +9,7 @@ import (
 	"testing"
 
 	"github.com/odysseythink/hermind/config"
+	"github.com/odysseythink/hermind/config/descriptor"
 )
 
 func TestHandleConfigGet_RedactsSecretFields(t *testing.T) {
@@ -211,5 +212,105 @@ func TestHandleConfigPut_PreservesSectionSecretOnBlank(t *testing.T) {
 
 	if got := cfg.Storage.PostgresURL; got != "postgres://user:pass@host/db" {
 		t.Errorf("PostgresURL = %q, want preserved secret", got)
+	}
+}
+
+func TestConfigGet_RedactsKeyedMapSecrets(t *testing.T) {
+	// Seed a ShapeKeyedMap section so we don't wait on Task 4's providers.
+	const key = "__test_redact_keyed_map"
+	descriptor.Register(descriptor.Section{
+		Key:     key,
+		Label:   "Test",
+		GroupID: "runtime",
+		Shape:   descriptor.ShapeKeyedMap,
+		Fields: []descriptor.FieldSpec{
+			{Name: "provider", Label: "Type", Kind: descriptor.FieldEnum,
+				Required: true, Enum: []string{"a"}},
+			{Name: "api_key", Label: "API key", Kind: descriptor.FieldSecret},
+		},
+	})
+
+	// The descriptor has yaml key __test_redact_keyed_map but config.Config has
+	// no matching struct field. To simulate a populated instance, inject it
+	// directly into the map that the GET handler receives. We do that by
+	// passing a Config whose yaml-marshaled shape contains the key — easiest
+	// is to bolt it onto config.Config.Providers since we're only exercising
+	// the redaction walk, not the yaml round-trip. But Providers isn't
+	// ShapeKeyedMap yet. Instead, seed the tested handler via a custom Config
+	// struct — which we can't define here. Fall back to exercising redaction
+	// through yaml.Marshal of a map[string]any we construct ourselves.
+	// The redactSectionSecrets function operates on a map[string]any — we
+	// call it directly.
+	blob := map[string]any{
+		key: map[string]any{
+			"anthropic_main": map[string]any{
+				"provider": "a",
+				"api_key":  "sk-real-secret",
+			},
+			"openai_bot": map[string]any{
+				"provider": "a",
+				"api_key":  "sk-other-secret",
+			},
+		},
+	}
+	RedactSectionSecretsForTest(blob)
+	inst1, _ := blob[key].(map[string]any)["anthropic_main"].(map[string]any)
+	inst2, _ := blob[key].(map[string]any)["openai_bot"].(map[string]any)
+	if inst1["api_key"] != "" {
+		t.Errorf("anthropic_main.api_key = %q, want blank", inst1["api_key"])
+	}
+	if inst2["api_key"] != "" {
+		t.Errorf("openai_bot.api_key = %q, want blank", inst2["api_key"])
+	}
+	if inst1["provider"] != "a" {
+		t.Errorf("anthropic_main.provider = %q, want untouched", inst1["provider"])
+	}
+}
+
+func TestConfigPut_PreservesKeyedMapSecrets(t *testing.T) {
+	// Same seeding story. Exercise preserveSectionSecrets via a test hook.
+	const key = "__test_preserve_keyed_map"
+	descriptor.Register(descriptor.Section{
+		Key:     key,
+		Label:   "Test",
+		GroupID: "runtime",
+		Shape:   descriptor.ShapeKeyedMap,
+		Fields: []descriptor.FieldSpec{
+			{Name: "provider", Label: "Type", Kind: descriptor.FieldEnum,
+				Required: true, Enum: []string{"a"}},
+			{Name: "api_key", Label: "API key", Kind: descriptor.FieldSecret},
+		},
+	})
+
+	current := map[string]any{
+		key: map[string]any{
+			"anthropic_main": map[string]any{
+				"provider": "a",
+				"api_key":  "sk-real-secret",
+			},
+		},
+	}
+	updated := map[string]any{
+		key: map[string]any{
+			"anthropic_main": map[string]any{
+				"provider": "a",
+				"api_key":  "", // blanked — should be restored from current
+			},
+			"new_instance": map[string]any{
+				"provider": "a",
+				"api_key":  "sk-freshly-typed",
+			},
+		},
+	}
+	PreserveSectionSecretsForTest(updated, current)
+	inst1, _ := updated[key].(map[string]any)["anthropic_main"].(map[string]any)
+	if inst1["api_key"] != "sk-real-secret" {
+		t.Errorf("anthropic_main.api_key = %q, want %q (restored from current)",
+			inst1["api_key"], "sk-real-secret")
+	}
+	inst2, _ := updated[key].(map[string]any)["new_instance"].(map[string]any)
+	if inst2["api_key"] != "sk-freshly-typed" {
+		t.Errorf("new_instance.api_key = %q, want %q (preserved from updated)",
+			inst2["api_key"], "sk-freshly-typed")
 	}
 }

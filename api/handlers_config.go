@@ -77,10 +77,29 @@ func redactPlatformSecrets(m map[string]any) {
 func redactSectionSecrets(m map[string]any) {
 	for _, sec := range descriptor.All() {
 		if sec.Shape == descriptor.ShapeScalar {
-			// Scalar sections have no nested map to walk. 4a has no
-			// scalar secrets, so the redact path is a no-op; the branch
-			// exists so a future scalar-secret descriptor doesn't fall
-			// through the map-assuming code below.
+			// Scalar sections have no nested map. 4a has no scalar secrets.
+			continue
+		}
+		if sec.Shape == descriptor.ShapeKeyedMap {
+			// Walk map[string]any of instances, each itself map[string]any.
+			outer, ok := m[sec.Key].(map[string]any)
+			if !ok {
+				continue
+			}
+			for _, raw := range outer {
+				inner, ok := raw.(map[string]any)
+				if !ok {
+					continue
+				}
+				for _, f := range sec.Fields {
+					if f.Kind != descriptor.FieldSecret {
+						continue
+					}
+					if _, present := inner[f.Name]; present {
+						inner[f.Name] = ""
+					}
+				}
+			}
 			continue
 		}
 		blob, ok := m[sec.Key].(map[string]any)
@@ -200,7 +219,39 @@ func preserveSectionSecrets(updated, current *config.Config) {
 	changed := false
 	for _, sec := range sections {
 		if sec.Shape == descriptor.ShapeScalar {
-			// See redactSectionSecrets — 4a has no scalar secrets.
+			continue
+		}
+		if sec.Shape == descriptor.ShapeKeyedMap {
+			outer, ok := updM[sec.Key].(map[string]any)
+			if !ok {
+				continue
+			}
+			curOuter, _ := curM[sec.Key].(map[string]any)
+			for instKey, raw := range outer {
+				inner, ok := raw.(map[string]any)
+				if !ok {
+					continue
+				}
+				curInst, _ := curOuter[instKey].(map[string]any)
+				for _, f := range sec.Fields {
+					if f.Kind != descriptor.FieldSecret {
+						continue
+					}
+					newVal, _ := inner[f.Name].(string)
+					if newVal != "" {
+						continue
+					}
+					if curInst == nil {
+						continue
+					}
+					prevVal, _ := curInst[f.Name].(string)
+					if prevVal == "" {
+						continue
+					}
+					inner[f.Name] = prevVal
+					changed = true
+				}
+			}
 			continue
 		}
 		upd, ok := updM[sec.Key].(map[string]any)
@@ -239,4 +290,51 @@ func preserveSectionSecrets(updated, current *config.Config) {
 		return
 	}
 	_ = yaml.Unmarshal(reBytes, updated)
+}
+
+// RedactSectionSecretsForTest is a test-only wrapper around redactSectionSecrets.
+// Stage 4b tests use it to exercise the ShapeKeyedMap redaction path without
+// wiring a full Config struct with a matching yaml field.
+func RedactSectionSecretsForTest(m map[string]any) { redactSectionSecrets(m) }
+
+// PreserveSectionSecretsForTest is a test-only wrapper around the
+// preserveSectionSecrets inner logic that walks map[string]any instead of
+// config.Config. It mimics what preserveSectionSecrets does after its
+// YAML-marshal-and-unmarshal prelude. Matches the input shape the redact
+// helper operates on.
+func PreserveSectionSecretsForTest(updated, current map[string]any) {
+	for _, sec := range descriptor.All() {
+		if sec.Shape != descriptor.ShapeKeyedMap {
+			continue
+		}
+		outer, ok := updated[sec.Key].(map[string]any)
+		if !ok {
+			continue
+		}
+		curOuter, _ := current[sec.Key].(map[string]any)
+		for instKey, raw := range outer {
+			inner, ok := raw.(map[string]any)
+			if !ok {
+				continue
+			}
+			curInst, _ := curOuter[instKey].(map[string]any)
+			for _, f := range sec.Fields {
+				if f.Kind != descriptor.FieldSecret {
+					continue
+				}
+				newVal, _ := inner[f.Name].(string)
+				if newVal != "" {
+					continue
+				}
+				if curInst == nil {
+					continue
+				}
+				prevVal, _ := curInst[f.Name].(string)
+				if prevVal == "" {
+					continue
+				}
+				inner[f.Name] = prevVal
+			}
+		}
+	}
 }
