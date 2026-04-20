@@ -370,6 +370,26 @@ describe('edit/config-field', () => {
     });
     expect(groupDirty(next, 'runtime')).toBe(true);
   });
+
+  it('writes a dotted field name into a nested object without clobbering siblings', () => {
+    const state: AppState = reducer(initialState, {
+      type: 'boot/loaded',
+      descriptors: emptyDescriptors,
+      configSections: [],
+      config: { memory: { provider: 'honcho', honcho: { workspace: 'w' } } } as unknown as Config,
+    });
+    const next = reducer(state, {
+      type: 'edit/config-field',
+      sectionKey: 'memory',
+      field: 'honcho.api_key',
+      value: 'k',
+    });
+    const cfg = next.config as unknown as Record<string, unknown>;
+    const memory = cfg.memory as Record<string, unknown>;
+    const honcho = memory.honcho as Record<string, unknown>;
+    expect(honcho.workspace).toBe('w');
+    expect(honcho.api_key).toBe('k');
+  });
 });
 
 describe('totalDirtyCount with non-gateway edits', () => {

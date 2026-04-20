@@ -1,6 +1,7 @@
 import type { Config, ConfigSection, PlatformInstance, SchemaDescriptor } from './api/schemas';
 import { GROUPS, type GroupId } from './shell/groups';
 import { loadExpandedGroups, saveExpandedGroups } from './shell/persistence';
+import { setPath } from './util/path';
 
 export type Status = 'booting' | 'ready' | 'saving' | 'applying' | 'error';
 
@@ -165,7 +166,7 @@ export function reducer(state: AppState, action: Action): AppState {
         ...state,
         config: {
           ...state.config,
-          [action.sectionKey]: { ...prev, [action.field]: action.value },
+          [action.sectionKey]: setPath(prev, action.field, action.value),
         } as typeof state.config,
       };
     }
