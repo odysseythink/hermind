@@ -439,3 +439,106 @@ describe('reducer: edit/config-scalar', () => {
     expect(typeof (next.config as any).model).toBe('string');
   });
 });
+
+describe('reducer: edit/keyed-instance-field', () => {
+  it('sets a field on an existing instance', () => {
+    const s = {
+      ...initialState,
+      config: {
+        providers: {
+          anthropic_main: { provider: 'anthropic', base_url: '', api_key: '', model: '' },
+        },
+      } as any,
+    };
+    const next = reducer(s, {
+      type: 'edit/keyed-instance-field',
+      sectionKey: 'providers',
+      instanceKey: 'anthropic_main',
+      field: 'base_url',
+      value: 'https://api.anthropic.com',
+    });
+    const p = (next.config as any).providers.anthropic_main;
+    expect(p.base_url).toBe('https://api.anthropic.com');
+    expect(p.provider).toBe('anthropic'); // unchanged
+  });
+
+  it('does not touch other instances', () => {
+    const s = {
+      ...initialState,
+      config: {
+        providers: {
+          a: { provider: 'x', model: '' },
+          b: { provider: 'y', model: 'other' },
+        },
+      } as any,
+    };
+    const next = reducer(s, {
+      type: 'edit/keyed-instance-field',
+      sectionKey: 'providers',
+      instanceKey: 'a',
+      field: 'model',
+      value: 'anthropic/claude-opus-4-7',
+    });
+    expect((next.config as any).providers.b).toEqual({ provider: 'y', model: 'other' });
+  });
+});
+
+describe('reducer: keyed-instance/create', () => {
+  it('adds a new instance with the initial payload', () => {
+    const s = {
+      ...initialState,
+      config: { providers: {} } as any,
+    };
+    const next = reducer(s, {
+      type: 'keyed-instance/create',
+      sectionKey: 'providers',
+      instanceKey: 'openai_bot',
+      initial: { provider: 'openai', base_url: '', api_key: '', model: '' },
+    });
+    expect((next.config as any).providers.openai_bot).toEqual({
+      provider: 'openai', base_url: '', api_key: '', model: '',
+    });
+  });
+
+  it('creates the section map if it did not exist', () => {
+    const s = { ...initialState, config: {} as any };
+    const next = reducer(s, {
+      type: 'keyed-instance/create',
+      sectionKey: 'providers',
+      instanceKey: 'p1',
+      initial: { provider: 'openai' },
+    });
+    expect((next.config as any).providers.p1.provider).toBe('openai');
+  });
+});
+
+describe('reducer: keyed-instance/delete', () => {
+  it('removes an existing instance', () => {
+    const s = {
+      ...initialState,
+      config: {
+        providers: { a: { provider: 'x' }, b: { provider: 'y' } },
+      } as any,
+    };
+    const next = reducer(s, {
+      type: 'keyed-instance/delete',
+      sectionKey: 'providers',
+      instanceKey: 'a',
+    });
+    expect((next.config as any).providers.a).toBeUndefined();
+    expect((next.config as any).providers.b).toEqual({ provider: 'y' });
+  });
+
+  it('is a no-op for missing keys', () => {
+    const s = {
+      ...initialState,
+      config: { providers: { a: { provider: 'x' } } } as any,
+    };
+    const next = reducer(s, {
+      type: 'keyed-instance/delete',
+      sectionKey: 'providers',
+      instanceKey: 'nonexistent',
+    });
+    expect((next.config as any).providers.a).toEqual({ provider: 'x' });
+  });
+});

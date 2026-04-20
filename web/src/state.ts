@@ -45,7 +45,10 @@ export type Action =
   | { type: 'shell/selectSub'; key: string | null }
   | { type: 'shell/toggleGroup'; group: GroupId }
   | { type: 'edit/config-field'; sectionKey: string; field: string; value: unknown }
-  | { type: 'edit/config-scalar'; sectionKey: string; value: unknown };
+  | { type: 'edit/config-scalar'; sectionKey: string; value: unknown }
+  | { type: 'edit/keyed-instance-field'; sectionKey: string; instanceKey: string; field: string; value: unknown }
+  | { type: 'keyed-instance/create'; sectionKey: string; instanceKey: string; initial: Record<string, unknown> }
+  | { type: 'keyed-instance/delete'; sectionKey: string; instanceKey: string };
 
 export const initialState: AppState = {
   status: 'booting',
@@ -166,6 +169,51 @@ export function reducer(state: AppState, action: Action): AppState {
         config: {
           ...state.config,
           [action.sectionKey]: action.value,
+        } as typeof state.config,
+      };
+    }
+    case 'edit/keyed-instance-field': {
+      const cfg = state.config as unknown as Record<string, unknown>;
+      const sec = (cfg[action.sectionKey] as Record<string, Record<string, unknown>> | undefined) ?? {};
+      const inst = sec[action.instanceKey] ?? {};
+      return {
+        ...state,
+        config: {
+          ...state.config,
+          [action.sectionKey]: {
+            ...sec,
+            [action.instanceKey]: { ...inst, [action.field]: action.value },
+          },
+        } as typeof state.config,
+      };
+    }
+    case 'keyed-instance/create': {
+      const cfg = state.config as unknown as Record<string, unknown>;
+      const sec = (cfg[action.sectionKey] as Record<string, Record<string, unknown>> | undefined) ?? {};
+      return {
+        ...state,
+        config: {
+          ...state.config,
+          [action.sectionKey]: {
+            ...sec,
+            [action.instanceKey]: action.initial,
+          },
+        } as typeof state.config,
+      };
+    }
+    case 'keyed-instance/delete': {
+      const cfg = state.config as unknown as Record<string, unknown>;
+      const sec = (cfg[action.sectionKey] as Record<string, Record<string, unknown>> | undefined) ?? {};
+      if (!(action.instanceKey in sec)) {
+        return state;
+      }
+      const next = { ...sec };
+      delete next[action.instanceKey];
+      return {
+        ...state,
+        config: {
+          ...state.config,
+          [action.sectionKey]: next,
         } as typeof state.config,
       };
     }
