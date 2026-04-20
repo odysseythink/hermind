@@ -196,3 +196,14 @@ rm -rf /tmp/hermind-smoke
   - provider does not implement ModelLister: 501
   - upstream error (auth, network, rate-limit): 502
 - Primary Providers fetch-models (4b) continues to work unchanged.
+
+## Stage 4f · Drag-and-drop reorder for Fallback Providers
+
+- Configure three fallback providers. Hover over any fallback row in the sidebar — cursor shows as a grab cursor.
+- Click and drag the `#1` row down over the `#3` row. The source row dims to 40% opacity. The target row gains a dashed amber outline.
+- Release. Rows reorder instantly. URL hash tracks the moved row (same behavior as up/down buttons).
+- Drag onto the same row (no-op): nothing changes.
+- Start a drag, then press Escape mid-drag: source row returns to full opacity, no reorder.
+- Up/down buttons still work as before — keyboard users get the full workflow.
+- Primary Providers rows (keyed_map) are NOT draggable — order has no semantic meaning there.
+- FallbackProviderEditor main-pane header still shows up/down buttons (drag is sidebar-only).
