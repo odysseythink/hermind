@@ -33,6 +33,9 @@ function makeProps(
     onConfigKeyedField: () => {},
     onConfigKeyedDelete: () => {},
     onFetchModels: async () => ({ models: [] }),
+    onConfigListField: () => {},
+    onConfigListDelete: () => {},
+    onConfigListMove: () => {},
     ...overrides,
   };
 }
@@ -93,6 +96,9 @@ describe('ContentPanel — non-gateway section routing', () => {
     onConfigKeyedField: () => {},
     onConfigKeyedDelete: () => {},
     onFetchModels: async () => ({ models: [] }),
+    onConfigListField: () => {},
+    onConfigListDelete: () => {},
+    onConfigListMove: () => {},
   };
 
   it('renders the ConfigSection for runtime/storage', () => {
@@ -230,5 +236,60 @@ describe('ContentPanel — keyed_map section routing', () => {
     );
     expect(screen.getByText(/anthropic_main/i)).toBeInTheDocument();
     expect(screen.getByLabelText(/api key/i)).toBeInTheDocument();
+  });
+});
+
+describe('ContentPanel — list section routing', () => {
+  const fbSection: ConfigSection = {
+    key: 'fallback_providers',
+    label: 'Fallback Providers',
+    group_id: 'models',
+    shape: 'list',
+    fields: [
+      { name: 'provider', label: 'Provider type', kind: 'enum', required: true,
+        enum: ['anthropic', 'openai'] },
+      { name: 'api_key', label: 'API key', kind: 'secret', required: true },
+    ],
+  };
+
+  it('renders FallbackProviderEditor for a fallback:N subkey', () => {
+    render(
+      <ContentPanel
+        {...makeProps({
+          activeGroup: 'models',
+          activeSubKey: 'fallback:1',
+          config: {
+            fallback_providers: [
+              { provider: 'anthropic', api_key: '' },
+              { provider: 'openai', api_key: '' },
+            ],
+          } as unknown as Config,
+          originalConfig: {
+            fallback_providers: [
+              { provider: 'anthropic', api_key: '' },
+              { provider: 'openai', api_key: '' },
+            ],
+          } as unknown as Config,
+          configSections: [fbSection],
+        })}
+      />,
+    );
+    expect(screen.getByText(/fallback #2/i)).toBeInTheDocument();
+    expect(screen.getByLabelText(/api key/i)).toBeInTheDocument();
+  });
+
+  it('does not render the editor when fallback:N index is out of bounds', () => {
+    render(
+      <ContentPanel
+        {...makeProps({
+          activeGroup: 'models',
+          activeSubKey: 'fallback:5',
+          config: { fallback_providers: [] } as unknown as Config,
+          originalConfig: { fallback_providers: [] } as unknown as Config,
+          configSections: [fbSection],
+        })}
+      />,
+    );
+    expect(screen.queryByText(/fallback #/i)).not.toBeInTheDocument();
   });
 });

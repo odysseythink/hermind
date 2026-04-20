@@ -18,11 +18,15 @@ export interface SidebarProps {
   dirtyInstanceKeys: Set<string>;
   providerInstances: Array<{ key: string; type: string }>;
   dirtyProviderKeys: Set<string>;
+  fallbackProviders: Array<{ provider: string }>;
+  dirtyFallbackIndices: Set<number>;
   onSelectGroup: (id: GroupId) => void;
   onSelectSub: (key: string) => void;
   onToggleGroup: (id: GroupId) => void;
   onNewInstance: () => void;
   onNewProvider: () => void;
+  onAddFallback: () => void;
+  onMoveFallback: (index: number, direction: 'up' | 'down') => void;
 }
 
 export default function Sidebar(props: SidebarProps) {
@@ -56,6 +60,20 @@ export default function Sidebar(props: SidebarProps) {
                 props.onSelectSub(key);
               }}
               onNewProvider={props.onNewProvider}
+              fallbackProviders={props.fallbackProviders}
+              dirtyFallbackIndices={props.dirtyFallbackIndices}
+              activeFallbackIndex={(() => {
+                if (props.activeGroup !== 'models') return null;
+                if (!props.activeSubKey || !props.activeSubKey.startsWith('fallback:')) return null;
+                const n = Number(props.activeSubKey.slice('fallback:'.length));
+                return Number.isInteger(n) ? n : null;
+              })()}
+              onSelectFallback={i => {
+                props.onSelectGroup('models');
+                props.onSelectSub(`fallback:${i}`);
+              }}
+              onAddFallback={props.onAddFallback}
+              onMoveFallback={props.onMoveFallback}
             />
           ) : (
             <SectionList

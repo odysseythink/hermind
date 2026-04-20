@@ -16,6 +16,7 @@ import {
   totalDirtyCount,
 } from './state';
 import { keyedInstanceDirty } from './shell/keyedInstances';
+import { listInstanceDirty } from './shell/listInstances';
 import { migrateLegacyHash, parseHash, stringifyHash } from './shell/hash';
 import type { GroupId } from './shell/groups';
 import TopBar from './components/shell/TopBar';
@@ -151,6 +152,28 @@ export default function App() {
     return out;
   }, [state]);
 
+  const fallbackProviders = useMemo(() => {
+    const list = ((state.config as Record<string, unknown>).fallback_providers as
+      | Array<Record<string, unknown>>
+      | undefined) ?? [];
+    return list.map(item => ({ provider: (item.provider as string) ?? '' }));
+  }, [state.config]);
+
+  const dirtyFallbackIndices = useMemo(() => {
+    const cur = ((state.config as Record<string, unknown>).fallback_providers as
+      | Array<unknown>
+      | undefined) ?? [];
+    const orig = ((state.originalConfig as Record<string, unknown>).fallback_providers as
+      | Array<unknown>
+      | undefined) ?? [];
+    const len = Math.max(cur.length, orig.length);
+    const out = new Set<number>();
+    for (let i = 0; i < len; i++) {
+      if (listInstanceDirty(state, 'fallback_providers', i)) out.add(i);
+    }
+    return out;
+  }, [state]);
+
   const [newProviderDialogOpen, setNewProviderDialogOpen] = useState(false);
 
   const onFetchProviderModels = useCallback(async (instanceKey: string) => {
@@ -232,11 +255,35 @@ export default function App() {
         dirtyInstanceKeys={dirtyInstanceKeys}
         providerInstances={providerInstances}
         dirtyProviderKeys={dirtyProviderKeys}
+        fallbackProviders={fallbackProviders}
+        dirtyFallbackIndices={dirtyFallbackIndices}
         onSelectGroup={(id: GroupId) => dispatch({ type: 'shell/selectGroup', group: id })}
         onSelectSub={(key: string) => dispatch({ type: 'shell/selectSub', key })}
         onToggleGroup={(id: GroupId) => dispatch({ type: 'shell/toggleGroup', group: id })}
         onNewInstance={() => setNewDialogOpen(true)}
         onNewProvider={() => setNewProviderDialogOpen(true)}
+        onAddFallback={() => {
+          const list = ((state.config as Record<string, unknown>).fallback_providers as
+            | Array<unknown>
+            | undefined) ?? [];
+          const section = state.configSections.find(s => s.key === 'fallback_providers');
+          const providerField = section?.fields.find(f => f.name === 'provider');
+          const firstType = providerField?.enum?.[0] ?? '';
+          dispatch({
+            type: 'list-instance/create',
+            sectionKey: 'fallback_providers',
+            initial: { provider: firstType, base_url: '', api_key: '', model: '' },
+          });
+          dispatch({ type: 'shell/selectGroup', group: 'models' });
+          dispatch({ type: 'shell/selectSub', key: `fallback:${list.length}` });
+        }}
+        onMoveFallback={(index, direction) =>
+          dispatch({
+            type: direction === 'up' ? 'list-instance/move-up' : 'list-instance/move-down',
+            sectionKey: 'fallback_providers',
+            index,
+          })
+        }
       />
       <main>
         <ContentPanel
@@ -274,6 +321,22 @@ export default function App() {
             dispatch({ type: 'shell/selectSub', key: null });
           }}
           onFetchModels={onFetchProviderModels}
+          onConfigListField={(sectionKey, index, field, value) =>
+            dispatch({ type: 'edit/list-instance-field', sectionKey, index, field, value })
+          }
+          onConfigListDelete={(sectionKey, index) => {
+            dispatch({ type: 'list-instance/delete', sectionKey, index });
+            dispatch({ type: 'shell/selectSub', key: null });
+          }}
+          onConfigListMove={(sectionKey, index, direction) => {
+            dispatch({
+              type: direction === 'up' ? 'list-instance/move-up' : 'list-instance/move-down',
+              sectionKey,
+              index,
+            });
+            const newIndex = direction === 'up' ? index - 1 : index + 1;
+            dispatch({ type: 'shell/selectSub', key: `fallback:${newIndex}` });
+          }}
         />
       </main>
       <Footer flash={state.flash} />

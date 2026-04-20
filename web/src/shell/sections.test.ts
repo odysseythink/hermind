@@ -61,9 +61,16 @@ describe('SECTIONS registry', () => {
     expect(p!.plannedStage).toBe('done');
   });
 
-  it('models group exposes model then providers in declaration order', () => {
+  it('registers Stage 4c section: fallback_providers under models', () => {
+    const fb = findSection('fallback_providers');
+    expect(fb, 'missing fallback_providers').toBeDefined();
+    expect(fb!.groupId).toBe('models');
+    expect(fb!.plannedStage).toBe('done');
+  });
+
+  it('models group exposes model, providers, fallback_providers in declaration order', () => {
     const models = sectionsInGroup('models');
-    expect(models.map(s => s.key)).toEqual(['model', 'providers']);
+    expect(models.map(s => s.key)).toEqual(['model', 'providers', 'fallback_providers']);
   });
 
   it('sectionsInGroup returns [] for a group with no registered sections', () => {

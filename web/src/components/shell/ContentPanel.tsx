@@ -5,6 +5,7 @@ import EmptyState from './EmptyState';
 import GatewayPanel from '../groups/gateway/GatewayPanel';
 import ConfigSection from '../ConfigSection';
 import ProviderEditor from '../groups/models/ProviderEditor';
+import FallbackProviderEditor from '../groups/models/FallbackProviderEditor';
 
 export interface ContentPanelProps {
   activeGroup: GroupId | null;
@@ -28,6 +29,9 @@ export interface ContentPanelProps {
   onConfigKeyedField: (sectionKey: string, instanceKey: string, field: string, value: unknown) => void;
   onConfigKeyedDelete: (sectionKey: string, instanceKey: string) => void;
   onFetchModels: (instanceKey: string) => Promise<{ models: string[] }>;
+  onConfigListField: (sectionKey: string, index: number, field: string, value: unknown) => void;
+  onConfigListDelete: (sectionKey: string, index: number) => void;
+  onConfigListMove: (sectionKey: string, index: number, direction: 'up' | 'down') => void;
 }
 
 function shallowEqualInstance(
@@ -81,8 +85,8 @@ export default function ContentPanel(props: ContentPanelProps) {
           />
         );
       }
-      if (section.shape === 'keyed_map') {
-        // activeSubKey is the section key; no instance selected yet.
+      if (section.shape === 'keyed_map' || section.shape === 'list') {
+        // activeSubKey is the section key; no instance/element selected yet.
         return <EmptyState onSelectGroup={props.onSelectGroup} />;
       }
       const value = (props.config as Record<string, unknown>)[section.key] as
@@ -99,6 +103,45 @@ export default function ContentPanel(props: ContentPanelProps) {
           onFieldChange={(field, v) => props.onConfigField(section.key, field, v)}
         />
       );
+    }
+    // fallback:N addresses the N-th element of fallback_providers.
+    if (props.activeGroup === 'models' && props.activeSubKey.startsWith('fallback:')) {
+      const index = Number(props.activeSubKey.slice('fallback:'.length));
+      const fbSection = props.configSections.find(s => s.key === 'fallback_providers');
+      const list = ((props.config as Record<string, unknown>).fallback_providers as
+        | Array<Record<string, unknown>>
+        | undefined) ?? [];
+      const origList = ((props.originalConfig as Record<string, unknown>).fallback_providers as
+        | Array<Record<string, unknown>>
+        | undefined) ?? [];
+      if (
+        fbSection &&
+        fbSection.shape === 'list' &&
+        Number.isInteger(index) &&
+        index >= 0 &&
+        index < list.length
+      ) {
+        const element = list[index];
+        const originalElement = origList[index];
+        const dirty = !shallowEqualInstance(element, originalElement);
+        return (
+          <FallbackProviderEditor
+            sectionKey="fallback_providers"
+            index={index}
+            length={list.length}
+            section={fbSection}
+            value={element}
+            originalValue={originalElement ?? {}}
+            dirty={dirty}
+            onField={(i, field, v) =>
+              props.onConfigListField('fallback_providers', i, field, v)
+            }
+            onDelete={() => props.onConfigListDelete('fallback_providers', index)}
+            onMoveUp={() => props.onConfigListMove('fallback_providers', index, 'up')}
+            onMoveDown={() => props.onConfigListMove('fallback_providers', index, 'down')}
+          />
+        );
+      }
     }
     // Key didn't match a section — try treating it as a provider-instance key.
     const providersSection = props.configSections.find(s => s.key === 'providers');
