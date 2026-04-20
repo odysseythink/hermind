@@ -67,3 +67,42 @@
 .body {
   margin-bottom: 16px;
 }
+
+.footer {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding-top: 12px;
+  border-top: 1px solid var(--border, #30363d);
+}
+
+.fetchBtn {
+  padding: 6px 14px;
+  background: var(--accent, #FFB800);
+  border: 0;
+  border-radius: 3px;
+  color: var(--accent-fg, #111827);
+  cursor: pointer;
+  font-weight: 600;
+}
+
+.fetchBtn:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+.chipOk, .chipErr {
+  padding: 4px 10px;
+  border-radius: 3px;
+  font-size: 12px;
+}
+
+.chipOk {
+  background: rgba(34, 197, 94, 0.15);
+  color: var(--success, #3fb950);
+}
+
+.chipErr {
+  background: rgba(239, 68, 68, 0.15);
+  color: var(--error, #f85149);
+}
