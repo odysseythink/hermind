@@ -6,6 +6,7 @@ import BoolToggle from './fields/BoolToggle';
 import EnumSelect from './fields/EnumSelect';
 import SecretInput from './fields/SecretInput';
 import FloatInput from './fields/FloatInput';
+import { getPath } from '../util/path';
 
 export interface ConfigSectionProps {
   section: ConfigSectionT;
@@ -56,8 +57,8 @@ export default function ConfigSection({
       {section.summary && <p className={styles.summary}>{section.summary}</p>}
       {section.fields.map(f => {
         if (!isVisible(f, value)) return null;
-        const current = asString(value[f.name]);
-        const original = asString(originalValue[f.name]);
+        const current = asString(getPath(value, f.name));
+        const original = asString(getPath(originalValue, f.name));
         const schemaField = f as SchemaField;
         const onChange = (v: string) => onFieldChange(f.name, v);
         switch (f.kind) {
@@ -104,10 +105,11 @@ export default function ConfigSection({
 
 function isVisible(f: ConfigField, value: Record<string, unknown>): boolean {
   if (!f.visible_when) return true;
-  // Values arrive as real types on boot (bool true, number 42) but
-  // edited values pass through string-coerced field onChange handlers.
-  // Coerce both sides to string so predicates keep matching either way.
-  return String(value[f.visible_when.field]) === String(f.visible_when.equals);
+  // Values arrive as real types on boot (bool true, number 42) but edited
+  // values pass through string-coerced field onChange handlers. Coerce both
+  // sides to string so predicates keep matching either way. getPath handles
+  // both flat and dotted discriminator names (e.g. "provider" or "foo.bar").
+  return String(getPath(value, f.visible_when.field)) === String(f.visible_when.equals);
 }
 
 function asString(v: unknown): string {

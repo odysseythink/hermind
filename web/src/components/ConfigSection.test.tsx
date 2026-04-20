@@ -299,3 +299,68 @@ describe('ConfigSection — datalist_source on a string field', () => {
     expect(container.querySelector('datalist')).toBeNull();
   });
 });
+
+const nested: ConfigSectionT = {
+  key: 'memory',
+  label: 'Memory',
+  group_id: 'memory',
+  fields: [
+    { name: 'provider', label: 'Provider', kind: 'enum', enum: ['', 'honcho'] },
+    {
+      name: 'honcho.api_key', label: 'Honcho API key', kind: 'secret',
+      visible_when: { field: 'provider', equals: 'honcho' },
+    },
+  ],
+};
+
+describe('ConfigSection — dotted field names', () => {
+  it('renders a nested value and dispatches the dotted name on edit', async () => {
+    const user = userEvent.setup();
+    const onFieldChange = vi.fn();
+
+    function Host() {
+      const [value, setValue] = useState<Record<string, unknown>>({
+        provider: 'honcho',
+        honcho: { api_key: 'orig-key' },
+      });
+      return (
+        <ConfigSection
+          section={nested}
+          value={value}
+          originalValue={value}
+          onFieldChange={(name, v) => {
+            setValue(prev => {
+              // Host mirrors the reducer behavior for the test.
+              if (!name.includes('.')) return { ...prev, [name]: v };
+              const [head, ...rest] = name.split('.');
+              const inner = (prev[head] as Record<string, unknown>) ?? {};
+              return { ...prev, [head]: { ...inner, [rest.join('.')]: v } };
+            });
+            onFieldChange(name, v);
+          }}
+        />
+      );
+    }
+
+    render(<Host />);
+    const input = screen.getByLabelText(/honcho api key/i) as HTMLInputElement;
+    expect(input.value).toBe('orig-key');
+    await user.clear(input);
+    await user.type(input, 'new-key');
+    const last = onFieldChange.mock.calls[onFieldChange.mock.calls.length - 1];
+    expect(last[0]).toBe('honcho.api_key');
+    expect(last[1]).toBe('new-key');
+  });
+
+  it('hides a dotted-name field when the sibling discriminator does not match', () => {
+    render(
+      <ConfigSection
+        section={nested}
+        value={{ provider: '' }}
+        originalValue={{ provider: '' }}
+        onFieldChange={() => {}}
+      />,
+    );
+    expect(screen.queryByLabelText(/honcho api key/i)).toBeNull();
+  });
+});
