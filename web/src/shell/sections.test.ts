@@ -16,14 +16,33 @@ describe('SECTIONS registry', () => {
     expect(s!.plannedStage).toBe('done');
   });
 
-  it('sectionsInGroup returns entries in declaration order', () => {
+  it('registers all five Stage 3 sections as done', () => {
+    const stage3 = {
+      logging: 'observability',
+      metrics: 'observability',
+      tracing: 'observability',
+      agent: 'runtime',
+      terminal: 'runtime',
+    };
+    for (const [key, group] of Object.entries(stage3)) {
+      const s = findSection(key);
+      expect(s, `missing ${key}`).toBeDefined();
+      expect(s!.groupId).toBe(group);
+      expect(s!.plannedStage).toBe('done');
+    }
+  });
+
+  it('runtime group exposes storage, agent, terminal in declaration order', () => {
     const runtime = sectionsInGroup('runtime');
-    const keys = runtime.map(s => s.key);
-    expect(keys).toContain('storage');
+    expect(runtime.map(s => s.key)).toEqual(['storage', 'agent', 'terminal']);
+  });
+
+  it('observability group exposes logging, metrics, tracing in declaration order', () => {
+    const observability = sectionsInGroup('observability');
+    expect(observability.map(s => s.key)).toEqual(['logging', 'metrics', 'tracing']);
   });
 
   it('sectionsInGroup returns [] for a group with no registered sections', () => {
-    // Memory group has no sections in stage 2; stage 5 adds them.
     expect(sectionsInGroup('memory')).toEqual([]);
   });
 });
