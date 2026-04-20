@@ -1,4 +1,4 @@
-import type { Config, PlatformInstance, SchemaDescriptor } from './api/schemas';
+import type { Config, ConfigSection, PlatformInstance, SchemaDescriptor } from './api/schemas';
 import { GROUPS, type GroupId } from './shell/groups';
 import { loadExpandedGroups, saveExpandedGroups } from './shell/persistence';
 
@@ -18,6 +18,7 @@ export interface ShellSliceState {
 export interface AppState {
   status: Status;
   descriptors: SchemaDescriptor[];
+  configSections: ConfigSection[];
   config: Config;
   originalConfig: Config;
   /** Legacy field retained for existing IM code paths.
@@ -28,7 +29,7 @@ export interface AppState {
 }
 
 export type Action =
-  | { type: 'boot/loaded'; descriptors: SchemaDescriptor[]; config: Config }
+  | { type: 'boot/loaded'; descriptors: SchemaDescriptor[]; configSections: ConfigSection[]; config: Config }
   | { type: 'boot/failed'; error: string }
   | { type: 'select'; key: string | null }
   | { type: 'flash'; flash: Flash | null }
@@ -48,6 +49,7 @@ export type Action =
 export const initialState: AppState = {
   status: 'booting',
   descriptors: [],
+  configSections: [],
   config: {},
   originalConfig: {},
   selectedKey: null,
@@ -66,6 +68,7 @@ export function reducer(state: AppState, action: Action): AppState {
         ...state,
         status: 'ready',
         descriptors: action.descriptors,
+        configSections: action.configSections,
         config: action.config,
         originalConfig: action.config,
       };

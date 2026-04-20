@@ -25,6 +25,7 @@ describe('reducer — boot/loaded', () => {
     const state = reducer(initialState, {
       type: 'boot/loaded',
       descriptors: emptyDescriptors,
+      configSections: [],
       config: cfg({ x: { type: 't', enabled: true } }),
     });
     expect(state.status).toBe('ready');
@@ -37,6 +38,7 @@ describe('reducer — edit/field', () => {
     const s0 = reducer(initialState, {
       type: 'boot/loaded',
       descriptors: emptyDescriptors,
+      configSections: [],
       config: cfg({ k: { type: 'telegram', enabled: true, options: { token: 'old' } } }),
     });
     const s1 = reducer(s0, { type: 'edit/field', key: 'k', field: 'token', value: 'new' });
@@ -48,6 +50,7 @@ describe('reducer — edit/field', () => {
     const s0 = reducer(initialState, {
       type: 'boot/loaded',
       descriptors: emptyDescriptors,
+      configSections: [],
       config: cfg({ k: { type: 't', enabled: true, options: {} } }),
     });
     const s1 = reducer(s0, { type: 'edit/field', key: 'nope', field: 'x', value: 'v' });
@@ -60,6 +63,7 @@ describe('reducer — edit/enabled', () => {
     const s0 = reducer(initialState, {
       type: 'boot/loaded',
       descriptors: emptyDescriptors,
+      configSections: [],
       config: cfg({ k: { type: 't', enabled: true } }),
     });
     const s1 = reducer(s0, { type: 'edit/enabled', key: 'k', enabled: false });
@@ -72,6 +76,7 @@ describe('reducer — instance/delete', () => {
     const s0 = reducer(initialState, {
       type: 'boot/loaded',
       descriptors: emptyDescriptors,
+      configSections: [],
       config: cfg({ k: { type: 't', enabled: true } }),
     });
     const s1 = reducer(s0, { type: 'select', key: 'k' });
@@ -84,6 +89,7 @@ describe('reducer — instance/delete', () => {
     const s0 = reducer(initialState, {
       type: 'boot/loaded',
       descriptors: emptyDescriptors,
+      configSections: [],
       config: cfg({
         a: { type: 't', enabled: true },
         b: { type: 't', enabled: true },
@@ -113,6 +119,7 @@ describe('reducer — save/done', () => {
     const s0 = reducer(initialState, {
       type: 'boot/loaded',
       descriptors: emptyDescriptors,
+      configSections: [],
       config: cfg({ k: { type: 't', enabled: true, options: { x: 'old' } } }),
     });
     const s1 = reducer(s0, { type: 'edit/field', key: 'k', field: 'x', value: 'new' });
@@ -126,6 +133,7 @@ describe('reducer — save/done', () => {
     const s0 = reducer(initialState, {
       type: 'boot/loaded',
       descriptors: emptyDescriptors,
+      configSections: [],
       config: cfg({ k: { type: 't', enabled: true } }),
     });
     const s1 = reducer(s0, { type: 'edit/enabled', key: 'k', enabled: false });
@@ -140,6 +148,7 @@ describe('selectors', () => {
     const s = reducer(initialState, {
       type: 'boot/loaded',
       descriptors: emptyDescriptors,
+      configSections: [],
       config: cfg({
         b: { type: 't', enabled: true },
         a: { type: 't', enabled: true },
@@ -152,6 +161,7 @@ describe('selectors', () => {
     const s0 = reducer(initialState, {
       type: 'boot/loaded',
       descriptors: emptyDescriptors,
+      configSections: [],
       config: cfg({
         a: { type: 't', enabled: true },
         b: { type: 't', enabled: true },
@@ -168,6 +178,7 @@ describe('selectors', () => {
     const s0 = reducer(initialState, {
       type: 'boot/loaded',
       descriptors: emptyDescriptors,
+      configSections: [],
       config: cfg({ k: { type: 't', enabled: true, options: {} } }),
     });
     const s1 = reducer(s0, { type: 'edit/field', key: 'k', field: 'x', value: '' });
@@ -181,6 +192,7 @@ function boot(state: AppState = initialState): AppState {
   return reducer(state, {
     type: 'boot/loaded',
     descriptors: emptyDescriptors,
+    configSections: [],
     config: cfg({ a: { type: 't', enabled: true } }),
   });
 }
@@ -382,5 +394,21 @@ describe('totalDirtyCount with non-gateway edits', () => {
       },
     };
     expect(totalDirtyCount(s)).toBe(2);
+  });
+});
+
+describe('boot/loaded carries configSections', () => {
+  it('stores sections alongside descriptors and config', () => {
+    const next = reducer(initialState, {
+      type: 'boot/loaded',
+      descriptors: [],
+      configSections: [
+        { key: 'storage', label: 'Storage', group_id: 'runtime', fields: [] },
+      ],
+      config: {},
+    });
+    expect(next.status).toBe('ready');
+    expect(next.configSections).toHaveLength(1);
+    expect(next.configSections[0].key).toBe('storage');
   });
 });

@@ -3,6 +3,7 @@ import { apiFetch, ApiError } from './api/client';
 import {
   ApplyResultSchema,
   ConfigResponseSchema,
+  ConfigSchemaResponseSchema,
   PlatformsSchemaResponseSchema,
 } from './api/schemas';
 import {
@@ -30,9 +31,13 @@ export default function App() {
     const ctrl = new AbortController();
     (async () => {
       try {
-        const [schema, cfg] = await Promise.all([
+        const [schema, cfgSchema, cfg] = await Promise.all([
           apiFetch('/api/platforms/schema', {
             schema: PlatformsSchemaResponseSchema,
+            signal: ctrl.signal,
+          }),
+          apiFetch('/api/config/schema', {
+            schema: ConfigSchemaResponseSchema,
             signal: ctrl.signal,
           }),
           apiFetch('/api/config', {
@@ -43,6 +48,7 @@ export default function App() {
         dispatch({
           type: 'boot/loaded',
           descriptors: schema.descriptors,
+          configSections: cfgSchema.sections,
           config: cfg.config,
         });
       } catch (err) {
