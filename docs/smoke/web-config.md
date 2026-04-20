@@ -148,3 +148,13 @@ rm -rf /tmp/hermind-smoke
 - **Default model (`#models/model`):** single text field. Typing a new provider-qualified id and Saving writes a top-level YAML scalar (`model: anthropic/claude-opus-4-7`), NOT a nested object.
 - **Auxiliary (`#runtime/auxiliary`):** four fields — Provider (enum populated from `provider/factory.Types()`), Base URL, API key (`FieldSecret` — blanked on GET, preserved on empty PUT), Model. All four are optional.
 - All four auxiliary fields blank → Save → the whole `auxiliary:` block vanishes from YAML (`omitempty` on every sub-field) and the main provider stays in use at runtime.
+
+## Stage 4b · Providers editor + fetch-models
+
+- Sidebar Models group shows "Default model" at the top and a "Providers" header below with the instance list and "+ New provider" button.
+- Click "+ New provider" — modal opens. Type `BAD KEY` + click Create → red error "Use lowercase letters, digits, underscore". Type `anthropic_main`, pick type `anthropic`, click Create → modal closes, sidebar shows the row, URL becomes `#models/anthropic_main`, editor shows 4 fields (provider type enum pre-selected as `anthropic`).
+- Fill Base URL, API key (real key), Model. Click Save — toast "Saved". Click Fetch models — green chip "Connected ✓ (N models)". Typing in the Model field shows autocomplete suggestions from the returned list.
+- Flip API key to garbage, click Save, click Fetch models — red chip with the upstream error ("401 unauthorized" or similar).
+- Re-visit `#models/anthropic_main`. API key field is blanked (GET redacts). Click Save without typing into API key — stored key is preserved (same contract as `storage.postgres_url` and `auxiliary.api_key`).
+- Click Delete, confirm → sidebar row disappears, pane returns to EmptyState. Save — YAML `providers:` block updates (entry removed).
+- `POST /api/providers/<name>/models` returns `{"models": ["id", ...]}` on success. Errors: 404 unknown name, 400 factory rejection, 501 non-ModelLister provider, 502 upstream.
