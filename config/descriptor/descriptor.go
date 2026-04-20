@@ -43,10 +43,15 @@ func (k FieldKind) String() string {
 }
 
 // SectionShape discriminates how a section's value is laid out in YAML.
-//   - ShapeMap    — value is map[string]any (the default; every Stage 2/3 section).
-//   - ShapeScalar — value is a scalar (string/int/bool); the section's Fields
-//                   slice must contain exactly 1 entry that carries the Kind,
-//                   Label, Help, Required, and Default for the scalar.
+//   - ShapeMap      — value is map[string]any (the default; every Stage 2/3 section).
+//   - ShapeScalar   — value is a scalar (string/int/bool); the section's Fields
+//                     slice must contain exactly 1 entry that carries the Kind,
+//                     Label, Help, Required, and Default for the scalar.
+//   - ShapeKeyedMap — value is map[string]map[string]any (uniform struct per
+//                     instance, e.g. providers). Fields describe the instance
+//                     value; exactly one FieldEnum named "provider" must serve
+//                     as the type discriminator consumed by the UI's
+//                     new-instance dialog and by any per-instance redaction.
 type SectionShape int
 
 const (
