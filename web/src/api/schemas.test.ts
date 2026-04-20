@@ -243,6 +243,34 @@ describe('ConfigSectionSchema — keyed_map shape', () => {
   });
 });
 
+describe('ConfigSectionSchema — list shape', () => {
+  it('accepts shape: "list"', () => {
+    const parsed = ConfigSectionSchema.parse({
+      key: 'fallback_providers',
+      label: 'Fallback Providers',
+      group_id: 'models',
+      shape: 'list',
+      fields: [
+        { name: 'provider', label: 'Provider type', kind: 'enum', required: true,
+          enum: ['anthropic', 'openai'] },
+      ],
+    });
+    expect(parsed.shape).toBe('list');
+  });
+
+  it('rejects unknown shape strings', () => {
+    expect(() =>
+      ConfigSectionSchema.parse({
+        key: 'fallback_providers',
+        label: 'X',
+        group_id: 'models',
+        shape: 'bogus_shape',
+        fields: [],
+      }),
+    ).toThrow();
+  });
+});
+
 describe('ProviderModelsResponseSchema', () => {
   it('accepts a valid models list', () => {
     const parsed = ProviderModelsResponseSchema.parse({
