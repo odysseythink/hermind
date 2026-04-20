@@ -542,3 +542,236 @@ describe('reducer: keyed-instance/delete', () => {
     expect((next.config as any).providers.a).toEqual({ provider: 'x' });
   });
 });
+
+describe('reducer: edit/list-instance-field', () => {
+  it('updates one field on element at index', () => {
+    const state = {
+      ...initialState,
+      status: 'ready' as const,
+      config: {
+        fallback_providers: [
+          { provider: 'anthropic', api_key: '' },
+          { provider: 'openai', api_key: '' },
+        ],
+      } as unknown as Config,
+      originalConfig: {
+        fallback_providers: [
+          { provider: 'anthropic', api_key: '' },
+          { provider: 'openai', api_key: '' },
+        ],
+      } as unknown as Config,
+    };
+    const next = reducer(state, {
+      type: 'edit/list-instance-field',
+      sectionKey: 'fallback_providers',
+      index: 1,
+      field: 'api_key',
+      value: 'sk-new',
+    });
+    const list = (next.config as any).fallback_providers as Array<Record<string, unknown>>;
+    expect(list[1].api_key).toBe('sk-new');
+    expect(list[0].api_key).toBe('');
+  });
+
+  it('is a no-op when index is out of bounds', () => {
+    const state = {
+      ...initialState,
+      status: 'ready' as const,
+      config: {
+        fallback_providers: [{ provider: 'anthropic', api_key: '' }],
+      } as unknown as Config,
+      originalConfig: {
+        fallback_providers: [{ provider: 'anthropic', api_key: '' }],
+      } as unknown as Config,
+    };
+    const next = reducer(state, {
+      type: 'edit/list-instance-field',
+      sectionKey: 'fallback_providers',
+      index: 5,
+      field: 'api_key',
+      value: 'sk-new',
+    });
+    expect(next).toBe(state);
+  });
+});
+
+describe('reducer: list-instance/create', () => {
+  it('appends the new element at the end', () => {
+    const state = {
+      ...initialState,
+      status: 'ready' as const,
+      config: {
+        fallback_providers: [{ provider: 'anthropic', api_key: '' }],
+      } as unknown as Config,
+      originalConfig: {
+        fallback_providers: [{ provider: 'anthropic', api_key: '' }],
+      } as unknown as Config,
+    };
+    const next = reducer(state, {
+      type: 'list-instance/create',
+      sectionKey: 'fallback_providers',
+      initial: { provider: 'openai', base_url: '', api_key: '', model: '' },
+    });
+    const list = (next.config as any).fallback_providers as Array<Record<string, unknown>>;
+    expect(list).toHaveLength(2);
+    expect(list[1].provider).toBe('openai');
+  });
+
+  it('initializes the list when the section is absent', () => {
+    const state = { ...initialState, status: 'ready' as const };
+    const next = reducer(state, {
+      type: 'list-instance/create',
+      sectionKey: 'fallback_providers',
+      initial: { provider: 'anthropic', base_url: '', api_key: '', model: '' },
+    });
+    const list = (next.config as any).fallback_providers as unknown[];
+    expect(list).toHaveLength(1);
+  });
+});
+
+describe('reducer: list-instance/delete', () => {
+  it('removes the element at index and shifts the rest', () => {
+    const state = {
+      ...initialState,
+      status: 'ready' as const,
+      config: {
+        fallback_providers: [
+          { provider: 'anthropic', api_key: 'a' },
+          { provider: 'openai', api_key: 'b' },
+          { provider: 'anthropic', api_key: 'c' },
+        ],
+      } as unknown as Config,
+      originalConfig: {
+        fallback_providers: [
+          { provider: 'anthropic', api_key: 'a' },
+          { provider: 'openai', api_key: 'b' },
+          { provider: 'anthropic', api_key: 'c' },
+        ],
+      } as unknown as Config,
+    };
+    const next = reducer(state, {
+      type: 'list-instance/delete',
+      sectionKey: 'fallback_providers',
+      index: 1,
+    });
+    const list = (next.config as any).fallback_providers as Array<Record<string, unknown>>;
+    expect(list).toHaveLength(2);
+    expect(list[0].provider).toBe('anthropic');
+    expect(list[1].api_key).toBe('c');
+  });
+
+  it('is a no-op when index is out of bounds', () => {
+    const state = {
+      ...initialState,
+      status: 'ready' as const,
+      config: {
+        fallback_providers: [{ provider: 'anthropic', api_key: '' }],
+      } as unknown as Config,
+      originalConfig: {
+        fallback_providers: [{ provider: 'anthropic', api_key: '' }],
+      } as unknown as Config,
+    };
+    const next = reducer(state, {
+      type: 'list-instance/delete',
+      sectionKey: 'fallback_providers',
+      index: 9,
+    });
+    expect(next).toBe(state);
+  });
+});
+
+describe('reducer: list-instance/move-up', () => {
+  it('swaps element with its predecessor', () => {
+    const state = {
+      ...initialState,
+      status: 'ready' as const,
+      config: {
+        fallback_providers: [
+          { provider: 'anthropic', api_key: 'a' },
+          { provider: 'openai', api_key: 'b' },
+        ],
+      } as unknown as Config,
+      originalConfig: {
+        fallback_providers: [
+          { provider: 'anthropic', api_key: 'a' },
+          { provider: 'openai', api_key: 'b' },
+        ],
+      } as unknown as Config,
+    };
+    const next = reducer(state, {
+      type: 'list-instance/move-up',
+      sectionKey: 'fallback_providers',
+      index: 1,
+    });
+    const list = (next.config as any).fallback_providers as Array<Record<string, unknown>>;
+    expect(list[0].provider).toBe('openai');
+    expect(list[1].provider).toBe('anthropic');
+  });
+
+  it('is a no-op at index 0', () => {
+    const state = {
+      ...initialState,
+      status: 'ready' as const,
+      config: {
+        fallback_providers: [{ provider: 'anthropic', api_key: 'a' }],
+      } as unknown as Config,
+      originalConfig: {
+        fallback_providers: [{ provider: 'anthropic', api_key: 'a' }],
+      } as unknown as Config,
+    };
+    const next = reducer(state, {
+      type: 'list-instance/move-up',
+      sectionKey: 'fallback_providers',
+      index: 0,
+    });
+    expect(next).toBe(state);
+  });
+});
+
+describe('reducer: list-instance/move-down', () => {
+  it('swaps element with its successor', () => {
+    const state = {
+      ...initialState,
+      status: 'ready' as const,
+      config: {
+        fallback_providers: [
+          { provider: 'anthropic', api_key: 'a' },
+          { provider: 'openai', api_key: 'b' },
+        ],
+      } as unknown as Config,
+      originalConfig: {
+        fallback_providers: [
+          { provider: 'anthropic', api_key: 'a' },
+          { provider: 'openai', api_key: 'b' },
+        ],
+      } as unknown as Config,
+    };
+    const next = reducer(state, {
+      type: 'list-instance/move-down',
+      sectionKey: 'fallback_providers',
+      index: 0,
+    });
+    const list = (next.config as any).fallback_providers as Array<Record<string, unknown>>;
+    expect(list[0].provider).toBe('openai');
+    expect(list[1].provider).toBe('anthropic');
+  });
+
+  it('is a no-op at the last index', () => {
+    const state = {
+      ...initialState,
+      status: 'ready' as const,
+      config: {
+        fallback_providers: [{ provider: 'anthropic', api_key: 'a' }],
+      } as unknown as Config,
+      originalConfig: {
+        fallback_providers: [{ provider: 'anthropic', api_key: 'a' }],
+      } as unknown as Config,
+    };
+    const next = reducer(state, {
+      type: 'list-instance/move-down',
+      sectionKey: 'fallback_providers',
+      index: 0,
+    });
+    expect(next).toBe(state);
+  });
+});

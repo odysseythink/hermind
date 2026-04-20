@@ -48,7 +48,12 @@ export type Action =
   | { type: 'edit/config-scalar'; sectionKey: string; value: unknown }
   | { type: 'edit/keyed-instance-field'; sectionKey: string; instanceKey: string; field: string; value: unknown }
   | { type: 'keyed-instance/create'; sectionKey: string; instanceKey: string; initial: Record<string, unknown> }
-  | { type: 'keyed-instance/delete'; sectionKey: string; instanceKey: string };
+  | { type: 'keyed-instance/delete'; sectionKey: string; instanceKey: string }
+  | { type: 'edit/list-instance-field'; sectionKey: string; index: number; field: string; value: unknown }
+  | { type: 'list-instance/create'; sectionKey: string; initial: Record<string, unknown> }
+  | { type: 'list-instance/delete'; sectionKey: string; index: number }
+  | { type: 'list-instance/move-up'; sectionKey: string; index: number }
+  | { type: 'list-instance/move-down'; sectionKey: string; index: number };
 
 export const initialState: AppState = {
   status: 'booting',
@@ -214,6 +219,67 @@ export function reducer(state: AppState, action: Action): AppState {
         config: {
           ...state.config,
           [action.sectionKey]: next,
+        } as typeof state.config,
+      };
+    }
+    case 'edit/list-instance-field': {
+      const cfg = state.config as unknown as Record<string, unknown>;
+      const list = (cfg[action.sectionKey] as Array<Record<string, unknown>> | undefined) ?? [];
+      if (action.index < 0 || action.index >= list.length) {
+        return state;
+      }
+      const nextList = list.slice();
+      nextList[action.index] = { ...nextList[action.index], [action.field]: action.value };
+      return {
+        ...state,
+        config: {
+          ...state.config,
+          [action.sectionKey]: nextList,
+        } as typeof state.config,
+      };
+    }
+    case 'list-instance/create': {
+      const cfg = state.config as unknown as Record<string, unknown>;
+      const list = (cfg[action.sectionKey] as Array<Record<string, unknown>> | undefined) ?? [];
+      const nextList = list.concat([{ ...action.initial }]);
+      return {
+        ...state,
+        config: {
+          ...state.config,
+          [action.sectionKey]: nextList,
+        } as typeof state.config,
+      };
+    }
+    case 'list-instance/delete': {
+      const cfg = state.config as unknown as Record<string, unknown>;
+      const list = (cfg[action.sectionKey] as Array<Record<string, unknown>> | undefined) ?? [];
+      if (action.index < 0 || action.index >= list.length) {
+        return state;
+      }
+      const nextList = list.slice();
+      nextList.splice(action.index, 1);
+      return {
+        ...state,
+        config: {
+          ...state.config,
+          [action.sectionKey]: nextList,
+        } as typeof state.config,
+      };
+    }
+    case 'list-instance/move-up':
+    case 'list-instance/move-down': {
+      const cfg = state.config as unknown as Record<string, unknown>;
+      const list = (cfg[action.sectionKey] as Array<Record<string, unknown>> | undefined) ?? [];
+      const target = action.type === 'list-instance/move-up' ? action.index - 1 : action.index + 1;
+      if (action.index < 0 || action.index >= list.length) return state;
+      if (target < 0 || target >= list.length) return state;
+      const nextList = list.slice();
+      [nextList[action.index], nextList[target]] = [nextList[target], nextList[action.index]];
+      return {
+        ...state,
+        config: {
+          ...state.config,
+          [action.sectionKey]: nextList,
         } as typeof state.config,
       };
     }
