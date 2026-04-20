@@ -179,3 +179,20 @@ rm -rf /tmp/hermind-smoke
 - Delete a provider entirely — same effect: its model id no longer surfaces as a suggestion.
 - Add a fallback provider with a model id that is NOT on any primary provider. The Default Model datalist does NOT include it — 4d intentionally scopes the source to `providers` only. (If you need this, the `DatalistSource` could be extended to multiple sources in a later stage.)
 - Every other field in the config UI continues to render as before — only the Default Model field has autocomplete.
+
+## Stage 4e · Fallback Providers fetch-models
+
+- Configure at least one fallback provider with a real provider type, base URL, API key, and Save. Navigate to that `#models/fallback:N` row.
+- Each Fallback editor now shows a "Fetch models" button in the footer, identical visual to ProviderEditor's Fetch.
+- While the row is dirty (unsaved field edits), the button is disabled with the tooltip "Save first, then fetch models".
+- Save, then click Fetch models. Green chip: `Connected ✓ (N models)`. The Model field on that row now offers autocomplete from the returned list.
+- Flip the API key to garbage, Save, click Fetch. Red chip shows the upstream error (e.g. "401 unauthorized").
+- Set the provider type to one that does not implement ModelLister. Save, click Fetch. Red chip: `provider "<type>" does not support model listing`.
+- Hitting `POST /api/fallback_providers/{index}/models` directly:
+  - valid index + ModelLister-capable provider: 200 `{"models": [...]}`
+  - index out of range for current slice: 404
+  - negative or non-integer index: 400
+  - factory rejects stored config: 400
+  - provider does not implement ModelLister: 501
+  - upstream error (auth, network, rate-limit): 502
+- Primary Providers fetch-models (4b) continues to work unchanged.
