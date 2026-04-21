@@ -2,6 +2,7 @@ package platforms
 
 import (
 	"context"
+	"encoding/json"
 	"fmt"
 	"sync"
 
@@ -88,6 +89,49 @@ func (fa *FeishuApp) SendReply(ctx context.Context, out gateway.OutgoingMessage)
 
 // handleEvent is invoked by the event stream for each inbound event.
 func (fa *FeishuApp) handleEvent(ctx context.Context, evt *larkim.P2MessageReceiveV1) error {
+	if evt == nil || evt.Event == nil || evt.Event.Message == nil {
+		return nil
+	}
+	msg := evt.Event.Message
+	if stringPtrValue(msg.MessageType) != "text" {
+		return nil
+	}
+
+	var content struct {
+		Text string `json:"text"`
+	}
+	raw := stringPtrValue(msg.Content)
+	if err := json.Unmarshal([]byte(raw), &content); err != nil {
+		return nil // malformed content — drop, don't kill the stream
+	}
+
+	openID := ""
+	if evt.Event.Sender != nil && evt.Event.Sender.SenderId != nil {
+		openID = stringPtrValue(evt.Event.Sender.SenderId.OpenId)
+	}
+
+	in := gateway.IncomingMessage{
+		Platform:  "feishu",
+		UserID:    openID,
+		ChatID:    stringPtrValue(msg.ChatId),
+		Text:      content.Text,
+		MessageID: stringPtrValue(msg.MessageId),
+	}
+
+	fa.mu.Lock()
+	h := fa.handler
+	fa.mu.Unlock()
+	if h == nil {
+		return nil
+	}
+	out, err := h(ctx, in)
+	if err != nil {
+		return nil // handler errors logged at gateway layer; don't kill stream
+	}
+	if out == nil {
+		return nil
+	}
+	_ = fa.SendReply(ctx, *out) // SendReply errors also don't kill stream
 	return nil
 }
 
