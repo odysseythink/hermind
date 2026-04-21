@@ -2,8 +2,9 @@
 package sqlite
 
 import (
-	"database/sql"
 	"fmt"
+	"strconv"
+	"strings"
 )
 
 // schemaSQL is the full initial schema. Designed to match the Python hermes
@@ -122,7 +123,7 @@ INSERT OR IGNORE INTO schema_meta (key, value) VALUES ('version', '1');
 // stored version less than this triggers incremental migration steps in
 // Migrate(). When adding a new step, bump this constant AND add the matching
 // case in applyVersion.
-const currentSchemaVersion = 1
+const currentSchemaVersion = 2
 
 // Migrate applies the base schema, then runs any versioned migration steps
 // up to currentSchemaVersion. Idempotent: safe to call on an up-to-date DB.
@@ -152,8 +153,8 @@ func (s *Store) schemaVersion() (int, error) {
 	if err != nil {
 		return 0, fmt.Errorf("sqlite: read schema version: %w", err)
 	}
-	var v int
-	if _, err := fmt.Sscanf(raw, "%d", &v); err != nil {
+	v, err := strconv.Atoi(strings.TrimSpace(raw))
+	if err != nil {
 		return 0, fmt.Errorf("sqlite: parse schema version %q: %w", raw, err)
 	}
 	return v, nil
@@ -169,14 +170,22 @@ func (s *Store) applyVersion(v int) error {
 	defer tx.Rollback()
 
 	switch v {
-	// Task 3 adds case 2.
+	case 2:
+		if _, err := tx.Exec(`DELETE FROM messages`); err != nil {
+			return err
+		}
+		if _, err := tx.Exec(`DELETE FROM sessions`); err != nil {
+			return err
+		}
 	default:
 		return fmt.Errorf("no migration step for v%d", v)
 	}
-	// Unreachable while currentSchemaVersion == 1.
-	_, _ = tx.Exec(`UPDATE schema_meta SET value = ? WHERE key = 'version'`, fmt.Sprintf("%d", v))
+
+	if _, err := tx.Exec(
+		`UPDATE schema_meta SET value = ? WHERE key = 'version'`,
+		fmt.Sprintf("%d", v),
+	); err != nil {
+		return err
+	}
 	return tx.Commit()
 }
-
-// _ silences the sql import when applyVersion has no real cases yet.
-var _ = sql.ErrNoRows
