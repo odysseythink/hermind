@@ -30,3 +30,18 @@ func TestFeishuApp_MissingCreds(t *testing.T) {
 		})
 	}
 }
+
+func TestFeishuApp_WebhookURLSurfaced(t *testing.T) {
+	fa, err := NewFeishuApp(map[string]string{
+		"webhook_url": "https://open.feishu.cn/open-apis/bot/v2/hook/xxxx",
+	})
+	if err == nil {
+		t.Fatal("expected migration error, got nil")
+	}
+	if fa != nil {
+		t.Errorf("expected nil FeishuApp on migration error, got %v", fa)
+	}
+	if !strings.Contains(err.Error(), "webhook_url is no longer supported") {
+		t.Errorf("error should mention migration: %v", err)
+	}
+}

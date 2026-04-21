@@ -45,6 +45,9 @@ type FeishuApp struct {
 func NewFeishuApp(opts map[string]string) (*FeishuApp, error) {
 	appID := opts["app_id"]
 	appSecret := opts["app_secret"]
+	if appID == "" && opts["webhook_url"] != "" {
+		return nil, fmt.Errorf("feishu: webhook_url is no longer supported; migrate to a self-built app (see CHANGELOG)")
+	}
 	if appID == "" || appSecret == "" {
 		return nil, fmt.Errorf("feishu: missing app_id or app_secret")
 	}
