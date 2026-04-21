@@ -114,6 +114,18 @@ type Section struct {
 	GroupID string      // "runtime" — which shell group hosts this section
 	Shape   SectionShape
 	Fields  []FieldSpec
+	// Subkey is the YAML key that wraps the shape-specific payload.
+	// Empty (default) means the section's value IS the payload (memory,
+	// providers). Non-empty means the payload lives one level deeper, e.g.
+	// Subkey="servers" for mcp means YAML path is cfg.mcp.servers.<k>.<f>.
+	// The API redact/preserve pipeline and the UI both unwrap this layer
+	// transparently.
+	Subkey string
+	// NoDiscriminator, when true, opts out of the "exactly one FieldEnum
+	// named provider" requirement on ShapeKeyedMap / ShapeList. Used for
+	// sections where every instance has the same fields (mcp servers,
+	// cron jobs). Ignored on ShapeMap / ShapeScalar.
+	NoDiscriminator bool
 }
 
 var registry = map[string]Section{}

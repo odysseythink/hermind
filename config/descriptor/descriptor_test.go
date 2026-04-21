@@ -130,30 +130,34 @@ func TestSectionInvariants(t *testing.T) {
 			if len(s.Fields) == 0 {
 				t.Errorf("section %q: ShapeKeyedMap requires at least 1 field", s.Key)
 			}
-			var providerEnums int
-			for _, f := range s.Fields {
-				if f.Name == "provider" && f.Kind == FieldEnum {
-					providerEnums++
+			if !s.NoDiscriminator {
+				var providerEnums int
+				for _, f := range s.Fields {
+					if f.Name == "provider" && f.Kind == FieldEnum {
+						providerEnums++
+					}
 				}
-			}
-			if providerEnums != 1 {
-				t.Errorf("section %q: ShapeKeyedMap requires exactly one FieldEnum named \"provider\" (got %d)",
-					s.Key, providerEnums)
+				if providerEnums != 1 {
+					t.Errorf("section %q: ShapeKeyedMap requires exactly one FieldEnum named \"provider\" (got %d)",
+						s.Key, providerEnums)
+				}
 			}
 		}
 		if s.Shape == ShapeList {
 			if len(s.Fields) == 0 {
 				t.Errorf("section %q: ShapeList requires at least 1 field", s.Key)
 			}
-			var providerEnums int
-			for _, f := range s.Fields {
-				if f.Name == "provider" && f.Kind == FieldEnum {
-					providerEnums++
+			if !s.NoDiscriminator {
+				var providerEnums int
+				for _, f := range s.Fields {
+					if f.Name == "provider" && f.Kind == FieldEnum {
+						providerEnums++
+					}
 				}
-			}
-			if providerEnums != 1 {
-				t.Errorf("section %q: ShapeList requires exactly one FieldEnum named \"provider\" (got %d)",
-					s.Key, providerEnums)
+				if providerEnums != 1 {
+					t.Errorf("section %q: ShapeList requires exactly one FieldEnum named \"provider\" (got %d)",
+						s.Key, providerEnums)
+				}
 			}
 		}
 	}
@@ -396,5 +400,96 @@ func TestShapeListInvariant_FlagsEmptyFields(t *testing.T) {
 	}
 	if !fired {
 		t.Error("invariant did not flag ShapeList with empty Fields")
+	}
+}
+
+func TestSectionSubkeyDefaultsToEmpty(t *testing.T) {
+	key := "__test_subkey_default"
+	defer delete(registry, key)
+	Register(Section{
+		Key: key, Label: "Test", GroupID: "runtime",
+		Shape:  ShapeMap,
+		Fields: []FieldSpec{{Name: "f", Label: "F", Kind: FieldString}},
+	})
+	s, _ := Get(key)
+	if s.Subkey != "" {
+		t.Errorf("Subkey default = %q, want empty", s.Subkey)
+	}
+	if s.NoDiscriminator {
+		t.Error("NoDiscriminator default = true, want false")
+	}
+}
+
+func TestShapeKeyedMapInvariant_NoDiscriminatorSkipsProviderRequirement(t *testing.T) {
+	// Mirror the style of TestShapeKeyedMapInvariant_FlagsMissingProviderEnum
+	// but with NoDiscriminator: true — the invariant must NOT fire.
+	key := "__test_keyed_map_no_discriminator"
+	defer delete(registry, key)
+	Register(Section{
+		Key: key, Label: "Test", GroupID: "runtime",
+		Shape:           ShapeKeyedMap,
+		Subkey:          "servers",
+		NoDiscriminator: true,
+		Fields: []FieldSpec{
+			{Name: "command", Label: "Command", Kind: FieldString, Required: true},
+		},
+	})
+
+	var fired bool
+	for _, s := range All() {
+		if s.Key != key || s.Shape != ShapeKeyedMap {
+			continue
+		}
+		if s.NoDiscriminator {
+			continue
+		}
+		var providerEnums int
+		for _, f := range s.Fields {
+			if f.Name == "provider" && f.Kind == FieldEnum {
+				providerEnums++
+			}
+		}
+		if providerEnums != 1 {
+			fired = true
+		}
+	}
+	if fired {
+		t.Error("invariant fired on NoDiscriminator ShapeKeyedMap — should have been skipped")
+	}
+}
+
+func TestShapeListInvariant_NoDiscriminatorSkipsProviderRequirement(t *testing.T) {
+	key := "__test_list_no_discriminator"
+	defer delete(registry, key)
+	Register(Section{
+		Key: key, Label: "Test", GroupID: "runtime",
+		Shape:           ShapeList,
+		Subkey:          "jobs",
+		NoDiscriminator: true,
+		Fields: []FieldSpec{
+			{Name: "name", Label: "Name", Kind: FieldString, Required: true},
+		},
+	})
+
+	var fired bool
+	for _, s := range All() {
+		if s.Key != key || s.Shape != ShapeList {
+			continue
+		}
+		if s.NoDiscriminator {
+			continue
+		}
+		var providerEnums int
+		for _, f := range s.Fields {
+			if f.Name == "provider" && f.Kind == FieldEnum {
+				providerEnums++
+			}
+		}
+		if providerEnums != 1 {
+			fired = true
+		}
+	}
+	if fired {
+		t.Error("invariant fired on NoDiscriminator ShapeList — should have been skipped")
 	}
 }
