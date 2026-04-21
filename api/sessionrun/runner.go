@@ -93,6 +93,11 @@ func Run(ctx context.Context, deps Deps, req Request) (err error) {
 		})
 	})
 	engine.SetSessionCreatedCallback(func(s *storage.Session) {
+		started := float64(s.StartedAt.UnixNano()) / 1e9
+		var ended float64
+		if s.EndedAt != nil {
+			ended = float64(s.EndedAt.UnixNano()) / 1e9
+		}
 		deps.Hub.Publish(Event{
 			Type:      "session_created",
 			SessionID: s.ID,
@@ -101,8 +106,8 @@ func Run(ctx context.Context, deps Deps, req Request) (err error) {
 				"title":         s.Title,
 				"source":        s.Source,
 				"model":         s.Model,
-				"started_at":    s.StartedAt.Unix(),
-				"ended_at":      0,
+				"started_at":    started,
+				"ended_at":      ended,
 				"message_count": s.MessageCount,
 			},
 		})

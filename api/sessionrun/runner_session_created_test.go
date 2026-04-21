@@ -69,7 +69,14 @@ func TestRun_PublishesSessionCreated_OnBrandNewSession(t *testing.T) {
 	assert.Equal(t, "Build me a", dto["title"]) // 10 runes of "Build me a haiku generator"
 	assert.Equal(t, "web", dto["source"])
 	assert.Equal(t, "stub", dto["model"])
-	assert.Equal(t, 0, dto["ended_at"])
+	// started_at is a non-zero float64 (time in unix seconds, sub-second precision)
+	startedAt, ok := dto["started_at"].(float64)
+	require.True(t, ok, "started_at must be float64, got %T", dto["started_at"])
+	assert.Greater(t, startedAt, 0.0)
+	// ended_at is always float64(0) for a brand-new session
+	endedAt, ok := dto["ended_at"].(float64)
+	require.True(t, ok, "ended_at must be float64, got %T", dto["ended_at"])
+	assert.Equal(t, 0.0, endedAt)
 }
 
 func TestRun_NoSessionCreated_OnExistingSession(t *testing.T) {
