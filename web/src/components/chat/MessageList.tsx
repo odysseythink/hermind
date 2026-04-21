@@ -4,6 +4,8 @@ import MessageContent from './MessageContent';
 import StreamingCursor from './StreamingCursor';
 import ToolCallCard from './ToolCallCard';
 import type { ChatMessage, ToolCallSnapshot } from '../../state/chat';
+import styles from './MessageList.module.css';
+import bubble from './MessageBubble.module.css';
 
 type Props = {
   messages: ChatMessage[];
@@ -23,7 +25,6 @@ export default function MessageList({
     if (typeof el.scrollTo === 'function') {
       el.scrollTo({ top: el.scrollHeight });
     } else {
-      // jsdom: no scrollTo; fall back to direct assignment.
       el.scrollTop = el.scrollHeight;
     }
   }, [messages, streamingDraft]);
@@ -32,17 +33,20 @@ export default function MessageList({
     streamingSessionId === activeSessionId && (!!streamingDraft || streamingToolCalls.length > 0);
 
   return (
-    <div ref={ref} style={{ flex: 1, overflowY: 'auto' }}>
+    <div ref={ref} className={styles.list}>
       {messages.map((m) => (
         <MessageBubble key={m.id} message={m} />
       ))}
       {showStreamingBubble && (
-        <div data-role="assistant" style={{ padding: '0.5rem 1rem' }}>
-          {streamingDraft && <MessageContent content={streamingDraft} />}
-          <StreamingCursor />
-          {streamingToolCalls.map((c) => (
-            <ToolCallCard key={c.id} call={c} />
-          ))}
+        <div data-role="assistant" className={`${bubble.row} ${bubble.assistant}`}>
+          <div className={bubble.roleTag}>assistant</div>
+          <div className={bubble.bubble}>
+            {streamingDraft && <MessageContent content={streamingDraft} />}
+            <StreamingCursor />
+            {streamingToolCalls.map((c) => (
+              <ToolCallCard key={c.id} call={c} />
+            ))}
+          </div>
         </div>
       )}
     </div>

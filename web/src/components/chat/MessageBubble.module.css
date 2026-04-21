@@ -1,0 +1,43 @@
+.row {
+  padding: var(--space-2) var(--space-4);
+  display: flex;
+  flex-direction: column;
+  max-width: 85%;
+}
+.user {
+  align-self: flex-end;
+  align-items: flex-end;
+  margin-left: auto;
+}
+.assistant {
+  align-self: flex-start;
+}
+
+.roleTag {
+  font-family: var(--font-mono);
+  font-size: var(--fs-xs);
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+  color: var(--muted);
+  margin-bottom: var(--space-1);
+}
+.user .roleTag { color: var(--accent); }
+
+.bubble {
+  padding: var(--space-2) var(--space-3);
+  border: 1px solid var(--border);
+  border-radius: var(--r-sm);
+  background: var(--surface);
+  line-height: 1.5;
+}
+.user .bubble {
+  background: transparent;
+  border-color: var(--accent);
+}
+
+.truncated {
+  color: var(--warning);
+  font-family: var(--font-mono);
+  font-size: var(--fs-xs);
+  margin-top: var(--space-1);
+}

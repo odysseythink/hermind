@@ -1,10 +1,10 @@
 .topbar {
   display: flex;
   align-items: center;
-  gap: 16px;
-  padding: 8px 16px;
-  background: var(--bg-topbar, #161b22);
-  border-bottom: 1px solid var(--border, #30363d);
+  gap: var(--space-3);
+  padding: 0 var(--space-4);
+  background: var(--surface);
+  border-bottom: 1px solid var(--border);
   height: 48px;
   box-sizing: border-box;
 }
@@ -12,14 +12,18 @@
 .brand {
   display: flex;
   align-items: center;
-  gap: 8px;
+  gap: var(--space-2);
+  font-family: var(--font-mono);
   font-weight: 600;
-  color: var(--fg, #c9d1d9);
+  font-size: var(--fs-sm);
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+  color: var(--text);
 }
 
 .logo {
-  font-size: 18px;
-  color: var(--accent, #58a6ff);
+  font-size: var(--fs-md);
+  color: var(--accent);
 }
 
 .spacer { flex: 1; }
@@ -27,64 +31,76 @@
 .status {
   display: flex;
   align-items: center;
-  gap: 6px;
-  color: var(--fg-muted, #8b949e);
-  font-size: 12px;
+  gap: var(--space-2);
+  color: var(--muted);
+  font-family: var(--font-mono);
+  font-size: var(--fs-xs);
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
 }
 
 .dot {
-  width: 8px;
-  height: 8px;
+  width: var(--dot);
+  height: var(--dot);
   border-radius: 50%;
 }
-
-.dotIdle { background: var(--ok, #3fb950); }
-.dotDirty { background: var(--warn, #d29922); }
-.dotBusy { background: var(--accent, #58a6ff); animation: pulse 1s infinite; }
+.dotIdle  { background: var(--success); }
+.dotDirty { background: var(--warning); }
+.dotBusy  { background: var(--accent); animation: pulse var(--t-long) ease-in-out infinite; }
 
 @keyframes pulse {
-  0% { opacity: 1; }
-  50% { opacity: 0.4; }
-  100% { opacity: 1; }
+  0%, 100% { opacity: 1; }
+  50%      { opacity: 0.35; }
 }
 
 .saveBtn {
-  padding: 6px 14px;
-  border-radius: 4px;
-  border: 1px solid var(--border, #30363d);
-  background: var(--accent, #1f6feb);
-  color: white;
-  font-weight: 500;
+  padding: var(--space-1) var(--space-4);
+  height: 32px;
+  border-radius: var(--r-sm);
+  border: 1px solid var(--accent);
+  background: var(--accent);
+  color: var(--accent-fg);
+  font-family: var(--font-sans);
+  font-weight: 600;
+  font-size: var(--fs-sm);
   cursor: pointer;
+  transition: background var(--t-fast) ease-out, border-color var(--t-fast) ease-out;
 }
-
+.saveBtn:hover { background: var(--accent-2); border-color: var(--accent-2); }
 .saveBtn:disabled {
-  opacity: 0.45;
+  opacity: 0.4;
   cursor: not-allowed;
+  background: transparent;
+  color: var(--muted);
+  border-color: var(--border);
 }
 
 .langSlot {
   display: inline-flex;
   align-items: center;
-  margin-right: 0.5rem;
 }
 
 .modeToggle {
   display: inline-flex;
-  gap: 0.25rem;
-  margin-left: 0.5rem;
+  border: 1px solid var(--border);
+  border-radius: var(--r-sm);
+  overflow: hidden;
 }
 .modeToggle button {
-  padding: 4px 10px;
-  border-radius: 4px;
-  border: 1px solid var(--border, #30363d);
+  padding: var(--space-1) var(--space-3);
   background: transparent;
-  color: inherit;
-  font: inherit;
+  color: var(--muted);
+  border: none;
+  font-family: var(--font-sans);
+  font-size: var(--fs-sm);
+  font-weight: 500;
   cursor: pointer;
+  transition: background var(--t-fast) ease-out, color var(--t-fast) ease-out;
 }
+.modeToggle button:not(:last-child) { border-right: 1px solid var(--border); }
+.modeToggle button:hover { color: var(--text); background: var(--hover-tint); }
 .modeToggle button[aria-pressed='true'] {
-  background: var(--accent, #1f6feb);
-  color: #fff;
+  background: var(--accent);
+  color: var(--accent-fg);
   font-weight: 600;
 }

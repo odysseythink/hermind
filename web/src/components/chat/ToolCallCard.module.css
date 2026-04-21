@@ -1,0 +1,56 @@
+.card {
+  border: 1px solid var(--border);
+  background: var(--surface-2);
+  margin: var(--space-2) 0;
+  font-family: var(--font-mono);
+  font-size: var(--fs-xs);
+}
+
+.head {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+  padding: var(--space-1) var(--space-2);
+  border-bottom: 1px solid var(--border);
+  background: transparent;
+  color: var(--muted);
+  border: none;
+  border-bottom: 1px solid var(--border);
+  width: 100%;
+  text-align: left;
+  cursor: pointer;
+  font-family: inherit;
+  font-size: inherit;
+  transition: background var(--t-fast) ease-out;
+}
+
+.head:hover { background: var(--hover-tint); }
+
+.caret { color: var(--accent); font-size: var(--fs-xs); }
+.name { color: var(--text); font-weight: 600; text-transform: uppercase; letter-spacing: 0.06em; }
+.state { margin-left: auto; color: var(--muted); text-transform: uppercase; letter-spacing: 0.06em; }
+
+.body {
+  padding: var(--space-2);
+  color: var(--text);
+}
+
+.body label {
+  color: var(--muted);
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  margin-right: var(--space-1);
+}
+
+.body pre {
+  white-space: pre-wrap;
+  margin: var(--space-1) 0 0;
+  font-family: var(--font-mono);
+  font-size: var(--fs-xs);
+  color: var(--text);
+}
+
+.body code {
+  font-family: var(--font-mono);
+  color: var(--text);
+}

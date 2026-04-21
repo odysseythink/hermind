@@ -1,0 +1,28 @@
+.item {
+  display: block;
+}
+
+.btn {
+  display: block;
+  width: 100%;
+  padding: var(--space-2) var(--space-2);
+  background: transparent;
+  border: none;
+  border-left: 2px solid transparent;
+  text-align: left;
+  color: var(--text);
+  font-family: var(--font-sans);
+  font-size: var(--fs-sm);
+  cursor: pointer;
+  transition: background var(--t-fast) ease-out;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.btn:hover { background: var(--hover-tint); }
+
+.btn[aria-pressed='true'] {
+  background: var(--accent-bg);
+  border-left-color: var(--accent);
+  color: var(--text);
+}

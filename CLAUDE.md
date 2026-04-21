@@ -17,3 +17,18 @@ Key routing rules:
 - Architecture review → invoke plan-eng-review
 - Save progress, checkpoint, resume → invoke checkpoint
 - Code quality, health check → invoke health
+
+## Design System
+
+Always read `DESIGN.md` before making any visual or UI change. All font
+choices, colors, spacing, aesthetic direction, and component patterns live
+there. Do not deviate without explicit user approval.
+
+Specifically:
+- Never use `system-ui`, `Inter`, `Roboto`, `Arial`, `Helvetica`, or any
+  blacklisted font.
+- Stick to the amber `#FFB800` accent — no purple, no gradient CTAs.
+- Body text is 13px (not 16px). Mono headings (not sans). 4px spacing base.
+- 1px borders, 2–4px radii, minimal motion. Anti-patterns list in DESIGN.md.
+
+In QA / review mode, flag any code that drifts from DESIGN.md.

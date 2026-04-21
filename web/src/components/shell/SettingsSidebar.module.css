@@ -1,8 +1,9 @@
 .sidebar {
-  padding: 12px 8px;
-  background: var(--bg-sidebar, #0d1117);
-  border-right: 1px solid var(--border, #30363d);
+  padding: var(--space-2) 0;
+  background: var(--surface);
+  border-right: 1px solid var(--border);
   overflow-y: auto;
-  min-width: 220px;
-  max-width: 220px;
+  width: 240px;
+  flex-shrink: 0;
+  height: 100%;
 }

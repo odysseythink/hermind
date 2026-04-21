@@ -1,6 +1,7 @@
 import NewChatButton from './NewChatButton';
 import SessionList from './SessionList';
 import type { SessionSummary as ApiSummary } from '../../api/schemas';
+import styles from './ChatSidebar.module.css';
 
 type Props = {
   sessions: ApiSummary[];
@@ -11,7 +12,7 @@ type Props = {
 
 export default function ChatSidebar({ sessions, activeId, onSelect, onNew }: Props) {
   return (
-    <aside style={{ width: '14rem', borderRight: '1px solid var(--border, #30363d)', padding: '0.5rem' }}>
+    <aside className={styles.sidebar}>
       <NewChatButton onClick={onNew} />
       <SessionList sessions={sessions} activeId={activeId} onSelect={onSelect} />
     </aside>

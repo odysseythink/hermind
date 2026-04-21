@@ -1,34 +1,40 @@
 .wrap {
   display: flex;
   align-items: center;
-  gap: 10px;
-  margin-top: 8px;
+  gap: var(--space-3);
+  margin-top: var(--space-2);
 }
 .btn {
   appearance: none;
-  padding: 8px 14px;
+  padding: 0 var(--space-3);
+  height: 30px;
   background: transparent;
   color: var(--text);
   border: 1px solid var(--border);
-  border-radius: 6px;
-  font: inherit;
-  font-size: 13px;
+  border-radius: var(--r-sm);
+  font-family: var(--font-sans);
+  font-size: var(--fs-sm);
+  font-weight: 500;
   cursor: pointer;
+  transition: background var(--t-fast) ease-out, border-color var(--t-fast) ease-out;
 }
-.btn:hover:not(:disabled) { background: var(--hover-tint); }
-.btn:disabled { cursor: not-allowed; opacity: 0.5; }
+.btn:hover:not(:disabled) { background: var(--hover-tint); border-color: var(--muted); }
+.btn:disabled { cursor: not-allowed; opacity: 0.4; }
 .result {
   display: inline-flex;
   align-items: center;
-  gap: 6px;
-  font-size: 13px;
+  gap: var(--space-1);
+  font-family: var(--font-mono);
+  font-size: var(--fs-xs);
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
 }
-.resultOk { color: var(--success); }
-.resultErr { color: var(--error); }
+.resultOk   { color: var(--success); }
+.resultErr  { color: var(--error); }
 .resultWarn { color: var(--muted); }
 .dot {
-  width: 6px;
-  height: 6px;
+  width: var(--dot);
+  height: var(--dot);
   border-radius: 50%;
   display: inline-block;
 }

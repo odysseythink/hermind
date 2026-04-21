@@ -1,12 +1,14 @@
 .footer {
   display: flex;
   align-items: center;
-  padding: 4px 16px;
-  min-height: 24px;
-  background: var(--bg-footer, #161b22);
-  border-top: 1px solid var(--border, #30363d);
-  font-size: 12px;
+  padding: 0 var(--space-4);
+  height: 32px;
+  background: var(--surface);
+  border-top: 1px solid var(--border);
+  font-family: var(--font-mono);
+  font-size: var(--fs-xs);
+  color: var(--muted);
 }
 
-.flashOk { color: var(--ok, #3fb950); }
-.flashErr { color: var(--error, #f85149); }
+.flashOk  { color: var(--success); }
+.flashErr { color: var(--error); }

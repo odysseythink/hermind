@@ -5,6 +5,7 @@ import ConversationHeader from './ConversationHeader';
 import MessageList from './MessageList';
 import ComposerBar from './ComposerBar';
 import Toast from './Toast';
+import styles from './ChatWorkspace.module.css';
 import { useSessionList } from '../../hooks/useSessionList';
 import { useChatStream } from '../../hooks/useChatStream';
 import { chatReducer, initialChatState } from '../../state/chat';
@@ -99,7 +100,7 @@ export default function ChatWorkspace({ sessionId, onChangeSession, providerConf
     sessions.find((s) => s.id === sessionId)?.title ?? t('chat.newConversation');
 
   return (
-    <div style={{ display: 'flex', height: 'calc(100vh - 48px)' }}>
+    <div className={styles.workspace}>
       <ChatSidebar
         sessions={sessions}
         activeId={sessionId}
@@ -109,7 +110,7 @@ export default function ChatWorkspace({ sessionId, onChangeSession, providerConf
           onChangeSession(id);
         }}
       />
-      <main style={{ flex: 1, display: 'flex', flexDirection: 'column', minWidth: 0 }}>
+      <main className={styles.main}>
         <ConversationHeader
           title={activeTitle}
           model={state.composer.selectedModel}
@@ -124,14 +125,7 @@ export default function ChatWorkspace({ sessionId, onChangeSession, providerConf
           activeSessionId={sessionId}
         />
         {state.streaming.status === 'error' && state.streaming.error && (
-          <div
-            role="alert"
-            style={{
-              padding: '0.5rem 1rem',
-              background: 'rgba(211, 47, 47, 0.1)',
-              color: 'var(--error, #d32f2f)',
-            }}
-          >
+          <div role="alert" className={styles.errorBanner}>
             {state.streaming.error}
           </div>
         )}

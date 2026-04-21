@@ -1,145 +1,148 @@
 .sidebar {
-  padding: 4px 0 8px;
+  padding: var(--space-1) 0 var(--space-2);
 }
 
 .scalarRow {
   display: block;
   width: 100%;
   text-align: left;
-  padding: 6px 12px 6px 24px;
+  padding: var(--space-1) var(--space-3) var(--space-1) var(--space-5);
   background: transparent;
-  border: 0;
-  color: var(--fg, #c9d1d9);
-  font-size: 13px;
+  border: none;
+  border-left: 2px solid transparent;
+  color: var(--muted);
+  font-family: var(--font-sans);
+  font-size: var(--fs-sm);
   cursor: pointer;
+  transition: background var(--t-fast) ease-out, color var(--t-fast) ease-out;
 }
 
-.scalarRow:hover {
-  background: var(--bg-hover, #1b1f27);
-}
+.scalarRow:hover { background: var(--hover-tint); color: var(--text); }
 
 .active {
-  background: var(--bg-active, #1f6feb33);
-  color: var(--fg-strong, #f0f6fc);
+  background: var(--accent-bg);
+  color: var(--text);
+  border-left-color: var(--accent);
 }
 
 .groupHeader {
-  padding: 10px 12px 4px 24px;
-  font-size: 11px;
+  padding: var(--space-3) var(--space-3) var(--space-1) var(--space-5);
+  font-family: var(--font-mono);
+  font-size: var(--fs-xs);
+  font-weight: 600;
   text-transform: uppercase;
-  letter-spacing: 0.5px;
-  color: var(--fg-muted, #8b949e);
+  letter-spacing: 0.08em;
+  color: var(--muted);
 }
 
 .empty {
-  padding: 4px 12px 4px 24px;
-  font-size: 12px;
+  padding: var(--space-1) var(--space-3) var(--space-1) var(--space-5);
+  font-family: var(--font-mono);
+  font-size: var(--fs-xs);
   font-style: italic;
-  color: var(--fg-muted, #8b949e);
+  color: var(--muted);
 }
 
 .mcpRow {
   display: block;
   width: 100%;
   text-align: left;
-  padding: 6px 12px 4px 24px;
+  padding: var(--space-1) var(--space-3) var(--space-1) var(--space-5);
   background: transparent;
-  border: 0;
-  color: var(--fg, #c9d1d9);
-  font-size: 13px;
+  border: none;
+  border-left: 2px solid transparent;
+  color: var(--text);
+  font-family: var(--font-sans);
+  font-size: var(--fs-sm);
   cursor: pointer;
+  transition: background var(--t-fast) ease-out, color var(--t-fast) ease-out;
 }
 
-.mcpRow:hover {
-  background: var(--bg-hover, #1b1f27);
-}
+.mcpRow:hover { background: var(--hover-tint); }
 
 .mcpRow.active {
-  background: var(--bg-active, #1f6feb33);
-  color: var(--fg-strong, #f0f6fc);
+  background: var(--accent-bg);
+  border-left-color: var(--accent);
 }
 
-.mcpRow.disabled {
-  opacity: 0.55;
-}
+.mcpRow.disabled { opacity: 0.5; }
 
 .mcpRowInner {
   display: flex;
   align-items: center;
-  gap: 8px;
+  gap: var(--space-2);
 }
 
-.mcpName {
-  flex: 1;
-  color: var(--fg, #c9d1d9);
-}
+.mcpName { flex: 1; color: var(--text); }
 
 .mcpCommand {
   display: block;
-  font-size: 11px;
-  color: var(--fg-muted, #8b949e);
+  font-family: var(--font-mono);
+  font-size: var(--fs-xs);
+  color: var(--muted);
 }
 
 .cronRow {
   display: flex;
   align-items: stretch;
-  padding-right: 4px;
+  padding-right: var(--space-1);
+  border-left: 2px solid transparent;
+  transition: background var(--t-fast) ease-out;
 }
 
 .cronRow.active {
-  background: var(--bg-active, #1f6feb33);
+  background: var(--accent-bg);
+  border-left-color: var(--accent);
 }
 
-.cronRow:hover {
-  background: var(--bg-hover, #1b1f27);
-}
+.cronRow:hover { background: var(--hover-tint); }
 
 .cronBody {
   flex: 1;
   text-align: left;
-  padding: 6px 6px 6px 24px;
+  padding: var(--space-1) var(--space-1) var(--space-1) var(--space-5);
   background: transparent;
   border: 0;
-  color: var(--fg, #c9d1d9);
-  font-size: 13px;
+  color: var(--text);
+  font-family: var(--font-sans);
+  font-size: var(--fs-sm);
   cursor: pointer;
 }
 
 .cronRowInner {
   display: flex;
   align-items: center;
-  gap: 8px;
+  gap: var(--space-2);
 }
 
 .posBadge {
   display: inline-block;
   min-width: 22px;
-  padding: 1px 6px;
-  border-radius: 10px;
-  background: var(--bg-badge, #30363d);
-  color: var(--fg-muted, #8b949e);
-  font-size: 10px;
+  padding: 1px var(--space-2);
+  border: 1px solid var(--border);
+  border-radius: var(--r-sm);
+  color: var(--muted);
+  font-family: var(--font-mono);
+  font-size: var(--fs-xs);
   font-weight: 600;
   text-align: center;
 }
 
-.cronName {
-  flex: 1;
-  color: var(--fg, #c9d1d9);
-}
+.cronName { flex: 1; color: var(--text); }
 
 .cronSchedule {
   display: block;
-  font-size: 11px;
-  color: var(--fg-muted, #8b949e);
+  font-family: var(--font-mono);
+  font-size: var(--fs-xs);
+  color: var(--muted);
 }
 
 .dirtyDot {
   display: inline-block;
-  width: 6px;
-  height: 6px;
+  width: var(--dot);
+  height: var(--dot);
   border-radius: 50%;
-  background: var(--warn, #d29922);
+  background: var(--warning);
 }
 
 .cronMoveBtns {
@@ -155,37 +158,39 @@
   padding: 0;
   background: transparent;
   border: 1px solid transparent;
-  border-radius: 2px;
-  color: var(--fg-muted, #8b949e);
-  font-size: 10px;
+  border-radius: var(--r-sm);
+  color: var(--muted);
+  font-family: var(--font-mono);
+  font-size: var(--fs-xs);
   line-height: 1;
   cursor: pointer;
+  transition: background var(--t-fast) ease-out, color var(--t-fast) ease-out;
 }
 
 .moveBtn:hover:not(:disabled) {
-  background: var(--bg-hover-strong, #30363d);
-  color: var(--fg, #c9d1d9);
+  background: var(--surface-2);
+  color: var(--accent);
+  border-color: var(--border);
 }
 
-.moveBtn:disabled {
-  opacity: 0.25;
-  cursor: not-allowed;
-}
+.moveBtn:disabled { opacity: 0.25; cursor: not-allowed; }
 
 .newBtn {
   display: block;
-  width: calc(100% - 24px);
-  margin: 8px 12px 4px 24px;
-  padding: 6px 10px;
+  width: calc(100% - var(--space-5));
+  margin: var(--space-2) var(--space-3) var(--space-1) var(--space-5);
+  padding: var(--space-1) var(--space-2);
   background: transparent;
-  border: 1px dashed var(--border, #30363d);
-  border-radius: 3px;
-  color: var(--fg-muted, #8b949e);
-  font-size: 12px;
+  border: 1px dashed var(--border);
+  border-radius: var(--r-sm);
+  color: var(--muted);
+  font-family: var(--font-sans);
+  font-size: var(--fs-sm);
   cursor: pointer;
+  transition: color var(--t-fast) ease-out, border-color var(--t-fast) ease-out;
 }
 
 .newBtn:hover {
-  border-color: var(--fg-muted, #8b949e);
-  color: var(--fg, #c9d1d9);
+  border-color: var(--accent);
+  color: var(--accent);
 }

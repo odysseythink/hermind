@@ -1,3 +1,5 @@
+import styles from './StreamingCursor.module.css';
+
 export default function StreamingCursor() {
-  return <span aria-hidden="true" style={{ opacity: 0.6 }}>▌</span>;
+  return <span aria-hidden="true" className={styles.cursor} />;
 }

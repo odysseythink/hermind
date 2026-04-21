@@ -1,0 +1,18 @@
+.btn {
+  align-self: flex-end;
+  height: 32px;
+  padding: 0 var(--space-4);
+  background: transparent;
+  color: var(--error);
+  border: 1px solid var(--error);
+  border-radius: var(--r-sm);
+  font-family: var(--font-sans);
+  font-size: var(--fs-sm);
+  font-weight: 600;
+  cursor: pointer;
+  transition: background var(--t-fast) ease-out;
+}
+
+.btn:hover {
+  background: var(--hover-tint);
+}

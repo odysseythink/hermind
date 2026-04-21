@@ -2,6 +2,7 @@ import StreamingCursor from './StreamingCursor';
 import MessageContent from './MessageContent';
 import ToolCallCard from './ToolCallCard';
 import type { ChatMessage } from '../../state/chat';
+import styles from './MessageBubble.module.css';
 
 type Props = { message: ChatMessage; streaming?: boolean };
 
@@ -10,18 +11,29 @@ export default function MessageBubble({ message, streaming }: Props) {
   return (
     <div
       data-role={message.role}
-      style={{
-        textAlign: isUser ? 'right' : 'left',
-        padding: '0.5rem 1rem',
-      }}
+      className={`${styles.row} ${isUser ? styles.user : styles.assistant}`}
     >
-      <MessageContent content={message.content} />
-      {streaming && <StreamingCursor />}
-      {message.toolCalls?.map((c) => (
-        <ToolCallCard key={c.id} call={c} />
-      ))}
+      {isUser ? (
+        <>
+          <div className={styles.roleTag}>you</div>
+          <div className={styles.bubble}>
+            <MessageContent content={message.content} />
+          </div>
+        </>
+      ) : (
+        <>
+          <div className={styles.roleTag}>assistant</div>
+          <div className={styles.bubble}>
+            <MessageContent content={message.content} />
+            {streaming && <StreamingCursor />}
+            {message.toolCalls?.map((c) => (
+              <ToolCallCard key={c.id} call={c} />
+            ))}
+          </div>
+        </>
+      )}
       {message.truncated && (
-        <span style={{ color: 'var(--warn, #d29922)', fontSize: '0.85em' }}> — interrupted</span>
+        <span className={styles.truncated}>— interrupted</span>
       )}
     </div>
   );

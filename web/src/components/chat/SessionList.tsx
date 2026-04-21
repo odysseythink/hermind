@@ -1,6 +1,7 @@
 import SessionItem from './SessionItem';
 import type { SessionSummary as StateSummary } from '../../state/chat';
 import type { SessionSummary as ApiSummary } from '../../api/schemas';
+import styles from './SessionList.module.css';
 
 type Props = {
   sessions: Array<StateSummary | ApiSummary>;
@@ -23,7 +24,7 @@ function normalize(s: StateSummary | ApiSummary): StateSummary {
 
 export default function SessionList({ sessions, activeId, onSelect }: Props) {
   return (
-    <ul style={{ listStyle: 'none', padding: 0, margin: 0 }}>
+    <ul className={styles.list}>
       {sessions.map((raw) => {
         const s = normalize(raw);
         return <SessionItem key={s.id} session={s} active={s.id === activeId} onClick={onSelect} />;

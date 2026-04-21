@@ -1,4 +1,5 @@
 import { useEffect, useState } from 'react';
+import styles from './SlashMenu.module.css';
 
 export type SlashCommand = {
   id: string;
@@ -32,29 +33,11 @@ export default function SlashMenu({ commands, onClose }: Props) {
   }, [commands, idx, onClose]);
 
   return (
-    <ul
-      style={{
-        position: 'absolute',
-        bottom: '100%',
-        left: 0,
-        listStyle: 'none',
-        padding: 0,
-        margin: 0,
-        background: 'var(--bg-topbar, #161b22)',
-        border: '1px solid var(--border, #30363d)',
-        borderRadius: 4,
-        minWidth: '12rem',
-      }}
-    >
+    <ul className={styles.menu}>
       {commands.map((c, i) => (
         <li
           key={c.id}
-          style={{
-            background: i === idx ? 'var(--accent, #1f6feb)' : 'transparent',
-            color: i === idx ? '#fff' : 'inherit',
-            padding: '0.25rem 0.5rem',
-            cursor: 'pointer',
-          }}
+          className={`${styles.item} ${i === idx ? styles.active : ''}`}
           onMouseDown={(e) => {
             e.preventDefault();
             c.run();

@@ -1,0 +1,24 @@
+.workspace {
+  display: grid;
+  grid-template-columns: 240px 1fr;
+  height: calc(100vh - 48px);
+  min-height: 0;
+  background: var(--bg);
+}
+
+.main {
+  display: flex;
+  flex-direction: column;
+  min-width: 0;
+  min-height: 0;
+  border-left: 1px solid var(--border);
+}
+
+.errorBanner {
+  padding: var(--space-2) var(--space-4);
+  background: var(--surface);
+  border-top: 1px solid var(--error);
+  color: var(--error);
+  font-family: var(--font-mono);
+  font-size: var(--fs-sm);
+}

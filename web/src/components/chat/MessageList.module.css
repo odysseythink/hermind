@@ -1,0 +1,11 @@
+.list {
+  flex: 1;
+  overflow-y: auto;
+  padding: var(--space-4) 0;
+  min-height: 0;
+}
+
+.streamingRow {
+  padding: var(--space-2) var(--space-4);
+  max-width: 85%;
+}

@@ -2,6 +2,7 @@ import { useCallback, useRef } from 'react';
 import { useTranslation } from 'react-i18next';
 import StopButton from './StopButton';
 import SlashMenu from './SlashMenu';
+import styles from './ComposerBar.module.css';
 
 type Props = {
   text: string;
@@ -31,15 +32,7 @@ export default function ComposerBar({
   const slashOpen = text.startsWith('/') && !!onSlashCommand;
 
   return (
-    <div
-      style={{
-        position: 'relative',
-        display: 'flex',
-        gap: '0.5rem',
-        padding: '0.5rem',
-        borderTop: '1px solid var(--border, #30363d)',
-      }}
-    >
+    <div className={styles.bar}>
       {slashOpen && onSlashCommand && (
         <SlashMenu
           commands={[
@@ -53,18 +46,23 @@ export default function ComposerBar({
       )}
       <textarea
         ref={inputRef}
+        className={styles.textarea}
         value={text}
         onChange={(e) => onChangeText(e.target.value)}
         onKeyDown={handleKey}
         placeholder={disabled ? t('chat.placeholderNoProvider') : t('chat.placeholder')}
         disabled={disabled}
         rows={3}
-        style={{ flex: 1, resize: 'vertical', maxHeight: '16rem' }}
       />
       {streaming ? (
         <StopButton visible onClick={onStop} />
       ) : (
-        <button type="button" onClick={onSend} disabled={disabled || !text.trim()}>
+        <button
+          type="button"
+          className={styles.sendBtn}
+          onClick={onSend}
+          disabled={disabled || !text.trim()}
+        >
           {t('chat.send')}
         </button>
       )}
