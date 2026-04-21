@@ -53,7 +53,7 @@ export const GROUPS: readonly GroupDef[] = [
   {
     id: 'skills',
     label: 'Skills',
-    plannedStage: '6',
+    plannedStage: 'done',
     configKeys: ['skills'],
     description: 'Skill enable/disable and per-platform overrides.',
     bullets: [
