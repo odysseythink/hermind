@@ -11,11 +11,6 @@ describe('ComingSoonPanel', () => {
     expect(screen.getByRole('heading', { name: /models/i })).toBeInTheDocument();
   });
 
-  it('displays the planned stage string', () => {
-    render(<ComingSoonPanel group="models" config={cfg} />);
-    expect(screen.getByText(/stage 3 & 4/i)).toBeInTheDocument();
-  });
-
   it('renders the group bullets', () => {
     render(<ComingSoonPanel group="models" config={cfg} />);
     expect(screen.getByText(/default model selection/i)).toBeInTheDocument();

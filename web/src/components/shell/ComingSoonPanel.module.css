@@ -23,19 +23,6 @@
   color: var(--text);
 }
 
-.stage {
-  display: inline-block;
-  padding: 2px var(--space-2);
-  font-family: var(--font-mono);
-  font-size: var(--fs-xs);
-  text-transform: uppercase;
-  letter-spacing: 0.06em;
-  border: 1px solid var(--border);
-  border-radius: var(--r-sm);
-  color: var(--muted);
-  margin-bottom: var(--space-4);
-}
-
 .desc {
   color: var(--text);
   margin: var(--space-2) 0 var(--space-4);

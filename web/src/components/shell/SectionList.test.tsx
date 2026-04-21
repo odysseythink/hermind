@@ -15,7 +15,6 @@ describe('SectionList', () => {
   it('renders the labels of registered sections for the group', () => {
     render(
       <SectionList
-        group="runtime"
         sections={[storageSection]}
         activeSubKey={null}
         onSelect={() => {}}
@@ -27,7 +26,6 @@ describe('SectionList', () => {
   it('marks the active subKey', () => {
     render(
       <SectionList
-        group="runtime"
         sections={[storageSection]}
         activeSubKey="storage"
         onSelect={() => {}}
@@ -42,7 +40,6 @@ describe('SectionList', () => {
     const onSelect = vi.fn();
     render(
       <SectionList
-        group="runtime"
         sections={[storageSection]}
         activeSubKey={null}
         onSelect={onSelect}
@@ -52,15 +49,14 @@ describe('SectionList', () => {
     expect(onSelect).toHaveBeenCalledWith('storage');
   });
 
-  it('falls back to a "Coming soon" row when no sections are registered under the group', () => {
+  it('falls back to an empty-placeholder row when no sections are registered under the group', () => {
     render(
       <SectionList
-        group="memory"
         sections={[]}
         activeSubKey={null}
         onSelect={() => {}}
       />,
     );
-    expect(screen.getByText(/coming soon/i)).toBeInTheDocument();
+    expect(screen.getByText(/no subsections registered yet/i)).toBeInTheDocument();
   });
 });

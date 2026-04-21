@@ -20,6 +20,7 @@ import { keyedInstanceDirty } from './shell/keyedInstances';
 import { listInstanceDirty } from './shell/listInstances';
 import { migrateLegacyHash, parseHash, stringifyHash } from './shell/hash';
 import type { GroupId } from './shell/groups';
+import { firstSubkeyForGroup } from './shell/firstSubkey';
 import TopBar from './components/shell/TopBar';
 import SettingsSidebar from './components/shell/SettingsSidebar';
 import SettingsPanel from './components/shell/SettingsPanel';
@@ -92,6 +93,14 @@ export default function App() {
       dispatch({ type: 'shell/selectGroup', group: parsed.groupId });
       if (parsed.sub) {
         dispatch({ type: 'shell/selectSub', key: parsed.sub });
+      } else if (parsed.groupId) {
+        const providerKeys = Object.keys(
+          ((state.config as Record<string, unknown>).providers as
+            | Record<string, unknown>
+            | undefined) ?? {},
+        ).sort();
+        const firstSub = firstSubkeyForGroup(parsed.groupId, state.configSections, providerKeys);
+        if (firstSub) dispatch({ type: 'shell/selectSub', key: firstSub });
       }
     }
     // If parsed.group is null, stay in EmptyState — no dispatch needed.
@@ -281,6 +290,21 @@ export default function App() {
   const dirty = totalDirtyCount(state);
   const busy = state.status === 'saving' || state.status === 'applying';
 
+  // Selecting a group always lands the user on a real editor by auto-picking
+  // the first valid subsection. Prevents the "XXX — 即将上线" fallback panel
+  // from showing up every time someone clicks a group header.
+  const handleSelectGroup = useCallback(
+    (id: GroupId) => {
+      dispatch({ type: 'shell/selectGroup', group: id });
+      const keys = providerInstances.map(p => p.key);
+      const firstSub = firstSubkeyForGroup(id, state.configSections, keys);
+      if (firstSub) {
+        dispatch({ type: 'shell/selectSub', key: firstSub });
+      }
+    },
+    [providerInstances, state.configSections],
+  );
+
   const onSave = useCallback(async () => {
     dispatch({ type: 'save/start' });
     try {
@@ -374,7 +398,7 @@ export default function App() {
         dirtyProviderKeys={dirtyProviderKeys}
         fallbackProviders={fallbackProviders}
         dirtyFallbackIndices={dirtyFallbackIndices}
-        onSelectGroup={(id: GroupId) => dispatch({ type: 'shell/selectGroup', group: id })}
+        onSelectGroup={handleSelectGroup}
         onSelectSub={(key: string) => dispatch({ type: 'shell/selectSub', key })}
         onToggleGroup={(id: GroupId) => dispatch({ type: 'shell/toggleGroup', group: id })}
         onNewInstance={() => setNewDialogOpen(true)}
@@ -465,7 +489,7 @@ export default function App() {
           }
           onDelete={() => selectedKey && dispatch({ type: 'instance/delete', key: selectedKey })}
           onApply={onApplyGateway}
-          onSelectGroup={(id: GroupId) => dispatch({ type: 'shell/selectGroup', group: id })}
+          onSelectGroup={handleSelectGroup}
           onConfigField={(sectionKey, field, value) =>
             dispatch({ type: 'edit/config-field', sectionKey, field, value })
           }

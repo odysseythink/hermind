@@ -78,9 +78,9 @@
   "empty.thisSectionCovers":"This section will cover",
   "empty.currentConfig":   "Current config (read-only preview)",
   "empty.escape":          "Need to edit this now? Run {{command}} for the legacy editor.",
-  "empty.comingSoon":      "{{group}} — coming soon",
+  "empty.comingSoon":      "{{group}} — pick a subsection",
   "empty.plannedStage":    "Planned for stage {{stage}}",
-  "empty.sectionComingSoon":"Coming soon — stage {{stage}}",
+  "empty.sectionComingSoon":"No subsections registered yet",
 
   "language.switcher": "Language",
   "mode.switcher": "Mode",

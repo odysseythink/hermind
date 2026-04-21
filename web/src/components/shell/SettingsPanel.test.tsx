@@ -55,7 +55,7 @@ describe('SettingsPanel', () => {
   it('renders ComingSoonPanel for every non-gateway group', () => {
     for (const id of ['models', 'memory', 'skills', 'runtime', 'advanced', 'observability'] as const) {
       const { unmount } = render(<SettingsPanel {...makeProps({ activeGroup: id })} />);
-      expect(screen.getByText(/coming soon/i)).toBeInTheDocument();
+      expect(screen.getByText(/pick a subsection/i)).toBeInTheDocument();
       unmount();
     }
   });
@@ -113,15 +113,15 @@ describe('SettingsPanel — non-gateway section routing', () => {
     render(
       <SettingsPanel {...baseProps} activeSubKey="somethingelse" />,
     );
-    // ComingSoonPanel shows "<GroupLabel> — coming soon"
-    expect(screen.getByText(/runtime — coming soon/i)).toBeInTheDocument();
+    // ComingSoonPanel shows "<GroupLabel> — pick a subsection"
+    expect(screen.getByText(/runtime — pick a subsection/i)).toBeInTheDocument();
   });
 
   it('falls back to ComingSoonPanel when subKey is null', () => {
     render(
       <SettingsPanel {...baseProps} activeSubKey={null} />,
     );
-    expect(screen.getByText(/runtime — coming soon/i)).toBeInTheDocument();
+    expect(screen.getByText(/runtime — pick a subsection/i)).toBeInTheDocument();
   });
 });
 
@@ -458,7 +458,7 @@ describe('SettingsPanel — mcp section routing', () => {
         })}
       />,
     );
-    expect(screen.getByText(/coming soon/i)).toBeInTheDocument();
+    expect(screen.getByText(/pick a subsection/i)).toBeInTheDocument();
   });
 
   it('calls onConfigKeyedField with sectionKey "mcp" when a field changes', async () => {

@@ -77,9 +77,9 @@
   "empty.thisSectionCovers":"本分区将覆盖",
   "empty.currentConfig":   "当前配置(只读预览)",
   "empty.escape":          "现在就想编辑?运行 {{command}} 打开旧版编辑器。",
-  "empty.comingSoon":      "{{group}} — 即将上线",
+  "empty.comingSoon":      "{{group}} — 请从左侧选择子项",
   "empty.plannedStage":    "计划在阶段 {{stage}} 上线",
-  "empty.sectionComingSoon":"即将上线 — 阶段 {{stage}}",
+  "empty.sectionComingSoon":"此分区暂无子项",
 
   "language.switcher": "语言",
   "mode.switcher": "模式",

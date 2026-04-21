@@ -118,7 +118,6 @@ export default function SettingsSidebar(props: SidebarProps) {
             />
           ) : (
             <SectionList
-              group={g.id}
               sections={props.configSections.filter(s => s.group_id === g.id)}
               activeSubKey={props.activeGroup === g.id ? props.activeSubKey : null}
               onSelect={key => {

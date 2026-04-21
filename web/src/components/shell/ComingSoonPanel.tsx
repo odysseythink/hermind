@@ -19,7 +19,6 @@ export default function ComingSoonPanel({ group, config }: ComingSoonPanelProps)
     <section className={styles.panel} aria-label={t('empty.comingSoon', { group: groupLabel })}>
       <div className={styles.label}>{groupLabel}</div>
       <h2 className={styles.title}>{t('empty.comingSoon', { group: groupLabel })}</h2>
-      <span className={styles.stage}>{t('empty.plannedStage', { stage: def.plannedStage })}</span>
       <p className={styles.desc}>{t(`group.${def.id}.description`)}</p>
 
       <div className={styles.label}>{t('empty.thisSectionCovers')}</div>

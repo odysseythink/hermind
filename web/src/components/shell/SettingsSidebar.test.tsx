@@ -79,7 +79,7 @@ describe('SettingsSidebar', () => {
         })}
       />,
     );
-    expect(screen.getByText(/coming soon — stage 5/i)).toBeInTheDocument();
+    expect(screen.getByText(/no subsections registered yet/i)).toBeInTheDocument();
   });
 
   it('calls onToggleGroup when an arrow is clicked', async () => {
@@ -169,7 +169,7 @@ describe('SettingsSidebar — non-gateway groups', () => {
         onMoveCron={() => {}}
       />,
     );
-    expect(screen.getByText(/coming soon — stage 5/i)).toBeInTheDocument();
+    expect(screen.getByText(/no subsections registered yet/i)).toBeInTheDocument();
   });
 });
 
