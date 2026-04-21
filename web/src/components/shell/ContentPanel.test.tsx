@@ -317,3 +317,92 @@ describe('ContentPanel — list section routing', () => {
     expect(fetchModels).toHaveBeenCalledWith(0);
   });
 });
+
+describe('ContentPanel — cron section routing', () => {
+  const cronSection: ConfigSection = {
+    key: 'cron',
+    label: 'Cron jobs',
+    group_id: 'advanced',
+    shape: 'list',
+    subkey: 'jobs',
+    fields: [
+      { name: 'name', label: 'Name', kind: 'string', required: true },
+      { name: 'schedule', label: 'Schedule', kind: 'string', required: true },
+      { name: 'prompt', label: 'Prompt', kind: 'string', required: true },
+      { name: 'model', label: 'Model override', kind: 'string' },
+    ],
+  };
+
+  const cronConfig = {
+    cron: {
+      jobs: [
+        { name: 'daily', schedule: '0 9 * * *', prompt: 'hello', model: '' },
+        { name: 'hourly', schedule: 'every 1h', prompt: 'check', model: '' },
+      ],
+    },
+  } as unknown as Config;
+
+  it('renders ListElementInlineEditor for cron:N subkey', () => {
+    render(
+      <ContentPanel
+        {...makeProps({
+          activeGroup: 'advanced',
+          activeSubKey: 'cron:1',
+          config: cronConfig,
+          originalConfig: cronConfig,
+          configSections: [cronSection],
+        })}
+      />,
+    );
+    expect(screen.getByText(/#2 of 2/i)).toBeInTheDocument();
+    expect(screen.getByLabelText(/name/i)).toBeInTheDocument();
+  });
+
+  it('does not render the editor when cron:N index is out of bounds', () => {
+    render(
+      <ContentPanel
+        {...makeProps({
+          activeGroup: 'advanced',
+          activeSubKey: 'cron:5',
+          config: { cron: { jobs: [] } } as unknown as Config,
+          originalConfig: { cron: { jobs: [] } } as unknown as Config,
+          configSections: [cronSection],
+        })}
+      />,
+    );
+    expect(screen.queryByText(/#\d+ of/i)).not.toBeInTheDocument();
+  });
+
+  it('calls onConfigListField with sectionKey "cron" when a field changes', async () => {
+    const onConfigListField = vi.fn();
+    function Host() {
+      const [jobs, setJobs] = useState([
+        { name: 'daily', schedule: '0 9 * * *', prompt: 'hello', model: '' },
+      ]);
+      return (
+        <ContentPanel
+          {...makeProps({
+            activeGroup: 'advanced',
+            activeSubKey: 'cron:0',
+            config: { cron: { jobs } } as unknown as Config,
+            originalConfig: { cron: { jobs } } as unknown as Config,
+            configSections: [cronSection],
+            onConfigListField: (sk, idx, field, v) => {
+              setJobs(prev => {
+                const next = [...prev];
+                next[idx] = { ...next[idx], [field]: v as string };
+                return next;
+              });
+              onConfigListField(sk, idx, field, v);
+            },
+          })}
+        />
+      );
+    }
+    render(<Host />);
+    const input = screen.getByLabelText(/name/i) as HTMLInputElement;
+    await userEvent.clear(input);
+    await userEvent.type(input, 'x');
+    expect(onConfigListField).toHaveBeenCalledWith('cron', 0, 'name', expect.any(String));
+  });
+});

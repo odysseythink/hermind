@@ -380,30 +380,37 @@ export default function App() {
           onConfigScalar={(sectionKey, value) =>
             dispatch({ type: 'edit/config-scalar', sectionKey, value })
           }
-          onConfigKeyedField={(sectionKey, instanceKey, field, value) =>
-            dispatch({ type: 'edit/keyed-instance-field', sectionKey, instanceKey, field, value })
-          }
+          onConfigKeyedField={(sectionKey, instanceKey, field, value) => {
+            const section = state.configSections.find(s => s.key === sectionKey);
+            dispatch({ type: 'edit/keyed-instance-field', sectionKey, subkey: section?.subkey, instanceKey, field, value });
+          }}
           onConfigKeyedDelete={(sectionKey, instanceKey) => {
-            dispatch({ type: 'keyed-instance/delete', sectionKey, instanceKey });
+            const section = state.configSections.find(s => s.key === sectionKey);
+            dispatch({ type: 'keyed-instance/delete', sectionKey, subkey: section?.subkey, instanceKey });
             dispatch({ type: 'shell/selectSub', key: null });
           }}
           onFetchModels={onFetchProviderModels}
           onFetchFallbackModels={onFetchFallbackModels}
-          onConfigListField={(sectionKey, index, field, value) =>
-            dispatch({ type: 'edit/list-instance-field', sectionKey, index, field, value })
-          }
+          onConfigListField={(sectionKey, index, field, value) => {
+            const section = state.configSections.find(s => s.key === sectionKey);
+            dispatch({ type: 'edit/list-instance-field', sectionKey, subkey: section?.subkey, index, field, value });
+          }}
           onConfigListDelete={(sectionKey, index) => {
-            dispatch({ type: 'list-instance/delete', sectionKey, index });
+            const section = state.configSections.find(s => s.key === sectionKey);
+            dispatch({ type: 'list-instance/delete', sectionKey, subkey: section?.subkey, index });
             dispatch({ type: 'shell/selectSub', key: null });
           }}
           onConfigListMove={(sectionKey, index, direction) => {
+            const section = state.configSections.find(s => s.key === sectionKey);
             dispatch({
               type: direction === 'up' ? 'list-instance/move-up' : 'list-instance/move-down',
               sectionKey,
+              subkey: section?.subkey,
               index,
             });
             const newIndex = direction === 'up' ? index - 1 : index + 1;
-            dispatch({ type: 'shell/selectSub', key: `fallback:${newIndex}` });
+            const prefix = sectionKey === 'fallback_providers' ? 'fallback:' : `${sectionKey}:`;
+            dispatch({ type: 'shell/selectSub', key: `${prefix}${newIndex}` });
           }}
         />
       </main>

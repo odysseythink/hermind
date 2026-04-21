@@ -6,6 +6,7 @@ import GatewayPanel from '../groups/gateway/GatewayPanel';
 import ConfigSection from '../ConfigSection';
 import ProviderEditor from '../groups/models/ProviderEditor';
 import FallbackProviderEditor from '../groups/models/FallbackProviderEditor';
+import ListElementInlineEditor from './ListElementInlineEditor';
 
 export interface ContentPanelProps {
   activeGroup: GroupId | null;
@@ -144,6 +145,42 @@ export default function ContentPanel(props: ContentPanelProps) {
             onMoveDown={() => props.onConfigListMove('fallback_providers', index, 'down')}
             fetchModels={() => props.onFetchFallbackModels(index)}
             config={props.config as unknown as Record<string, unknown>}
+          />
+        );
+      }
+    }
+    // cron:N addresses the N-th element of config.cron.jobs (Subkey="jobs").
+    if (props.activeGroup === 'advanced' && props.activeSubKey.startsWith('cron:')) {
+      const index = Number(props.activeSubKey.slice('cron:'.length));
+      const cronSection = props.configSections.find(s => s.key === 'cron');
+      const list = (((props.config as Record<string, unknown>).cron as
+        | { jobs?: Array<Record<string, unknown>> }
+        | undefined)?.jobs) ?? [];
+      const origList = (((props.originalConfig as Record<string, unknown>).cron as
+        | { jobs?: Array<Record<string, unknown>> }
+        | undefined)?.jobs) ?? [];
+      if (
+        cronSection && cronSection.shape === 'list' &&
+        Number.isInteger(index) && index >= 0 && index < list.length
+      ) {
+        const element = list[index];
+        const originalElement = origList[index];
+        const dirty = !shallowEqualInstance(element, originalElement);
+        return (
+          <ListElementInlineEditor
+            section={cronSection}
+            index={index}
+            length={list.length}
+            value={element}
+            originalValue={originalElement ?? {}}
+            dirty={dirty}
+            config={props.config as unknown as Record<string, unknown>}
+            onField={(i, field, v) =>
+              props.onConfigListField('cron', i, field, v)
+            }
+            onDelete={() => props.onConfigListDelete('cron', index)}
+            onMoveUp={() => props.onConfigListMove('cron', index, 'up')}
+            onMoveDown={() => props.onConfigListMove('cron', index, 'down')}
           />
         );
       }
