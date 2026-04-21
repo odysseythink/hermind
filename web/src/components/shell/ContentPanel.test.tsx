@@ -406,3 +406,90 @@ describe('ContentPanel — cron section routing', () => {
     expect(onConfigListField).toHaveBeenCalledWith('cron', 0, 'name', expect.any(String));
   });
 });
+
+describe('ContentPanel — mcp section routing', () => {
+  const mcpSection: ConfigSection = {
+    key: 'mcp',
+    label: 'MCP servers',
+    group_id: 'advanced',
+    shape: 'keyed_map',
+    subkey: 'servers',
+    no_discriminator: true,
+    fields: [
+      { name: 'command', label: 'Command', kind: 'string', required: true },
+      { name: 'enabled', label: 'Enabled', kind: 'bool' },
+    ],
+  };
+
+  const mcpConfig = {
+    mcp: {
+      servers: {
+        filesystem: { command: 'npx', enabled: true },
+        github: { command: '/usr/local/bin/mcp-github', enabled: false },
+      },
+    },
+  } as unknown as Config;
+
+  it('renders KeyedInstanceInlineEditor for mcp:<name> subkey', () => {
+    render(
+      <ContentPanel
+        {...makeProps({
+          activeGroup: 'advanced',
+          activeSubKey: 'mcp:filesystem',
+          config: mcpConfig,
+          originalConfig: mcpConfig,
+          configSections: [mcpSection],
+        })}
+      />,
+    );
+    expect(screen.getByText('filesystem')).toBeInTheDocument();
+    expect(screen.getByLabelText(/command/i)).toBeInTheDocument();
+  });
+
+  it('falls through to ComingSoonPanel when mcp instance key does not exist', () => {
+    render(
+      <ContentPanel
+        {...makeProps({
+          activeGroup: 'advanced',
+          activeSubKey: 'mcp:nonexistent',
+          config: mcpConfig,
+          originalConfig: mcpConfig,
+          configSections: [mcpSection],
+        })}
+      />,
+    );
+    expect(screen.getByText(/coming soon/i)).toBeInTheDocument();
+  });
+
+  it('calls onConfigKeyedField with sectionKey "mcp" when a field changes', async () => {
+    const onConfigKeyedField = vi.fn();
+    function Host() {
+      const [servers, setServers] = useState<Record<string, Record<string, unknown>>>({
+        filesystem: { command: 'npx', enabled: true },
+      });
+      return (
+        <ContentPanel
+          {...makeProps({
+            activeGroup: 'advanced',
+            activeSubKey: 'mcp:filesystem',
+            config: { mcp: { servers } } as unknown as Config,
+            originalConfig: { mcp: { servers } } as unknown as Config,
+            configSections: [mcpSection],
+            onConfigKeyedField: (sk, instKey, field, v) => {
+              setServers(prev => ({
+                ...prev,
+                [instKey]: { ...prev[instKey], [field]: v },
+              }));
+              onConfigKeyedField(sk, instKey, field, v);
+            },
+          })}
+        />
+      );
+    }
+    render(<Host />);
+    const input = screen.getByLabelText(/command/i) as HTMLInputElement;
+    await userEvent.clear(input);
+    await userEvent.type(input, 'node');
+    expect(onConfigKeyedField).toHaveBeenCalledWith('mcp', 'filesystem', 'command', expect.any(String));
+  });
+});

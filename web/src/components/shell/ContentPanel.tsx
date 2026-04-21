@@ -7,6 +7,7 @@ import ConfigSection from '../ConfigSection';
 import ProviderEditor from '../groups/models/ProviderEditor';
 import FallbackProviderEditor from '../groups/models/FallbackProviderEditor';
 import ListElementInlineEditor from './ListElementInlineEditor';
+import KeyedInstanceInlineEditor from './KeyedInstanceInlineEditor';
 
 export interface ContentPanelProps {
   activeGroup: GroupId | null;
@@ -181,6 +182,31 @@ export default function ContentPanel(props: ContentPanelProps) {
             onDelete={() => props.onConfigListDelete('cron', index)}
             onMoveUp={() => props.onConfigListMove('cron', index, 'up')}
             onMoveDown={() => props.onConfigListMove('cron', index, 'down')}
+          />
+        );
+      }
+    }
+    // mcp:<name> addresses config.mcp.servers[<name>] (Subkey="servers").
+    if (props.activeGroup === 'advanced' && props.activeSubKey.startsWith('mcp:')) {
+      const instKey = props.activeSubKey.slice('mcp:'.length);
+      const mcpSection = props.configSections.find(s => s.key === 'mcp');
+      const servers = ((props.config as Record<string, unknown>).mcp as
+        { servers?: Record<string, Record<string, unknown>> } | undefined)?.servers ?? {};
+      const origServers = ((props.originalConfig as Record<string, unknown>).mcp as
+        { servers?: Record<string, Record<string, unknown>> } | undefined)?.servers ?? {};
+      const instance = servers[instKey];
+      if (mcpSection && mcpSection.shape === 'keyed_map' && instance) {
+        const dirty = !shallowEqualInstance(instance, origServers[instKey]);
+        return (
+          <KeyedInstanceInlineEditor
+            section={mcpSection}
+            instanceKey={instKey}
+            value={instance}
+            originalValue={origServers[instKey] ?? {}}
+            dirty={dirty}
+            config={props.config as unknown as Record<string, unknown>}
+            onField={(key, field, v) => props.onConfigKeyedField('mcp', key, field, v)}
+            onDelete={() => props.onConfigKeyedDelete('mcp', instKey)}
           />
         );
       }
