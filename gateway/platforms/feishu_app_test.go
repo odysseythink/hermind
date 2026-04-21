@@ -3,10 +3,11 @@ package platforms
 import (
 	"context"
 	"encoding/json"
+	"fmt"
 	"strings"
 	"sync"
-	"time"
 	"testing"
+	"time"
 
 	larkim "github.com/larksuite/oapi-sdk-go/v3/service/im/v1"
 
@@ -299,5 +300,33 @@ func TestFeishuApp_ContextCancels(t *testing.T) {
 		}
 	case <-time.After(2 * time.Second):
 		t.Fatal("Run did not return within 2s of ctx cancel")
+	}
+}
+
+func TestFeishuApp_HandlerErrorDoesNotKillStream(t *testing.T) {
+	fa := newFeishuAppForTest(nil, &fakeSender{}, "")
+
+	calls := 0
+	fa.mu.Lock()
+	fa.handler = func(ctx context.Context, in gateway.IncomingMessage) (*gateway.OutgoingMessage, error) {
+		calls++
+		if calls == 1 {
+			return nil, fmt.Errorf("handler boom")
+		}
+		return nil, nil
+	}
+	fa.mu.Unlock()
+
+	evt1 := buildTextEvent("oc", "om1", "ou", `{"text":"one"}`, "text")
+	evt2 := buildTextEvent("oc", "om2", "ou", `{"text":"two"}`, "text")
+
+	if err := fa.handleEvent(context.Background(), evt1); err != nil {
+		t.Fatalf("handleEvent#1: %v", err)
+	}
+	if err := fa.handleEvent(context.Background(), evt2); err != nil {
+		t.Fatalf("handleEvent#2: %v", err)
+	}
+	if calls != 2 {
+		t.Errorf("handler called %d times, want 2", calls)
 	}
 }
