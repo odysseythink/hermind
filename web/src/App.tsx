@@ -200,6 +200,38 @@ export default function App() {
     return out;
   }, [state.config, state.originalConfig]);
 
+  const mcpInstances = useMemo(() => {
+    const sec = (state.config as Record<string, unknown>).mcp as
+      | { servers?: Record<string, Record<string, unknown>> }
+      | undefined;
+    const servers = sec?.servers ?? {};
+    return Object.keys(servers)
+      .sort()
+      .map(key => {
+        const inst = servers[key];
+        return {
+          key,
+          command: typeof inst?.command === 'string' ? inst.command : '',
+          enabled: inst?.enabled !== false, // default-true when unset (matches Go IsEnabled)
+        };
+      });
+  }, [state.config]);
+
+  const dirtyMcpKeys = useMemo(() => {
+    const cur = ((state.config as Record<string, unknown>).mcp as
+      | { servers?: Record<string, Record<string, unknown>> }
+      | undefined)?.servers ?? {};
+    const orig = ((state.originalConfig as Record<string, unknown>).mcp as
+      | { servers?: Record<string, Record<string, unknown>> }
+      | undefined)?.servers ?? {};
+    const out = new Set<string>();
+    const keys = new Set<string>([...Object.keys(cur), ...Object.keys(orig)]);
+    for (const k of keys) {
+      if (!shallowEqualRecord(cur[k], orig[k])) out.add(k);
+    }
+    return out;
+  }, [state.config, state.originalConfig]);
+
   const sectionSubkey = useMemo(() => {
     const m = new Map<string, string | undefined>();
     for (const s of state.configSections) {
