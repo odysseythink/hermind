@@ -52,4 +52,50 @@ describe('NewMcpServerDialog', () => {
     await userEvent.click(screen.getByRole('button', { name: /cancel/i }));
     expect(onCancel).toHaveBeenCalled();
   });
+
+  it('typing an invalid key (uppercase, space) shows format error and disables Create', async () => {
+    const onCreate = vi.fn();
+    render(<NewMcpServerDialog {...baseProps({ onCreate })} />);
+    const input = screen.getByPlaceholderText(/filesystem/i);
+    await userEvent.type(input, 'Bad Key');
+    expect(screen.getByText(/lowercase letters, digits, underscore/i)).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: /create/i })).toBeDisabled();
+    expect(onCreate).not.toHaveBeenCalled();
+  });
+
+  it('typing a valid key like fs_local enables Create button', async () => {
+    const onCreate = vi.fn();
+    render(<NewMcpServerDialog {...baseProps({ onCreate })} />);
+    const input = screen.getByPlaceholderText(/filesystem/i);
+    await userEvent.type(input, 'fs_local');
+    expect(screen.queryByText(/lowercase letters, digits, underscore/i)).not.toBeInTheDocument();
+    expect(screen.getByRole('button', { name: /create/i })).not.toBeDisabled();
+  });
+
+  it('pressing Enter in a valid name input triggers onCreate', async () => {
+    const onCreate = vi.fn();
+    render(<NewMcpServerDialog {...baseProps({ onCreate })} />);
+    const input = screen.getByPlaceholderText(/filesystem/i);
+    await userEvent.type(input, 'filesystem');
+    await userEvent.keyboard('{Enter}');
+    expect(onCreate).toHaveBeenCalledWith('filesystem');
+  });
+
+  it('pressing Enter with an empty name does NOT trigger onCreate', async () => {
+    const onCreate = vi.fn();
+    render(<NewMcpServerDialog {...baseProps({ onCreate })} />);
+    const input = screen.getByPlaceholderText(/filesystem/i);
+    await userEvent.click(input);
+    await userEvent.keyboard('{Enter}');
+    expect(onCreate).not.toHaveBeenCalled();
+  });
+
+  it('pressing Enter with a duplicate name does NOT trigger onCreate', async () => {
+    const onCreate = vi.fn();
+    render(<NewMcpServerDialog {...baseProps({ existingKeys: new Set(['filesystem']), onCreate })} />);
+    const input = screen.getByPlaceholderText(/filesystem/i);
+    await userEvent.type(input, 'filesystem');
+    await userEvent.keyboard('{Enter}');
+    expect(onCreate).not.toHaveBeenCalled();
+  });
 });
