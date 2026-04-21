@@ -188,3 +188,28 @@ func TestFeishuApp_StripsAtMention(t *testing.T) {
 		})
 	}
 }
+
+func TestFeishuApp_IgnoresNonText(t *testing.T) {
+	fa := newFeishuAppForTest(nil, &fakeSender{}, "")
+	called := false
+	fa.mu.Lock()
+	fa.handler = func(ctx context.Context, in gateway.IncomingMessage) (*gateway.OutgoingMessage, error) {
+		called = true
+		return nil, nil
+	}
+	fa.mu.Unlock()
+
+	for _, mt := range []string{"image", "file", "sticker", "post", ""} {
+		mt := mt
+		t.Run("msg_type="+mt, func(t *testing.T) {
+			called = false
+			evt := buildTextEvent("oc", "om", "ou", `{"text":"ignored"}`, mt)
+			if err := fa.handleEvent(context.Background(), evt); err != nil {
+				t.Fatalf("handleEvent: %v", err)
+			}
+			if called {
+				t.Errorf("handler called for msg_type=%q; want dropped", mt)
+			}
+		})
+	}
+}
