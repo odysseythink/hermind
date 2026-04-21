@@ -4,6 +4,9 @@ import (
 	"encoding/json"
 	"net/http"
 	"net/http/httptest"
+	"os"
+	"path/filepath"
+	"reflect"
 	"sort"
 	"testing"
 
@@ -509,4 +512,82 @@ func TestConfigSchema_EmitsKeyedMapShapeString(t *testing.T) {
 	if !found {
 		t.Fatalf("seeded section %q not present in response", key)
 	}
+}
+
+func TestConfigSchema_SkillsDisabledEnumFromLoader(t *testing.T) {
+	dir := t.TempDir()
+	t.Setenv("HERMIND_HOME", dir)
+
+	// Seed two skills under $HERMIND_HOME/skills/<category>/<name>/SKILL.md.
+	seed := func(name string) {
+		p := filepath.Join(dir, "skills", "demo", name)
+		if err := os.MkdirAll(p, 0o755); err != nil {
+			t.Fatal(err)
+		}
+		body := "---\nname: " + name + "\ndescription: seeded for test\n---\nbody"
+		if err := os.WriteFile(filepath.Join(p, "SKILL.md"), []byte(body), 0o644); err != nil {
+			t.Fatal(err)
+		}
+	}
+	seed("alpha")
+	seed("beta")
+
+	srv, err := api.NewServer(&api.ServerOpts{
+		Config: &config.Config{},
+		Token:  "test-token",
+	})
+	if err != nil {
+		t.Fatalf("NewServer: %v", err)
+	}
+
+	req := httptest.NewRequest("GET", "/api/config/schema", nil)
+	req.Header.Set("Authorization", "Bearer test-token")
+	w := httptest.NewRecorder()
+	srv.Router().ServeHTTP(w, req)
+
+	if w.Code != http.StatusOK {
+		t.Fatalf("status = %d, body = %s", w.Code, w.Body.String())
+	}
+	var body api.ConfigSchemaResponse
+	if err := json.Unmarshal(w.Body.Bytes(), &body); err != nil {
+		t.Fatalf("parse: %v", err)
+	}
+
+	var skills *api.ConfigSectionDTO
+	for i := range body.Sections {
+		if body.Sections[i].Key == "skills" {
+			skills = &body.Sections[i]
+			break
+		}
+	}
+	if skills == nil {
+		t.Fatalf("missing skills section; got keys = %v", keysOf(body.Sections))
+	}
+	if skills.GroupID != "skills" {
+		t.Errorf("skills.group_id = %q, want \"skills\"", skills.GroupID)
+	}
+	if len(skills.Fields) != 1 {
+		t.Fatalf("skills.fields count = %d, want 1", len(skills.Fields))
+	}
+	disabled := skills.Fields[0]
+	if disabled.Name != "disabled" {
+		t.Errorf("field name = %q, want \"disabled\"", disabled.Name)
+	}
+	if disabled.Kind != "multiselect" {
+		t.Errorf("field kind = %q, want \"multiselect\"", disabled.Kind)
+	}
+
+	if !reflect.DeepEqual(disabled.Enum, []string{"alpha", "beta"}) {
+		t.Errorf("disabled.Enum = %v, want [alpha beta] in sorted order", disabled.Enum)
+	}
+}
+
+// keysOf returns the Key of each section in order — used to produce
+// readable failure messages when a section lookup fails.
+func keysOf(sections []api.ConfigSectionDTO) []string {
+	out := make([]string, len(sections))
+	for i, s := range sections {
+		out[i] = s.Key
+	}
+	return out
 }
