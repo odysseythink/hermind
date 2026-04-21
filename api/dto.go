@@ -66,6 +66,18 @@ type MessagesResponse struct {
 	Total    int          `json:"total"`
 }
 
+// MessageSubmitRequest is the body of POST /api/sessions/{id}/messages.
+type MessageSubmitRequest struct {
+	Text  string `json:"text"`
+	Model string `json:"model,omitempty"`
+}
+
+// MessageSubmitResponse is returned on 202.
+type MessageSubmitResponse struct {
+	SessionID string `json:"session_id"`
+	Status    string `json:"status"`
+}
+
 // ConfigResponse is the payload for GET /api/config.
 type ConfigResponse struct {
 	Config map[string]any `json:"config"`

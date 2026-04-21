@@ -13,6 +13,7 @@ import (
 
 	"github.com/go-chi/chi/v5"
 
+	"github.com/odysseythink/hermind/api/sessionrun"
 	"github.com/odysseythink/hermind/config"
 	"github.com/odysseythink/hermind/storage"
 )
@@ -74,6 +75,12 @@ type ServerOpts struct {
 	// Controller manages the gateway lifecycle. nil means the four
 	// /api/platforms/* endpoints return 503 Service Unavailable.
 	Controller GatewayController
+
+	// Deps is the pre-built Engine dependency bundle. Callers
+	// (cli/web.go) fill this via cli.BuildEngineDeps. Required for the
+	// POST /sessions/{id}/messages endpoint; zero-value leaves the
+	// endpoint returning 503.
+	Deps sessionrun.Deps
 }
 
 // Server is the API server.
@@ -82,6 +89,8 @@ type Server struct {
 	router   chi.Router
 	bootedAt time.Time
 	streams  StreamHub
+	registry *SessionRegistry
+	deps     sessionrun.Deps
 }
 
 // NewServer wires routes and middleware.
@@ -97,6 +106,12 @@ func NewServer(opts *ServerOpts) (*Server, error) {
 		streams = NewMemoryStreamHub()
 	}
 	s := &Server{opts: opts, bootedAt: time.Now(), streams: streams}
+	s.registry = NewSessionRegistry()
+	s.deps = opts.Deps
+	// Adapt the hub into the publisher sessionrun.Run expects. Overrides
+	// any Hub the caller pre-set on opts.Deps because the server owns
+	// event publishing.
+	s.deps.Hub = &hubPublisher{hub: streams}
 	s.router = s.buildRouter()
 	return s, nil
 }
@@ -138,6 +153,8 @@ func (s *Server) buildRouter() chi.Router {
 		r.Get("/sessions/{id}", s.handleSessionGet)
 		r.Delete("/sessions/{id}", s.handleSessionDelete)
 		r.Get("/sessions/{id}/messages", s.handleSessionMessages)
+		r.Post("/sessions/{id}/messages", s.handleSessionMessagesPost)
+		r.Post("/sessions/{id}/cancel", s.handleSessionCancel)
 		r.Get("/sessions/{id}/stream/ws", s.handleSessionStreamWS)
 		r.Get("/sessions/{id}/stream/sse", s.handleSessionStreamSSE)
 

@@ -40,6 +40,14 @@ landing page so the browser can authenticate automatically.`,
 				return err
 			}
 
+			deps, cleanup, err := BuildEngineDeps(cmd.Context(), app)
+			if cleanup != nil {
+				defer cleanup()
+			}
+			if err != nil {
+				return fmt.Errorf("web: build engine deps: %w", err)
+			}
+
 			ctrl := gatewayctl.New(app.Config, func(cfg config.Config) (*gateway.Gateway, error) {
 				return BuildGateway(BuildGatewayDeps{Config: cfg})
 			})
@@ -70,6 +78,7 @@ landing page so the browser can authenticate automatically.`,
 				Version:    Version,
 				Streams:    streams,
 				Controller: ctrl,
+				Deps:       deps,
 			})
 			if err != nil {
 				return err

@@ -1,0 +1,221 @@
+package cli
+
+import (
+	"context"
+	"errors"
+	"fmt"
+	"os"
+	"time"
+
+	"github.com/google/uuid"
+	"github.com/odysseythink/hermind/agent"
+	"github.com/odysseythink/hermind/api/sessionrun"
+	"github.com/odysseythink/hermind/config"
+	"github.com/odysseythink/hermind/provider"
+	"github.com/odysseythink/hermind/provider/factory"
+	"github.com/odysseythink/hermind/tool"
+	"github.com/odysseythink/hermind/tool/browser"
+	"github.com/odysseythink/hermind/tool/delegate"
+	"github.com/odysseythink/hermind/tool/file"
+	"github.com/odysseythink/hermind/tool/mcp"
+	"github.com/odysseythink/hermind/tool/memory"
+	"github.com/odysseythink/hermind/tool/memory/memprovider"
+	"github.com/odysseythink/hermind/tool/terminal"
+	"github.com/odysseythink/hermind/tool/vision"
+	"github.com/odysseythink/hermind/tool/web"
+)
+
+// BuildEngineDeps constructs the shared provider + aux + tool registry +
+// skills bundle used by both the TUI (cli/repl.go) and the web server
+// (cli/web.go). Callers invoke Cleanup on shutdown to release
+// lifecycle-bearing resources (terminal backend, mcp manager,
+// external memory provider).
+//
+// Hub is not set here — callers attach their own EventPublisher per
+// request.
+//
+// This is a pragmatic extraction: repl.go historically inlined all of
+// this. Leaving repl.go's copy in place keeps TUI behaviour stable
+// while web gets a sharable builder. Plan 5 deletes the TUI so the
+// duplicate disappears naturally.
+func BuildEngineDeps(ctx context.Context, app *App) (sessionrun.Deps, func(), error) {
+	cleanupFns := []func(){}
+	cleanup := func() {
+		for i := len(cleanupFns) - 1; i >= 0; i-- {
+			cleanupFns[i]()
+		}
+	}
+
+	primaryProvider, primaryName, err := buildPrimaryProvider(app.Config)
+	if err != nil {
+		if errors.Is(err, errMissingAPIKey) {
+			fmt.Fprintf(os.Stderr, "%v\n", err)
+			fmt.Fprintln(os.Stderr, "hermind: starting in degraded mode. Chat will fail until you configure a provider.")
+			primaryProvider = newStubProvider(primaryName)
+		} else {
+			return sessionrun.Deps{}, cleanup, err
+		}
+	}
+
+	providers := []provider.Provider{primaryProvider}
+	for i, fbCfg := range app.Config.FallbackProviders {
+		if fbCfg.APIKey == "" {
+			fmt.Fprintf(os.Stderr, "hermind: warning: fallback_providers[%d] (%s) has no api_key — skipping\n", i, fbCfg.Provider)
+			continue
+		}
+		fb, err := factory.New(fbCfg)
+		if err != nil {
+			fmt.Fprintf(os.Stderr, "hermind: warning: fallback_providers[%d] (%s): %v — skipping\n", i, fbCfg.Provider, err)
+			continue
+		}
+		providers = append(providers, fb)
+	}
+
+	var p provider.Provider
+	if len(providers) == 1 {
+		p = providers[0]
+	} else {
+		p = provider.NewFallbackChain(providers)
+	}
+
+	displayModel := defaultModelFromString(app.Config.Model)
+
+	var auxProvider provider.Provider
+	if app.Config.Auxiliary.APIKey != "" || app.Config.Auxiliary.Provider != "" {
+		auxCfg := config.ProviderConfig{
+			Provider: app.Config.Auxiliary.Provider,
+			BaseURL:  app.Config.Auxiliary.BaseURL,
+			APIKey:   app.Config.Auxiliary.APIKey,
+			Model:    app.Config.Auxiliary.Model,
+		}
+		if auxCfg.Provider == "" {
+			auxCfg.Provider = "anthropic"
+		}
+		if auxP, err := factory.New(auxCfg); err == nil {
+			auxProvider = auxP
+		}
+	}
+
+	toolRegistry := tool.NewRegistry()
+	file.RegisterAll(toolRegistry)
+
+	termCfg := terminal.Config{
+		Cwd:              app.Config.Terminal.Cwd,
+		DockerImage:      app.Config.Terminal.DockerImage,
+		DockerVolumes:    app.Config.Terminal.DockerVolumes,
+		SSHHost:          app.Config.Terminal.SSHHost,
+		SSHUser:          app.Config.Terminal.SSHUser,
+		SSHKey:           app.Config.Terminal.SSHKey,
+		SingularityImage: app.Config.Terminal.SingularityImage,
+		ModalBaseURL:     app.Config.Terminal.ModalBaseURL,
+		ModalToken:       app.Config.Terminal.ModalToken,
+		DaytonaBaseURL:   app.Config.Terminal.DaytonaBaseURL,
+		DaytonaToken:     app.Config.Terminal.DaytonaToken,
+	}
+	if app.Config.Terminal.Timeout > 0 {
+		termCfg.Timeout = time.Duration(app.Config.Terminal.Timeout) * time.Second
+	}
+	backend, err := terminal.New(app.Config.Terminal.Backend, termCfg)
+	if err != nil {
+		return sessionrun.Deps{}, cleanup, fmt.Errorf("hermind: create terminal backend %q: %w", app.Config.Terminal.Backend, err)
+	}
+	cleanupFns = append(cleanupFns, func() { backend.Close() })
+	terminal.RegisterShellExecute(toolRegistry, backend)
+
+	web.RegisterAll(toolRegistry, web.Options{
+		SearchProvider:  app.Config.Web.Search.Provider,
+		TavilyAPIKey:    app.Config.Web.Search.Providers.Tavily.APIKey,
+		BraveAPIKey:     app.Config.Web.Search.Providers.Brave.APIKey,
+		ExaAPIKey:       app.Config.Web.Search.Providers.Exa.APIKey,
+		FirecrawlAPIKey: os.Getenv("FIRECRAWL_API_KEY"),
+	})
+
+	if app.Storage != nil {
+		memory.RegisterAll(toolRegistry, app.Storage)
+	}
+
+	browserProvider := browser.NewBrowserbase(app.Config.Browser.Browserbase)
+	browser.RegisterAll(toolRegistry, browserProvider)
+
+	visionModel := app.Config.Auxiliary.Model
+	if visionModel == "" {
+		visionModel = displayModel
+	}
+	vision.Register(toolRegistry, auxProvider, visionModel)
+
+	// Use a stable session prefix for delegate sub-conversations spawned
+	// from web requests. Each sub-conversation gets its own UUID suffix.
+	sessionPrefix := uuid.NewString()
+
+	extMem, err := memprovider.New(app.Config.Memory, memprovider.WithStorage(app.Storage))
+	if err != nil {
+		fmt.Fprintf(os.Stderr, "hermind: memory provider: %v\n", err)
+	}
+	if extMem != nil {
+		if err := extMem.Initialize(ctx, sessionPrefix); err != nil {
+			fmt.Fprintf(os.Stderr, "hermind: memory provider %s init: %v\n", extMem.Name(), err)
+		} else {
+			extMem.RegisterTools(toolRegistry)
+			cleanupFns = append(cleanupFns, func() {
+				shutdownCtx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
+				defer cancel()
+				_ = extMem.Shutdown(shutdownCtx)
+			})
+		}
+	}
+
+	delegate.RegisterDelegate(toolRegistry, func(subCtx context.Context, task, extra string, maxTurns int) (*delegate.SubagentResult, error) {
+		subEngine := agent.NewEngineWithToolsAndAux(
+			p, auxProvider, app.Storage, toolRegistry,
+			config.AgentConfig{
+				MaxTurns:    maxTurns,
+				Compression: app.Config.Agent.Compression,
+			},
+			"subagent",
+		)
+		result, err := subEngine.RunConversation(subCtx, &agent.RunOptions{
+			UserMessage: task + "\n\n" + extra,
+			SessionID:   sessionPrefix + "-sub-" + uuid.NewString(),
+			Model:       displayModel,
+		})
+		if err != nil {
+			return nil, err
+		}
+		return &delegate.SubagentResult{
+			Response:   result.Response,
+			Iterations: result.Iterations,
+			ToolCalls:  0,
+		}, nil
+	})
+
+	if len(app.Config.MCP.Servers) > 0 {
+		mcpManager := mcp.NewManager("0.1.0", toolRegistry)
+		var serverCfgs []mcp.ServerConfig
+		for name, srv := range app.Config.MCP.Servers {
+			if !srv.IsEnabled() {
+				continue
+			}
+			serverCfgs = append(serverCfgs, mcp.ServerConfig{
+				Name:    name,
+				Command: srv.Command,
+				Args:    srv.Args,
+				Env:     srv.Env,
+			})
+		}
+		if err := mcpManager.Start(ctx, serverCfgs); err != nil {
+			fmt.Fprintf(os.Stderr, "hermind: mcp warning: %v\n", err)
+		}
+		cleanupFns = append(cleanupFns, func() { mcpManager.Close() })
+	}
+
+	skillsReg, _ := loadSkills(app)
+
+	return sessionrun.Deps{
+		Provider:    p,
+		AuxProvider: auxProvider,
+		Storage:     app.Storage,
+		ToolReg:     toolRegistry,
+		SkillsReg:   skillsReg,
+		AgentCfg:    app.Config.Agent,
+	}, cleanup, nil
+}

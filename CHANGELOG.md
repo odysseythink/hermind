@@ -4,6 +4,19 @@
 
 ### Added
 
+- **Web chat backend**: `POST /api/sessions/{id}/messages` accepts a
+  user message, spawns a per-request `agent.Engine` in a goroutine, and
+  streams status/token/tool_call/tool_result/message_complete events
+  through the existing `StreamHub` (SSE + WS). Returns 202 on accept,
+  409 when the session is already running, 503 when no provider is
+  configured. `POST /api/sessions/{id}/cancel` ctx-cancels the running
+  engine (204 on success, 404 on not-running). An in-memory
+  `SessionRegistry` tracks per-session cancel funcs. New
+  `api/sessionrun` package hosts the reusable `Run(ctx, Deps, Request)`
+  that both the web path and (eventually) other callers share.
+  `cli.BuildEngineDeps` consolidates provider/tool/skills construction
+  for the web path; TUI keeps its inlined copy until Plan 5 removes the
+  TUI altogether.
 - **Multi-provider `web_search`**: DuckDuckGo (keyless fallback),
   Tavily, and Brave Search joined Exa. Provider chosen via the new
   `web.search.provider` config field or auto-selected by priority
