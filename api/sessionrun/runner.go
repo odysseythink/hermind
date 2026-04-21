@@ -92,6 +92,21 @@ func Run(ctx context.Context, deps Deps, req Request) (err error) {
 			Data:      map[string]any{"call": call, "result": result},
 		})
 	})
+	engine.SetSessionCreatedCallback(func(s *storage.Session) {
+		deps.Hub.Publish(Event{
+			Type:      "session_created",
+			SessionID: s.ID,
+			Data: map[string]any{
+				"id":            s.ID,
+				"title":         s.Title,
+				"source":        s.Source,
+				"model":         s.Model,
+				"started_at":    s.StartedAt.Unix(),
+				"ended_at":      0,
+				"message_count": s.MessageCount,
+			},
+		})
+	})
 
 	deps.Hub.Publish(Event{
 		Type:      "status",
