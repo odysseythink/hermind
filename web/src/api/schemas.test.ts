@@ -327,3 +327,26 @@ describe('ProviderModelsResponseSchema', () => {
     ).toThrow();
   });
 });
+
+describe('ConfigFieldSchema — multiselect', () => {
+  it('parses kind: multiselect with enum', () => {
+    const parsed = ConfigFieldSchema.parse({
+      name: 'disabled',
+      label: 'Disabled skills',
+      kind: 'multiselect',
+      enum: ['alpha', 'beta'],
+    });
+    expect(parsed.kind).toBe('multiselect');
+    expect(parsed.enum).toEqual(['alpha', 'beta']);
+  });
+
+  it('parses kind: multiselect with empty enum (no skills installed)', () => {
+    const parsed = ConfigFieldSchema.parse({
+      name: 'disabled',
+      label: 'Disabled skills',
+      kind: 'multiselect',
+    });
+    expect(parsed.kind).toBe('multiselect');
+    expect(parsed.enum).toBeUndefined();
+  });
+});

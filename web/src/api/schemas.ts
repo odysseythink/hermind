@@ -72,7 +72,7 @@ export type RevealResponse = z.infer<typeof RevealResponseSchema>;
 // Config section kinds produced by descriptor.FieldKind.String(). Adds
 // 'float' on top of the platform FieldKind set.
 export const ConfigFieldKindSchema = z.enum([
-  'string', 'int', 'bool', 'secret', 'enum', 'float',
+  'string', 'int', 'bool', 'secret', 'enum', 'float', 'multiselect',
 ]);
 export type ConfigFieldKind = z.infer<typeof ConfigFieldKindSchema>;
 
