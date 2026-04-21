@@ -139,6 +139,17 @@ func (e *Engine) SetToolResultCallback(fn func(call message.ContentBlock, result
 	e.onToolResult = fn
 }
 
+// SetSessionCreatedCallback registers a callback invoked exactly once per
+// session, from RunConversation, immediately after ensureSession materializes
+// a new row (and AFTER the user message has been persisted). Must be set
+// before RunConversation. Calling after is undefined behavior.
+//
+// The callback runs synchronously on the turn's critical path before the
+// first LLM turn. Keep it fast or dispatch heavy work to a goroutine.
+func (e *Engine) SetSessionCreatedCallback(fn func(s *storage.Session)) {
+	e.onSessionCreated = fn
+}
+
 // SetActiveSkillsProvider registers a callback that returns the currently
 // active skills. The provider is invoked at the start of each turn and the
 // bodies are prepended to the system prompt.
