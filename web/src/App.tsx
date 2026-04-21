@@ -174,6 +174,32 @@ export default function App() {
     return out;
   }, [state]);
 
+  const cronJobs = useMemo(() => {
+    const sec = (state.config as Record<string, unknown>).cron as
+      | { jobs?: Array<Record<string, unknown>> }
+      | undefined;
+    const list = sec?.jobs ?? [];
+    return list.map(j => ({
+      name: typeof j.name === 'string' ? j.name : '',
+      schedule: typeof j.schedule === 'string' ? j.schedule : '',
+    }));
+  }, [state.config]);
+
+  const dirtyCronIndices = useMemo(() => {
+    const cur = ((state.config as Record<string, unknown>).cron as
+      | { jobs?: Array<Record<string, unknown>> }
+      | undefined)?.jobs ?? [];
+    const orig = ((state.originalConfig as Record<string, unknown>).cron as
+      | { jobs?: Array<Record<string, unknown>> }
+      | undefined)?.jobs ?? [];
+    const out = new Set<number>();
+    const len = Math.max(cur.length, orig.length);
+    for (let i = 0; i < len; i++) {
+      if (!shallowEqualRecord(cur[i], orig[i])) out.add(i);
+    }
+    return out;
+  }, [state.config, state.originalConfig]);
+
   const [newProviderDialogOpen, setNewProviderDialogOpen] = useState(false);
 
   const onFetchProviderModels = useCallback(async (instanceKey: string) => {
@@ -402,6 +428,19 @@ export default function App() {
       })()}
     </div>
   );
+}
+
+function shallowEqualRecord(
+  a: Record<string, unknown> | undefined,
+  b: Record<string, unknown> | undefined,
+): boolean {
+  if (a === b) return true;
+  if (!a || !b) return false;
+  const ak = Object.keys(a);
+  const bk = Object.keys(b);
+  if (ak.length !== bk.length) return false;
+  for (const k of ak) if (a[k] !== b[k]) return false;
+  return true;
 }
 
 function toErrMsg(err: unknown): string {
