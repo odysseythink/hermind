@@ -88,7 +88,17 @@ func (fa *FeishuApp) Run(ctx context.Context, h gateway.MessageHandler) error {
 // SendReply posts a text message to the target chat. When out.ChatID is
 // empty, falls back to the adapter's default_chat_id.
 func (fa *FeishuApp) SendReply(ctx context.Context, out gateway.OutgoingMessage) error {
-	return fmt.Errorf("feishu: SendReply not implemented yet")
+	target := out.ChatID
+	if target == "" {
+		target = fa.defaultChatID
+	}
+	if target == "" {
+		return fmt.Errorf("feishu: no target chat_id (out.ChatID empty and default_chat_id not set)")
+	}
+	if fa.sender == nil {
+		return fmt.Errorf("feishu: sender not initialised")
+	}
+	return fa.sender.Create(ctx, target, out.Text)
 }
 
 // handleEvent is invoked by the event stream for each inbound event.
