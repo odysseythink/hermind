@@ -8,7 +8,10 @@ import (
 	"strings"
 	"sync"
 
+	lark "github.com/larksuite/oapi-sdk-go/v3"
+	"github.com/larksuite/oapi-sdk-go/v3/event/dispatcher"
 	larkim "github.com/larksuite/oapi-sdk-go/v3/service/im/v1"
+	larkws "github.com/larksuite/oapi-sdk-go/v3/ws"
 
 	"github.com/odysseythink/hermind/gateway"
 )
@@ -63,6 +66,24 @@ func NewFeishuApp(opts map[string]string) (*FeishuApp, error) {
 		encryptKey:    opts["encrypt_key"],
 		defaultChatID: opts["default_chat_id"],
 	}
+
+	base := baseURLFor(fa.domain)
+
+	ev := dispatcher.NewEventDispatcher("", fa.encryptKey).
+		OnP2MessageReceiveV1(func(ctx context.Context, evt *larkim.P2MessageReceiveV1) error {
+			return fa.handleEvent(ctx, evt)
+		})
+	wsCli := larkws.NewClient(fa.appID, fa.appSecret,
+		larkws.WithEventHandler(ev),
+		larkws.WithDomain(base),
+	)
+	fa.stream = &feishuSDKStream{cli: wsCli}
+
+	restCli := lark.NewClient(fa.appID, fa.appSecret,
+		lark.WithOpenBaseUrl(base),
+	)
+	fa.sender = &feishuSDKSender{cli: restCli}
+
 	return fa, nil
 }
 
@@ -170,4 +191,52 @@ func stringPtrValue(s *string) string {
 		return ""
 	}
 	return *s
+}
+
+// --- production SDK-backed implementations ---
+
+// feishuSDKStream wraps *larkws.Client.
+type feishuSDKStream struct {
+	cli *larkws.Client
+}
+
+func (s *feishuSDKStream) Start(ctx context.Context) error {
+	return s.cli.Start(ctx)
+}
+
+// feishuSDKSender wraps *lark.Client's im.Message.Create.
+type feishuSDKSender struct {
+	cli *lark.Client
+}
+
+func (s *feishuSDKSender) Create(ctx context.Context, chatID, text string) error {
+	content := larkim.NewTextMsgBuilder().Text(text).Build()
+	req := larkim.NewCreateMessageReqBuilder().
+		ReceiveIdType(larkim.ReceiveIdTypeChatId).
+		Body(larkim.NewCreateMessageReqBodyBuilder().
+			MsgType(larkim.MsgTypeText).
+			ReceiveId(chatID).
+			Content(content).
+			Build()).
+		Build()
+	resp, err := s.cli.Im.Message.Create(ctx, req)
+	if err != nil {
+		return fmt.Errorf("feishu: send failed: %w", err)
+	}
+	if !resp.Success() {
+		return fmt.Errorf("feishu: send failed: code=%d msg=%s requestID=%s",
+			resp.Code, resp.Msg, resp.RequestId())
+	}
+	return nil
+}
+
+// baseURLFor maps the descriptor's domain enum to the SDK's open-platform
+// base URL. Defaults to the CN (feishu) URL when empty or unknown.
+func baseURLFor(domain string) string {
+	switch domain {
+	case "lark":
+		return lark.LarkBaseUrl
+	default:
+		return lark.FeishuBaseUrl
+	}
 }
