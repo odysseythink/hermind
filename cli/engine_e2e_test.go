@@ -21,10 +21,14 @@ import (
 	"github.com/stretchr/testify/require"
 )
 
-// TestEndToEndToolLoop verifies the full stack: LLM (mocked) issues a tool
-// call, the engine dispatches the tool via the registry, the result is fed
-// back to the LLM, and the LLM's final answer is returned.
-func TestEndToEndToolLoop(t *testing.T) {
+// TestEngineE2E_ToolRoundTrip verifies the full stack: a mocked
+// Anthropic server emits a tool_use event, the engine dispatches the
+// tool via the registry, the result is fed back to the LLM, and the
+// LLM's final text answer is returned. Renamed from the old
+// TestEndToEndToolLoop when the TUI was deleted in Phase 3.
+// sessionrun.Run's tool_call/tool_result publishing has its own unit
+// test in api/sessionrun/runner_test.go.
+func TestEngineE2E_ToolRoundTrip(t *testing.T) {
 	// Prepare a file the mocked LLM will "request" via read_file
 	dir := t.TempDir()
 	testFilePath := filepath.Join(dir, "hello.txt")

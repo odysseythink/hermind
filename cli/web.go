@@ -2,9 +2,12 @@ package cli
 
 import (
 	"context"
+	"errors"
 	"fmt"
+	"io"
 	"net"
 	"net/http"
+	"os"
 	"os/exec"
 	"runtime"
 	"time"
@@ -17,16 +20,108 @@ import (
 	"github.com/odysseythink/hermind/gateway"
 )
 
-// newWebCmd builds the `hermind web` subcommand. It starts the REST API
-// server on 127.0.0.1 by default (web UI is not intended to be exposed
-// to the network), prints the session token + URL, and optionally opens
-// the browser.
+// webRunOptions parameterize runWeb. Shared by newWebCmd, newRunCmd,
+// and the bare `hermind` RunE.
+type webRunOptions struct {
+	Addr      string
+	NoBrowser bool
+	ExitAfter time.Duration
+	// Out is where the listening-URL and token banner lines are
+	// written. Nil defaults to os.Stdout. Tests inject a buffer to
+	// capture the output.
+	Out io.Writer
+}
+
+// runWeb is the actual body of `hermind web`. Shared by newRunCmd and
+// the root command's default RunE.
+func runWeb(ctx context.Context, app *App, opts webRunOptions) error {
+	if err := ensureStorage(app); err != nil {
+		return err
+	}
+
+	deps, cleanup, err := BuildEngineDeps(ctx, app)
+	if cleanup != nil {
+		defer cleanup()
+	}
+	if err != nil && !errors.Is(err, errMissingAPIKey) {
+		return fmt.Errorf("web: build engine deps: %w", err)
+	}
+
+	ctrl := gatewayctl.New(app.Config, func(cfg config.Config) (*gateway.Gateway, error) {
+		return BuildGateway(BuildGatewayDeps{Config: cfg})
+	})
+	if err := ctrl.Start(ctx); err != nil {
+		return fmt.Errorf("web: start gateway controller: %w", err)
+	}
+	defer func() {
+		shutCtx, c2 := context.WithTimeout(context.Background(), 2*time.Second)
+		defer c2()
+		ctrl.Shutdown(shutCtx)
+	}()
+
+	token, err := api.GenerateToken()
+	if err != nil {
+		return fmt.Errorf("web: generate token: %w", err)
+	}
+
+	streams := api.NewMemoryStreamHub()
+	srv, err := api.NewServer(&api.ServerOpts{
+		Config:     app.Config,
+		ConfigPath: app.ConfigPath,
+		Storage:    app.Storage,
+		Token:      token,
+		Version:    Version,
+		Streams:    streams,
+		Controller: ctrl,
+		Deps:       deps,
+	})
+	if err != nil {
+		return err
+	}
+
+	ln, err := net.Listen("tcp", opts.Addr)
+	if err != nil {
+		return fmt.Errorf("web: listen %s: %w", opts.Addr, err)
+	}
+	realAddr := "http://" + ln.Addr().String()
+	out := opts.Out
+	if out == nil {
+		out = os.Stdout
+	}
+	fmt.Fprintf(out, "hermind web listening on %s\n", realAddr)
+	fmt.Fprintf(out, "token: %s\n", token)
+	fmt.Fprintf(out, "open:  %s/?t=%s\n", realAddr, token)
+
+	if !opts.NoBrowser {
+		go openBrowser(realAddr + "/?t=" + token)
+	}
+
+	runCtx, cancel := context.WithCancel(ctx)
+	defer cancel()
+	if opts.ExitAfter > 0 {
+		time.AfterFunc(opts.ExitAfter, cancel)
+	}
+
+	httpSrv := &http.Server{
+		Handler:           srv.Router(),
+		ReadHeaderTimeout: 5 * time.Second,
+	}
+	go func() {
+		<-runCtx.Done()
+		shutCtx, c2 := context.WithTimeout(context.Background(), 2*time.Second)
+		defer c2()
+		_ = httpSrv.Shutdown(shutCtx)
+	}()
+	if err := httpSrv.Serve(ln); err != nil && err != http.ErrServerClosed {
+		return err
+	}
+	return nil
+}
+
+// newWebCmd builds the `hermind web` subcommand. It parses flags,
+// then delegates to runWeb.
 func newWebCmd(app *App) *cobra.Command {
-	var (
-		addr      string
-		noBrowser bool
-		exitAfter time.Duration
-	)
+	var opts webRunOptions
 	c := &cobra.Command{
 		Use:   "web",
 		Short: "Start the hermind web UI and REST API",
@@ -36,96 +131,15 @@ Binds to 127.0.0.1 by default. A fresh session token is generated on
 every boot and never persisted to disk; it is injected into the served
 landing page so the browser can authenticate automatically.`,
 		RunE: func(cmd *cobra.Command, args []string) error {
-			if err := ensureStorage(app); err != nil {
-				return err
-			}
-
-			deps, cleanup, err := BuildEngineDeps(cmd.Context(), app)
-			if cleanup != nil {
-				defer cleanup()
-			}
-			if err != nil {
-				return fmt.Errorf("web: build engine deps: %w", err)
-			}
-
-			ctrl := gatewayctl.New(app.Config, func(cfg config.Config) (*gateway.Gateway, error) {
-				return BuildGateway(BuildGatewayDeps{Config: cfg})
-			})
-			if err := ctrl.Start(cmd.Context()); err != nil {
-				return fmt.Errorf("web: start gateway controller: %w", err)
-			}
-			defer func() {
-				shutCtx, c2 := context.WithTimeout(context.Background(), 2*time.Second)
-				defer c2()
-				ctrl.Shutdown(shutCtx)
-			}()
-
-			token, err := api.GenerateToken()
-			if err != nil {
-				return fmt.Errorf("web: generate token: %w", err)
-			}
-			// Install an in-process stream hub so the WebSocket and
-			// SSE endpoints have a fan-out to publish into. The
-			// gateway / future chat runner calls api.BridgeEngineToHub
-			// to forward agent.Engine events when it constructs an
-			// Engine per session.
-			streams := api.NewMemoryStreamHub()
-			srv, err := api.NewServer(&api.ServerOpts{
-				Config:     app.Config,
-				ConfigPath: app.ConfigPath,
-				Storage:    app.Storage,
-				Token:      token,
-				Version:    Version,
-				Streams:    streams,
-				Controller: ctrl,
-				Deps:       deps,
-			})
-			if err != nil {
-				return err
-			}
-
-			// Bind early so we can report the real port when :0 was
-			// requested.
-			ln, err := net.Listen("tcp", addr)
-			if err != nil {
-				return fmt.Errorf("web: listen %s: %w", addr, err)
-			}
-			realAddr := "http://" + ln.Addr().String()
-			fmt.Fprintf(cmd.OutOrStdout(), "hermind web listening on %s\n", realAddr)
-			fmt.Fprintf(cmd.OutOrStdout(), "token: %s\n", token)
-			fmt.Fprintf(cmd.OutOrStdout(), "open:  %s/?t=%s\n", realAddr, token)
-
-			if !noBrowser {
-				go openBrowser(realAddr + "/?t=" + token)
-			}
-
-			ctx, cancel := context.WithCancel(cmd.Context())
-			defer cancel()
-			if exitAfter > 0 {
-				time.AfterFunc(exitAfter, cancel)
-			}
-
-			httpSrv := &http.Server{
-				Handler:           srv.Router(),
-				ReadHeaderTimeout: 5 * time.Second,
-			}
-			go func() {
-				<-ctx.Done()
-				shutCtx, c2 := context.WithTimeout(context.Background(), 2*time.Second)
-				defer c2()
-				_ = httpSrv.Shutdown(shutCtx)
-			}()
-			if err := httpSrv.Serve(ln); err != nil && err != http.ErrServerClosed {
-				return err
-			}
-			return nil
+			opts.Out = cmd.OutOrStdout()
+			return runWeb(cmd.Context(), app, opts)
 		},
 	}
-	c.Flags().StringVar(&addr, "addr", "127.0.0.1:9119",
+	c.Flags().StringVar(&opts.Addr, "addr", "127.0.0.1:9119",
 		"bind address (keep 127.0.0.1 unless you know what you're doing)")
-	c.Flags().BoolVar(&noBrowser, "no-browser", false,
+	c.Flags().BoolVar(&opts.NoBrowser, "no-browser", false,
 		"do not open the browser automatically")
-	c.Flags().DurationVar(&exitAfter, "exit-after", 0,
+	c.Flags().DurationVar(&opts.ExitAfter, "exit-after", 0,
 		"exit after the given duration (0 = run until Ctrl-C)")
 	return c
 }

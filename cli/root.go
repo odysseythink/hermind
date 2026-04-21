@@ -34,7 +34,7 @@ func NewRootCmd(app *App) *cobra.Command {
 		newCronCmd(app),
 		newSkillsCmd(app),
 		newSetupCmd(app),
-		newConfigCmd(app),
+		// newConfigCmd removed — config lives in the web UI Settings panel.
 		newDoctorCmd(app),
 		newAuthCmd(app),
 		newModelsCmd(app),
@@ -47,9 +47,12 @@ func NewRootCmd(app *App) *cobra.Command {
 		newVersionCmd(),
 	)
 
-	// Default subcommand: if no args, run the REPL
+	// Default action (bare `hermind`): launch the web UI.
 	root.RunE = func(cmd *cobra.Command, args []string) error {
-		return runREPL(cmd.Context(), app)
+		return runWeb(cmd.Context(), app, webRunOptions{
+			Addr: "127.0.0.1:9119",
+			Out:  cmd.OutOrStdout(),
+		})
 	}
 
 	return root

@@ -5,14 +5,21 @@ import (
 	"github.com/spf13/cobra"
 )
 
-// newRunCmd creates the "hermind run" command. Both "hermind" and
-// "hermind run" launch the same REPL.
+// newRunCmd creates `hermind run` — an alias for `hermind web`.
+// Exists for backwards compatibility with scripts that invoke the
+// historical REPL entry point.
 func newRunCmd(app *App) *cobra.Command {
-	return &cobra.Command{
+	var opts webRunOptions
+	c := &cobra.Command{
 		Use:   "run",
-		Short: "Start the interactive REPL",
+		Short: "Start hermind (alias for `web`)",
 		RunE: func(cmd *cobra.Command, args []string) error {
-			return runREPL(cmd.Context(), app)
+			opts.Out = cmd.OutOrStdout()
+			return runWeb(cmd.Context(), app, opts)
 		},
 	}
+	c.Flags().StringVar(&opts.Addr, "addr", "127.0.0.1:9119", "bind address")
+	c.Flags().BoolVar(&opts.NoBrowser, "no-browser", false, "do not open the browser automatically")
+	c.Flags().DurationVar(&opts.ExitAfter, "exit-after", 0, "exit after the given duration")
+	return c
 }

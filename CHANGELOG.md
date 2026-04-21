@@ -61,6 +61,16 @@
 
 ### Breaking
 
+- **TUI removed.** The bubbletea chat interface (`cli/ui/`) and
+  bubbletea config editor (`cli/ui/config/`, `cli/ui/webconfig/`) are
+  gone. `hermind` and `hermind run` now launch the web UI and open the
+  browser (equivalent to `hermind web`). Configuration lives in the
+  Settings panel of the web UI — the standalone `hermind config`
+  subcommand is removed. Headless usage: `hermind web --no-browser`
+  plus an SSH tunnel to the bound port.
+  charmbracelet dependencies (bubbletea, bubbles, lipgloss, glamour)
+  dropped from `go.mod`.
+
 - **Feishu platform (`feishu`) switched from one-way bot webhook to
   self-built app over long-connection.** The `webhook_url` option is
   removed. Replace it with `app_id`, `app_secret`, `domain`, and

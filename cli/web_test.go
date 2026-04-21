@@ -113,3 +113,41 @@ func TestWebCmd_BindsAndServesStatus(t *testing.T) {
 		t.Fatal("cmd did not exit")
 	}
 }
+
+// TestHermindRun_DispatchesToWeb verifies `hermind run` now launches
+// the same web server as `hermind web` (the TUI entry was removed in
+// Phase 3).
+func TestHermindRun_DispatchesToWeb(t *testing.T) {
+	app := newWebTestApp(t)
+	cmd := NewRootCmd(app)
+	cmd.SetArgs([]string{"run", "--addr", "127.0.0.1:0", "--no-browser", "--exit-after", "1s"})
+	out := &safeBuffer{}
+	cmd.SetOut(out)
+	cmd.SetErr(out)
+
+	ctx, cancel := context.WithTimeout(context.Background(), 4*time.Second)
+	defer cancel()
+	if err := cmd.ExecuteContext(ctx); err != nil {
+		t.Fatalf("run: %v", err)
+	}
+	if !strings.Contains(out.String(), "hermind web listening on") {
+		t.Errorf("`run` did not dispatch to web; output=%q", out.String())
+	}
+}
+
+// TestHermindConfig_Removed confirms `hermind config` is no longer a
+// registered subcommand.
+func TestHermindConfig_Removed(t *testing.T) {
+	app := newWebTestApp(t)
+	cmd := NewRootCmd(app)
+	cmd.SetArgs([]string{"config"})
+	cmd.SetOut(&safeBuffer{})
+	cmd.SetErr(&safeBuffer{})
+	err := cmd.Execute()
+	if err == nil {
+		t.Fatal("expected `hermind config` to be unknown; got nil")
+	}
+	if !strings.Contains(err.Error(), "unknown command") {
+		t.Errorf("expected 'unknown command' error, got %v", err)
+	}
+}
