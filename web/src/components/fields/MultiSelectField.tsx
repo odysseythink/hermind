@@ -17,12 +17,10 @@ export default function MultiSelectField({
 
   if (choices.length === 0) {
     return (
-      <div className={styles.row}>
-        <span className={styles.label}>{field.label}</span>
-        <span className={styles.help}>
-          No skills installed. {field.help}
-        </span>
-      </div>
+      <fieldset className={styles.row} style={{ border: 'none', padding: 0, margin: 0 }}>
+        <legend className={styles.label}>{field.label}</legend>
+        <span className={styles.help}>No skills installed. {field.help}</span>
+      </fieldset>
     );
   }
 
