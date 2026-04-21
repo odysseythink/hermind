@@ -1,10 +1,13 @@
 package api
 
 import (
+	"encoding/json"
 	"errors"
 	"net/http"
 	"strconv"
+	"strings"
 	"time"
+	"unicode/utf8"
 
 	"github.com/go-chi/chi/v5"
 
@@ -66,6 +69,53 @@ func (s *Server) handleSessionGet(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	writeJSON(w, dtoFromSession(row))
+}
+
+// handleSessionPatch updates a session's title. Only title is editable in
+// this version — system_prompt stays frozen at creation time.
+func (s *Server) handleSessionPatch(w http.ResponseWriter, r *http.Request) {
+	if s.opts.Storage == nil {
+		http.Error(w, "storage not configured", http.StatusServiceUnavailable)
+		return
+	}
+	id := chi.URLParam(r, "id")
+	if id == "" {
+		http.Error(w, "missing session id", http.StatusBadRequest)
+		return
+	}
+	var body struct {
+		Title string `json:"title"`
+	}
+	if err := json.NewDecoder(r.Body).Decode(&body); err != nil {
+		http.Error(w, "invalid json", http.StatusBadRequest)
+		return
+	}
+	title := strings.TrimSpace(body.Title)
+	if title == "" {
+		http.Error(w, "title must not be empty", http.StatusBadRequest)
+		return
+	}
+	if utf8.RuneCountInString(title) > 200 {
+		http.Error(w, "title too long (max 200 runes)", http.StatusBadRequest)
+		return
+	}
+
+	err := s.opts.Storage.UpdateSession(r.Context(), id, &storage.SessionUpdate{Title: title})
+	if errors.Is(err, storage.ErrNotFound) {
+		http.Error(w, "session not found", http.StatusNotFound)
+		return
+	}
+	if err != nil {
+		http.Error(w, err.Error(), http.StatusInternalServerError)
+		return
+	}
+
+	sess, err := s.opts.Storage.GetSession(r.Context(), id)
+	if err != nil {
+		http.Error(w, err.Error(), http.StatusInternalServerError)
+		return
+	}
+	writeJSON(w, dtoFromSession(sess))
 }
 
 func (s *Server) handleSessionDelete(w http.ResponseWriter, _ *http.Request) {

@@ -151,6 +151,7 @@ func (s *Server) buildRouter() chi.Router {
 
 		r.Get("/sessions", s.handleSessionsList)
 		r.Get("/sessions/{id}", s.handleSessionGet)
+		r.Patch("/sessions/{id}", s.handleSessionPatch)
 		r.Delete("/sessions/{id}", s.handleSessionDelete)
 		r.Get("/sessions/{id}/messages", s.handleSessionMessages)
 		r.Post("/sessions/{id}/messages", s.handleSessionMessagesPost)

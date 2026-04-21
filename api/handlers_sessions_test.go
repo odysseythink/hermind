@@ -3,7 +3,9 @@ package api
 import (
 	"context"
 	"encoding/json"
+	"net/http"
 	"net/http/httptest"
+	"strings"
 	"testing"
 	"time"
 
@@ -56,7 +58,24 @@ func (m *mockStorage) GetSession(ctx context.Context, id string) (*storage.Sessi
 	return nil, storage.ErrNotFound
 }
 func (m *mockStorage) UpdateSession(ctx context.Context, id string, u *storage.SessionUpdate) error {
-	return nil
+	for _, s := range m.sessions {
+		if s.ID == id {
+			if u.Title != "" {
+				s.Title = u.Title
+			}
+			if u.EndedAt != nil {
+				s.EndedAt = u.EndedAt
+			}
+			if u.EndReason != "" {
+				s.EndReason = u.EndReason
+			}
+			if u.MessageCount != nil {
+				s.MessageCount = *u.MessageCount
+			}
+			return nil
+		}
+	}
+	return storage.ErrNotFound
 }
 func (m *mockStorage) ListSessions(ctx context.Context, opts *storage.ListOptions) ([]*storage.Session, error) {
 	if m.listErr != nil {
@@ -224,5 +243,87 @@ func TestSessionStatus_ReportsDriver(t *testing.T) {
 	_ = json.NewDecoder(rr.Body).Decode(&resp)
 	if resp.StorageDriver != "sqlite" {
 		t.Errorf("driver = %q", resp.StorageDriver)
+	}
+}
+
+func TestPatchSession_RenamesTitle(t *testing.T) {
+	s, store := newTestServerWithStore(t)
+	store.seedSession("sess-rename")
+
+	rr := httptest.NewRecorder()
+	body := strings.NewReader(`{"title":"new title"}`)
+	req := httptest.NewRequest("PATCH", "/api/sessions/sess-rename", body)
+	req.Header.Set("Authorization", "Bearer t")
+	req.Header.Set("Content-Type", "application/json")
+	s.Router().ServeHTTP(rr, req)
+
+	if rr.Code != http.StatusOK {
+		t.Fatalf("code=%d body=%s", rr.Code, rr.Body.String())
+	}
+	var dto SessionDTO
+	if err := json.NewDecoder(rr.Body).Decode(&dto); err != nil {
+		t.Fatal(err)
+	}
+	if dto.Title != "new title" {
+		t.Errorf("title = %q, want %q", dto.Title, "new title")
+	}
+	if dto.ID != "sess-rename" {
+		t.Errorf("id = %q, want %q", dto.ID, "sess-rename")
+	}
+}
+
+func TestPatchSession_EmptyTitle_Returns400(t *testing.T) {
+	s, store := newTestServerWithStore(t)
+	store.seedSession("s1")
+
+	for _, body := range []string{`{"title":""}`, `{"title":"   "}`} {
+		rr := httptest.NewRecorder()
+		req := httptest.NewRequest("PATCH", "/api/sessions/s1", strings.NewReader(body))
+		req.Header.Set("Authorization", "Bearer t")
+		req.Header.Set("Content-Type", "application/json")
+		s.Router().ServeHTTP(rr, req)
+		if rr.Code != http.StatusBadRequest {
+			t.Errorf("body=%q: code=%d, want 400", body, rr.Code)
+		}
+	}
+}
+
+func TestPatchSession_TooLong_Returns400(t *testing.T) {
+	s, store := newTestServerWithStore(t)
+	store.seedSession("s2")
+	body := `{"title":"` + strings.Repeat("x", 201) + `"}`
+	rr := httptest.NewRecorder()
+	req := httptest.NewRequest("PATCH", "/api/sessions/s2", strings.NewReader(body))
+	req.Header.Set("Authorization", "Bearer t")
+	req.Header.Set("Content-Type", "application/json")
+	s.Router().ServeHTTP(rr, req)
+	if rr.Code != http.StatusBadRequest {
+		t.Errorf("code=%d, want 400", rr.Code)
+	}
+}
+
+func TestPatchSession_NotFound_Returns404(t *testing.T) {
+	s, _ := newTestServerWithStore(t)
+	rr := httptest.NewRecorder()
+	req := httptest.NewRequest("PATCH", "/api/sessions/ghost",
+		strings.NewReader(`{"title":"anything"}`))
+	req.Header.Set("Authorization", "Bearer t")
+	req.Header.Set("Content-Type", "application/json")
+	s.Router().ServeHTTP(rr, req)
+	if rr.Code != http.StatusNotFound {
+		t.Errorf("code=%d, want 404", rr.Code)
+	}
+}
+
+func TestPatchSession_MissingToken_Returns401(t *testing.T) {
+	s, store := newTestServerWithStore(t)
+	store.seedSession("s3")
+	rr := httptest.NewRecorder()
+	req := httptest.NewRequest("PATCH", "/api/sessions/s3",
+		strings.NewReader(`{"title":"new"}`))
+	req.Header.Set("Content-Type", "application/json")
+	s.Router().ServeHTTP(rr, req)
+	if rr.Code != http.StatusUnauthorized {
+		t.Errorf("code=%d, want 401", rr.Code)
 	}
 }
