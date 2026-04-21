@@ -326,6 +326,31 @@ export default function App() {
             to,
           })
         }
+        cronJobs={cronJobs}
+        dirtyCronIndices={dirtyCronIndices}
+        onAddCronJob={() => {
+          const list = (((state.config as Record<string, unknown>).cron as
+            | { jobs?: Array<unknown> }
+            | undefined)?.jobs) ?? [];
+          dispatch({
+            type: 'list-instance/create',
+            sectionKey: 'cron',
+            subkey: 'jobs',
+            initial: { name: '', schedule: '', prompt: '', model: '' },
+          });
+          dispatch({ type: 'shell/selectGroup', group: 'advanced' });
+          dispatch({ type: 'shell/selectSub', key: `cron:${list.length}` });
+        }}
+        onMoveCron={(index, direction) => {
+          dispatch({
+            type: direction === 'up' ? 'list-instance/move-up' : 'list-instance/move-down',
+            sectionKey: 'cron',
+            subkey: 'jobs',
+            index,
+          });
+          const newIndex = direction === 'up' ? index - 1 : index + 1;
+          dispatch({ type: 'shell/selectSub', key: `cron:${newIndex}` });
+        }}
       />
       <main>
         <ContentPanel

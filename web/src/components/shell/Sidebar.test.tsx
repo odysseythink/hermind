@@ -32,6 +32,10 @@ function baseProps(
     onAddFallback: vi.fn(),
     onMoveFallback: vi.fn(),
     onReorderFallback: vi.fn(),
+    cronJobs: [],
+    dirtyCronIndices: new Set<number>(),
+    onAddCronJob: vi.fn(),
+    onMoveCron: vi.fn(),
     ...overrides,
   };
 }
@@ -117,6 +121,10 @@ describe('Sidebar — non-gateway groups', () => {
         onAddFallback={() => {}}
         onMoveFallback={() => {}}
         onReorderFallback={() => {}}
+        cronJobs={[]}
+        dirtyCronIndices={new Set()}
+        onAddCronJob={() => {}}
+        onMoveCron={() => {}}
       />,
     );
     expect(screen.getByRole('button', { name: /storage/i })).toBeInTheDocument();
@@ -146,6 +154,10 @@ describe('Sidebar — non-gateway groups', () => {
         onAddFallback={() => {}}
         onMoveFallback={() => {}}
         onReorderFallback={() => {}}
+        cronJobs={[]}
+        dirtyCronIndices={new Set()}
+        onAddCronJob={() => {}}
+        onMoveCron={() => {}}
       />,
     );
     expect(screen.getByText(/coming soon — stage 5/i)).toBeInTheDocument();

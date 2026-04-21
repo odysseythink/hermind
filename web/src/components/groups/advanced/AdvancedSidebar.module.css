@@ -1,0 +1,149 @@
+.sidebar {
+  padding: 4px 0 8px;
+}
+
+.scalarRow {
+  display: block;
+  width: 100%;
+  text-align: left;
+  padding: 6px 12px 6px 24px;
+  background: transparent;
+  border: 0;
+  color: var(--fg, #c9d1d9);
+  font-size: 13px;
+  cursor: pointer;
+}
+
+.scalarRow:hover {
+  background: var(--bg-hover, #1b1f27);
+}
+
+.active {
+  background: var(--bg-active, #1f6feb33);
+  color: var(--fg-strong, #f0f6fc);
+}
+
+.groupHeader {
+  padding: 10px 12px 4px 24px;
+  font-size: 11px;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+  color: var(--fg-muted, #8b949e);
+}
+
+.empty {
+  padding: 4px 12px 4px 24px;
+  font-size: 12px;
+  font-style: italic;
+  color: var(--fg-muted, #8b949e);
+}
+
+.cronRow {
+  display: flex;
+  align-items: stretch;
+  padding-right: 4px;
+}
+
+.cronRow.active {
+  background: var(--bg-active, #1f6feb33);
+}
+
+.cronRow:hover {
+  background: var(--bg-hover, #1b1f27);
+}
+
+.cronBody {
+  flex: 1;
+  text-align: left;
+  padding: 6px 6px 6px 24px;
+  background: transparent;
+  border: 0;
+  color: var(--fg, #c9d1d9);
+  font-size: 13px;
+  cursor: pointer;
+}
+
+.cronRowInner {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.posBadge {
+  display: inline-block;
+  min-width: 22px;
+  padding: 1px 6px;
+  border-radius: 10px;
+  background: var(--bg-badge, #30363d);
+  color: var(--fg-muted, #8b949e);
+  font-size: 10px;
+  font-weight: 600;
+  text-align: center;
+}
+
+.cronName {
+  flex: 1;
+  color: var(--fg, #c9d1d9);
+}
+
+.cronSchedule {
+  display: block;
+  font-size: 11px;
+  color: var(--fg-muted, #8b949e);
+}
+
+.dirtyDot {
+  display: inline-block;
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+  background: var(--warn, #d29922);
+}
+
+.cronMoveBtns {
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  gap: 2px;
+}
+
+.moveBtn {
+  width: 20px;
+  height: 16px;
+  padding: 0;
+  background: transparent;
+  border: 1px solid transparent;
+  border-radius: 2px;
+  color: var(--fg-muted, #8b949e);
+  font-size: 10px;
+  line-height: 1;
+  cursor: pointer;
+}
+
+.moveBtn:hover:not(:disabled) {
+  background: var(--bg-hover-strong, #30363d);
+  color: var(--fg, #c9d1d9);
+}
+
+.moveBtn:disabled {
+  opacity: 0.25;
+  cursor: not-allowed;
+}
+
+.newBtn {
+  display: block;
+  width: calc(100% - 24px);
+  margin: 8px 12px 4px 24px;
+  padding: 6px 10px;
+  background: transparent;
+  border: 1px dashed var(--border, #30363d);
+  border-radius: 3px;
+  color: var(--fg-muted, #8b949e);
+  font-size: 12px;
+  cursor: pointer;
+}
+
+.newBtn:hover {
+  border-color: var(--fg-muted, #8b949e);
+  color: var(--fg, #c9d1d9);
+}

@@ -4,6 +4,7 @@ import GroupSection from './GroupSection';
 import GatewaySidebar from '../groups/gateway/GatewaySidebar';
 import SectionList from './SectionList';
 import ModelsSidebar from '../groups/models/ModelsSidebar';
+import AdvancedSidebar from '../groups/advanced/AdvancedSidebar';
 import type { ConfigSection, SchemaDescriptor } from '../../api/schemas';
 
 export interface SidebarProps {
@@ -28,6 +29,10 @@ export interface SidebarProps {
   onAddFallback: () => void;
   onMoveFallback: (index: number, direction: 'up' | 'down') => void;
   onReorderFallback: (from: number, to: number) => void;
+  cronJobs: Array<{ name: string; schedule: string }>;
+  dirtyCronIndices: Set<number>;
+  onAddCronJob: () => void;
+  onMoveCron: (index: number, direction: 'up' | 'down') => void;
 }
 
 export default function Sidebar(props: SidebarProps) {
@@ -76,6 +81,28 @@ export default function Sidebar(props: SidebarProps) {
               onAddFallback={props.onAddFallback}
               onMoveFallback={props.onMoveFallback}
               onReorderFallback={props.onReorderFallback}
+            />
+          ) : g.id === 'advanced' ? (
+            <AdvancedSidebar
+              activeSubKey={props.activeGroup === 'advanced' ? props.activeSubKey : null}
+              onSelectScalar={key => {
+                props.onSelectGroup('advanced');
+                props.onSelectSub(key);
+              }}
+              cronJobs={props.cronJobs}
+              dirtyCronIndices={props.dirtyCronIndices}
+              activeCronIndex={(() => {
+                if (props.activeGroup !== 'advanced') return null;
+                if (!props.activeSubKey || !props.activeSubKey.startsWith('cron:')) return null;
+                const n = Number(props.activeSubKey.slice('cron:'.length));
+                return Number.isInteger(n) ? n : null;
+              })()}
+              onSelectCron={i => {
+                props.onSelectGroup('advanced');
+                props.onSelectSub(`cron:${i}`);
+              }}
+              onAddCronJob={props.onAddCronJob}
+              onMoveCron={props.onMoveCron}
             />
           ) : (
             <SectionList
