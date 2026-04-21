@@ -39,4 +39,23 @@ describe('TopBar', () => {
     render(<TopBar dirtyCount={1} status="ready" onSave={() => {}} />);
     expect(screen.queryByText(/apply/i)).not.toBeInTheDocument();
   });
+
+  it('shows mode toggle when onModeChange is provided; Settings click fires callback', async () => {
+    const spy = vi.fn();
+    render(
+      <TopBar dirtyCount={0} status="ready" onSave={() => {}} mode="chat" onModeChange={spy} />,
+    );
+    const chat = screen.getByRole('button', { name: 'Chat' });
+    const settings = screen.getByRole('button', { name: 'Settings' });
+    expect(chat).toHaveAttribute('aria-pressed', 'true');
+    expect(settings).toHaveAttribute('aria-pressed', 'false');
+    await userEvent.click(settings);
+    expect(spy).toHaveBeenCalledWith('settings');
+  });
+
+  it('hides mode toggle when onModeChange is not provided', () => {
+    render(<TopBar dirtyCount={0} status="ready" onSave={() => {}} />);
+    expect(screen.queryByRole('button', { name: 'Chat' })).not.toBeInTheDocument();
+    expect(screen.queryByRole('button', { name: 'Settings' })).not.toBeInTheDocument();
+  });
 });

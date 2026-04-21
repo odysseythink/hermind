@@ -2,6 +2,7 @@ import { describe, it, expect, beforeEach, afterEach, vi } from 'vitest';
 import { render, screen, waitFor } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import App from './App';
+import { FakeEventSource } from './test/fakeEventSource';
 
 function mockBoot() {
   vi.spyOn(globalThis, 'fetch').mockImplementation(async (input) => {
@@ -75,5 +76,54 @@ describe('App integration — storage vertical slice', () => {
 
     // TopBar badge shows one change.
     expect(screen.getByRole('button', { name: /save · 1 changes/i })).toBeInTheDocument();
+  });
+});
+
+describe('App integration — chat mode', () => {
+  beforeEach(() => {
+    window.location.hash = '#/chat/s1';
+    FakeEventSource.install();
+    FakeEventSource.reset();
+    vi.spyOn(globalThis, 'fetch').mockImplementation(async (input) => {
+      const url = typeof input === 'string' ? input : (input as Request).url;
+      if (url.endsWith('/api/platforms/schema')) return jsonResponse({ descriptors: [] });
+      if (url.endsWith('/api/config/schema')) return jsonResponse({ sections: [] });
+      if (url.endsWith('/api/config')) {
+        return jsonResponse({ config: { providers: { anthropic: { api_key: 'sk-test' } } } });
+      }
+      if (url.includes('/api/sessions?limit=50')) return jsonResponse({ sessions: [] });
+      if (url.match(/\/api\/sessions\/[^/]+\/messages$/)) {
+        const method = input instanceof Request ? input.method : 'GET';
+        if (method === 'POST') return jsonResponse({ session_id: 's1', status: 'accepted' }, 202);
+        return jsonResponse({ messages: [] });
+      }
+      return jsonResponse({}, 200);
+    });
+  });
+  afterEach(() => {
+    vi.restoreAllMocks();
+    window.location.hash = '';
+  });
+
+  it('renders the chat composer in chat mode', async () => {
+    render(<App />);
+    await waitFor(() => {
+      expect(screen.getByPlaceholderText(/Type a message/i)).toBeInTheDocument();
+    });
+    expect(screen.getByRole('button', { name: /^Send$/ })).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: 'Chat' })).toHaveAttribute('aria-pressed', 'true');
+  });
+
+  it('streamed tokens render the assistant draft', async () => {
+    render(<App />);
+    await waitFor(() => expect(FakeEventSource.instances.length).toBeGreaterThan(0));
+    const es = FakeEventSource.instances.at(-1)!;
+    es.dispatchMessage({ type: 'status', session_id: 's1', data: { state: 'running' } });
+    es.dispatchMessage({ type: 'token', session_id: 's1', data: { text: 'Hello' } });
+    // token dispatch is throttled via requestAnimationFrame; wait a frame
+    await new Promise((r) => requestAnimationFrame(() => r(null)));
+    await waitFor(() => {
+      expect(screen.getByText('Hello')).toBeInTheDocument();
+    });
   });
 });

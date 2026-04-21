@@ -4,6 +4,31 @@
 
 ### Added
 
+- **Web chat frontend**: React chat workspace is now the default
+  landing mode at `#/chat`. Config groups moved to `#/settings`,
+  reached via a TopBar toggle. Features: session list sidebar with
+  new-conversation button, conversation header with model selector,
+  message list with markdown + KaTeX + shiki code highlighting +
+  lazy-loaded Mermaid, streaming assistant bubble with
+  token-throttled (rAF) updates, tool-call cards with expandable
+  input/result, composer with Shift+Enter-newline and slash-menu
+  (`/new`, `/clear`, `/settings`, `/model`), Stop button during
+  streaming, error toasts for 409 busy / 503 no-provider, automatic
+  message-history fetch on session select. Subscribes to the existing
+  `/api/sessions/:id/stream/sse` channel via `useChatStream`.
+- Hash router: `#/chat[/:id]` and `#/settings/:group[/:sub]`; legacy
+  `#<group>` and `#<group>/<sub>` hashes auto-canonicalize to
+  `#/settings/...`. `parseHash` returns a discriminated
+  `{mode,…}` union.
+
+### Dependencies
+
+- Added: `react-markdown`, `remark-gfm`, `remark-math`, `rehype-katex`,
+  `katex`, `shiki`, `mermaid`. Bundle grew from ~350KB to ~1MB (~300KB
+  gzipped) — mostly shiki grammars and KaTeX fonts. Dynamic imports
+  for language grammars are a follow-up optimization if bundle budget
+  becomes a concern.
+
 - **Web chat backend**: `POST /api/sessions/{id}/messages` accepts a
   user message, spawns a per-request `agent.Engine` in a goroutine, and
   streams status/token/tool_call/tool_result/message_complete events

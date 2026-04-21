@@ -122,3 +122,51 @@ export const ProviderModelsResponseSchema = z.object({
   models: z.array(z.string()),
 });
 export type ProviderModelsResponse = z.infer<typeof ProviderModelsResponseSchema>;
+
+// ---- Chat mode (Phase 2/3) ----
+
+export const MessageSubmitRequestSchema = z.object({
+  text: z.string().min(1),
+  model: z.string().optional(),
+});
+export type MessageSubmitRequest = z.infer<typeof MessageSubmitRequestSchema>;
+
+export const MessageSubmitResponseSchema = z.object({
+  session_id: z.string(),
+  status: z.literal('accepted'),
+});
+export type MessageSubmitResponse = z.infer<typeof MessageSubmitResponseSchema>;
+
+export const SessionSummarySchema = z.object({
+  id: z.string(),
+  title: z.string().optional(),
+  updated_at: z.number().optional(),
+});
+export type SessionSummary = z.infer<typeof SessionSummarySchema>;
+
+export const SessionsListResponseSchema = z.object({
+  sessions: z.array(SessionSummarySchema),
+  total: z.number().optional(),
+});
+export type SessionsListResponse = z.infer<typeof SessionsListResponseSchema>;
+
+export const ChatMessageSchema = z.object({
+  id: z.string(),
+  role: z.enum(['user', 'assistant', 'system', 'tool']),
+  content: z.string(),
+  timestamp: z.number().optional(),
+  tool_calls: z.string().optional(),
+});
+export type ChatMessage = z.infer<typeof ChatMessageSchema>;
+
+export const MessagesResponseSchema = z.object({
+  messages: z.array(ChatMessageSchema),
+  total: z.number().optional(),
+});
+
+export const StreamEventSchema = z.object({
+  type: z.string(),
+  session_id: z.string(),
+  data: z.unknown().optional(),
+});
+export type StreamEvent = z.infer<typeof StreamEventSchema>;

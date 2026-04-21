@@ -3,13 +3,17 @@ import type { Status } from '../../state';
 import LanguageToggle from './LanguageToggle';
 import { useTranslation } from 'react-i18next';
 
+export type ShellMode = 'chat' | 'settings';
+
 export interface TopBarProps {
   dirtyCount: number;
   status: Status;
   onSave: () => void;
+  mode?: ShellMode;
+  onModeChange?: (m: ShellMode) => void;
 }
 
-export default function TopBar({ dirtyCount, status, onSave }: TopBarProps) {
+export default function TopBar({ dirtyCount, status, onSave, mode = 'settings', onModeChange }: TopBarProps) {
   const { t } = useTranslation('ui');
   const busy = status === 'saving' || status === 'applying';
   const dotClass = busy
@@ -33,6 +37,20 @@ export default function TopBar({ dirtyCount, status, onSave }: TopBarProps) {
         <span className={styles.logo}>⬡</span>
         <span>hermind</span>
       </div>
+      {onModeChange && (
+        <div className={styles.modeToggle} role="group" aria-label={t('mode.switcher')}>
+          <button
+            type="button"
+            aria-pressed={mode === 'chat'}
+            onClick={() => onModeChange('chat')}
+          >{t('mode.chat')}</button>
+          <button
+            type="button"
+            aria-pressed={mode === 'settings'}
+            onClick={() => onModeChange('settings')}
+          >{t('mode.settings')}</button>
+        </div>
+      )}
       <span className={styles.spacer} />
       <span className={styles.status}>
         <span className={`${styles.dot} ${dotClass}`} />

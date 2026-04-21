@@ -83,6 +83,20 @@
   "empty.sectionComingSoon":"Coming soon — stage {{stage}}",
 
   "language.switcher": "Language",
+  "mode.switcher": "Mode",
+  "mode.chat": "Chat",
+  "mode.settings": "Settings",
+
+  "chat.newConversation":    "+ New conversation",
+  "chat.untitledConversation":"New conversation",
+  "chat.placeholder":        "Type a message. Shift+Enter for newline.",
+  "chat.placeholderNoProvider":"Configure a provider in Settings →",
+  "chat.send":               "Send",
+  "chat.stop":               "Stop",
+  "chat.noProvider":         "No provider configured. Open Settings → Models to add an API key.",
+  "chat.errorBusy":          "Session is busy — wait for the current response.",
+  "chat.errorNoProvider":    "Provider not configured — open Settings → Models.",
+  "chat.errorSendFailed":    "Send failed: {{msg}}",
 
   "group.models.description":       "Default model and provider configuration.",
   "group.gateway.description":      "Messaging platform instances (Feishu, DingTalk, WeChat, …).",

@@ -82,6 +82,20 @@
   "empty.sectionComingSoon":"即将上线 — 阶段 {{stage}}",
 
   "language.switcher": "语言",
+  "mode.switcher": "模式",
+  "mode.chat": "对话",
+  "mode.settings": "设置",
+
+  "chat.newConversation":    "+ 新建对话",
+  "chat.untitledConversation":"新对话",
+  "chat.placeholder":        "输入消息。按 Shift+Enter 换行。",
+  "chat.placeholderNoProvider":"请先在 设置 → 配置 Provider",
+  "chat.send":               "发送",
+  "chat.stop":               "停止",
+  "chat.noProvider":         "尚未配置 Provider。打开 设置 → 模型 以添加 API key。",
+  "chat.errorBusy":          "该会话正忙 — 请等待当前响应完成。",
+  "chat.errorNoProvider":    "Provider 未配置 — 请打开 设置 → 模型。",
+  "chat.errorSendFailed":    "发送失败:{{msg}}",
 
   "group.models.description":       "默认模型及 Provider 配置。",
   "group.gateway.description":      "消息平台实例(飞书、钉钉、微信 …)。",

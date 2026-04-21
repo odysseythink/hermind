@@ -21,17 +21,26 @@ import { listInstanceDirty } from './shell/listInstances';
 import { migrateLegacyHash, parseHash, stringifyHash } from './shell/hash';
 import type { GroupId } from './shell/groups';
 import TopBar from './components/shell/TopBar';
-import Sidebar from './components/shell/Sidebar';
-import ContentPanel from './components/shell/ContentPanel';
+import SettingsSidebar from './components/shell/SettingsSidebar';
+import SettingsPanel from './components/shell/SettingsPanel';
 import Footer from './components/Footer';
 import NewInstanceDialog from './components/NewInstanceDialog';
 import NewProviderDialog from './components/groups/models/NewProviderDialog';
 import NewMcpServerDialog from './components/groups/advanced/NewMcpServerDialog';
+import ChatWorkspace from './components/chat/ChatWorkspace';
 
 export default function App() {
   const { t } = useTranslation('ui');
   const [state, dispatch] = useReducer(reducer, initialState);
   const [newDialogOpen, setNewDialogOpen] = useState(false);
+
+  // Hash-driven top-level mode router. parseHash returns { mode: 'chat' | 'settings', ... }.
+  const [hashState, setHashState] = useState(() => parseHash(window.location.hash));
+  useEffect(() => {
+    const onChange = () => setHashState(parseHash(window.location.hash));
+    window.addEventListener('hashchange', onChange);
+    return () => window.removeEventListener('hashchange', onChange);
+  }, []);
 
   // Boot: fetch schema + config
   useEffect(() => {
@@ -79,8 +88,8 @@ export default function App() {
       history.replaceState(null, '', window.location.pathname + window.location.search + migrated);
     }
     const parsed = parseHash(effective);
-    if (parsed.group) {
-      dispatch({ type: 'shell/selectGroup', group: parsed.group });
+    if (parsed.mode === 'settings') {
+      dispatch({ type: 'shell/selectGroup', group: parsed.groupId });
       if (parsed.sub) {
         dispatch({ type: 'shell/selectSub', key: parsed.sub });
       }
@@ -95,7 +104,13 @@ export default function App() {
   // Sync hash whenever active group/sub changes.
   useEffect(() => {
     if (state.status === 'booting') return;
-    const wanted = stringifyHash(state.shell.activeGroup, state.shell.activeSubKey);
+    const wanted = state.shell.activeGroup
+      ? stringifyHash({
+          mode: 'settings',
+          groupId: state.shell.activeGroup,
+          sub: state.shell.activeSubKey ?? undefined,
+        })
+      : '';
     if (window.location.hash !== wanted) {
       if (wanted) {
         history.replaceState(null, '', window.location.pathname + window.location.search + wanted);
@@ -307,6 +322,30 @@ export default function App() {
     );
   }
 
+  const setMode = (m: 'chat' | 'settings') => {
+    window.location.hash = stringifyHash(
+      m === 'chat' ? { mode: 'chat' } : { mode: 'settings', groupId: 'models' },
+    );
+  };
+
+  if (hashState.mode === 'chat') {
+    const providerConfigured = Object.values(
+      (state.config as { providers?: Record<string, { api_key?: string }> }).providers ?? {},
+    ).some((p) => typeof p?.api_key === 'string' && p.api_key.length > 0);
+    return (
+      <div className="app-shell">
+        <TopBar dirtyCount={0} status={state.status} onSave={() => {}} mode="chat" onModeChange={setMode} />
+        <ChatWorkspace
+          sessionId={hashState.sessionId ?? null}
+          providerConfigured={providerConfigured}
+          onChangeSession={(id) => {
+            window.location.hash = stringifyHash({ mode: 'chat', sessionId: id });
+          }}
+        />
+      </div>
+    );
+  }
+
   const selectedKey = state.shell.activeSubKey;
   const selectedInstance = selectedKey
     ? state.config.gateway?.platforms?.[selectedKey] ?? null
@@ -320,8 +359,8 @@ export default function App() {
 
   return (
     <div className="app-shell">
-      <TopBar dirtyCount={dirty} status={state.status} onSave={onSave} />
-      <Sidebar
+      <TopBar dirtyCount={dirty} status={state.status} onSave={onSave} mode="settings" onModeChange={setMode} />
+      <SettingsSidebar
         activeGroup={state.shell.activeGroup}
         activeSubKey={state.shell.activeSubKey}
         expandedGroups={state.shell.expandedGroups}
@@ -406,7 +445,7 @@ export default function App() {
         }}
       />
       <main>
-        <ContentPanel
+        <SettingsPanel
           activeGroup={state.shell.activeGroup}
           activeSubKey={state.shell.activeSubKey}
           config={state.config}

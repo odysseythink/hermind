@@ -2,83 +2,121 @@ import { describe, it, expect } from 'vitest';
 import { parseHash, stringifyHash, migrateLegacyHash } from './hash';
 
 describe('parseHash', () => {
-  it('returns null/null for an empty hash', () => {
-    expect(parseHash('')).toEqual({ group: null, sub: null });
-    expect(parseHash('#')).toEqual({ group: null, sub: null });
+  it('empty hash → chat mode', () => {
+    expect(parseHash('')).toEqual({ mode: 'chat' });
+    expect(parseHash('#')).toEqual({ mode: 'chat' });
   });
 
-  it('parses #<group> with no sub', () => {
-    expect(parseHash('#models')).toEqual({ group: 'models', sub: null });
-    expect(parseHash('#gateway')).toEqual({ group: 'gateway', sub: null });
+  it('#/chat → chat mode', () => {
+    expect(parseHash('#/chat')).toEqual({ mode: 'chat' });
   });
 
-  it('parses #<group>/<sub>', () => {
-    expect(parseHash('#gateway/feishu-bot-main')).toEqual({
-      group: 'gateway',
+  it('#/chat/<id> → chat with sessionId', () => {
+    expect(parseHash('#/chat/abc-123')).toEqual({ mode: 'chat', sessionId: 'abc-123' });
+  });
+
+  it('#/settings → settings default group', () => {
+    expect(parseHash('#/settings')).toEqual({ mode: 'settings', groupId: 'models' });
+  });
+
+  it('#/settings/<group>', () => {
+    expect(parseHash('#/settings/gateway')).toEqual({ mode: 'settings', groupId: 'gateway' });
+  });
+
+  it('#/settings/<group>/<sub> keeps sub', () => {
+    expect(parseHash('#/settings/gateway/feishu-bot-main')).toEqual({
+      mode: 'settings',
+      groupId: 'gateway',
       sub: 'feishu-bot-main',
     });
   });
 
   it('decodes percent-encoded sub keys', () => {
-    expect(parseHash('#gateway/' + encodeURIComponent('key with/special chars'))).toEqual({
-      group: 'gateway',
+    const enc = encodeURIComponent('key with/special chars');
+    expect(parseHash('#/settings/gateway/' + enc)).toEqual({
+      mode: 'settings',
+      groupId: 'gateway',
       sub: 'key with/special chars',
     });
   });
 
-  it('returns null/null for unknown group names', () => {
-    expect(parseHash('#bogus')).toEqual({ group: null, sub: null });
-    expect(parseHash('#bogus/whatever')).toEqual({ group: null, sub: null });
+  it('legacy bare group #models → settings/models', () => {
+    expect(parseHash('#models')).toEqual({ mode: 'settings', groupId: 'models' });
   });
 
-  it('tolerates malformed percent encoding by passing through', () => {
-    // '%' alone is invalid percent-encoding; decodeURIComponent throws.
-    expect(parseHash('#gateway/%-raw')).toEqual({ group: 'gateway', sub: '%-raw' });
+  it('legacy #gateway/<sub> keeps sub', () => {
+    expect(parseHash('#gateway/feishu-bot-main')).toEqual({
+      mode: 'settings',
+      groupId: 'gateway',
+      sub: 'feishu-bot-main',
+    });
+  });
+
+  it('unknown hashes fall back to chat', () => {
+    expect(parseHash('#bogus')).toEqual({ mode: 'chat' });
+  });
+
+  it('unknown settings group falls back to models', () => {
+    expect(parseHash('#/settings/nope')).toEqual({ mode: 'settings', groupId: 'models' });
   });
 });
 
 describe('stringifyHash', () => {
-  it('returns empty for null group', () => {
-    expect(stringifyHash(null, null)).toBe('');
-    expect(stringifyHash(null, 'ignored')).toBe('');
+  it('chat with no id', () => {
+    expect(stringifyHash({ mode: 'chat' })).toBe('#/chat');
   });
 
-  it('builds #<group> when sub is null', () => {
-    expect(stringifyHash('models', null)).toBe('#models');
+  it('chat with id', () => {
+    expect(stringifyHash({ mode: 'chat', sessionId: 'abc' })).toBe('#/chat/abc');
   });
 
-  it('builds #<group>/<sub> and encodes the sub', () => {
-    expect(stringifyHash('gateway', 'feishu-bot-main')).toBe('#gateway/feishu-bot-main');
-    expect(stringifyHash('gateway', 'key with/special')).toBe(
-      '#gateway/' + encodeURIComponent('key with/special'),
-    );
+  it('settings + group only', () => {
+    expect(stringifyHash({ mode: 'settings', groupId: 'memory' })).toBe('#/settings/memory');
   });
 
-  it('round-trips with parseHash', () => {
-    const h = stringifyHash('gateway', 'weird/key with%');
-    expect(parseHash(h)).toEqual({ group: 'gateway', sub: 'weird/key with%' });
+  it('settings + group + sub (encoded)', () => {
+    expect(stringifyHash({ mode: 'settings', groupId: 'gateway', sub: 'feishu-bot-main' }))
+      .toBe('#/settings/gateway/feishu-bot-main');
+    expect(stringifyHash({ mode: 'settings', groupId: 'gateway', sub: 'weird/key' }))
+      .toBe('#/settings/gateway/' + encodeURIComponent('weird/key'));
+  });
+
+  it('round-trips through parseHash', () => {
+    const s = stringifyHash({ mode: 'settings', groupId: 'gateway', sub: 'weird/key with%' });
+    expect(parseHash(s)).toEqual({
+      mode: 'settings',
+      groupId: 'gateway',
+      sub: 'weird/key with%',
+    });
   });
 });
 
 describe('migrateLegacyHash', () => {
   const platforms = ['feishu-bot-main', 'dingtalk-alerts'];
 
-  it('returns null when hash is empty', () => {
+  it('returns null for empty hash', () => {
     expect(migrateLegacyHash('', platforms)).toBeNull();
   });
 
-  it('returns null when hash already matches a known group', () => {
-    expect(migrateLegacyHash('#gateway/anything', platforms)).toBeNull();
-    expect(migrateLegacyHash('#models', platforms)).toBeNull();
+  it('returns null for already-canonical chat hashes', () => {
+    expect(migrateLegacyHash('#/chat', platforms)).toBeNull();
+    expect(migrateLegacyHash('#/chat/abc', platforms)).toBeNull();
   });
 
-  it('migrates a bare legacy key that exists in platforms', () => {
-    expect(migrateLegacyHash('#feishu-bot-main', platforms)).toBe('#gateway/feishu-bot-main');
+  it('returns null for already-canonical settings hashes', () => {
+    expect(migrateLegacyHash('#/settings', platforms)).toBeNull();
+    expect(migrateLegacyHash('#/settings/gateway/foo', platforms)).toBeNull();
   });
 
-  it('migrates percent-encoded legacy keys', () => {
-    const legacy = '#' + encodeURIComponent('feishu-bot-main');
-    expect(migrateLegacyHash(legacy, platforms)).toBe('#gateway/feishu-bot-main');
+  it('canonicalizes bare legacy group hashes', () => {
+    expect(migrateLegacyHash('#models', platforms)).toBe('#/settings/models');
+    expect(migrateLegacyHash('#gateway/feishu-bot-main', platforms))
+      .toBe('#/settings/gateway/feishu-bot-main');
+  });
+
+  it('migrates bare legacy platform key in platforms', () => {
+    expect(migrateLegacyHash('#feishu-bot-main', platforms))
+      .toBe('#/settings/gateway/feishu-bot-main');
   });
 
   it('returns null for unknown bare keys', () => {

@@ -68,3 +68,23 @@
   align-items: center;
   margin-right: 0.5rem;
 }
+
+.modeToggle {
+  display: inline-flex;
+  gap: 0.25rem;
+  margin-left: 0.5rem;
+}
+.modeToggle button {
+  padding: 4px 10px;
+  border-radius: 4px;
+  border: 1px solid var(--border, #30363d);
+  background: transparent;
+  color: inherit;
+  font: inherit;
+  cursor: pointer;
+}
+.modeToggle button[aria-pressed='true'] {
+  background: var(--accent, #1f6feb);
+  color: #fff;
+  font-weight: 600;
+}
