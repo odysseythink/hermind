@@ -157,3 +157,34 @@ func TestFeishuApp_IncomingText(t *testing.T) {
 		t.Errorf("Text = %q, want hello world", got.Text)
 	}
 }
+
+func TestFeishuApp_StripsAtMention(t *testing.T) {
+	fa := newFeishuAppForTest(nil, &fakeSender{}, "")
+	var gotText string
+	fa.mu.Lock()
+	fa.handler = func(ctx context.Context, in gateway.IncomingMessage) (*gateway.OutgoingMessage, error) {
+		gotText = in.Text
+		return nil, nil
+	}
+	fa.mu.Unlock()
+
+	cases := []struct{ raw, want string }{
+		{`{"text":"@_user_1 hello"}`, "hello"},
+		{`{"text":"hey @_user_2  how are you"}`, "hey how are you"},
+		{`{"text":"@_user_1 @_user_2 hi"}`, "hi"},
+		{`{"text":"plain"}`, "plain"},
+	}
+	for _, tc := range cases {
+		tc := tc
+		t.Run(tc.raw, func(t *testing.T) {
+			gotText = ""
+			evt := buildTextEvent("oc", "om", "ou", tc.raw, "text")
+			if err := fa.handleEvent(context.Background(), evt); err != nil {
+				t.Fatalf("handleEvent: %v", err)
+			}
+			if gotText != tc.want {
+				t.Errorf("got %q, want %q", gotText, tc.want)
+			}
+		})
+	}
+}

@@ -4,12 +4,16 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
+	"regexp"
+	"strings"
 	"sync"
 
 	larkim "github.com/larksuite/oapi-sdk-go/v3/service/im/v1"
 
 	"github.com/odysseythink/hermind/gateway"
 )
+
+var feishuMentionRE = regexp.MustCompile(`@_user_\d+\s*`)
 
 // feishuEventStream is the inbound seam. Production wraps *larkws.Client.
 // Start blocks until ctx is cancelled and delivers events via the handler
@@ -110,11 +114,15 @@ func (fa *FeishuApp) handleEvent(ctx context.Context, evt *larkim.P2MessageRecei
 		openID = stringPtrValue(evt.Event.Sender.SenderId.OpenId)
 	}
 
+	cleaned := strings.TrimSpace(feishuMentionRE.ReplaceAllString(content.Text, ""))
+	// collapse double spaces left behind between two mentions
+	cleaned = strings.Join(strings.Fields(cleaned), " ")
+
 	in := gateway.IncomingMessage{
 		Platform:  "feishu",
 		UserID:    openID,
 		ChatID:    stringPtrValue(msg.ChatId),
-		Text:      content.Text,
+		Text:      cleaned,
 		MessageID: stringPtrValue(msg.MessageId),
 	}
 
