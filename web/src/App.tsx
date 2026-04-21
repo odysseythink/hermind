@@ -390,7 +390,7 @@ export default function App() {
           dispatch({
             type: direction === 'up' ? 'list-instance/move-up' : 'list-instance/move-down',
             sectionKey: 'cron',
-            subkey: 'jobs',
+            subkey: sectionSubkey('cron'),
             index,
           });
           const newIndex = direction === 'up' ? index - 1 : index + 1;
