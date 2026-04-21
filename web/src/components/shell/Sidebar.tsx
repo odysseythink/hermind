@@ -29,6 +29,9 @@ export interface SidebarProps {
   onAddFallback: () => void;
   onMoveFallback: (index: number, direction: 'up' | 'down') => void;
   onReorderFallback: (from: number, to: number) => void;
+  mcpInstances: Array<{ key: string; command: string; enabled: boolean }>;
+  dirtyMcpKeys: Set<string>;
+  onAddMcpServer: () => void;
   cronJobs: Array<{ name: string; schedule: string }>;
   dirtyCronIndices: Set<number>;
   onAddCronJob: () => void;
@@ -89,6 +92,13 @@ export default function Sidebar(props: SidebarProps) {
                 props.onSelectGroup('advanced');
                 props.onSelectSub(key);
               }}
+              mcpInstances={props.mcpInstances}
+              dirtyMcpKeys={props.dirtyMcpKeys}
+              onSelectMcp={key => {
+                props.onSelectGroup('advanced');
+                props.onSelectSub(`mcp:${key}`);
+              }}
+              onAddMcpServer={props.onAddMcpServer}
               cronJobs={props.cronJobs}
               dirtyCronIndices={props.dirtyCronIndices}
               activeCronIndex={(() => {

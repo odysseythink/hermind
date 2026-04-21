@@ -25,6 +25,7 @@ import ContentPanel from './components/shell/ContentPanel';
 import Footer from './components/Footer';
 import NewInstanceDialog from './components/NewInstanceDialog';
 import NewProviderDialog from './components/groups/models/NewProviderDialog';
+import NewMcpServerDialog from './components/groups/advanced/NewMcpServerDialog';
 
 export default function App() {
   const [state, dispatch] = useReducer(reducer, initialState);
@@ -241,6 +242,7 @@ export default function App() {
   }, [state.configSections]);
 
   const [newProviderDialogOpen, setNewProviderDialogOpen] = useState(false);
+  const [newMcpDialogOpen, setNewMcpDialogOpen] = useState(false);
 
   const onFetchProviderModels = useCallback(async (instanceKey: string) => {
     const res = await apiFetch(`/api/providers/${encodeURIComponent(instanceKey)}/models`, {
@@ -366,6 +368,9 @@ export default function App() {
             to,
           })
         }
+        mcpInstances={mcpInstances}
+        dirtyMcpKeys={dirtyMcpKeys}
+        onAddMcpServer={() => setNewMcpDialogOpen(true)}
         cronJobs={cronJobs}
         dirtyCronIndices={dirtyCronIndices}
         onAddCronJob={() => {
@@ -465,6 +470,30 @@ export default function App() {
           }}
         />
       )}
+      {newMcpDialogOpen && (() => {
+        const existingKeys = new Set(Object.keys(
+          (((state.config as Record<string, unknown>).mcp as
+            { servers?: Record<string, unknown> } | undefined)?.servers) ?? {}
+        ));
+        return (
+          <NewMcpServerDialog
+            existingKeys={existingKeys}
+            onCancel={() => setNewMcpDialogOpen(false)}
+            onCreate={key => {
+              dispatch({
+                type: 'keyed-instance/create',
+                sectionKey: 'mcp',
+                subkey: 'servers',
+                instanceKey: key,
+                initial: { command: '', enabled: true },
+              });
+              dispatch({ type: 'shell/selectGroup', group: 'advanced' });
+              dispatch({ type: 'shell/selectSub', key: `mcp:${key}` });
+              setNewMcpDialogOpen(false);
+            }}
+          />
+        );
+      })()}
       {newProviderDialogOpen && (() => {
         const section = state.configSections.find(s => s.key === 'providers');
         const providerField = section?.fields.find(f => f.name === 'provider');

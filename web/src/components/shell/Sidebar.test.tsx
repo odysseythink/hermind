@@ -32,6 +32,9 @@ function baseProps(
     onAddFallback: vi.fn(),
     onMoveFallback: vi.fn(),
     onReorderFallback: vi.fn(),
+    mcpInstances: [],
+    dirtyMcpKeys: new Set<string>(),
+    onAddMcpServer: vi.fn(),
     cronJobs: [],
     dirtyCronIndices: new Set<number>(),
     onAddCronJob: vi.fn(),
@@ -121,6 +124,9 @@ describe('Sidebar — non-gateway groups', () => {
         onAddFallback={() => {}}
         onMoveFallback={() => {}}
         onReorderFallback={() => {}}
+        mcpInstances={[]}
+        dirtyMcpKeys={new Set()}
+        onAddMcpServer={() => {}}
         cronJobs={[]}
         dirtyCronIndices={new Set()}
         onAddCronJob={() => {}}
@@ -154,6 +160,9 @@ describe('Sidebar — non-gateway groups', () => {
         onAddFallback={() => {}}
         onMoveFallback={() => {}}
         onReorderFallback={() => {}}
+        mcpInstances={[]}
+        dirtyMcpKeys={new Set()}
+        onAddMcpServer={() => {}}
         cronJobs={[]}
         dirtyCronIndices={new Set()}
         onAddCronJob={() => {}}
