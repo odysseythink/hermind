@@ -387,13 +387,19 @@ export default function App() {
           dispatch({ type: 'shell/selectSub', key: `cron:${list.length}` });
         }}
         onMoveCron={(index, direction) => {
+          const list = (((state.config as Record<string, unknown>).cron as
+            { jobs?: Array<unknown> } | undefined)?.jobs) ?? [];
+          const newIndex = direction === 'up' ? index - 1 : index + 1;
+          if (newIndex < 0 || newIndex >= list.length) {
+            // Button is disabled at the edges; this is defensive only.
+            return;
+          }
           dispatch({
             type: direction === 'up' ? 'list-instance/move-up' : 'list-instance/move-down',
             sectionKey: 'cron',
             subkey: sectionSubkey('cron'),
             index,
           });
-          const newIndex = direction === 'up' ? index - 1 : index + 1;
           dispatch({ type: 'shell/selectSub', key: `cron:${newIndex}` });
         }}
       />
