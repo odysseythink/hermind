@@ -51,8 +51,8 @@ Go codebase, adapting it to `tool/web/`.
 │  newSearchDispatcher(opts.Search) ─► SearchProvider[4]     │
 │                                                             │
 │  dispatcher.Search(ctx, args):                              │
+│    ├─► resolveProvider() → SearchProvider (has providerID) │
 │    ├─► cache.Get(providerID|query|num) — if hit, return    │
-│    ├─► resolveProvider() → SearchProvider                   │
 │    ├─► provider.Search(ctx, query, num)                     │
 │    ├─► normalizeResults → []SearchResult                    │
 │    └─► cache.Set + return {query, provider, results}        │
@@ -88,20 +88,33 @@ emit `omitempty` rather than `0.0`.
 - `resolveProvider()` — explicit `cfg.Provider` wins; if unset, walks the
   priority list; returns error if explicit provider is unknown or not
   configured.
-- `Search(ctx, args)` — runs cache → resolve → provider.Search → normalize
-  → cache.Set.
+- `Search(ctx, args)` — runs resolve → cache.Get → provider.Search →
+  normalize → cache.Set.
 
 ### Registration point
 
-`cli/engine_deps.go` replaces the current
-`web.RegisterAll(reg, exaAPIKey, firecrawlAPIKey)` call with:
+The current call site is `cli/repl.go:128-130`:
 
 ```go
-web.RegisterAll(reg, web.Options{
-    Search:          agentCfg.Tools.Web.Search,
-    FirecrawlAPIKey: agentCfg.Tools.Web.FirecrawlAPIKey,
+exaKey := os.Getenv("EXA_API_KEY")
+firecrawlKey := os.Getenv("FIRECRAWL_API_KEY")
+web.RegisterAll(toolRegistry, exaKey, firecrawlKey)
+```
+
+This becomes:
+
+```go
+web.RegisterAll(toolRegistry, web.Options{
+    Search:          cfg.Web.Search,                // new config struct
+    FirecrawlAPIKey: os.Getenv("FIRECRAWL_API_KEY"), // unchanged env-var path
 })
 ```
+
+**Sequencing with pending TUI→Web plans**: the Phase 1 plan (`web-chat-backend`)
+extracts this block into `cli/engine_deps.go::BuildEngineDeps`, and the Phase 3
+plan (`tui-removal`) deletes `cli/repl.go`. Whichever lands first — the
+websearch plan targets the file *as it currently exists*; execution will
+rebase onto whatever state is on `main` at the time.
 
 ---
 
@@ -126,11 +139,14 @@ tool/web/search.go                keep file; strip Exa logic, keep
 tool/web/register.go              RegisterAll(reg, opts Options)
 tool/web/web_test.go              split: keep fetch/extract tests here,
                                   move Exa to search_exa_test.go
-cli/engine_deps.go                call new RegisterAll signature
-cli/config.go                     AgentConfig.Tools.Web restructured:
-                                  new Search subtree
-config/descriptor/tools_web.go    descriptor reflects new fields
-CHANGELOG.md                      breaking change entry + migration
+cli/repl.go                       call new RegisterAll signature (or
+                                  cli/engine_deps.go if Phase 1 has
+                                  landed first)
+config/config.go                  add top-level Web WebConfig field,
+                                  plus SearchConfig + SearchProvidersConfig
+                                  + ProviderKeyConfig struct definitions
+config/descriptor/web.go          NEW: descriptor for web.search.*
+CHANGELOG.md                      additive entry: new providers + cache
 ```
 
 ### New test files
@@ -261,44 +277,52 @@ func (d *searchDispatcher) resolveProvider() (SearchProvider, error) {
 
 ### 5.2 New config YAML
 
+New top-level `web:` section (matches existing convention where each tool
+family — `browser:`, `memory:`, `terminal:` — lives at the top level):
+
 ```yaml
-tools:
-  web:
-    firecrawl_api_key: "..."       # unchanged
-    search:
-      provider: tavily              # optional; empty → auto priority
-      providers:
-        tavily:
-          api_key: "..."
-        brave:
-          api_key: "..."
-        exa:
-          api_key: "..."
-        # ddg has no sub-node; always enabled
+web:
+  search:
+    provider: tavily              # optional; empty → auto priority
+    providers:
+      tavily:
+        api_key: "..."
+      brave:
+        api_key: "..."
+      exa:
+        api_key: "..."
+      # ddg has no sub-node; always enabled
 ```
+
+Firecrawl (used by `tool/web/extract.go`) continues to read
+`FIRECRAWL_API_KEY` env var directly — out of scope for this spec.
 
 ### 5.3 Go config types
 
+New types added to `config/config.go`, using `yaml` tags to match the
+existing convention (no `mapstructure`):
+
 ```go
-// cli/config.go
-type WebToolsConfig struct {
-    FirecrawlAPIKey string        `mapstructure:"firecrawl_api_key"`
-    Search          SearchConfig  `mapstructure:"search"`
+// config.Config gains:
+//   Web WebConfig `yaml:"web,omitempty"`
+
+type WebConfig struct {
+    Search SearchConfig `yaml:"search,omitempty"`
 }
 
 type SearchConfig struct {
-    Provider  string                 `mapstructure:"provider"`
-    Providers SearchProvidersConfig  `mapstructure:"providers"`
+    Provider  string                `yaml:"provider,omitempty"`
+    Providers SearchProvidersConfig `yaml:"providers,omitempty"`
 }
 
 type SearchProvidersConfig struct {
-    Tavily ProviderKeyConfig `mapstructure:"tavily"`
-    Brave  ProviderKeyConfig `mapstructure:"brave"`
-    Exa    ProviderKeyConfig `mapstructure:"exa"`
+    Tavily ProviderKeyConfig `yaml:"tavily,omitempty"`
+    Brave  ProviderKeyConfig `yaml:"brave,omitempty"`
+    Exa    ProviderKeyConfig `yaml:"exa,omitempty"`
 }
 
 type ProviderKeyConfig struct {
-    APIKey string `mapstructure:"api_key"`
+    APIKey string `yaml:"api_key,omitempty"`
 }
 ```
 
@@ -316,28 +340,15 @@ Each provider's ctor resolves key as `cfg.APIKey` first, then
 
 ### 5.5 Descriptor
 
-`config/descriptor/tools_web.go` publishes:
+NEW file `config/descriptor/web.go` (matches the one-file-per-section
+pattern of `browser.go`, `memory.go`, etc.) publishes:
 
-- `tools.web.firecrawl_api_key` — unchanged
-- `tools.web.search.provider` — enum `["", "tavily", "brave", "exa", "ddg"]`
-- `tools.web.search.providers.tavily.api_key` — secret
-- `tools.web.search.providers.brave.api_key` — secret
-- `tools.web.search.providers.exa.api_key` — secret
+- `web.search.provider` — enum `["", "tavily", "brave", "exa", "ddg"]`
+- `web.search.providers.tavily.api_key` — secret
+- `web.search.providers.brave.api_key` — secret
+- `web.search.providers.exa.api_key` — secret
 
-DDG has no UI field.
-
-### 5.6 Legacy field warning
-
-Post-viper-decode, check:
-
-```go
-if viper.IsSet("tools.web.exa_api_key") {
-    log.Printf("[config] tools.web.exa_api_key is removed. Move it to tools.web.search.providers.exa.api_key. See CHANGELOG.")
-}
-```
-
-Non-blocking. If the user hasn't migrated, web_search falls through to
-DDG rather than Exa.
+DDG has no UI field. Firecrawl stays out.
 
 ---
 
@@ -376,22 +387,45 @@ this scale.
 
 ## 7. Error Handling
 
-Layered:
+### Responsibility split
 
-1. **Argument errors** (empty query, bad JSON) → `tool.ToolError(...)`.
-2. **Provider not configured** (explicit `provider:` with no key) →
+- **`SearchProvider.Search`** returns Go `error`. Providers do not build
+  `tool.ToolError` strings themselves — they just return descriptive errors
+  like `fmt.Errorf("http %d", code)` or `fmt.Errorf("decode: %w", err)`.
+- **`searchDispatcher.Search`** is the tool handler shape. It catches
+  provider errors and converts them into `tool.ToolError("<providerID>: <msg>")`
+  before returning to the Engine. Argument-level errors (bad JSON, empty
+  query) are handled before reaching a provider.
+
+### Error categories and surface
+
+1. **Argument errors** (empty query, bad JSON args from the model) —
+   dispatcher returns `tool.ToolError(...)`, no provider call.
+2. **Provider not configured** (`cfg.Provider` explicit but key missing) —
+   `resolveProvider` returns an error; dispatcher wraps as
    `tool.ToolError("provider \"<id>\" not configured; set <ENVVAR> or configure tools.web.search.providers.<id>.api_key")`.
-3. **Non-200 HTTP** → `tool.ToolError("<providerID> http <code>")`.
-4. **JSON decode** → `tool.ToolError("<providerID> decode: <msg>")`.
-5. **Context cancel/timeout** → pass context error through if still
-   present on `ctx`; otherwise wrap as `tool.ToolError("<providerID> timeout")`.
-6. **DDG CAPTCHA** → `tool.ToolError("ddg rate limited")`.
+3. **Non-2xx HTTP** — provider returns `fmt.Errorf("http %d", code)`;
+   dispatcher wraps as `tool.ToolError("<providerID>: http <code>")`.
+4. **JSON decode / HTML parse** — provider returns
+   `fmt.Errorf("decode: %w", err)`; dispatcher wraps as
+   `tool.ToolError("<providerID>: decode: <msg>")`.
+5. **Context cancel/timeout** — dispatcher checks `ctx.Err()`; if context
+   is cancelled/timed-out, return the context error verbatim (Engine layer
+   handles it); otherwise wrap as `tool.ToolError("<providerID>: timeout")`.
+6. **DDG CAPTCHA** — provider returns `errors.New("rate limited")` when
+   HTML body contains `anomaly`; dispatcher wraps as
+   `tool.ToolError("ddg: rate limited")`.
 
-**Not done**: no auto-fallback to another provider, no retry, errors not
-cached.
+### Not done
 
-**Log**: dispatcher logs `[web_search] provider=<id> err=<msg>` before
-returning the tool error. Success path logs nothing.
+- No auto-fallback to another provider on failure.
+- No retry on transient failure.
+- Errors not cached (only successful results are cached).
+
+### Log
+
+Dispatcher logs `[web_search] provider=<id> err=<msg>` before returning
+the tool error. Success path logs nothing.
 
 ---
 
@@ -424,48 +458,48 @@ returning the tool error. Success path logs nothing.
 
 ## 9. Migration & Compatibility
 
+### No end-user breaking change
+
+The existing setup is env-var-only (`EXA_API_KEY` → Exa `web_search`).
+That keeps working unchanged. Everything in this spec is additive:
+
+- New top-level `web:` config section (optional).
+- New `TAVILY_API_KEY` / `BRAVE_API_KEY` env vars (optional).
+- New providers, selection logic, cache.
+
+Users who currently set only `EXA_API_KEY` continue to get Exa as the
+search backend (since auto-priority picks Exa when it's the only
+configured provider).
+
+### Internal API change
+
+`web.RegisterAll(reg, exaAPIKey, firecrawlAPIKey)` → `web.RegisterAll(reg, opts Options)`.
+Internal to the repo, no external consumers.
+
 ### CHANGELOG.md new entry
 
 ```markdown
 ## [Unreleased]
 
-### Breaking
-
-- **Web search provider config restructured.** The `tools.web.exa_api_key`
-  field has been removed. Migrate by setting:
-
-      tools:
-        web:
-          search:
-            provider: exa    # optional; empty → auto priority
-            providers:
-              exa:
-                api_key: "..."
-
-  Environment variables (`EXA_API_KEY`, plus new `TAVILY_API_KEY`,
-  `BRAVE_API_KEY`) continue to work as fallback.
-
 ### Added
 
 - `web_search` tool now supports DuckDuckGo (keyless), Tavily, and Brave
-  Search in addition to Exa. Provider is chosen via
-  `tools.web.search.provider` or auto-selected by priority
+  Search in addition to Exa. Provider is chosen via the new
+  `web.search.provider` config field or auto-selected by priority
   (Tavily → Brave → Exa → DuckDuckGo).
+- New `web` top-level config section; see `docs/smoke/web-search.md`.
 - 60s in-memory LRU cache (max 128 entries) for repeated queries.
 - New dependency: `github.com/PuerkitoBio/goquery` (DuckDuckGo HTML
-  parsing).
+  parsing, ~300 KB, MIT licensed).
+- New env vars: `TAVILY_API_KEY`, `BRAVE_API_KEY`. `EXA_API_KEY` still
+  works unchanged.
 ```
-
-### Startup warning
-
-Config decode step emits a non-blocking log when the legacy
-`tools.web.exa_api_key` field is present (see §5.6).
 
 ### Web frontend
 
 `ConfigSection` already supports dotted field paths (commits `eafb67e`,
-`48611b3`, `627adfe`). After the descriptor update, the new fields
-render automatically; the removed legacy field disappears from the UI.
+`48611b3`, `627adfe`). After adding `config/descriptor/web.go`, the new
+fields render automatically.
 
 ---
 
@@ -504,6 +538,7 @@ render automatically; the removed legacy field disappears from the UI.
 - [x] Selection: explicit config → priority Tavily > Brave > Exa > DDG
 - [x] Result schema: `{query, provider, results:[{title, url, snippet, published_date?, score?}]}`
 - [x] Cache: 60s LRU 128 entries
-- [x] Backcompat: breaking + CHANGELOG migration
+- [x] Backcompat: purely additive for end users (`EXA_API_KEY` still works); internal `RegisterAll` signature changes
 - [x] Architecture: flat `tool/web/search_*.go`
+- [x] Config shape: top-level `web:` section matching existing `browser:`/`memory:` convention
 - [x] New dep: `goquery` (DDG only)
