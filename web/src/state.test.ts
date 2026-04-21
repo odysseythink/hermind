@@ -796,6 +796,146 @@ describe('reducer: list-instance/move-down', () => {
   });
 });
 
+describe('reducer: subkey — edit/keyed-instance-field', () => {
+  it('writes to config[sectionKey][subkey][instanceKey][field]', () => {
+    const s = {
+      ...initialState,
+      config: {
+        mcp: {
+          servers: {
+            foo: { command: '/bin/old' },
+            bar: { command: '/bin/bar' },
+          },
+        },
+      } as any,
+    };
+    const next = reducer(s, {
+      type: 'edit/keyed-instance-field',
+      sectionKey: 'mcp',
+      subkey: 'servers',
+      instanceKey: 'foo',
+      field: 'command',
+      value: '/bin/new',
+    });
+    expect((next.config as any).mcp.servers.foo.command).toBe('/bin/new');
+    // sibling untouched
+    expect((next.config as any).mcp.servers.bar.command).toBe('/bin/bar');
+  });
+
+  it('backward-compat: without subkey writes to config[sectionKey][instanceKey][field]', () => {
+    const s = {
+      ...initialState,
+      config: {
+        providers: { p1: { provider: 'anthropic', api_key: '' } },
+      } as any,
+    };
+    const next = reducer(s, {
+      type: 'edit/keyed-instance-field',
+      sectionKey: 'providers',
+      instanceKey: 'p1',
+      field: 'api_key',
+      value: 'sk-xyz',
+    });
+    expect((next.config as any).providers.p1.api_key).toBe('sk-xyz');
+  });
+});
+
+describe('reducer: subkey — edit/list-instance-field', () => {
+  it('writes to config[sectionKey][subkey][index][field]', () => {
+    const s = {
+      ...initialState,
+      config: {
+        cron: {
+          jobs: [{ name: 'a' }, { name: 'b' }],
+        },
+      } as any,
+    };
+    const next = reducer(s, {
+      type: 'edit/list-instance-field',
+      sectionKey: 'cron',
+      subkey: 'jobs',
+      index: 1,
+      field: 'name',
+      value: 'B',
+    });
+    expect((next.config as any).cron.jobs[1].name).toBe('B');
+    expect((next.config as any).cron.jobs[0].name).toBe('a');
+  });
+});
+
+describe('reducer: subkey — keyed-instance/create', () => {
+  it('creates config[sectionKey][subkey][instanceKey] with initial payload', () => {
+    const s = {
+      ...initialState,
+      config: { mcp: { servers: {} } } as any,
+    };
+    const next = reducer(s, {
+      type: 'keyed-instance/create',
+      sectionKey: 'mcp',
+      subkey: 'servers',
+      instanceKey: 'newone',
+      initial: { command: '/bin/true' },
+    });
+    expect((next.config as any).mcp.servers.newone.command).toBe('/bin/true');
+  });
+});
+
+describe('reducer: subkey — list-instance/create', () => {
+  it('appends to config[sectionKey][subkey] list', () => {
+    const s = {
+      ...initialState,
+      config: { cron: { jobs: [] } } as any,
+    };
+    const next = reducer(s, {
+      type: 'list-instance/create',
+      sectionKey: 'cron',
+      subkey: 'jobs',
+      initial: { name: 'x' },
+    });
+    expect((next.config as any).cron.jobs).toEqual([{ name: 'x' }]);
+  });
+});
+
+describe('reducer: subkey — list-instance/delete', () => {
+  it('removes element at index, sibling survives', () => {
+    const s = {
+      ...initialState,
+      config: {
+        cron: { jobs: [{ name: 'first' }, { name: 'second' }] },
+      } as any,
+    };
+    const next = reducer(s, {
+      type: 'list-instance/delete',
+      sectionKey: 'cron',
+      subkey: 'jobs',
+      index: 0,
+    });
+    const jobs = (next.config as any).cron.jobs as Array<Record<string, unknown>>;
+    expect(jobs).toHaveLength(1);
+    expect(jobs[0].name).toBe('second');
+  });
+});
+
+describe('reducer: subkey — list-instance/move-up', () => {
+  it('swaps element with predecessor in config[sectionKey][subkey]', () => {
+    const s = {
+      ...initialState,
+      config: {
+        cron: { jobs: [{ name: 'a' }, { name: 'b' }] },
+      } as any,
+    };
+    const next = reducer(s, {
+      type: 'list-instance/move-up',
+      sectionKey: 'cron',
+      subkey: 'jobs',
+      index: 1,
+    });
+    const jobs = (next.config as any).cron.jobs as Array<Record<string, unknown>>;
+    expect(jobs[0].name).toBe('b');
+    expect(jobs[1].name).toBe('a');
+  });
+});
+
 describe('reducer: list-instance/move', () => {
   it('moves an element from one index to another via splice', () => {
     const state = {

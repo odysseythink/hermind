@@ -47,15 +47,15 @@ export type Action =
   | { type: 'shell/toggleGroup'; group: GroupId }
   | { type: 'edit/config-field'; sectionKey: string; field: string; value: unknown }
   | { type: 'edit/config-scalar'; sectionKey: string; value: unknown }
-  | { type: 'edit/keyed-instance-field'; sectionKey: string; instanceKey: string; field: string; value: unknown }
-  | { type: 'keyed-instance/create'; sectionKey: string; instanceKey: string; initial: Record<string, unknown> }
-  | { type: 'keyed-instance/delete'; sectionKey: string; instanceKey: string }
-  | { type: 'edit/list-instance-field'; sectionKey: string; index: number; field: string; value: unknown }
-  | { type: 'list-instance/create'; sectionKey: string; initial: Record<string, unknown> }
-  | { type: 'list-instance/delete'; sectionKey: string; index: number }
-  | { type: 'list-instance/move-up'; sectionKey: string; index: number }
-  | { type: 'list-instance/move-down'; sectionKey: string; index: number }
-  | { type: 'list-instance/move'; sectionKey: string; from: number; to: number };
+  | { type: 'edit/keyed-instance-field'; sectionKey: string; subkey?: string; instanceKey: string; field: string; value: unknown }
+  | { type: 'keyed-instance/create'; sectionKey: string; subkey?: string; instanceKey: string; initial: Record<string, unknown> }
+  | { type: 'keyed-instance/delete'; sectionKey: string; subkey?: string; instanceKey: string }
+  | { type: 'edit/list-instance-field'; sectionKey: string; subkey?: string; index: number; field: string; value: unknown }
+  | { type: 'list-instance/create'; sectionKey: string; subkey?: string; initial: Record<string, unknown> }
+  | { type: 'list-instance/delete'; sectionKey: string; subkey?: string; index: number }
+  | { type: 'list-instance/move-up'; sectionKey: string; subkey?: string; index: number }
+  | { type: 'list-instance/move-down'; sectionKey: string; subkey?: string; index: number }
+  | { type: 'list-instance/move'; sectionKey: string; subkey?: string; from: number; to: number };
 
 export const initialState: AppState = {
   status: 'booting',
@@ -180,53 +180,54 @@ export function reducer(state: AppState, action: Action): AppState {
       };
     }
     case 'edit/keyed-instance-field': {
-      const cfg = state.config as unknown as Record<string, unknown>;
-      const sec = (cfg[action.sectionKey] as Record<string, Record<string, unknown>> | undefined) ?? {};
-      const inst = sec[action.instanceKey] ?? {};
+      const container =
+        (resolveContainer(state.config, action.sectionKey, action.subkey) as
+          | Record<string, Record<string, unknown>>
+          | undefined) ?? {};
+      const inst = container[action.instanceKey] ?? {};
+      const next = {
+        ...container,
+        [action.instanceKey]: { ...inst, [action.field]: action.value },
+      };
       return {
         ...state,
-        config: {
-          ...state.config,
-          [action.sectionKey]: {
-            ...sec,
-            [action.instanceKey]: { ...inst, [action.field]: action.value },
-          },
-        } as typeof state.config,
+        config: writeContainer(state.config, action.sectionKey, action.subkey, next),
       };
     }
     case 'keyed-instance/create': {
-      const cfg = state.config as unknown as Record<string, unknown>;
-      const sec = (cfg[action.sectionKey] as Record<string, Record<string, unknown>> | undefined) ?? {};
+      const container =
+        (resolveContainer(state.config, action.sectionKey, action.subkey) as
+          | Record<string, Record<string, unknown>>
+          | undefined) ?? {};
+      const next = {
+        ...container,
+        [action.instanceKey]: action.initial,
+      };
       return {
         ...state,
-        config: {
-          ...state.config,
-          [action.sectionKey]: {
-            ...sec,
-            [action.instanceKey]: action.initial,
-          },
-        } as typeof state.config,
+        config: writeContainer(state.config, action.sectionKey, action.subkey, next),
       };
     }
     case 'keyed-instance/delete': {
-      const cfg = state.config as unknown as Record<string, unknown>;
-      const sec = (cfg[action.sectionKey] as Record<string, Record<string, unknown>> | undefined) ?? {};
-      if (!(action.instanceKey in sec)) {
+      const container =
+        (resolveContainer(state.config, action.sectionKey, action.subkey) as
+          | Record<string, Record<string, unknown>>
+          | undefined) ?? {};
+      if (!(action.instanceKey in container)) {
         return state;
       }
-      const next = { ...sec };
+      const next = { ...container };
       delete next[action.instanceKey];
       return {
         ...state,
-        config: {
-          ...state.config,
-          [action.sectionKey]: next,
-        } as typeof state.config,
+        config: writeContainer(state.config, action.sectionKey, action.subkey, next),
       };
     }
     case 'edit/list-instance-field': {
-      const cfg = state.config as unknown as Record<string, unknown>;
-      const list = (cfg[action.sectionKey] as Array<Record<string, unknown>> | undefined) ?? [];
+      const list =
+        (resolveContainer(state.config, action.sectionKey, action.subkey) as
+          | Array<Record<string, unknown>>
+          | undefined) ?? [];
       if (action.index < 0 || action.index >= list.length) {
         return state;
       }
@@ -234,27 +235,25 @@ export function reducer(state: AppState, action: Action): AppState {
       nextList[action.index] = { ...nextList[action.index], [action.field]: action.value };
       return {
         ...state,
-        config: {
-          ...state.config,
-          [action.sectionKey]: nextList,
-        } as typeof state.config,
+        config: writeContainer(state.config, action.sectionKey, action.subkey, nextList),
       };
     }
     case 'list-instance/create': {
-      const cfg = state.config as unknown as Record<string, unknown>;
-      const list = (cfg[action.sectionKey] as Array<Record<string, unknown>> | undefined) ?? [];
+      const list =
+        (resolveContainer(state.config, action.sectionKey, action.subkey) as
+          | Array<Record<string, unknown>>
+          | undefined) ?? [];
       const nextList = list.concat([{ ...action.initial }]);
       return {
         ...state,
-        config: {
-          ...state.config,
-          [action.sectionKey]: nextList,
-        } as typeof state.config,
+        config: writeContainer(state.config, action.sectionKey, action.subkey, nextList),
       };
     }
     case 'list-instance/delete': {
-      const cfg = state.config as unknown as Record<string, unknown>;
-      const list = (cfg[action.sectionKey] as Array<Record<string, unknown>> | undefined) ?? [];
+      const list =
+        (resolveContainer(state.config, action.sectionKey, action.subkey) as
+          | Array<Record<string, unknown>>
+          | undefined) ?? [];
       if (action.index < 0 || action.index >= list.length) {
         return state;
       }
@@ -262,16 +261,15 @@ export function reducer(state: AppState, action: Action): AppState {
       nextList.splice(action.index, 1);
       return {
         ...state,
-        config: {
-          ...state.config,
-          [action.sectionKey]: nextList,
-        } as typeof state.config,
+        config: writeContainer(state.config, action.sectionKey, action.subkey, nextList),
       };
     }
     case 'list-instance/move-up':
     case 'list-instance/move-down': {
-      const cfg = state.config as unknown as Record<string, unknown>;
-      const list = (cfg[action.sectionKey] as Array<Record<string, unknown>> | undefined) ?? [];
+      const list =
+        (resolveContainer(state.config, action.sectionKey, action.subkey) as
+          | Array<Record<string, unknown>>
+          | undefined) ?? [];
       const target = action.type === 'list-instance/move-up' ? action.index - 1 : action.index + 1;
       if (action.index < 0 || action.index >= list.length) return state;
       if (target < 0 || target >= list.length) return state;
@@ -279,15 +277,14 @@ export function reducer(state: AppState, action: Action): AppState {
       [nextList[action.index], nextList[target]] = [nextList[target], nextList[action.index]];
       return {
         ...state,
-        config: {
-          ...state.config,
-          [action.sectionKey]: nextList,
-        } as typeof state.config,
+        config: writeContainer(state.config, action.sectionKey, action.subkey, nextList),
       };
     }
     case 'list-instance/move': {
-      const cfg = state.config as unknown as Record<string, unknown>;
-      const list = (cfg[action.sectionKey] as Array<Record<string, unknown>> | undefined) ?? [];
+      const list =
+        (resolveContainer(state.config, action.sectionKey, action.subkey) as
+          | Array<Record<string, unknown>>
+          | undefined) ?? [];
       if (action.from === action.to) return state;
       if (action.from < 0 || action.from >= list.length) return state;
       if (action.to < 0 || action.to >= list.length) return state;
@@ -296,10 +293,7 @@ export function reducer(state: AppState, action: Action): AppState {
       nextList.splice(action.to, 0, moved);
       return {
         ...state,
-        config: {
-          ...state.config,
-          [action.sectionKey]: nextList,
-        } as typeof state.config,
+        config: writeContainer(state.config, action.sectionKey, action.subkey, nextList),
       };
     }
   }
@@ -349,6 +343,43 @@ function shallowEqualInstance(
     if ((ao[k] ?? '') !== (bo[k] ?? '')) return false;
   }
   return true;
+}
+
+/** resolveContainer returns the object/array at config[sectionKey] when
+ *  subkey is empty, or at config[sectionKey][subkey] when set. Returns
+ *  undefined when the path doesn't exist or an intermediate isn't a map. */
+function resolveContainer(
+  config: Config,
+  sectionKey: string,
+  subkey: string | undefined,
+): unknown {
+  const cfg = config as unknown as Record<string, unknown>;
+  const top = cfg[sectionKey];
+  if (top === undefined || top === null) return undefined;
+  if (!subkey) return top;
+  if (typeof top !== 'object' || Array.isArray(top)) return undefined;
+  return (top as Record<string, unknown>)[subkey];
+}
+
+/** writeContainer returns a new Config where the value at
+ *  config[sectionKey] (subkey empty) OR config[sectionKey][subkey] (subkey set)
+ *  is replaced with `next`. Preserves sibling keys under sectionKey when
+ *  subkey is set. */
+function writeContainer(
+  config: Config,
+  sectionKey: string,
+  subkey: string | undefined,
+  next: unknown,
+): Config {
+  if (!subkey) {
+    return { ...config, [sectionKey]: next } as typeof config;
+  }
+  const cfg = config as unknown as Record<string, unknown>;
+  const prev = (cfg[sectionKey] as Record<string, unknown> | undefined) ?? {};
+  return {
+    ...config,
+    [sectionKey]: { ...prev, [subkey]: next },
+  } as typeof config;
 }
 
 function setField(config: Config, key: string, field: string, value: string): Config {
