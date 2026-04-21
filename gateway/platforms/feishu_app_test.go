@@ -236,3 +236,23 @@ func TestFeishuApp_SendReplyToSource(t *testing.T) {
 		t.Errorf("text = %q, want hi", calls[0].text)
 	}
 }
+
+func TestFeishuApp_SendReplyFallback(t *testing.T) {
+	sender := &fakeSender{}
+	fa := newFeishuAppForTest(nil, sender, "oc_default")
+
+	err := fa.SendReply(context.Background(), gateway.OutgoingMessage{
+		ChatID: "", // empty → fallback
+		Text:   "push",
+	})
+	if err != nil {
+		t.Fatalf("SendReply: %v", err)
+	}
+	calls := sender.recorded()
+	if len(calls) != 1 {
+		t.Fatalf("want 1 call, got %d", len(calls))
+	}
+	if calls[0].chatID != "oc_default" {
+		t.Errorf("chatID = %q, want oc_default", calls[0].chatID)
+	}
+}
