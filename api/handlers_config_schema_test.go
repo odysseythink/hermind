@@ -591,3 +591,103 @@ func keysOf(sections []api.ConfigSectionDTO) []string {
 	}
 	return out
 }
+
+func TestConfigSchema_EmitsSubkeyAndNoDiscriminator(t *testing.T) {
+	const key = "__test_schema_subkey"
+	descriptor.Register(descriptor.Section{
+		Key:             key,
+		Label:           "Subkey probe",
+		GroupID:         "runtime",
+		Shape:           descriptor.ShapeKeyedMap,
+		Subkey:          "servers",
+		NoDiscriminator: true,
+		Fields: []descriptor.FieldSpec{
+			{Name: "command", Label: "Command", Kind: descriptor.FieldString, Required: true},
+		},
+	})
+	t.Cleanup(func() { descriptor.Unregister(key) })
+
+	srv, err := api.NewServer(&api.ServerOpts{
+		Config: &config.Config{},
+		Token:  "test-token",
+	})
+	if err != nil {
+		t.Fatalf("NewServer: %v", err)
+	}
+	req := httptest.NewRequest("GET", "/api/config/schema", nil)
+	req.Header.Set("Authorization", "Bearer test-token")
+	w := httptest.NewRecorder()
+	srv.Router().ServeHTTP(w, req)
+	if w.Code != http.StatusOK {
+		t.Fatalf("status = %d", w.Code)
+	}
+	var body struct {
+		Sections []map[string]any `json:"sections"`
+	}
+	if err := json.Unmarshal(w.Body.Bytes(), &body); err != nil {
+		t.Fatalf("parse: %v", err)
+	}
+	var found map[string]any
+	for _, sec := range body.Sections {
+		if k, _ := sec["key"].(string); k == key {
+			found = sec
+			break
+		}
+	}
+	if found == nil {
+		t.Fatalf("seeded section %q not present in response", key)
+	}
+	if sk, _ := found["subkey"].(string); sk != "servers" {
+		t.Errorf("subkey = %q, want \"servers\"", sk)
+	}
+	if nd, _ := found["no_discriminator"].(bool); !nd {
+		t.Errorf("no_discriminator = %v, want true", found["no_discriminator"])
+	}
+}
+
+func TestConfigSchema_OmitsSubkeyAndNoDiscriminatorWhenUnset(t *testing.T) {
+	const key = "__test_schema_no_subkey"
+	descriptor.Register(descriptor.Section{
+		Key:     key,
+		Label:   "No-subkey probe",
+		GroupID: "runtime",
+		Shape:   descriptor.ShapeMap,
+		Fields: []descriptor.FieldSpec{
+			{Name: "f", Label: "F", Kind: descriptor.FieldString},
+		},
+	})
+	t.Cleanup(func() { descriptor.Unregister(key) })
+
+	srv, err := api.NewServer(&api.ServerOpts{
+		Config: &config.Config{},
+		Token:  "test-token",
+	})
+	if err != nil {
+		t.Fatalf("NewServer: %v", err)
+	}
+	req := httptest.NewRequest("GET", "/api/config/schema", nil)
+	req.Header.Set("Authorization", "Bearer test-token")
+	w := httptest.NewRecorder()
+	srv.Router().ServeHTTP(w, req)
+	var body struct {
+		Sections []map[string]any `json:"sections"`
+	}
+	_ = json.Unmarshal(w.Body.Bytes(), &body)
+	var found map[string]any
+	for _, sec := range body.Sections {
+		if k, _ := sec["key"].(string); k == key {
+			found = sec
+			break
+		}
+	}
+	if found == nil {
+		t.Fatalf("seeded section %q not present", key)
+	}
+	// Keys must be absent (omitempty) when unset, not present with zero values.
+	if _, has := found["subkey"]; has {
+		t.Errorf("subkey key should be omitted when empty; got %v", found["subkey"])
+	}
+	if _, has := found["no_discriminator"]; has {
+		t.Errorf("no_discriminator key should be omitted when false; got %v", found["no_discriminator"])
+	}
+}

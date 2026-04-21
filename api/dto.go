@@ -201,8 +201,10 @@ type ConfigSectionDTO struct {
 	Label   string           `json:"label"`
 	Summary string           `json:"summary,omitempty"`
 	GroupID string           `json:"group_id"`
-	Shape   string           `json:"shape,omitempty"` // "scalar" for scalar sections; omitted (= "map") for map sections
-	Fields  []ConfigFieldDTO `json:"fields"`
+	Shape           string           `json:"shape,omitempty"` // "scalar" for scalar sections; omitted (= "map") for map sections
+	Subkey          string           `json:"subkey,omitempty"`
+	NoDiscriminator bool             `json:"no_discriminator,omitempty"`
+	Fields          []ConfigFieldDTO `json:"fields"`
 }
 
 // ConfigSchemaResponse is the payload for GET /api/config/schema.

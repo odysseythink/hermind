@@ -43,12 +43,14 @@ func (s *Server) handleConfigSchema(w http.ResponseWriter, r *http.Request) {
 			fields = append(fields, dto)
 		}
 		out.Sections = append(out.Sections, ConfigSectionDTO{
-			Key:     sec.Key,
-			Label:   sec.Label,
-			Summary: sec.Summary,
-			GroupID: sec.GroupID,
-			Shape:   shapeString(sec.Shape),
-			Fields:  fields,
+			Key:             sec.Key,
+			Label:           sec.Label,
+			Summary:         sec.Summary,
+			GroupID:         sec.GroupID,
+			Shape:           shapeString(sec.Shape),
+			Subkey:          sec.Subkey,
+			NoDiscriminator: sec.NoDiscriminator,
+			Fields:          fields,
 		})
 	}
 	for i := range out.Sections {
