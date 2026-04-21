@@ -26,7 +26,7 @@ const MODEL_OPTIONS = ['', 'claude-opus-4-7', 'claude-sonnet-4-6', 'gpt-4'];
 export default function ChatWorkspace({ sessionId, onChangeSession, providerConfigured = true }: Props) {
   const { t } = useTranslation('ui');
   const [state, dispatch] = useReducer(chatReducer, initialChatState);
-  const { sessions, newSession, insertSession } = useSessionList();
+  const { sessions, newSession, insertSession, renameSession } = useSessionList();
   const [toast, setToast] = useState<string | null>(null);
 
   // Subscribe to SSE for the active session.
@@ -85,6 +85,21 @@ export default function ChatWorkspace({ sessionId, onChangeSession, providerConf
     }
   }
 
+  async function handleRename(id: string, title: string): Promise<void> {
+    try {
+      await apiFetch(`/api/sessions/${encodeURIComponent(id)}`, {
+        method: 'PATCH',
+        body: { title },
+      });
+      renameSession(id, title);
+    } catch (err) {
+      setToast(
+        t('chat.renameFailed', { msg: err instanceof Error ? err.message : '' }),
+      );
+      throw err; // let SessionItem reset its local draft
+    }
+  }
+
   async function handleStop() {
     if (!sessionId) return;
     try {
@@ -109,6 +124,7 @@ export default function ChatWorkspace({ sessionId, onChangeSession, providerConf
           const id = newSession();
           onChangeSession(id);
         }}
+        onRename={handleRename}
       />
       <main className={styles.main}>
         <ConversationHeader

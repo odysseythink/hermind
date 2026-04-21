@@ -89,6 +89,9 @@
 
   "chat.newConversation":    "+ New conversation",
   "chat.untitledConversation":"New conversation",
+  "chat.untitled":           "Untitled",
+  "chat.sidebar.doubleClickToRename":"Double-click to rename",
+  "chat.renameFailed":       "Rename failed: {{msg}}",
   "chat.placeholder":        "Type a message. Shift+Enter for newline.",
   "chat.placeholderNoProvider":"Configure a provider in Settings →",
   "chat.send":               "Send",

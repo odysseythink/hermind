@@ -88,6 +88,9 @@
 
   "chat.newConversation":    "+ 新建对话",
   "chat.untitledConversation":"新对话",
+  "chat.untitled":           "未命名",
+  "chat.sidebar.doubleClickToRename":"双击重命名",
+  "chat.renameFailed":       "重命名失败:{{msg}}",
   "chat.placeholder":        "输入消息。按 Shift+Enter 换行。",
   "chat.placeholderNoProvider":"请先在 设置 → 配置 Provider",
   "chat.send":               "发送",

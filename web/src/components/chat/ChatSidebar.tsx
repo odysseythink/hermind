@@ -8,13 +8,19 @@ type Props = {
   activeId: string | null;
   onSelect: (id: string) => void;
   onNew: () => void;
+  onRename: (id: string, title: string) => Promise<void> | void;
 };
 
-export default function ChatSidebar({ sessions, activeId, onSelect, onNew }: Props) {
+export default function ChatSidebar({ sessions, activeId, onSelect, onNew, onRename }: Props) {
   return (
     <aside className={styles.sidebar}>
       <NewChatButton onClick={onNew} />
-      <SessionList sessions={sessions} activeId={activeId} onSelect={onSelect} />
+      <SessionList
+        sessions={sessions}
+        activeId={activeId}
+        onSelect={onSelect}
+        onRename={onRename}
+      />
     </aside>
   );
 }
