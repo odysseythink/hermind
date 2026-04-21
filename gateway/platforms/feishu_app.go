@@ -82,7 +82,18 @@ func (fa *FeishuApp) Name() string { return "feishu" }
 // Run starts the long-connection event loop. It blocks until ctx is
 // cancelled or the stream errors out.
 func (fa *FeishuApp) Run(ctx context.Context, h gateway.MessageHandler) error {
-	return fmt.Errorf("feishu: Run not implemented yet")
+	if fa.stream == nil {
+		return fmt.Errorf("feishu: stream not initialised")
+	}
+	fa.mu.Lock()
+	fa.handler = h
+	fa.mu.Unlock()
+	defer func() {
+		fa.mu.Lock()
+		fa.handler = nil
+		fa.mu.Unlock()
+	}()
+	return fa.stream.Start(ctx)
 }
 
 // SendReply posts a text message to the target chat. When out.ChatID is

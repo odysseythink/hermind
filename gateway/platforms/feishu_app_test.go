@@ -5,6 +5,7 @@ import (
 	"encoding/json"
 	"strings"
 	"sync"
+	"time"
 	"testing"
 
 	larkim "github.com/larksuite/oapi-sdk-go/v3/service/im/v1"
@@ -273,5 +274,30 @@ func TestFeishuApp_SendReplyNoTarget(t *testing.T) {
 	}
 	if len(sender.recorded()) != 0 {
 		t.Errorf("sender should not have been called")
+	}
+}
+
+func TestFeishuApp_ContextCancels(t *testing.T) {
+	stream := &fakeStream{startCh: make(chan struct{})}
+	fa := newFeishuAppForTest(stream, &fakeSender{}, "")
+
+	ctx, cancel := context.WithCancel(context.Background())
+	done := make(chan error, 1)
+	go func() {
+		done <- fa.Run(ctx, func(ctx context.Context, in gateway.IncomingMessage) (*gateway.OutgoingMessage, error) {
+			return nil, nil
+		})
+	}()
+
+	<-stream.startCh // wait for stream.Start to be entered
+	cancel()
+
+	select {
+	case err := <-done:
+		if err == nil {
+			t.Fatal("Run should return a non-nil error on ctx cancel (ctx.Err())")
+		}
+	case <-time.After(2 * time.Second):
+		t.Fatal("Run did not return within 2s of ctx cancel")
 	}
 }
