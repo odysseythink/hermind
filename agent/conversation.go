@@ -6,6 +6,7 @@ import (
 	"errors"
 	"fmt"
 	"io"
+	"strings"
 	"time"
 
 	"github.com/odysseythink/hermind/config"
@@ -50,13 +51,22 @@ func (e *Engine) RunConversation(ctx context.Context, opts *RunOptions) (*Conver
 	}
 	systemPrompt := e.prompt.Build(&PromptOptions{Model: model, ActiveSkills: activeSkills})
 
-	// Persist the session + the incoming user message (if storage is configured)
+	// Persist the session + the incoming user message (if storage is configured).
+	// effectivePrompt starts as the freshly built prompt; if storage is configured
+	// we replace it with the stored (frozen at creation) prompt so later config
+	// changes don't leak into long-running sessions.
+	effectivePrompt := systemPrompt
 	if e.storage != nil {
-		if err := e.ensureSession(ctx, opts, systemPrompt, model); err != nil {
+		sess, created, err := e.ensureSession(ctx, opts, systemPrompt, opts.UserMessage, model)
+		if err != nil {
 			return nil, fmt.Errorf("engine: ensure session: %w", err)
 		}
+		effectivePrompt = sess.SystemPrompt
 		if err := e.persistMessage(ctx, opts.SessionID, &history[len(history)-1]); err != nil {
 			return nil, fmt.Errorf("engine: persist user message: %w", err)
+		}
+		if created && e.onSessionCreated != nil {
+			e.onSessionCreated(sess)
 		}
 	}
 
@@ -96,7 +106,7 @@ func (e *Engine) RunConversation(ctx context.Context, opts *RunOptions) (*Conver
 
 		req := &provider.Request{
 			Model:        model,
-			SystemPrompt: systemPrompt,
+			SystemPrompt: effectivePrompt,
 			Messages:     history,
 			Tools:        toolDefs,
 			MaxTokens:    4096,
@@ -263,23 +273,39 @@ func (e *Engine) executeToolCalls(ctx context.Context, calls []message.ContentBl
 	return results
 }
 
-// ensureSession creates a new session row if it doesn't exist yet.
-func (e *Engine) ensureSession(ctx context.Context, opts *RunOptions, systemPrompt, model string) error {
-	_, err := e.storage.GetSession(ctx, opts.SessionID)
-	if err == nil {
-		return nil
+// ensureSession creates a new session row if it doesn't exist. On new rows,
+// the stored system prompt is composed as `defaultPrompt + "\n\n" + firstMsg`
+// (frozen at creation) and title is DeriveTitle(firstMsg). Returns the session
+// (existing or freshly created) and a bool indicating whether this call
+// created it.
+func (e *Engine) ensureSession(
+	ctx context.Context,
+	opts *RunOptions,
+	defaultPrompt, firstMsg, model string,
+) (*storage.Session, bool, error) {
+	if s, err := e.storage.GetSession(ctx, opts.SessionID); err == nil {
+		return s, false, nil
+	} else if !errors.Is(err, storage.ErrNotFound) {
+		return nil, false, err
 	}
-	if !errors.Is(err, storage.ErrNotFound) {
-		return err
+
+	composed := defaultPrompt
+	if strings.TrimSpace(firstMsg) != "" {
+		composed = defaultPrompt + "\n\n" + firstMsg
 	}
-	return e.storage.CreateSession(ctx, &storage.Session{
+	s := &storage.Session{
 		ID:           opts.SessionID,
 		Source:       e.platform,
 		UserID:       opts.UserID,
 		Model:        model,
-		SystemPrompt: systemPrompt,
+		SystemPrompt: composed,
+		Title:        DeriveTitle(firstMsg),
 		StartedAt:    time.Now().UTC(),
-	})
+	}
+	if err := e.storage.CreateSession(ctx, s); err != nil {
+		return nil, false, err
+	}
+	return s, true, nil
 }
 
 // persistMessage writes a single message outside a transaction.

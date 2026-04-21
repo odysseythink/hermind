@@ -31,9 +31,10 @@ type Engine struct {
 	memory *MemoryManager
 
 	// Callbacks — optional. Nil means no-op.
-	onStreamDelta func(delta *provider.StreamDelta)
-	onToolStart   func(call message.ContentBlock)                // fired before tool execution
-	onToolResult  func(call message.ContentBlock, result string) // fired after
+	onStreamDelta    func(delta *provider.StreamDelta)
+	onToolStart      func(call message.ContentBlock)                // fired before tool execution
+	onToolResult     func(call message.ContentBlock, result string) // fired after
+	onSessionCreated func(*storage.Session)                         // fired on first ensureSession that creates a row
 
 	// activeSkills returns the skills whose bodies should be prepended to
 	// the system prompt. Called once per turn so the set can change as the
