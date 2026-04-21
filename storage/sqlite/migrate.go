@@ -2,11 +2,13 @@
 package sqlite
 
 import (
+	"database/sql"
 	"fmt"
 )
 
-// schemaSQL is the full initial schema. The schema is designed to match
-// the Python hermes state.db layout for compatibility.
+// schemaSQL is the full initial schema. Designed to match the Python hermes
+// state.db layout for compatibility. schema_meta tracks the applied version
+// so incremental migrations beyond v1 can run idempotently.
 const schemaSQL = `
 CREATE TABLE IF NOT EXISTS sessions (
     id TEXT PRIMARY KEY,
@@ -57,14 +59,12 @@ CREATE TABLE IF NOT EXISTS messages (
 CREATE INDEX IF NOT EXISTS idx_messages_session ON messages(session_id);
 CREATE INDEX IF NOT EXISTS idx_messages_timestamp ON messages(timestamp);
 
--- FTS5 full-text search over message content
 CREATE VIRTUAL TABLE IF NOT EXISTS messages_fts USING fts5(
     content,
     content='messages',
     content_rowid='id'
 );
 
--- Triggers to keep FTS index in sync with messages table
 CREATE TRIGGER IF NOT EXISTS messages_fts_insert AFTER INSERT ON messages BEGIN
     INSERT INTO messages_fts(rowid, content) VALUES (new.id, new.content);
 END;
@@ -110,14 +110,73 @@ CREATE TRIGGER IF NOT EXISTS memories_fts_update AFTER UPDATE ON memories BEGIN
     INSERT INTO memories_fts(memories_fts, rowid, content) VALUES ('delete', old.rowid, old.content);
     INSERT INTO memories_fts(rowid, content) VALUES (new.rowid, new.content);
 END;
+
+CREATE TABLE IF NOT EXISTS schema_meta (
+    key TEXT PRIMARY KEY,
+    value TEXT NOT NULL
+);
+INSERT OR IGNORE INTO schema_meta (key, value) VALUES ('version', '1');
 `
 
-// Migrate applies the schema to the database. Idempotent: safe to call
-// multiple times. Does NOT yet support incremental migrations beyond v1 —
-// future plans will add a migrations table.
+// currentSchemaVersion is the highest version this binary knows about. Any
+// stored version less than this triggers incremental migration steps in
+// Migrate(). When adding a new step, bump this constant AND add the matching
+// case in applyVersion.
+const currentSchemaVersion = 1
+
+// Migrate applies the base schema, then runs any versioned migration steps
+// up to currentSchemaVersion. Idempotent: safe to call on an up-to-date DB.
 func (s *Store) Migrate() error {
 	if _, err := s.db.Exec(schemaSQL); err != nil {
-		return fmt.Errorf("sqlite: migrate: %w", err)
+		return fmt.Errorf("sqlite: migrate base: %w", err)
 	}
-	return nil
+	for {
+		v, err := s.schemaVersion()
+		if err != nil {
+			return err
+		}
+		if v >= currentSchemaVersion {
+			return nil
+		}
+		if err := s.applyVersion(v + 1); err != nil {
+			return fmt.Errorf("sqlite: migrate v%d: %w", v+1, err)
+		}
+	}
 }
+
+func (s *Store) schemaVersion() (int, error) {
+	var raw string
+	err := s.db.QueryRow(
+		`SELECT value FROM schema_meta WHERE key = 'version'`,
+	).Scan(&raw)
+	if err != nil {
+		return 0, fmt.Errorf("sqlite: read schema version: %w", err)
+	}
+	var v int
+	if _, err := fmt.Sscanf(raw, "%d", &v); err != nil {
+		return 0, fmt.Errorf("sqlite: parse schema version %q: %w", raw, err)
+	}
+	return v, nil
+}
+
+// applyVersion dispatches to the step that bumps the DB from v-1 to v.
+// Runs in a single transaction so partial failures leave the version unchanged.
+func (s *Store) applyVersion(v int) error {
+	tx, err := s.db.Begin()
+	if err != nil {
+		return err
+	}
+	defer tx.Rollback()
+
+	switch v {
+	// Task 3 adds case 2.
+	default:
+		return fmt.Errorf("no migration step for v%d", v)
+	}
+	// Unreachable while currentSchemaVersion == 1.
+	_, _ = tx.Exec(`UPDATE schema_meta SET value = ? WHERE key = 'version'`, fmt.Sprintf("%d", v))
+	return tx.Commit()
+}
+
+// _ silences the sql import when applyVersion has no real cases yet.
+var _ = sql.ErrNoRows
