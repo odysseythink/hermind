@@ -174,6 +174,9 @@ func (e *Engine) RunConversation(ctx context.Context, opts *RunOptions) (*Conver
 // streamOnce runs a single provider stream and collects the full response.
 // Fires the onStreamDelta callback for each delta.
 func (e *Engine) streamOnce(ctx context.Context, req *provider.Request) (*provider.Response, error) {
+	if e.provider == nil {
+		return nil, errors.New("engine: no LLM provider configured — set one under Settings → Models → Providers")
+	}
 	stream, err := e.provider.Stream(ctx, req)
 	if err != nil {
 		return nil, fmt.Errorf("engine: start stream: %w", err)

@@ -48,7 +48,13 @@ func runWeb(ctx context.Context, app *App, opts webRunOptions) error {
 	}
 
 	ctrl := gatewayctl.New(app.Config, func(cfg config.Config) (*gateway.Gateway, error) {
-		return BuildGateway(BuildGatewayDeps{Config: cfg})
+		return BuildGateway(BuildGatewayDeps{
+			Config:  cfg,
+			Primary: deps.Provider,
+			Aux:     deps.AuxProvider,
+			Storage: deps.Storage,
+			Tools:   deps.ToolReg,
+		})
 	})
 	if err := ctrl.Start(ctx); err != nil {
 		return fmt.Errorf("web: start gateway controller: %w", err)
