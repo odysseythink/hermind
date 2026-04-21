@@ -3,6 +3,11 @@ import styles from './AdvancedSidebar.module.css';
 export interface AdvancedSidebarProps {
   activeSubKey: string | null;
   onSelectScalar: (key: string) => void;
+  // MCP
+  mcpInstances: Array<{ key: string; command: string; enabled: boolean }>;
+  dirtyMcpKeys: Set<string>;
+  onSelectMcp: (key: string) => void;
+  onAddMcpServer: () => void;
   // Cron
   cronJobs: Array<{ name: string; schedule: string }>;
   dirtyCronIndices: Set<number>;
@@ -15,6 +20,10 @@ export interface AdvancedSidebarProps {
 export default function AdvancedSidebar({
   activeSubKey,
   onSelectScalar,
+  mcpInstances,
+  dirtyMcpKeys,
+  onSelectMcp,
+  onAddMcpServer,
   cronJobs,
   dirtyCronIndices,
   activeCronIndex,
@@ -30,6 +39,33 @@ export default function AdvancedSidebar({
         onClick={() => onSelectScalar('browser')}
       >
         Browser
+      </button>
+
+      <div className={styles.groupHeader}>MCP servers</div>
+      {mcpInstances.length === 0 && (
+        <div className={styles.empty}>No MCP servers configured.</div>
+      )}
+      {mcpInstances.map(inst => {
+        const active = activeSubKey === `mcp:${inst.key}`;
+        return (
+          <button
+            key={inst.key}
+            type="button"
+            className={`${styles.mcpRow} ${active ? styles.active : ''} ${!inst.enabled ? styles.disabled : ''}`}
+            onClick={() => onSelectMcp(inst.key)}
+          >
+            <span className={styles.mcpRowInner}>
+              <span className={styles.mcpName}>{inst.key}</span>
+              {dirtyMcpKeys.has(inst.key) && (
+                <span className={styles.dirtyDot} title="Unsaved changes" />
+              )}
+            </span>
+            <span className={styles.mcpCommand}>{inst.command || '(no command)'}</span>
+          </button>
+        );
+      })}
+      <button type="button" className={styles.newBtn} onClick={onAddMcpServer}>
+        + Add MCP server
       </button>
 
       <div className={styles.groupHeader}>Cron jobs</div>

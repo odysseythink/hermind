@@ -10,6 +10,10 @@ function baseProps(
   return {
     activeSubKey: null,
     onSelectScalar: vi.fn(),
+    mcpInstances: [],
+    dirtyMcpKeys: new Set<string>(),
+    onSelectMcp: vi.fn(),
+    onAddMcpServer: vi.fn(),
     cronJobs: [],
     dirtyCronIndices: new Set<number>(),
     activeCronIndex: null,
@@ -163,5 +167,91 @@ describe('AdvancedSidebar', () => {
     expect(onMoveCron).toHaveBeenCalledWith(0, 'down');
     await userEvent.click(screen.getAllByRole('button', { name: /move up/i })[1]);
     expect(onMoveCron).toHaveBeenCalledWith(1, 'up');
+  });
+
+  // MCP servers section
+  it('shows empty state when mcpInstances is empty', () => {
+    render(<AdvancedSidebar {...baseProps({ mcpInstances: [] })} />);
+    expect(screen.getByText(/no mcp servers configured/i)).toBeInTheDocument();
+  });
+
+  it('renders each MCP instance with key and command', () => {
+    render(
+      <AdvancedSidebar
+        {...baseProps({
+          mcpInstances: [
+            { key: 'filesystem', command: 'npx', enabled: true },
+            { key: 'github', command: '/usr/local/bin/mcp-github', enabled: false },
+          ],
+        })}
+      />,
+    );
+    expect(screen.getByText('filesystem')).toBeInTheDocument();
+    expect(screen.getByText('npx')).toBeInTheDocument();
+    expect(screen.getByText('github')).toBeInTheDocument();
+    expect(screen.getByText('/usr/local/bin/mcp-github')).toBeInTheDocument();
+  });
+
+  it('shows "(no command)" when command is empty', () => {
+    render(
+      <AdvancedSidebar
+        {...baseProps({
+          mcpInstances: [{ key: 'empty-cmd', command: '', enabled: true }],
+        })}
+      />,
+    );
+    expect(screen.getByText('(no command)')).toBeInTheDocument();
+  });
+
+  it('renders dirty dot for dirty MCP keys', () => {
+    render(
+      <AdvancedSidebar
+        {...baseProps({
+          mcpInstances: [
+            { key: 'fs', command: 'npx', enabled: true },
+            { key: 'gh', command: 'npx', enabled: true },
+          ],
+          dirtyMcpKeys: new Set(['gh']),
+        })}
+      />,
+    );
+    const dots = document.querySelectorAll('[title="Unsaved changes"]');
+    // At least 1 dirty dot for the mcp section (cron has none here)
+    expect(dots.length).toBeGreaterThanOrEqual(1);
+  });
+
+  it('clicking an MCP row calls onSelectMcp with the key', async () => {
+    const onSelectMcp = vi.fn();
+    render(
+      <AdvancedSidebar
+        {...baseProps({
+          mcpInstances: [{ key: 'filesystem', command: 'npx', enabled: true }],
+          onSelectMcp,
+        })}
+      />,
+    );
+    await userEvent.click(screen.getByText('filesystem'));
+    expect(onSelectMcp).toHaveBeenCalledWith('filesystem');
+  });
+
+  it('MCP row is active when activeSubKey matches mcp:<key>', () => {
+    render(
+      <AdvancedSidebar
+        {...baseProps({
+          mcpInstances: [{ key: 'filesystem', command: 'npx', enabled: true }],
+          activeSubKey: 'mcp:filesystem',
+        })}
+      />,
+    );
+    // The row button containing 'filesystem' should have the active class
+    const btn = screen.getByText('filesystem').closest('button');
+    expect(btn?.className).toMatch(/active/);
+  });
+
+  it('"Add MCP server" button calls onAddMcpServer', async () => {
+    const onAddMcpServer = vi.fn();
+    render(<AdvancedSidebar {...baseProps({ onAddMcpServer })} />);
+    await userEvent.click(screen.getByRole('button', { name: /add mcp server/i }));
+    expect(onAddMcpServer).toHaveBeenCalled();
   });
 });

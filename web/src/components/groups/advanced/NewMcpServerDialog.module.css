@@ -1,0 +1,77 @@
+.overlay {
+  position: fixed;
+  inset: 0;
+  background: rgba(0, 0, 0, 0.5);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 100;
+}
+
+.panel {
+  background: var(--surface, #14171c);
+  border: 1px solid var(--border, #30363d);
+  border-radius: 6px;
+  padding: 20px 24px;
+  min-width: 360px;
+  color: var(--text, #c9d1d9);
+}
+
+.panel h2 {
+  margin: 0 0 16px;
+  font-size: 16px;
+  font-weight: 600;
+}
+
+.row {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  font-size: 12px;
+  color: var(--muted, #8b949e);
+  margin-bottom: 8px;
+}
+
+.row input {
+  padding: 6px 8px;
+  background: var(--bg, #0b0d11);
+  border: 1px solid var(--border, #30363d);
+  border-radius: 3px;
+  color: var(--text, #c9d1d9);
+  font-size: 13px;
+}
+
+.err {
+  margin: 4px 0 8px;
+  font-size: 11px;
+  color: var(--error, #f85149);
+}
+
+.actions {
+  display: flex;
+  justify-content: flex-end;
+  gap: 8px;
+  margin-top: 16px;
+}
+
+.actions button {
+  padding: 6px 14px;
+  border-radius: 3px;
+  cursor: pointer;
+  font-size: 13px;
+  font-weight: 600;
+  border: 1px solid var(--border, #30363d);
+  background: transparent;
+  color: var(--text, #c9d1d9);
+}
+
+.actions button:last-child {
+  background: var(--accent, #FFB800);
+  border: 0;
+  color: var(--accent-fg, #111827);
+}
+
+.actions button:disabled {
+  opacity: 0.4;
+  cursor: not-allowed;
+}
