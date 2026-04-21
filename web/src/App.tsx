@@ -200,6 +200,14 @@ export default function App() {
     return out;
   }, [state.config, state.originalConfig]);
 
+  const sectionSubkey = useMemo(() => {
+    const m = new Map<string, string | undefined>();
+    for (const s of state.configSections) {
+      m.set(s.key, s.subkey);
+    }
+    return (sectionKey: string): string | undefined => m.get(sectionKey);
+  }, [state.configSections]);
+
   const [newProviderDialogOpen, setNewProviderDialogOpen] = useState(false);
 
   const onFetchProviderModels = useCallback(async (instanceKey: string) => {
@@ -381,34 +389,31 @@ export default function App() {
             dispatch({ type: 'edit/config-scalar', sectionKey, value })
           }
           onConfigKeyedField={(sectionKey, instanceKey, field, value) => {
-            const section = state.configSections.find(s => s.key === sectionKey);
-            dispatch({ type: 'edit/keyed-instance-field', sectionKey, subkey: section?.subkey, instanceKey, field, value });
+            dispatch({ type: 'edit/keyed-instance-field', sectionKey, subkey: sectionSubkey(sectionKey), instanceKey, field, value });
           }}
           onConfigKeyedDelete={(sectionKey, instanceKey) => {
-            const section = state.configSections.find(s => s.key === sectionKey);
-            dispatch({ type: 'keyed-instance/delete', sectionKey, subkey: section?.subkey, instanceKey });
+            dispatch({ type: 'keyed-instance/delete', sectionKey, subkey: sectionSubkey(sectionKey), instanceKey });
             dispatch({ type: 'shell/selectSub', key: null });
           }}
           onFetchModels={onFetchProviderModels}
           onFetchFallbackModels={onFetchFallbackModels}
           onConfigListField={(sectionKey, index, field, value) => {
-            const section = state.configSections.find(s => s.key === sectionKey);
-            dispatch({ type: 'edit/list-instance-field', sectionKey, subkey: section?.subkey, index, field, value });
+            dispatch({ type: 'edit/list-instance-field', sectionKey, subkey: sectionSubkey(sectionKey), index, field, value });
           }}
           onConfigListDelete={(sectionKey, index) => {
-            const section = state.configSections.find(s => s.key === sectionKey);
-            dispatch({ type: 'list-instance/delete', sectionKey, subkey: section?.subkey, index });
+            dispatch({ type: 'list-instance/delete', sectionKey, subkey: sectionSubkey(sectionKey), index });
             dispatch({ type: 'shell/selectSub', key: null });
           }}
           onConfigListMove={(sectionKey, index, direction) => {
-            const section = state.configSections.find(s => s.key === sectionKey);
             dispatch({
               type: direction === 'up' ? 'list-instance/move-up' : 'list-instance/move-down',
               sectionKey,
-              subkey: section?.subkey,
+              subkey: sectionSubkey(sectionKey),
               index,
             });
             const newIndex = direction === 'up' ? index - 1 : index + 1;
+            // fallback_providers uses the shorter "fallback:N" sub-key prefix (legacy
+            // from stage-4c). All new list-shaped sections use "${sectionKey}:N".
             const prefix = sectionKey === 'fallback_providers' ? 'fallback:' : `${sectionKey}:`;
             dispatch({ type: 'shell/selectSub', key: `${prefix}${newIndex}` });
           }}
