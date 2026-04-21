@@ -2,6 +2,7 @@ import { useState } from 'react';
 import styles from './TestConnection.module.css';
 import { apiFetch, ApiError } from '../api/client';
 import { PlatformTestResponseSchema } from '../api/schemas';
+import { useTranslation } from 'react-i18next';
 
 export interface TestConnectionProps {
   instanceKey: string;
@@ -16,6 +17,7 @@ type Result =
   | { kind: 'warn'; msg: string };
 
 export default function TestConnection({ instanceKey, dirty }: TestConnectionProps) {
+  const { t } = useTranslation('ui');
   const [result, setResult] = useState<Result>({ kind: 'idle' });
 
   async function runProbe() {
@@ -32,10 +34,7 @@ export default function TestConnection({ instanceKey, dirty }: TestConnectionPro
       }
     } catch (e) {
       if (e instanceof ApiError && e.status === 501) {
-        setResult({
-          kind: 'warn',
-          msg: 'no probe for this platform type',
-        });
+        setResult({ kind: 'warn', msg: t('status.connectionProbeMissing') });
         return;
       }
       setResult({ kind: 'err', msg: toMsg(e) });
@@ -49,22 +48,22 @@ export default function TestConnection({ instanceKey, dirty }: TestConnectionPro
         className={styles.btn}
         onClick={runProbe}
         disabled={result.kind === 'busy' || dirty}
-        title={dirty ? 'Save changes first — probe uses on-disk config' : undefined}
+        title={dirty ? t('status.saveBeforeProbe') : undefined}
       >
-        {result.kind === 'busy' ? 'Testing…' : 'Test connection'}
+        {result.kind === 'busy' ? t('action.testing') : t('action.test')}
       </button>
-      {renderResult(result)}
+      {renderResult(result, t)}
     </div>
   );
 }
 
-function renderResult(r: Result) {
+function renderResult(r: Result, t: (k: string) => string) {
   if (r.kind === 'idle' || r.kind === 'busy') return null;
   if (r.kind === 'ok') {
     return (
       <span className={`${styles.result} ${styles.resultOk}`}>
         <span className={`${styles.dot} ${styles.dotOk}`} />
-        connected
+        {t('status.connected')}
       </span>
     );
   }

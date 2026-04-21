@@ -1,4 +1,5 @@
 import { useCallback, useEffect, useMemo, useReducer, useState } from 'react';
+import { useTranslation } from 'react-i18next';
 import { apiFetch, ApiError } from './api/client';
 import {
   ApplyResultSchema,
@@ -28,6 +29,7 @@ import NewProviderDialog from './components/groups/models/NewProviderDialog';
 import NewMcpServerDialog from './components/groups/advanced/NewMcpServerDialog';
 
 export default function App() {
+  const { t } = useTranslation('ui');
   const [state, dispatch] = useReducer(reducer, initialState);
   const [newDialogOpen, setNewDialogOpen] = useState(false);
 
@@ -58,7 +60,7 @@ export default function App() {
         });
       } catch (err) {
         if (ctrl.signal.aborted) return;
-        const msg = err instanceof Error ? err.message : 'boot failed';
+        const msg = err instanceof Error ? err.message : t('status.bootFailed');
         dispatch({ type: 'boot/failed', error: msg });
       }
     })();
@@ -295,12 +297,12 @@ export default function App() {
   }, []);
 
   if (state.status === 'booting') {
-    return <div style={{ padding: '2rem' }}>Loading…</div>;
+    return <div style={{ padding: '2rem' }}>{t('status.loading')}</div>;
   }
   if (state.status === 'error' && state.descriptors.length === 0) {
     return (
       <div style={{ padding: '2rem', color: 'var(--error)' }}>
-        Boot failed: {state.flash?.msg ?? 'unknown error'}
+        {t('status.bootFailedPrefix')} {state.flash?.msg ?? t('status.unknownError')}
       </div>
     );
   }

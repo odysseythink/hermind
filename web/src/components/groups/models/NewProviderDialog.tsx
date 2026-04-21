@@ -1,6 +1,7 @@
 import { useEffect, useRef, useState } from 'react';
 import type React from 'react';
 import styles from './NewProviderDialog.module.css';
+import { useTranslation } from 'react-i18next';
 
 export interface NewProviderDialogProps {
   providerTypes: readonly string[];
@@ -17,6 +18,7 @@ export default function NewProviderDialog({
   onCancel,
   onCreate,
 }: NewProviderDialogProps) {
+  const { t } = useTranslation('ui');
   const dialogRef = useRef<HTMLDialogElement>(null);
   const [key, setKey] = useState('');
   const [providerType, setProviderType] = useState(providerTypes[0] ?? '');
@@ -25,15 +27,8 @@ export default function NewProviderDialog({
   useEffect(() => {
     const d = dialogRef.current;
     if (!d) return;
-    // showModal() is the native way to open a <dialog>; jsdom does not
-    // always implement it, so we also set `open` manually to keep the
-    // dialog's children in the accessibility tree for testing.
     if (typeof d.showModal === 'function') {
-      try {
-        d.showModal();
-      } catch {
-        d.setAttribute('open', '');
-      }
+      try { d.showModal(); } catch { d.setAttribute('open', ''); }
     } else {
       d.setAttribute('open', '');
     }
@@ -43,19 +38,19 @@ export default function NewProviderDialog({
     e.preventDefault();
     const trimmed = key.trim();
     if (!trimmed) {
-      setKeyError('Instance key is required.');
+      setKeyError(t('error.keyRequired'));
       return;
     }
     if (!KEY_REGEX.test(trimmed)) {
-      setKeyError('Use lowercase letters, digits, underscore. Must start with a letter.');
+      setKeyError(t('error.keyFormat'));
       return;
     }
     if (existingKeys.has(trimmed)) {
-      setKeyError(`An instance named "${trimmed}" already exists.`);
+      setKeyError(t('error.keyDuplicate', { key: trimmed }));
       return;
     }
     if (!providerType) {
-      setKeyError('Pick a provider type.');
+      setKeyError(t('error.providerTypeRequired'));
       return;
     }
     onCreate(trimmed, providerType);
@@ -65,29 +60,24 @@ export default function NewProviderDialog({
     <dialog
       ref={dialogRef}
       className={styles.dialog}
-      onCancel={e => {
-        e.preventDefault();
-        onCancel();
-      }}
+      onCancel={e => { e.preventDefault(); onCancel(); }}
       onClose={() => onCancel()}
     >
       <form onSubmit={onSubmit}>
         <header className={styles.header}>
-          <h2 className={styles.title}>New provider</h2>
+          <h2 className={styles.title}>{t('dialog.newProvider.title')}</h2>
           <span className={styles.spacer} />
           <button
             type="button"
             className={styles.close}
             onClick={onCancel}
-            aria-label="Close"
-          >
-            ✕
-          </button>
+            aria-label={t('action.close')}
+          >✕</button>
         </header>
         <div className={styles.body}>
           <div className={styles.field}>
             <label className={styles.label} htmlFor="new-provider-type">
-              Provider type
+              {t('dialog.newProvider.type')}
             </label>
             <select
               id="new-provider-type"
@@ -95,16 +85,14 @@ export default function NewProviderDialog({
               value={providerType}
               onChange={e => setProviderType(e.currentTarget.value)}
             >
-              {providerTypes.map(t => (
-                <option key={t} value={t}>
-                  {t}
-                </option>
+              {providerTypes.map(tp => (
+                <option key={tp} value={tp}>{tp}</option>
               ))}
             </select>
           </div>
           <div className={styles.field}>
             <label className={styles.label} htmlFor="new-provider-key">
-              Instance key
+              {t('dialog.newInstance.key')}
             </label>
             <input
               id="new-provider-key"
@@ -117,9 +105,7 @@ export default function NewProviderDialog({
                 setKeyError(null);
               }}
             />
-            <span className={styles.hint}>
-              Identifier under <code>providers.*</code>. Lowercase, underscores.
-            </span>
+            <span className={styles.hint}>{t('dialog.newProvider.hint')}</span>
             {keyError && <span className={styles.error}>{keyError}</span>}
           </div>
         </div>
@@ -128,16 +114,12 @@ export default function NewProviderDialog({
             type="button"
             className={`${styles.btn} ${styles.secondary}`}
             onClick={onCancel}
-          >
-            Cancel
-          </button>
+          >{t('action.cancel')}</button>
           <span className={styles.footerSpacer} />
           <button
             type="submit"
             className={`${styles.btn} ${styles.primary}`}
-          >
-            Create
-          </button>
+          >{t('action.create')}</button>
         </footer>
       </form>
     </dialog>

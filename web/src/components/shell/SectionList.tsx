@@ -1,6 +1,8 @@
 import styles from './SectionList.module.css';
 import { findGroup, type GroupId } from '../../shell/groups';
 import type { ConfigSection } from '../../api/schemas';
+import { useTranslation } from 'react-i18next';
+import { useDescriptorT } from '../../i18n/useDescriptorT';
 
 export interface SectionListProps {
   group: GroupId;
@@ -15,11 +17,13 @@ export default function SectionList({
   activeSubKey,
   onSelect,
 }: SectionListProps) {
+  const { t } = useTranslation('ui');
+  const dt = useDescriptorT();
   if (sections.length === 0) {
     const def = findGroup(group);
     return (
       <div className={styles.comingSoon}>
-        Coming soon — stage {def.plannedStage}
+        {t('empty.sectionComingSoon', { stage: def.plannedStage })}
       </div>
     );
   }
@@ -35,7 +39,7 @@ export default function SectionList({
             aria-current={active ? 'true' : undefined}
             onClick={() => onSelect(s.key)}
           >
-            {s.label}
+            {dt.sectionLabel(s.key, s.label)}
           </button>
         );
       })}

@@ -1,6 +1,8 @@
 import type { ReactNode } from 'react';
 import styles from './GroupSection.module.css';
 import { findGroup, type GroupId } from '../../shell/groups';
+import { useTranslation } from 'react-i18next';
+import { useDescriptorT } from '../../i18n/useDescriptorT';
 
 export interface GroupSectionProps {
   group: GroupId;
@@ -22,12 +24,15 @@ export default function GroupSection({
   onSelectGroup,
 }: GroupSectionProps) {
   const def = findGroup(group);
+  const { t } = useTranslation('ui');
+  const dt = useDescriptorT();
+  const label = dt.groupLabel(def.id, def.label);
   return (
     <div className={styles.section}>
       <div className={styles.header}>
         <button
           type="button"
-          aria-label={`toggle ${def.label}`}
+          aria-label={t('sidebar.toggle', { group: label })}
           className={styles.toggle}
           onClick={onToggle}
         >
@@ -38,9 +43,9 @@ export default function GroupSection({
           className={`${styles.label} ${active ? styles.active : ''}`}
           onClick={() => onSelectGroup(group)}
         >
-          {def.label}
+          {label}
         </button>
-        {dirty && <span className={styles.dirtyDot} title="Unsaved changes" />}
+        {dirty && <span className={styles.dirtyDot} title={t('empty.unsaved')} />}
       </div>
       {expanded && (
         <div className={styles.children}>

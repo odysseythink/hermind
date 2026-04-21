@@ -1,14 +1,18 @@
 import styles from './EmptyState.module.css';
 import { GROUPS, type GroupId } from '../../shell/groups';
+import { useTranslation } from 'react-i18next';
+import { useDescriptorT } from '../../i18n/useDescriptorT';
 
 export interface EmptyStateProps {
   onSelectGroup: (id: GroupId) => void;
 }
 
 export default function EmptyState({ onSelectGroup }: EmptyStateProps) {
+  const { t } = useTranslation('ui');
+  const dt = useDescriptorT();
   return (
     <section className={styles.empty}>
-      <h2 className={styles.title}>Select a configuration section</h2>
+      <h2 className={styles.title}>{t('empty.title')}</h2>
       <div className={styles.grid}>
         {GROUPS.map(g => (
           <button
@@ -17,10 +21,12 @@ export default function EmptyState({ onSelectGroup }: EmptyStateProps) {
             className={styles.card}
             onClick={() => onSelectGroup(g.id)}
           >
-            <div className={styles.cardLabel}>{g.label}</div>
-            <div className={styles.cardDesc}>{g.description}</div>
+            <div className={styles.cardLabel}>{dt.groupLabel(g.id, g.label)}</div>
+            <div className={styles.cardDesc}>{t(`group.${g.id}.description`)}</div>
             <span className={styles.cardStage}>
-              {g.plannedStage === 'done' ? 'available' : `stage ${g.plannedStage}`}
+              {g.plannedStage === 'done'
+                ? t('empty.available')
+                : t('empty.stage', { stage: g.plannedStage })}
             </span>
           </button>
         ))}

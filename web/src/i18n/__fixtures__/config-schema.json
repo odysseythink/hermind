@@ -1,0 +1,792 @@
+[
+  {
+    "key": "agent",
+    "label": "Agent",
+    "summary": "Engine turn limit and gateway request budget.",
+    "group_id": "runtime",
+    "fields": [
+      {
+        "name": "max_turns",
+        "label": "Max turns",
+        "help": "Maximum model turns per user request before the engine bails out.",
+        "kind": "int",
+        "required": true,
+        "default": 90
+      },
+      {
+        "name": "gateway_timeout",
+        "label": "Gateway timeout (seconds)",
+        "help": "Seconds a gateway request may run before being cancelled. 0 uses the gateway default.",
+        "kind": "int",
+        "default": 1800
+      }
+    ]
+  },
+  {
+    "key": "auxiliary",
+    "label": "Auxiliary provider",
+    "summary": "Secondary provider for compression, vision, and background tasks. Leave all fields blank to reuse the main provider.",
+    "group_id": "runtime",
+    "fields": [
+      {
+        "name": "provider",
+        "label": "Provider",
+        "help": "Provider factory. Leave blank to reuse the main provider.",
+        "kind": "enum",
+        "enum": [
+          "anthropic",
+          "bedrock",
+          "copilot",
+          "deepseek",
+          "kimi",
+          "minimax",
+          "openai",
+          "openrouter",
+          "qwen",
+          "wenxin",
+          "zhipu"
+        ]
+      },
+      {
+        "name": "base_url",
+        "label": "Base URL",
+        "kind": "string"
+      },
+      {
+        "name": "api_key",
+        "label": "API key",
+        "kind": "secret"
+      },
+      {
+        "name": "model",
+        "label": "Model",
+        "help": "Provider-qualified id; optional — falls back to the main provider's default.",
+        "kind": "string"
+      }
+    ]
+  },
+  {
+    "key": "browser",
+    "label": "Browser",
+    "summary": "Browser automation provider. Leave blank for no browser integration.",
+    "group_id": "advanced",
+    "fields": [
+      {
+        "name": "provider",
+        "label": "Provider",
+        "help": "Browser automation backend. Leave blank to disable.",
+        "kind": "enum",
+        "enum": [
+          "",
+          "browserbase",
+          "camofox"
+        ]
+      },
+      {
+        "name": "browserbase.base_url",
+        "label": "Browserbase base URL",
+        "kind": "string",
+        "visible_when": {
+          "field": "provider",
+          "equals": "browserbase"
+        }
+      },
+      {
+        "name": "browserbase.api_key",
+        "label": "Browserbase API key",
+        "help": "Env var BROWSERBASE_API_KEY overrides this value at runtime.",
+        "kind": "secret",
+        "visible_when": {
+          "field": "provider",
+          "equals": "browserbase"
+        }
+      },
+      {
+        "name": "browserbase.project_id",
+        "label": "Browserbase project ID",
+        "help": "Env var BROWSERBASE_PROJECT_ID overrides this value at runtime.",
+        "kind": "string",
+        "visible_when": {
+          "field": "provider",
+          "equals": "browserbase"
+        }
+      },
+      {
+        "name": "browserbase.keep_alive",
+        "label": "Keep session alive",
+        "kind": "bool",
+        "visible_when": {
+          "field": "provider",
+          "equals": "browserbase"
+        }
+      },
+      {
+        "name": "browserbase.proxies",
+        "label": "Enable Browserbase proxies",
+        "kind": "bool",
+        "visible_when": {
+          "field": "provider",
+          "equals": "browserbase"
+        }
+      },
+      {
+        "name": "camofox.base_url",
+        "label": "Camofox base URL",
+        "help": "Defaults to http://localhost:9377 when blank.",
+        "kind": "string",
+        "visible_when": {
+          "field": "provider",
+          "equals": "camofox"
+        }
+      },
+      {
+        "name": "camofox.managed_persistence",
+        "label": "Managed persistence",
+        "kind": "bool",
+        "visible_when": {
+          "field": "provider",
+          "equals": "camofox"
+        }
+      }
+    ]
+  },
+  {
+    "key": "cron",
+    "label": "Cron jobs",
+    "summary": "Scheduled prompts that run on a recurring schedule.",
+    "group_id": "advanced",
+    "shape": "list",
+    "subkey": "jobs",
+    "no_discriminator": true,
+    "fields": [
+      {
+        "name": "name",
+        "label": "Name",
+        "help": "Stable identifier for this job.",
+        "kind": "string",
+        "required": true
+      },
+      {
+        "name": "schedule",
+        "label": "Schedule",
+        "help": "Cron expression or \"every 5m\" / \"every 1h\" shorthand.",
+        "kind": "string",
+        "required": true
+      },
+      {
+        "name": "prompt",
+        "label": "Prompt",
+        "help": "Prompt text to send. For long prompts, edit YAML directly.",
+        "kind": "string",
+        "required": true
+      },
+      {
+        "name": "model",
+        "label": "Model override",
+        "help": "Leave blank to use the default model.",
+        "kind": "string",
+        "datalist_source": {
+          "section": "providers",
+          "field": "model"
+        }
+      }
+    ]
+  },
+  {
+    "key": "fallback_providers",
+    "label": "Fallback Providers",
+    "summary": "Ordered list of providers tried in turn when the primary fails.",
+    "group_id": "models",
+    "shape": "list",
+    "fields": [
+      {
+        "name": "provider",
+        "label": "Provider type",
+        "kind": "enum",
+        "required": true,
+        "enum": [
+          "anthropic",
+          "bedrock",
+          "copilot",
+          "deepseek",
+          "kimi",
+          "minimax",
+          "openai",
+          "openrouter",
+          "qwen",
+          "wenxin",
+          "zhipu"
+        ]
+      },
+      {
+        "name": "base_url",
+        "label": "Base URL",
+        "kind": "string"
+      },
+      {
+        "name": "api_key",
+        "label": "API key",
+        "kind": "secret",
+        "required": true
+      },
+      {
+        "name": "model",
+        "label": "Model",
+        "help": "Optional — provider-qualified id used when this fallback is active.",
+        "kind": "string"
+      }
+    ]
+  },
+  {
+    "key": "logging",
+    "label": "Logging",
+    "summary": "slog output level for the hermind process.",
+    "group_id": "observability",
+    "fields": [
+      {
+        "name": "level",
+        "label": "Level",
+        "help": "Minimum log level emitted to stderr.",
+        "kind": "enum",
+        "default": "info",
+        "enum": [
+          "debug",
+          "info",
+          "warn",
+          "error"
+        ]
+      }
+    ]
+  },
+  {
+    "key": "mcp",
+    "label": "MCP servers",
+    "summary": "Model Context Protocol servers launched on CLI/gateway startup.",
+    "group_id": "advanced",
+    "shape": "keyed_map",
+    "subkey": "servers",
+    "no_discriminator": true,
+    "fields": [
+      {
+        "name": "command",
+        "label": "Command",
+        "help": "Executable to run, e.g. \"npx\" or a full path.",
+        "kind": "string",
+        "required": true
+      },
+      {
+        "name": "enabled",
+        "label": "Enabled",
+        "help": "Disabled servers never start. Delete the entry to remove it entirely. Edit config.yaml directly to configure args/env.",
+        "kind": "bool"
+      }
+    ]
+  },
+  {
+    "key": "memory",
+    "label": "Memory",
+    "summary": "Optional external long-term memory provider. Leave blank for no external memory.",
+    "group_id": "memory",
+    "fields": [
+      {
+        "name": "provider",
+        "label": "Provider",
+        "help": "External memory backend. Leave blank for no external memory.",
+        "kind": "enum",
+        "enum": [
+          "",
+          "honcho",
+          "mem0",
+          "supermemory",
+          "hindsight",
+          "retaindb",
+          "openviking",
+          "byterover",
+          "holographic"
+        ]
+      },
+      {
+        "name": "honcho.base_url",
+        "label": "Honcho base URL",
+        "kind": "string",
+        "visible_when": {
+          "field": "provider",
+          "equals": "honcho"
+        }
+      },
+      {
+        "name": "honcho.api_key",
+        "label": "Honcho API key",
+        "kind": "secret",
+        "visible_when": {
+          "field": "provider",
+          "equals": "honcho"
+        }
+      },
+      {
+        "name": "honcho.workspace",
+        "label": "Honcho workspace",
+        "kind": "string",
+        "visible_when": {
+          "field": "provider",
+          "equals": "honcho"
+        }
+      },
+      {
+        "name": "honcho.peer",
+        "label": "Honcho peer",
+        "kind": "string",
+        "visible_when": {
+          "field": "provider",
+          "equals": "honcho"
+        }
+      },
+      {
+        "name": "mem0.base_url",
+        "label": "Mem0 base URL",
+        "kind": "string",
+        "visible_when": {
+          "field": "provider",
+          "equals": "mem0"
+        }
+      },
+      {
+        "name": "mem0.api_key",
+        "label": "Mem0 API key",
+        "kind": "secret",
+        "visible_when": {
+          "field": "provider",
+          "equals": "mem0"
+        }
+      },
+      {
+        "name": "mem0.user_id",
+        "label": "Mem0 user ID",
+        "kind": "string",
+        "visible_when": {
+          "field": "provider",
+          "equals": "mem0"
+        }
+      },
+      {
+        "name": "supermemory.base_url",
+        "label": "Supermemory base URL",
+        "kind": "string",
+        "visible_when": {
+          "field": "provider",
+          "equals": "supermemory"
+        }
+      },
+      {
+        "name": "supermemory.api_key",
+        "label": "Supermemory API key",
+        "kind": "secret",
+        "visible_when": {
+          "field": "provider",
+          "equals": "supermemory"
+        }
+      },
+      {
+        "name": "supermemory.user_id",
+        "label": "Supermemory user ID",
+        "kind": "string",
+        "visible_when": {
+          "field": "provider",
+          "equals": "supermemory"
+        }
+      },
+      {
+        "name": "hindsight.base_url",
+        "label": "Hindsight base URL",
+        "kind": "string",
+        "visible_when": {
+          "field": "provider",
+          "equals": "hindsight"
+        }
+      },
+      {
+        "name": "hindsight.api_key",
+        "label": "Hindsight API key",
+        "kind": "secret",
+        "visible_when": {
+          "field": "provider",
+          "equals": "hindsight"
+        }
+      },
+      {
+        "name": "hindsight.bank_id",
+        "label": "Hindsight bank ID",
+        "kind": "string",
+        "visible_when": {
+          "field": "provider",
+          "equals": "hindsight"
+        }
+      },
+      {
+        "name": "hindsight.budget",
+        "label": "Hindsight budget",
+        "kind": "enum",
+        "enum": [
+          "low",
+          "mid",
+          "high"
+        ],
+        "visible_when": {
+          "field": "provider",
+          "equals": "hindsight"
+        }
+      },
+      {
+        "name": "retaindb.base_url",
+        "label": "RetainDB base URL",
+        "kind": "string",
+        "visible_when": {
+          "field": "provider",
+          "equals": "retaindb"
+        }
+      },
+      {
+        "name": "retaindb.api_key",
+        "label": "RetainDB API key",
+        "kind": "secret",
+        "visible_when": {
+          "field": "provider",
+          "equals": "retaindb"
+        }
+      },
+      {
+        "name": "retaindb.project",
+        "label": "RetainDB project",
+        "kind": "string",
+        "visible_when": {
+          "field": "provider",
+          "equals": "retaindb"
+        }
+      },
+      {
+        "name": "retaindb.user_id",
+        "label": "RetainDB user ID",
+        "kind": "string",
+        "visible_when": {
+          "field": "provider",
+          "equals": "retaindb"
+        }
+      },
+      {
+        "name": "openviking.endpoint",
+        "label": "OpenViking endpoint",
+        "kind": "string",
+        "visible_when": {
+          "field": "provider",
+          "equals": "openviking"
+        }
+      },
+      {
+        "name": "openviking.api_key",
+        "label": "OpenViking API key",
+        "kind": "secret",
+        "visible_when": {
+          "field": "provider",
+          "equals": "openviking"
+        }
+      },
+      {
+        "name": "byterover.brv_path",
+        "label": "Byterover brv CLI path",
+        "kind": "string",
+        "visible_when": {
+          "field": "provider",
+          "equals": "byterover"
+        }
+      },
+      {
+        "name": "byterover.cwd",
+        "label": "Byterover working directory",
+        "kind": "string",
+        "visible_when": {
+          "field": "provider",
+          "equals": "byterover"
+        }
+      }
+    ]
+  },
+  {
+    "key": "metrics",
+    "label": "Metrics",
+    "summary": "Prometheus /metrics HTTP server address. Leave blank to disable.",
+    "group_id": "observability",
+    "fields": [
+      {
+        "name": "addr",
+        "label": "Listen address",
+        "help": "Host:port for the exporter, e.g. \":9100\". Empty disables metrics.",
+        "kind": "string"
+      }
+    ]
+  },
+  {
+    "key": "model",
+    "label": "Default model",
+    "summary": "Model used when a request doesn't pin one explicitly.",
+    "group_id": "models",
+    "shape": "scalar",
+    "fields": [
+      {
+        "name": "model",
+        "label": "Model",
+        "help": "Provider-qualified id, e.g. anthropic/claude-opus-4-7.",
+        "kind": "string",
+        "required": true,
+        "datalist_source": {
+          "section": "providers",
+          "field": "model"
+        }
+      }
+    ]
+  },
+  {
+    "key": "providers",
+    "label": "Providers",
+    "summary": "LLM providers available to Default Model, Auxiliary, and fallback.",
+    "group_id": "models",
+    "shape": "keyed_map",
+    "fields": [
+      {
+        "name": "provider",
+        "label": "Provider type",
+        "kind": "enum",
+        "required": true,
+        "enum": [
+          "anthropic",
+          "bedrock",
+          "copilot",
+          "deepseek",
+          "kimi",
+          "minimax",
+          "openai",
+          "openrouter",
+          "qwen",
+          "wenxin",
+          "zhipu"
+        ]
+      },
+      {
+        "name": "base_url",
+        "label": "Base URL",
+        "kind": "string"
+      },
+      {
+        "name": "api_key",
+        "label": "API key",
+        "kind": "secret",
+        "required": true
+      },
+      {
+        "name": "model",
+        "label": "Default model for this provider",
+        "help": "Optional — provider-qualified id used when a request doesn't pin a specific model.",
+        "kind": "string"
+      }
+    ]
+  },
+  {
+    "key": "skills",
+    "label": "Skills",
+    "summary": "Enable or disable skills across every platform. Unchecked = enabled.",
+    "group_id": "skills",
+    "fields": [
+      {
+        "name": "disabled",
+        "label": "Disabled skills",
+        "help": "Skills listed here never activate. Check a skill to disable it globally. Install skills into $HERMIND_HOME/skills to make them appear.",
+        "kind": "multiselect"
+      }
+    ]
+  },
+  {
+    "key": "storage",
+    "label": "Storage",
+    "summary": "Where hermind keeps conversation history and agent state.",
+    "group_id": "runtime",
+    "fields": [
+      {
+        "name": "driver",
+        "label": "Driver",
+        "help": "Storage backend to use.",
+        "kind": "enum",
+        "required": true,
+        "default": "sqlite",
+        "enum": [
+          "sqlite",
+          "postgres"
+        ]
+      },
+      {
+        "name": "sqlite_path",
+        "label": "SQLite path",
+        "help": "Filesystem path to the SQLite database file.",
+        "kind": "string",
+        "visible_when": {
+          "field": "driver",
+          "equals": "sqlite"
+        }
+      },
+      {
+        "name": "postgres_url",
+        "label": "Postgres URL",
+        "help": "postgres://user:pass@host/db connection string.",
+        "kind": "secret",
+        "visible_when": {
+          "field": "driver",
+          "equals": "postgres"
+        }
+      }
+    ]
+  },
+  {
+    "key": "terminal",
+    "label": "Terminal",
+    "summary": "Shell-exec backend used by the agent's bash tool.",
+    "group_id": "runtime",
+    "fields": [
+      {
+        "name": "backend",
+        "label": "Backend",
+        "help": "Which execution backend to run shell commands through.",
+        "kind": "enum",
+        "required": true,
+        "default": "local",
+        "enum": [
+          "local",
+          "docker",
+          "ssh",
+          "modal",
+          "daytona",
+          "singularity"
+        ]
+      },
+      {
+        "name": "cwd",
+        "label": "Working directory",
+        "help": "Absolute path used as cwd for each command. Empty = backend default.",
+        "kind": "string"
+      },
+      {
+        "name": "timeout",
+        "label": "Default timeout (seconds)",
+        "help": "Command timeout; 0 means use the backend default.",
+        "kind": "int"
+      },
+      {
+        "name": "docker_image",
+        "label": "Docker image",
+        "help": "Image name passed to `docker run`.",
+        "kind": "string",
+        "visible_when": {
+          "field": "backend",
+          "equals": "docker"
+        }
+      },
+      {
+        "name": "ssh_host",
+        "label": "SSH host",
+        "help": "Hostname or IP of the target machine.",
+        "kind": "string",
+        "visible_when": {
+          "field": "backend",
+          "equals": "ssh"
+        }
+      },
+      {
+        "name": "ssh_user",
+        "label": "SSH user",
+        "kind": "string",
+        "visible_when": {
+          "field": "backend",
+          "equals": "ssh"
+        }
+      },
+      {
+        "name": "ssh_key",
+        "label": "SSH key path",
+        "help": "Filesystem path to the private key file.",
+        "kind": "string",
+        "visible_when": {
+          "field": "backend",
+          "equals": "ssh"
+        }
+      },
+      {
+        "name": "modal_base_url",
+        "label": "Modal base URL",
+        "kind": "string",
+        "visible_when": {
+          "field": "backend",
+          "equals": "modal"
+        }
+      },
+      {
+        "name": "modal_token",
+        "label": "Modal token",
+        "kind": "secret",
+        "visible_when": {
+          "field": "backend",
+          "equals": "modal"
+        }
+      },
+      {
+        "name": "daytona_base_url",
+        "label": "Daytona base URL",
+        "kind": "string",
+        "visible_when": {
+          "field": "backend",
+          "equals": "daytona"
+        }
+      },
+      {
+        "name": "daytona_token",
+        "label": "Daytona token",
+        "kind": "secret",
+        "visible_when": {
+          "field": "backend",
+          "equals": "daytona"
+        }
+      },
+      {
+        "name": "singularity_image",
+        "label": "Singularity image",
+        "help": "Path to the .sif image file.",
+        "kind": "string",
+        "visible_when": {
+          "field": "backend",
+          "equals": "singularity"
+        }
+      }
+    ]
+  },
+  {
+    "key": "tracing",
+    "label": "Tracing",
+    "summary": "Stdlib-based tracing emitted to a JSON-lines sink.",
+    "group_id": "observability",
+    "fields": [
+      {
+        "name": "enabled",
+        "label": "Enabled",
+        "help": "Turn tracing on.",
+        "kind": "bool",
+        "default": false
+      },
+      {
+        "name": "file",
+        "label": "File",
+        "help": "Path to the JSON-lines trace file. Leave blank for stderr.",
+        "kind": "string",
+        "visible_when": {
+          "field": "enabled",
+          "equals": true
+        }
+      }
+    ]
+  }
+]

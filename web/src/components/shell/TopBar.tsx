@@ -1,5 +1,7 @@
 import styles from './TopBar.module.css';
 import type { Status } from '../../state';
+import LanguageToggle from './LanguageToggle';
+import { useTranslation } from 'react-i18next';
 
 export interface TopBarProps {
   dirtyCount: number;
@@ -8,6 +10,7 @@ export interface TopBarProps {
 }
 
 export default function TopBar({ dirtyCount, status, onSave }: TopBarProps) {
+  const { t } = useTranslation('ui');
   const busy = status === 'saving' || status === 'applying';
   const dotClass = busy
     ? styles.dotBusy
@@ -16,12 +19,14 @@ export default function TopBar({ dirtyCount, status, onSave }: TopBarProps) {
       : styles.dotIdle;
   const statusMsg = busy
     ? status === 'saving'
-      ? 'Saving…'
-      : 'Applying…'
+      ? t('action.saving')
+      : t('action.applying')
     : dirtyCount > 0
-      ? `${dirtyCount} unsaved change${dirtyCount === 1 ? '' : 's'}`
-      : 'All saved';
-  const saveLabel = dirtyCount > 0 ? `Save · ${dirtyCount} changes` : 'Save';
+      ? t('status.unsavedChanges', { count: dirtyCount })
+      : t('status.allSaved');
+  const saveLabel = dirtyCount > 0
+    ? t('status.saveWithCount', { count: dirtyCount })
+    : t('action.save');
   return (
     <header className={styles.topbar}>
       <div className={styles.brand}>
@@ -32,6 +37,9 @@ export default function TopBar({ dirtyCount, status, onSave }: TopBarProps) {
       <span className={styles.status}>
         <span className={`${styles.dot} ${dotClass}`} />
         {statusMsg}
+      </span>
+      <span className={styles.langSlot}>
+        <LanguageToggle />
       </span>
       <button
         type="button"

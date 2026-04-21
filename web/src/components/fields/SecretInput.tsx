@@ -3,6 +3,7 @@ import styles from './SecretInput.module.css';
 import type { SchemaField } from '../../api/schemas';
 import { RevealResponseSchema } from '../../api/schemas';
 import { apiFetch, ApiError } from '../../api/client';
+import { useTranslation } from 'react-i18next';
 
 export interface SecretInputProps {
   field: SchemaField;
@@ -21,6 +22,7 @@ export default function SecretInput({
   disableReveal,
   onChange,
 }: SecretInputProps) {
+  const { t } = useTranslation('ui');
   const [revealed, setRevealed] = useState(false);
   const [busy, setBusy] = useState(false);
   const [err, setErr] = useState<string | null>(null);
@@ -52,9 +54,9 @@ export default function SecretInput({
 
   const showDisabled = busy || dirty || Boolean(disableReveal);
   const showTitle = disableReveal
-    ? 'Reveal not supported for this field (stage 2)'
+    ? t('field.revealDisabled')
     : dirty
-      ? 'Save changes before revealing the stored value'
+      ? t('field.saveBeforeReveal')
       : undefined;
 
   return (
@@ -81,7 +83,7 @@ export default function SecretInput({
           disabled={showDisabled}
           title={showTitle}
         >
-          {busy ? '…' : revealed ? 'Hide' : 'Show'}
+          {busy ? '…' : revealed ? t('field.hide') : t('field.show')}
         </button>
       </span>
       {err && <span className={styles.error}>{err}</span>}

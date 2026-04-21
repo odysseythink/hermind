@@ -1,6 +1,8 @@
 import { useEffect, useRef, useState } from 'react';
+import type React from 'react';
 import styles from './NewInstanceDialog.module.css';
 import type { SchemaDescriptor } from '../api/schemas';
+import { useTranslation } from 'react-i18next';
 
 export interface NewInstanceDialogProps {
   descriptors: SchemaDescriptor[];
@@ -17,11 +19,10 @@ export default function NewInstanceDialog({
   onCancel,
   onCreate,
 }: NewInstanceDialogProps) {
+  const { t } = useTranslation('ui');
   const dialogRef = useRef<HTMLDialogElement>(null);
   const [key, setKey] = useState('');
-  const [platformType, setPlatformType] = useState(
-    descriptors[0]?.type ?? '',
-  );
+  const [platformType, setPlatformType] = useState(descriptors[0]?.type ?? '');
   const [keyError, setKeyError] = useState<string | null>(null);
 
   useEffect(() => {
@@ -32,19 +33,19 @@ export default function NewInstanceDialog({
     e.preventDefault();
     const trimmed = key.trim();
     if (!trimmed) {
-      setKeyError('Instance key is required.');
+      setKeyError(t('error.keyRequired'));
       return;
     }
     if (!KEY_REGEX.test(trimmed)) {
-      setKeyError('Use lowercase letters, digits, underscore. Must start with a letter.');
+      setKeyError(t('error.keyFormat'));
       return;
     }
     if (existingKeys.has(trimmed)) {
-      setKeyError(`An instance named "${trimmed}" already exists.`);
+      setKeyError(t('error.keyDuplicate', { key: trimmed }));
       return;
     }
     if (!platformType) {
-      setKeyError('Pick a platform type.');
+      setKeyError(t('error.platformTypeRequired'));
       return;
     }
     onCreate(trimmed, platformType);
@@ -54,29 +55,24 @@ export default function NewInstanceDialog({
     <dialog
       ref={dialogRef}
       className={styles.dialog}
-      onCancel={e => {
-        e.preventDefault();
-        onCancel();
-      }}
+      onCancel={e => { e.preventDefault(); onCancel(); }}
       onClose={() => onCancel()}
     >
       <form onSubmit={onSubmit}>
         <header className={styles.header}>
-          <h2 className={styles.title}>New instance</h2>
+          <h2 className={styles.title}>{t('dialog.newInstance.title')}</h2>
           <span className={styles.spacer} />
           <button
             type="button"
             className={styles.close}
             onClick={onCancel}
-            aria-label="Close"
-          >
-            ✕
-          </button>
+            aria-label={t('action.close')}
+          >✕</button>
         </header>
         <div className={styles.body}>
           <div className={styles.field}>
             <label className={styles.label} htmlFor="new-instance-type">
-              Platform type
+              {t('dialog.newInstance.platform')}
             </label>
             <select
               id="new-instance-type"
@@ -93,7 +89,7 @@ export default function NewInstanceDialog({
           </div>
           <div className={styles.field}>
             <label className={styles.label} htmlFor="new-instance-key">
-              Instance key
+              {t('dialog.newInstance.key')}
             </label>
             <input
               id="new-instance-key"
@@ -106,10 +102,7 @@ export default function NewInstanceDialog({
                 setKeyError(null);
               }}
             />
-            <span className={styles.hint}>
-              Identifier under <code>gateway.platforms.*</code>. Lowercase, underscores.
-              Immutable after creation.
-            </span>
+            <span className={styles.hint}>{t('dialog.newInstance.hint')}</span>
             {keyError && <span className={styles.error}>{keyError}</span>}
           </div>
         </div>
@@ -118,16 +111,12 @@ export default function NewInstanceDialog({
             type="button"
             className={`${styles.btn} ${styles.secondary}`}
             onClick={onCancel}
-          >
-            Cancel
-          </button>
+          >{t('action.cancel')}</button>
           <span className={styles.footerSpacer} />
           <button
             type="submit"
             className={`${styles.btn} ${styles.primary}`}
-          >
-            Create
-          </button>
+          >{t('action.create')}</button>
         </footer>
       </form>
     </dialog>

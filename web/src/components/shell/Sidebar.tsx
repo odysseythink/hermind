@@ -1,4 +1,5 @@
 import styles from './Sidebar.module.css';
+import { useTranslation } from 'react-i18next';
 import { GROUPS, type GroupId } from '../../shell/groups';
 import GroupSection from './GroupSection';
 import GatewaySidebar from '../groups/gateway/GatewaySidebar';
@@ -39,8 +40,9 @@ export interface SidebarProps {
 }
 
 export default function Sidebar(props: SidebarProps) {
+  const { t } = useTranslation('ui');
   return (
-    <aside className={styles.sidebar} aria-label="Configuration groups">
+    <aside className={styles.sidebar} aria-label={t('sidebar.ariaLabel')}>
       {GROUPS.map(g => {
         const body =
           g.id === 'gateway' ? (

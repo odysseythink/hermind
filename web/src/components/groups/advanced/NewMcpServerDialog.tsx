@@ -1,6 +1,7 @@
 import { useState } from 'react';
 import type React from 'react';
 import styles from './NewMcpServerDialog.module.css';
+import { useTranslation } from 'react-i18next';
 
 export interface NewMcpServerDialogProps {
   existingKeys: Set<string>;
@@ -10,7 +11,12 @@ export interface NewMcpServerDialogProps {
 
 const KEY_REGEX = /^[a-z][a-z0-9_]*$/;
 
-export default function NewMcpServerDialog({ existingKeys, onCancel, onCreate }: NewMcpServerDialogProps) {
+export default function NewMcpServerDialog({
+  existingKeys,
+  onCancel,
+  onCreate,
+}: NewMcpServerDialogProps) {
+  const { t } = useTranslation('ui');
   const [key, setKey] = useState('');
   const [keyError, setKeyError] = useState<string | null>(null);
 
@@ -23,15 +29,15 @@ export default function NewMcpServerDialog({ existingKeys, onCancel, onCreate }:
     e.preventDefault();
     if (disabled) return;
     if (!trimmed) {
-      setKeyError('Instance key is required.');
+      setKeyError(t('error.keyRequired'));
       return;
     }
     if (!KEY_REGEX.test(trimmed)) {
-      setKeyError('Use lowercase letters, digits, underscore. Must start with a letter.');
+      setKeyError(t('error.keyFormat'));
       return;
     }
     if (existingKeys.has(trimmed)) {
-      setKeyError(`A server named "${trimmed}" already exists.`);
+      setKeyError(t('error.mcpKeyDuplicate', { key: trimmed }));
       return;
     }
     onCreate(trimmed);
@@ -40,34 +46,30 @@ export default function NewMcpServerDialog({ existingKeys, onCancel, onCreate }:
   return (
     <div className={styles.overlay} role="dialog" aria-labelledby="newMcpTitle" aria-modal="true">
       <div className={styles.panel}>
-        <h2 id="newMcpTitle">New MCP server</h2>
+        <h2 id="newMcpTitle">{t('dialog.newMcp.title')}</h2>
         <form onSubmit={onSubmit}>
           <label className={styles.row}>
-            Name
+            {t('dialog.newMcp.name')}
             <input
               type="text"
               value={key}
-              onChange={e => {
-                setKey(e.currentTarget.value);
-                setKeyError(null);
-              }}
+              onChange={e => { setKey(e.currentTarget.value); setKeyError(null); }}
               placeholder="e.g. filesystem"
               autoFocus
             />
           </label>
-          {duplicate && <p className={styles.err}>A server named &quot;{trimmed}&quot; already exists.</p>}
-          {formatInvalid && !duplicate && (
-            <p className={styles.err}>Use lowercase letters, digits, underscore. Must start with a letter.</p>
+          {duplicate && (
+            <p className={styles.err}>{t('error.mcpKeyDuplicate', { key: trimmed })}</p>
           )}
-          {keyError && !duplicate && !formatInvalid && <p className={styles.err}>{keyError}</p>}
+          {formatInvalid && !duplicate && (
+            <p className={styles.err}>{t('error.keyFormat')}</p>
+          )}
+          {keyError && !duplicate && !formatInvalid && (
+            <p className={styles.err}>{keyError}</p>
+          )}
           <div className={styles.actions}>
-            <button type="button" onClick={onCancel}>Cancel</button>
-            <button
-              type="submit"
-              disabled={disabled}
-            >
-              Create
-            </button>
+            <button type="button" onClick={onCancel}>{t('action.cancel')}</button>
+            <button type="submit" disabled={disabled}>{t('action.create')}</button>
           </div>
         </form>
       </div>

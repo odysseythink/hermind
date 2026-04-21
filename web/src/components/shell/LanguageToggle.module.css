@@ -1,0 +1,29 @@
+.toggle {
+  display: inline-flex;
+  border: 1px solid var(--border, #333);
+  border-radius: 4px;
+  overflow: hidden;
+  font-size: 0.85rem;
+}
+
+.toggle button {
+  background: transparent;
+  border: none;
+  color: inherit;
+  padding: 0.25rem 0.6rem;
+  cursor: pointer;
+  font: inherit;
+}
+
+.toggle button:not(:last-child) {
+  border-right: 1px solid var(--border, #333);
+}
+
+.toggle button.active {
+  background: var(--accent, #2a66ff);
+  color: #fff;
+}
+
+.toggle button:hover:not(.active) {
+  background: var(--hover, rgba(255, 255, 255, 0.06));
+}

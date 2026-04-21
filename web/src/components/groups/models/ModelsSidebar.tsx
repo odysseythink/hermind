@@ -1,5 +1,7 @@
 import { useState } from 'react';
 import styles from './ModelsSidebar.module.css';
+import { useTranslation } from 'react-i18next';
+import { useDescriptorT } from '../../../i18n/useDescriptorT';
 
 export interface ModelsSidebarProps {
   instances: Array<{ key: string; type: string }>;
@@ -34,6 +36,8 @@ export default function ModelsSidebar({
   onMoveFallback,
   onReorderFallback,
 }: ModelsSidebarProps) {
+  const { t } = useTranslation('ui');
+  const dt = useDescriptorT();
   const [dragFrom, setDragFrom] = useState<number | null>(null);
   const [dragOver, setDragOver] = useState<number | null>(null);
   return (
@@ -43,11 +47,11 @@ export default function ModelsSidebar({
         className={`${styles.scalarRow} ${activeSubKey === 'model' ? styles.active : ''}`}
         onClick={() => onSelectScalar('model')}
       >
-        Default model
+        {dt.sectionLabel('model', t('sidebar.defaultModel'))}
       </button>
-      <div className={styles.groupHeader}>Providers</div>
+      <div className={styles.groupHeader}>{t('sidebar.providers')}</div>
       {instances.length === 0 && (
-        <div className={styles.empty}>No providers configured.</div>
+        <div className={styles.empty}>{t('sidebar.noProviders')}</div>
       )}
       {instances.map(inst => (
         <button
@@ -59,18 +63,18 @@ export default function ModelsSidebar({
           <span className={styles.itemRow}>
             <span className={styles.itemKey}>{inst.key}</span>
             {dirtyKeys.has(inst.key) && (
-              <span className={styles.dirtyDot} title="Unsaved changes" />
+              <span className={styles.dirtyDot} title={t('empty.unsaved')} />
             )}
           </span>
           <span className={styles.itemType}>{inst.type}</span>
         </button>
       ))}
       <button type="button" className={styles.newBtn} onClick={onNewProvider}>
-        + New provider
+        {t('sidebar.newProvider')}
       </button>
-      <div className={styles.groupHeader}>Fallback Providers</div>
+      <div className={styles.groupHeader}>{t('sidebar.fallbackProviders')}</div>
       {fallbackProviders.length === 0 && (
-        <div className={styles.empty}>No fallback providers configured.</div>
+        <div className={styles.empty}>{t('sidebar.noFallbacks')}</div>
       )}
       {fallbackProviders.map((fb, i) => {
         const active = i === activeFallbackIndex;
@@ -120,7 +124,7 @@ export default function ModelsSidebar({
                 <span className={styles.posBadge}>#{i + 1}</span>
                 <span className={styles.fallbackType}>{fb.provider}</span>
                 {dirtyFallbackIndices.has(i) && (
-                  <span className={styles.dirtyDot} title="Unsaved changes" />
+                  <span className={styles.dirtyDot} title={t('empty.unsaved')} />
                 )}
               </span>
             </button>
@@ -128,7 +132,7 @@ export default function ModelsSidebar({
               <button
                 type="button"
                 className={styles.moveBtn}
-                aria-label="Move up"
+                aria-label={t('sidebar.moveUp')}
                 disabled={atTop}
                 onClick={() => onMoveFallback(i, 'up')}
               >
@@ -137,7 +141,7 @@ export default function ModelsSidebar({
               <button
                 type="button"
                 className={styles.moveBtn}
-                aria-label="Move down"
+                aria-label={t('sidebar.moveDown')}
                 disabled={atBottom}
                 onClick={() => onMoveFallback(i, 'down')}
               >
@@ -148,7 +152,7 @@ export default function ModelsSidebar({
         );
       })}
       <button type="button" className={styles.newBtn} onClick={onAddFallback}>
-        + Add fallback
+        {t('sidebar.addFallback')}
       </button>
     </div>
   );

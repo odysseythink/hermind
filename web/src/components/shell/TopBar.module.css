@@ -62,3 +62,9 @@
   opacity: 0.45;
   cursor: not-allowed;
 }
+
+.langSlot {
+  display: inline-flex;
+  align-items: center;
+  margin-right: 0.5rem;
+}

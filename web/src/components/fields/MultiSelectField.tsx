@@ -1,5 +1,6 @@
 import styles from './fields.module.css';
 import type { ConfigField } from '../../api/schemas';
+import { useTranslation } from 'react-i18next';
 
 export interface MultiSelectFieldProps {
   field: ConfigField;
@@ -12,6 +13,7 @@ export default function MultiSelectField({
   value,
   onChange,
 }: MultiSelectFieldProps) {
+  const { t } = useTranslation('ui');
   const choices = field.enum ?? [];
   const checked = new Set(value);
 
@@ -19,7 +21,7 @@ export default function MultiSelectField({
     return (
       <fieldset className={styles.row} style={{ border: 'none', padding: 0, margin: 0 }}>
         <legend className={styles.label}>{field.label}</legend>
-        <span className={styles.help}>No skills installed. {field.help}</span>
+        <span className={styles.help}>{t('field.noSkills')} {field.help}</span>
       </fieldset>
     );
   }

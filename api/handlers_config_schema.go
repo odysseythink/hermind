@@ -14,6 +14,25 @@ import (
 // section registered via descriptor.Register. The response is sorted by
 // section key so the frontend can render a deterministic navigation.
 func (s *Server) handleConfigSchema(w http.ResponseWriter, r *http.Request) {
+	out := BuildConfigSchema()
+	for i := range out.Sections {
+		if out.Sections[i].Key != "skills" {
+			continue
+		}
+		names := discoveredSkillNames(r.Context())
+		for j := range out.Sections[i].Fields {
+			if out.Sections[i].Fields[j].Name == "disabled" {
+				out.Sections[i].Fields[j].Enum = names
+			}
+		}
+	}
+	writeJSON(w, out)
+}
+
+// BuildConfigSchema builds the pure ConfigSchemaResponse (no runtime skill
+// enumeration) from the descriptor registry. Exposed so the i18n fixture
+// generator can dump the same JSON shape the frontend consumes.
+func BuildConfigSchema() ConfigSchemaResponse {
 	all := descriptor.All()
 	out := ConfigSchemaResponse{Sections: make([]ConfigSectionDTO, 0, len(all))}
 	for _, sec := range all {
@@ -53,18 +72,7 @@ func (s *Server) handleConfigSchema(w http.ResponseWriter, r *http.Request) {
 			Fields:          fields,
 		})
 	}
-	for i := range out.Sections {
-		if out.Sections[i].Key != "skills" {
-			continue
-		}
-		names := discoveredSkillNames(r.Context())
-		for j := range out.Sections[i].Fields {
-			if out.Sections[i].Fields[j].Name == "disabled" {
-				out.Sections[i].Fields[j].Enum = names
-			}
-		}
-	}
-	writeJSON(w, out)
+	return out
 }
 
 // discoveredSkillNames walks the default skills home and returns sorted
