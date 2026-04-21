@@ -62,6 +62,7 @@ func TestFieldKindString(t *testing.T) {
 		{FieldSecret, "secret"},
 		{FieldEnum, "enum"},
 		{FieldFloat, "float"},
+		{FieldMultiSelect, "multiselect"},
 		{FieldUnknown, "unknown"},
 		{FieldKind(99), "unknown"},
 	}
