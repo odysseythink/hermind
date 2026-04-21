@@ -13,10 +13,22 @@ describe('chatReducer', () => {
   it('session/created prepends to sessions and activates', () => {
     const s = chatReducer(initialChatState, {
       type: 'chat/session/created',
-      id: 'new-1',
-      title: 'New conversation',
+      session: { id: 'new-1', title: 'New conversation', source: 'web' },
     });
     expect(s.sessions[0]?.id).toBe('new-1');
+    expect(s.activeSessionId).toBe('new-1');
+  });
+
+  it('session/created is idempotent on duplicate id', () => {
+    let s = chatReducer(initialChatState, {
+      type: 'chat/session/created',
+      session: { id: 'new-1', title: 'alpha', source: 'web' },
+    });
+    s = chatReducer(s, {
+      type: 'chat/session/created',
+      session: { id: 'new-1', title: 'alpha', source: 'web' },
+    });
+    expect(s.sessions.length).toBe(1);
     expect(s.activeSessionId).toBe('new-1');
   });
 

@@ -22,7 +22,7 @@ export function useSessionList() {
 
   const newSession = useCallback(() => {
     const id = crypto.randomUUID();
-    setSessions((prev) => [{ id, title: 'New conversation', updated_at: Date.now() }, ...prev]);
+    setSessions((prev) => [{ id, title: 'New conversation', source: 'web', started_at: Date.now() }, ...prev]);
     return id;
   }, []);
 

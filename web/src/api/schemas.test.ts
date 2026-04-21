@@ -12,6 +12,7 @@ import {
   RevealResponseSchema,
   SchemaDescriptorSchema,
   SchemaFieldSchema,
+  SessionSummarySchema,
 } from './schemas';
 
 describe('FieldKindSchema', () => {
@@ -378,5 +379,33 @@ describe('ConfigSectionSchema subkey/no_discriminator', () => {
     });
     expect(parsed.subkey).toBeUndefined();
     expect(parsed.no_discriminator).toBeUndefined();
+  });
+});
+
+describe('SessionSummarySchema (widened)', () => {
+  it('accepts the full backend DTO shape', () => {
+    const parsed = SessionSummarySchema.parse({
+      id: 'abc',
+      title: 'hi there',
+      source: 'web',
+      model: 'claude-opus-4-7',
+      started_at: 1713724000,
+      ended_at: 0,
+      message_count: 3,
+    });
+    expect(parsed.source).toBe('web');
+    expect(parsed.message_count).toBe(3);
+  });
+
+  it('allows optional fields to be missing', () => {
+    const parsed = SessionSummarySchema.parse({
+      id: 'abc',
+      source: 'web',
+    });
+    expect(parsed.title).toBeUndefined();
+  });
+
+  it('requires source', () => {
+    expect(() => SessionSummarySchema.parse({ id: 'abc' })).toThrow();
   });
 });

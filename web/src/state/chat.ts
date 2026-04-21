@@ -1,3 +1,7 @@
+import type { SessionSummary } from '../api/schemas';
+
+export type { SessionSummary };
+
 export type ChatMessage = {
   id: string;
   role: 'user' | 'assistant' | 'system' | 'tool';
@@ -13,12 +17,6 @@ export type ToolCallSnapshot = {
   input: unknown;
   result?: string;
   state: 'running' | 'done' | 'error';
-};
-
-export type SessionSummary = {
-  id: string;
-  title: string;
-  updatedAt: number;
 };
 
 export type ChatState = {
@@ -54,7 +52,7 @@ export const initialChatState: ChatState = {
 
 export type ChatAction =
   | { type: 'chat/session/select'; sessionId: string }
-  | { type: 'chat/session/created'; id: string; title: string }
+  | { type: 'chat/session/created'; session: SessionSummary }
   | { type: 'chat/session/listLoaded'; sessions: SessionSummary[] }
   | { type: 'chat/messages/loaded'; sessionId: string; messages: ChatMessage[] }
   | { type: 'chat/stream/start'; sessionId: string; userText: string }
@@ -73,15 +71,16 @@ export function chatReducer(state: ChatState, action: ChatAction): ChatState {
     case 'chat/session/select':
       return { ...state, activeSessionId: action.sessionId };
 
-    case 'chat/session/created':
+    case 'chat/session/created': {
+      const exists = state.sessions.some((s) => s.id === action.session.id);
       return {
         ...state,
-        sessions: [
-          { id: action.id, title: action.title, updatedAt: Date.now() },
-          ...state.sessions,
-        ],
-        activeSessionId: action.id,
+        sessions: exists
+          ? state.sessions
+          : [action.session, ...state.sessions],
+        activeSessionId: action.session.id,
       };
+    }
 
     case 'chat/session/listLoaded':
       return { ...state, sessions: action.sessions };

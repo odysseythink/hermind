@@ -140,7 +140,11 @@ export type MessageSubmitResponse = z.infer<typeof MessageSubmitResponseSchema>;
 export const SessionSummarySchema = z.object({
   id: z.string(),
   title: z.string().optional(),
-  updated_at: z.number().optional(),
+  source: z.string(),
+  model: z.string().optional(),
+  started_at: z.number().optional(),
+  ended_at: z.number().optional(),
+  message_count: z.number().optional(),
 });
 export type SessionSummary = z.infer<typeof SessionSummarySchema>;
 

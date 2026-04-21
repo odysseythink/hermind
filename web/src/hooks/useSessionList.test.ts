@@ -10,7 +10,7 @@ describe('useSessionList', () => {
   it('loads sessions via GET /api/sessions', async () => {
     vi.spyOn(globalThis, 'fetch').mockResolvedValueOnce(
       new Response(
-        JSON.stringify({ sessions: [{ id: 's1', title: 'First' }] }),
+        JSON.stringify({ sessions: [{ id: 's1', title: 'First', source: 'web' }] }),
         { status: 200, headers: { 'content-type': 'application/json' } },
       ),
     );
