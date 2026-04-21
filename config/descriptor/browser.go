@@ -8,6 +8,9 @@ package descriptor
 // Dotted field names like "browserbase.api_key" rely on the dotted-path
 // infrastructure in ConfigSection.tsx, state.ts (edit/config-field
 // reducer), and api/handlers_config.go (walkPath helper).
+// TODO(env-override-badges): BROWSERBASE_API_KEY / BROWSERBASE_PROJECT_ID
+// override the YAML values at runtime. The UI currently shows YAML values
+// only. Future plan: render a badge indicating "env overrides this".
 func init() {
 	gate := func(backend string) *Predicate {
 		return &Predicate{Field: "provider", Equals: backend}
