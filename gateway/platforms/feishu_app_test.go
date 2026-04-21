@@ -256,3 +256,22 @@ func TestFeishuApp_SendReplyFallback(t *testing.T) {
 		t.Errorf("chatID = %q, want oc_default", calls[0].chatID)
 	}
 }
+
+func TestFeishuApp_SendReplyNoTarget(t *testing.T) {
+	sender := &fakeSender{}
+	fa := newFeishuAppForTest(nil, sender, "") // no default
+
+	err := fa.SendReply(context.Background(), gateway.OutgoingMessage{
+		ChatID: "",
+		Text:   "orphan",
+	})
+	if err == nil {
+		t.Fatal("expected error, got nil")
+	}
+	if !strings.Contains(err.Error(), "no target") {
+		t.Errorf("error should mention no target: %v", err)
+	}
+	if len(sender.recorded()) != 0 {
+		t.Errorf("sender should not have been called")
+	}
+}
