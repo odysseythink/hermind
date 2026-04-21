@@ -53,4 +53,33 @@ describe('useChatStream', () => {
     });
     expect(dispatch).not.toHaveBeenCalled();
   });
+
+  it('dispatches chat/session/created on session_created SSE event', async () => {
+    const dispatch = vi.fn();
+    const onSessionCreated = vi.fn();
+    renderHook(() => useChatStream('s-new', dispatch, onSessionCreated));
+    await waitFor(() => expect(FakeEventSource.instances[0]?.readyState).toBe(1));
+    act(() => {
+      FakeEventSource.instances[0].dispatchMessage({
+        type: 'session_created',
+        session_id: 's-new',
+        data: {
+          id: 's-new',
+          title: 'Build me ',
+          source: 'web',
+          model: 'm',
+          started_at: 1713724000,
+          ended_at: 0,
+          message_count: 1,
+        },
+      });
+    });
+    expect(dispatch).toHaveBeenCalledWith({
+      type: 'chat/session/created',
+      session: expect.objectContaining({ id: 's-new', title: 'Build me ' }),
+    });
+    expect(onSessionCreated).toHaveBeenCalledWith(
+      expect.objectContaining({ id: 's-new', title: 'Build me ' }),
+    );
+  });
 });

@@ -26,11 +26,11 @@ const MODEL_OPTIONS = ['', 'claude-opus-4-7', 'claude-sonnet-4-6', 'gpt-4'];
 export default function ChatWorkspace({ sessionId, onChangeSession, providerConfigured = true }: Props) {
   const { t } = useTranslation('ui');
   const [state, dispatch] = useReducer(chatReducer, initialChatState);
-  const { sessions, newSession } = useSessionList();
+  const { sessions, newSession, insertSession } = useSessionList();
   const [toast, setToast] = useState<string | null>(null);
 
   // Subscribe to SSE for the active session.
-  useChatStream(sessionId, dispatch);
+  useChatStream(sessionId, dispatch, insertSession);
 
   // Load message history when sessionId changes.
   useEffect(() => {
