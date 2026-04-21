@@ -21,7 +21,7 @@ var parityCases = []struct {
 	{"slack", map[string]string{"webhook_url": "https://hooks.slack.com/xxx"}},
 	{"discord", map[string]string{"webhook_url": "https://discord.com/api/webhooks/xxx"}},
 	{"mattermost", map[string]string{"webhook_url": "https://mm.example.com/hooks/xxx"}},
-	{"feishu", map[string]string{"webhook_url": "https://open.feishu.cn/open-apis/bot/xxx"}},
+	{"feishu", map[string]string{"app_id": "a", "app_secret": "s", "domain": "feishu"}},
 	{"dingtalk", map[string]string{"webhook_url": "https://oapi.dingtalk.com/robot/send?access_token=xxx"}},
 	{"wecom", map[string]string{"webhook_url": "https://qyapi.weixin.qq.com/cgi-bin/webhook/send?key=xxx"}},
 	{"email", map[string]string{
