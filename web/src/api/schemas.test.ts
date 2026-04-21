@@ -350,3 +350,33 @@ describe('ConfigFieldSchema — multiselect', () => {
     expect(parsed.enum).toBeUndefined();
   });
 });
+
+describe('ConfigSectionSchema subkey/no_discriminator', () => {
+  it('accepts subkey + no_discriminator when present', () => {
+    const parsed = ConfigSectionSchema.parse({
+      key: 'mcp',
+      label: 'MCP',
+      group_id: 'advanced',
+      shape: 'keyed_map',
+      subkey: 'servers',
+      no_discriminator: true,
+      fields: [
+        { name: 'command', label: 'Command', kind: 'string' },
+      ],
+    });
+    expect(parsed.subkey).toBe('servers');
+    expect(parsed.no_discriminator).toBe(true);
+  });
+
+  it('defaults subkey/no_discriminator to undefined when omitted', () => {
+    const parsed = ConfigSectionSchema.parse({
+      key: 'memory',
+      label: 'Memory',
+      group_id: 'memory',
+      shape: 'map',
+      fields: [],
+    });
+    expect(parsed.subkey).toBeUndefined();
+    expect(parsed.no_discriminator).toBeUndefined();
+  });
+});
