@@ -54,20 +54,6 @@ func TestChatbotsSendReply(t *testing.T) {
 			},
 		},
 		{
-			name:         "feishu",
-			ctor:         NewFeishu,
-			containsText: true,
-			assert: func(t *testing.T, body map[string]any) {
-				if body["msg_type"] != "text" {
-					t.Errorf("feishu msg_type = %v", body["msg_type"])
-				}
-				c, _ := body["content"].(map[string]any)
-				if c == nil || c["text"] != "hi" {
-					t.Errorf("feishu content = %v", body["content"])
-				}
-			},
-		},
-		{
 			name:         "dingtalk",
 			ctor:         NewDingTalk,
 			containsText: true,

@@ -26,17 +26,6 @@ func NewMattermost(url string) *WebhookBot {
 	})
 }
 
-// NewFeishu builds a Feishu / Lark incoming-webhook bot.
-// Feishu expects: {"msg_type":"text","content":{"text":"..."}}.
-func NewFeishu(url string) *WebhookBot {
-	return NewWebhookBot("feishu", url, func(out gateway.OutgoingMessage) any {
-		return map[string]any{
-			"msg_type": "text",
-			"content":  map[string]string{"text": out.Text},
-		}
-	})
-}
-
 // NewDingTalk builds a DingTalk incoming-webhook bot.
 // Expected shape: {"msgtype":"text","text":{"content":"..."}}.
 func NewDingTalk(url string) *WebhookBot {
