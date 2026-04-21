@@ -14,6 +14,7 @@ require (
 	github.com/go-chi/chi/v5 v5.2.5
 	github.com/google/uuid v1.6.0
 	github.com/gotd/td v0.143.0
+	github.com/larksuite/oapi-sdk-go/v3 v3.5.3
 	github.com/odysseythink/mlog v0.0.3
 	github.com/spf13/cobra v1.10.2
 	github.com/stretchr/testify v1.11.1
