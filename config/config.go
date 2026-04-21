@@ -19,6 +19,35 @@ type Config struct {
 	Metrics           MetricsConfig             `yaml:"metrics,omitempty"`
 	Tracing           TracingConfig             `yaml:"tracing,omitempty"`
 	Skills            SkillsConfig              `yaml:"skills,omitempty"`
+	Web               WebConfig                 `yaml:"web,omitempty"`
+}
+
+// WebConfig holds configuration for the `web_*` tool family.
+// Firecrawl (used by web_extract) continues to read FIRECRAWL_API_KEY
+// directly and is not represented here.
+type WebConfig struct {
+	Search SearchConfig `yaml:"search,omitempty"`
+}
+
+// SearchConfig configures the web_search tool's provider abstraction.
+// Provider selects the active backend; empty string enables auto-selection
+// by priority (tavily > brave > exa > ddg).
+type SearchConfig struct {
+	Provider  string                `yaml:"provider,omitempty"`
+	Providers SearchProvidersConfig `yaml:"providers,omitempty"`
+}
+
+// SearchProvidersConfig holds per-provider credentials. DDG does not
+// require credentials and therefore has no sub-node.
+type SearchProvidersConfig struct {
+	Tavily ProviderKeyConfig `yaml:"tavily,omitempty"`
+	Brave  ProviderKeyConfig `yaml:"brave,omitempty"`
+	Exa    ProviderKeyConfig `yaml:"exa,omitempty"`
+}
+
+// ProviderKeyConfig is the shared shape for an API-key-only provider.
+type ProviderKeyConfig struct {
+	APIKey string `yaml:"api_key,omitempty"`
 }
 
 // SkillsConfig records user skill enable/disable selections. It mirrors

@@ -103,55 +103,6 @@ func TestWebFetchTruncatesLargeResponses(t *testing.T) {
 	assert.Equal(t, float64(maxFetchBytes), result["content_length"])
 }
 
-func TestWebSearchHappyPath(t *testing.T) {
-	var capturedQuery string
-	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		assert.Equal(t, "test-key", r.Header.Get("x-api-key"))
-		body, _ := io.ReadAll(r.Body)
-		var req exaSearchRequest
-		require.NoError(t, json.Unmarshal(body, &req))
-		capturedQuery = req.Query
-
-		resp := exaSearchResponse{
-			Results: []exaResult{
-				{Title: "Go Lang", URL: "https://go.dev", Text: "Go programming language."},
-				{Title: "Effective Go", URL: "https://go.dev/doc/effective_go"},
-			},
-		}
-		w.Header().Set("Content-Type", "application/json")
-		_ = json.NewEncoder(w).Encode(resp)
-	}))
-	defer srv.Close()
-
-	handler := newWebSearchHandler("test-key", srv.URL)
-	out, err := handler(context.Background(), json.RawMessage(`{"query":"golang"}`))
-	require.NoError(t, err)
-
-	assert.Equal(t, "golang", capturedQuery)
-
-	var result webSearchResult
-	require.NoError(t, json.Unmarshal([]byte(out), &result))
-	assert.Equal(t, "golang", result.Query)
-	require.Len(t, result.Results, 2)
-	assert.Equal(t, "Go Lang", result.Results[0].Title)
-}
-
-func TestWebSearchRequiresQuery(t *testing.T) {
-	handler := newWebSearchHandler("test-key", "https://x")
-	out, err := handler(context.Background(), json.RawMessage(`{}`))
-	require.NoError(t, err)
-	assert.Contains(t, out, `"error"`)
-	assert.Contains(t, out, "query")
-}
-
-func TestWebSearchRejectsMissingKey(t *testing.T) {
-	t.Setenv("EXA_API_KEY", "")
-	handler := newWebSearchHandler("", "https://x")
-	out, err := handler(context.Background(), json.RawMessage(`{"query":"go"}`))
-	require.NoError(t, err)
-	assert.Contains(t, out, "EXA_API_KEY")
-}
-
 func TestWebExtractHappyPath(t *testing.T) {
 	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		assert.Equal(t, "Bearer test-key", r.Header.Get("Authorization"))

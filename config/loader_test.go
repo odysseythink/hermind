@@ -179,6 +179,30 @@ skills:
 	}
 }
 
+func TestLoadWebSearchConfig(t *testing.T) {
+	dir := t.TempDir()
+	path := filepath.Join(dir, "config.yaml")
+	err := os.WriteFile(path, []byte(`
+web:
+  search:
+    provider: tavily
+    providers:
+      tavily:
+        api_key: "tav-123"
+      brave:
+        api_key: "brv-456"
+      exa:
+        api_key: "exa-789"
+`), 0o600)
+	require.NoError(t, err)
+	cfg, err := LoadFromPath(path)
+	require.NoError(t, err)
+	assert.Equal(t, "tavily", cfg.Web.Search.Provider)
+	assert.Equal(t, "tav-123", cfg.Web.Search.Providers.Tavily.APIKey)
+	assert.Equal(t, "brv-456", cfg.Web.Search.Providers.Brave.APIKey)
+	assert.Equal(t, "exa-789", cfg.Web.Search.Providers.Exa.APIKey)
+}
+
 func TestLoadPreservesLiteralEnvString(t *testing.T) {
 	// After dropping env:VAR expansion, a config value that happens to start
 	// with "env:" must round-trip as a literal string, not trigger lookup.

@@ -7,11 +7,15 @@ import (
 	"github.com/odysseythink/hermind/tool"
 )
 
-// RegisterAll registers the web tools into a registry.
-// - web_fetch is always registered (uses stdlib http)
-// - web_search is registered only if exaAPIKey is non-empty
-// - web_extract is registered only if firecrawlAPIKey is non-empty
-func RegisterAll(reg *tool.Registry, exaAPIKey, firecrawlAPIKey string) {
+// RegisterAll wires the web toolset into reg according to opts.
+//
+//   - web_fetch is always registered (uses stdlib http, no credentials).
+//   - web_search is always registered; the dispatcher chooses a provider
+//     based on opts.SearchProvider or built-in priority. DDG is the
+//     keyless fallback so this tool is never unavailable.
+//   - web_extract is registered only when opts.FirecrawlAPIKey is
+//     non-empty.
+func RegisterAll(reg *tool.Registry, opts Options) {
 	reg.Register(&tool.Entry{
 		Name:        "web_fetch",
 		Toolset:     "web",
@@ -28,31 +32,30 @@ func RegisterAll(reg *tool.Registry, exaAPIKey, firecrawlAPIKey string) {
 		},
 	})
 
-	if exaAPIKey != "" {
-		reg.Register(&tool.Entry{
-			Name:        "web_search",
-			Toolset:     "web",
-			Description: "Search the web via Exa.",
-			Emoji:       "🔎",
-			Handler:     newWebSearchHandler(exaAPIKey, ""),
-			Schema: tool.ToolDefinition{
-				Type: "function",
-				Function: tool.FunctionDef{
-					Name:        "web_search",
-					Description: "Search the web and return a list of results.",
-					Parameters:  json.RawMessage(webSearchSchema),
-				},
+	dispatcher := newSearchDispatcher(opts)
+	reg.Register(&tool.Entry{
+		Name:        "web_search",
+		Toolset:     "web",
+		Description: "Search the web via a configured provider (DuckDuckGo, Tavily, Brave, or Exa).",
+		Emoji:       "🔎",
+		Handler:     dispatcher.Handler(),
+		Schema: tool.ToolDefinition{
+			Type: "function",
+			Function: tool.FunctionDef{
+				Name:        "web_search",
+				Description: "Search the web and return a list of results.",
+				Parameters:  json.RawMessage(webSearchSchema),
 			},
-		})
-	}
+		},
+	})
 
-	if firecrawlAPIKey != "" {
+	if opts.FirecrawlAPIKey != "" {
 		reg.Register(&tool.Entry{
 			Name:        "web_extract",
 			Toolset:     "web",
 			Description: "Extract page content as markdown/html/text via Firecrawl.",
 			Emoji:       "📰",
-			Handler:     newWebExtractHandler(firecrawlAPIKey, ""),
+			Handler:     newWebExtractHandler(opts.FirecrawlAPIKey, ""),
 			Schema: tool.ToolDefinition{
 				Type: "function",
 				Function: tool.FunctionDef{

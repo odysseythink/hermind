@@ -124,10 +124,14 @@ func runREPL(ctx context.Context, app *App) error {
 	defer backend.Close()
 	terminal.RegisterShellExecute(toolRegistry, backend)
 
-	// Web tools (always register web_fetch, others if API keys present)
-	exaKey := os.Getenv("EXA_API_KEY")
-	firecrawlKey := os.Getenv("FIRECRAWL_API_KEY")
-	web.RegisterAll(toolRegistry, exaKey, firecrawlKey)
+	// Web tools (fetch + search always; extract only when Firecrawl key set)
+	web.RegisterAll(toolRegistry, web.Options{
+		SearchProvider:  app.Config.Web.Search.Provider,
+		TavilyAPIKey:    app.Config.Web.Search.Providers.Tavily.APIKey,
+		BraveAPIKey:     app.Config.Web.Search.Providers.Brave.APIKey,
+		ExaAPIKey:       app.Config.Web.Search.Providers.Exa.APIKey,
+		FirecrawlAPIKey: os.Getenv("FIRECRAWL_API_KEY"),
+	})
 
 	// Memory tools (require storage)
 	if app.Storage != nil {

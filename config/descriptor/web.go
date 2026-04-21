@@ -1,0 +1,46 @@
+package descriptor
+
+// Web mirrors config.WebConfig. Currently only hosts the web_search
+// provider abstraction. Firecrawl (used by web_extract) reads
+// FIRECRAWL_API_KEY from the environment and has no UI field.
+//
+// Dotted field names like "search.provider" and
+// "search.providers.tavily.api_key" rely on the dotted-path
+// infrastructure in ConfigSection.tsx, state.ts (edit/config-field
+// reducer), and api/handlers_config.go (walkPath helper).
+func init() {
+	Register(Section{
+		Key:     "web",
+		Label:   "Web tools",
+		Summary: "Web search provider configuration. DuckDuckGo is the keyless fallback and always available.",
+		GroupID: "advanced",
+		Shape:   ShapeMap,
+		Fields: []FieldSpec{
+			{
+				Name:  "search.provider",
+				Label: "Search provider",
+				Help:  "Leave blank to auto-select by priority (Tavily > Brave > Exa > DuckDuckGo).",
+				Kind:  FieldEnum,
+				Enum:  []string{"", "tavily", "brave", "exa", "ddg"},
+			},
+			{
+				Name:  "search.providers.tavily.api_key",
+				Label: "Tavily API key",
+				Kind:  FieldSecret,
+				Help:  "Env var TAVILY_API_KEY overrides this value at runtime.",
+			},
+			{
+				Name:  "search.providers.brave.api_key",
+				Label: "Brave Search API key",
+				Kind:  FieldSecret,
+				Help:  "Env var BRAVE_API_KEY overrides this value at runtime.",
+			},
+			{
+				Name:  "search.providers.exa.api_key",
+				Label: "Exa API key",
+				Kind:  FieldSecret,
+				Help:  "Env var EXA_API_KEY overrides this value at runtime.",
+			},
+		},
+	})
+}
