@@ -75,6 +75,29 @@ func redactPlatformSecrets(m map[string]any) {
 	}
 }
 
+// unwrapSection returns the payload for sec from m, walking sec.Subkey
+// one level deeper when non-empty. The caller still type-asserts the
+// result to map[string]any or []any per Shape. Returns nil, false when
+// the path is absent or the intermediate isn't a map.
+func unwrapSection(m map[string]any, sec descriptor.Section) (any, bool) {
+	raw, ok := m[sec.Key]
+	if !ok || raw == nil {
+		return nil, false
+	}
+	if sec.Subkey == "" {
+		return raw, true
+	}
+	inner, ok := raw.(map[string]any)
+	if !ok {
+		return nil, false
+	}
+	v, ok := inner[sec.Subkey]
+	if !ok {
+		return nil, false
+	}
+	return v, true
+}
+
 func redactSectionSecrets(m map[string]any) {
 	for _, sec := range descriptor.All() {
 		if sec.Shape == descriptor.ShapeScalar {
@@ -83,7 +106,11 @@ func redactSectionSecrets(m map[string]any) {
 		}
 		if sec.Shape == descriptor.ShapeKeyedMap {
 			// Walk map[string]any of instances, each itself map[string]any.
-			outer, ok := m[sec.Key].(map[string]any)
+			raw, ok := unwrapSection(m, sec)
+			if !ok {
+				continue
+			}
+			outer, ok := raw.(map[string]any)
 			if !ok {
 				continue
 			}
@@ -105,7 +132,11 @@ func redactSectionSecrets(m map[string]any) {
 		}
 		if sec.Shape == descriptor.ShapeList {
 			// Walk []any of elements, each itself map[string]any.
-			outer, ok := m[sec.Key].([]any)
+			raw, ok := unwrapSection(m, sec)
+			if !ok {
+				continue
+			}
+			outer, ok := raw.([]any)
 			if !ok {
 				continue
 			}
@@ -249,11 +280,18 @@ func preserveSectionSecrets(updated, current *config.Config) {
 			continue
 		}
 		if sec.Shape == descriptor.ShapeKeyedMap {
-			outer, ok := updM[sec.Key].(map[string]any)
+			rawUpd, ok := unwrapSection(updM, sec)
 			if !ok {
 				continue
 			}
-			curOuter, _ := curM[sec.Key].(map[string]any)
+			outer, ok := rawUpd.(map[string]any)
+			if !ok {
+				continue
+			}
+			var curOuter map[string]any
+			if rawCur, ok := unwrapSection(curM, sec); ok {
+				curOuter, _ = rawCur.(map[string]any)
+			}
 			for instKey, raw := range outer {
 				inner, ok := raw.(map[string]any)
 				if !ok {
@@ -282,11 +320,18 @@ func preserveSectionSecrets(updated, current *config.Config) {
 			continue
 		}
 		if sec.Shape == descriptor.ShapeList {
-			outer, ok := updM[sec.Key].([]any)
+			rawUpd, ok := unwrapSection(updM, sec)
 			if !ok {
 				continue
 			}
-			curOuter, _ := curM[sec.Key].([]any)
+			outer, ok := rawUpd.([]any)
+			if !ok {
+				continue
+			}
+			var curOuter []any
+			if rawCur, ok := unwrapSection(curM, sec); ok {
+				curOuter, _ = rawCur.([]any)
+			}
 			for i, raw := range outer {
 				inner, ok := raw.(map[string]any)
 				if !ok {
@@ -377,11 +422,18 @@ func RedactSectionSecretsForTest(m map[string]any) { redactSectionSecrets(m) }
 func PreserveSectionSecretsForTest(updated, current map[string]any) {
 	for _, sec := range descriptor.All() {
 		if sec.Shape == descriptor.ShapeKeyedMap {
-			outer, ok := updated[sec.Key].(map[string]any)
+			rawUpd, ok := unwrapSection(updated, sec)
 			if !ok {
 				continue
 			}
-			curOuter, _ := current[sec.Key].(map[string]any)
+			outer, ok := rawUpd.(map[string]any)
+			if !ok {
+				continue
+			}
+			var curOuter map[string]any
+			if rawCur, ok := unwrapSection(current, sec); ok {
+				curOuter, _ = rawCur.(map[string]any)
+			}
 			for instKey, raw := range outer {
 				inner, ok := raw.(map[string]any)
 				if !ok {
@@ -409,11 +461,18 @@ func PreserveSectionSecretsForTest(updated, current map[string]any) {
 			continue
 		}
 		if sec.Shape == descriptor.ShapeList {
-			outer, ok := updated[sec.Key].([]any)
+			rawUpd, ok := unwrapSection(updated, sec)
 			if !ok {
 				continue
 			}
-			curOuter, _ := current[sec.Key].([]any)
+			outer, ok := rawUpd.([]any)
+			if !ok {
+				continue
+			}
+			var curOuter []any
+			if rawCur, ok := unwrapSection(current, sec); ok {
+				curOuter, _ = rawCur.([]any)
+			}
 			for i, raw := range outer {
 				inner, ok := raw.(map[string]any)
 				if !ok {

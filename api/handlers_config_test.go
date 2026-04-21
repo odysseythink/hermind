@@ -513,3 +513,124 @@ func TestPreserveSectionSecrets_DottedPath(t *testing.T) {
 		t.Errorf("%s.a.api_key = %q, want %q (restored)", key, inner["api_key"], "sk-real")
 	}
 }
+
+func TestRedactAndPreserve_HonorsSubkey(t *testing.T) {
+	// Ad-hoc ShapeKeyedMap descriptor with Subkey="servers" + NoDiscriminator,
+	// single secret field "api_key". Mirrors the future mcp shape.
+	const key = "__test_subkey_redact"
+	descriptor.Register(descriptor.Section{
+		Key: key, Label: "Test", GroupID: "runtime",
+		Shape: descriptor.ShapeKeyedMap, Subkey: "servers",
+		NoDiscriminator: true,
+		Fields: []descriptor.FieldSpec{
+			{Name: "api_key", Label: "k", Kind: descriptor.FieldSecret},
+		},
+	})
+	t.Cleanup(func() { descriptor.Unregister(key) })
+
+	// Redact: secrets under servers.<inst> must be blanked.
+	blob := map[string]any{
+		key: map[string]any{
+			"servers": map[string]any{
+				"foo": map[string]any{"api_key": "real-secret-1"},
+				"bar": map[string]any{"api_key": "real-secret-2"},
+			},
+		},
+	}
+	RedactSectionSecretsForTest(blob)
+	foo := blob[key].(map[string]any)["servers"].(map[string]any)["foo"].(map[string]any)
+	bar := blob[key].(map[string]any)["servers"].(map[string]any)["bar"].(map[string]any)
+	if foo["api_key"] != "" {
+		t.Errorf("after redact: foo.api_key = %v, want blank", foo["api_key"])
+	}
+	if bar["api_key"] != "" {
+		t.Errorf("after redact: bar.api_key = %v, want blank", bar["api_key"])
+	}
+
+	// Preserve: foo comes back blanked (user didn't touch it in UI), bar
+	// comes back with a new value. foo should be restored from current,
+	// bar should keep the new value.
+	current := map[string]any{
+		key: map[string]any{
+			"servers": map[string]any{
+				"foo": map[string]any{"api_key": "real-secret-1"},
+				"bar": map[string]any{"api_key": "real-secret-2"},
+			},
+		},
+	}
+	updated := map[string]any{
+		key: map[string]any{
+			"servers": map[string]any{
+				"foo": map[string]any{"api_key": ""},
+				"bar": map[string]any{"api_key": "new-bar-secret"},
+			},
+		},
+	}
+	PreserveSectionSecretsForTest(updated, current)
+	fooAfter := updated[key].(map[string]any)["servers"].(map[string]any)["foo"].(map[string]any)
+	barAfter := updated[key].(map[string]any)["servers"].(map[string]any)["bar"].(map[string]any)
+	if fooAfter["api_key"] != "real-secret-1" {
+		t.Errorf("after preserve: foo.api_key = %v, want real-secret-1 (restored)", fooAfter["api_key"])
+	}
+	if barAfter["api_key"] != "new-bar-secret" {
+		t.Errorf("after preserve: bar.api_key = %v, want new-bar-secret (kept)", barAfter["api_key"])
+	}
+}
+
+func TestRedactAndPreserve_HonorsSubkeyForList(t *testing.T) {
+	// Ad-hoc ShapeList descriptor with Subkey="jobs" + NoDiscriminator,
+	// single secret field "token". Mirrors a future list-of-secrets shape.
+	const key = "__test_subkey_list"
+	descriptor.Register(descriptor.Section{
+		Key: key, Label: "Test", GroupID: "runtime",
+		Shape: descriptor.ShapeList, Subkey: "jobs",
+		NoDiscriminator: true,
+		Fields: []descriptor.FieldSpec{
+			{Name: "name", Label: "N", Kind: descriptor.FieldString},
+			{Name: "token", Label: "T", Kind: descriptor.FieldSecret},
+		},
+	})
+	t.Cleanup(func() { descriptor.Unregister(key) })
+
+	blob := map[string]any{
+		key: map[string]any{
+			"jobs": []any{
+				map[string]any{"name": "a", "token": "tok-a"},
+				map[string]any{"name": "b", "token": "tok-b"},
+			},
+		},
+	}
+	RedactSectionSecretsForTest(blob)
+	jobs := blob[key].(map[string]any)["jobs"].([]any)
+	if jobs[0].(map[string]any)["token"] != "" {
+		t.Errorf("redacted jobs[0].token = %v, want blank", jobs[0].(map[string]any)["token"])
+	}
+	if jobs[1].(map[string]any)["token"] != "" {
+		t.Errorf("redacted jobs[1].token = %v, want blank", jobs[1].(map[string]any)["token"])
+	}
+
+	current := map[string]any{
+		key: map[string]any{
+			"jobs": []any{
+				map[string]any{"name": "a", "token": "tok-a"},
+				map[string]any{"name": "b", "token": "tok-b"},
+			},
+		},
+	}
+	updated := map[string]any{
+		key: map[string]any{
+			"jobs": []any{
+				map[string]any{"name": "a", "token": ""},            // user untouched
+				map[string]any{"name": "b", "token": "tok-b-fresh"}, // user retyped
+			},
+		},
+	}
+	PreserveSectionSecretsForTest(updated, current)
+	after := updated[key].(map[string]any)["jobs"].([]any)
+	if after[0].(map[string]any)["token"] != "tok-a" {
+		t.Errorf("preserved jobs[0].token = %v, want tok-a (restored)", after[0].(map[string]any)["token"])
+	}
+	if after[1].(map[string]any)["token"] != "tok-b-fresh" {
+		t.Errorf("preserved jobs[1].token = %v, want tok-b-fresh (kept)", after[1].(map[string]any)["token"])
+	}
+}
