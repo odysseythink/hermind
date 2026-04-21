@@ -243,16 +243,20 @@ Errors:
   500  storage error
 ```
 
-`storage.Storage` gains:
+**No new storage method needed.** `storage.Storage` already exposes
+`UpdateSession(ctx, id, *SessionUpdate)` and the existing `SessionUpdate`
+struct already has a `Title` field. The SQLite implementation at
+`storage/sqlite/session.go:97` already handles `Title`: non-empty values are
+written, empty is treated as "no change". The PATCH handler:
 
-```go
-// UpdateSessionTitle sets the session's title. Returns ErrSessionNotFound if
-// the session does not exist.
-UpdateSessionTitle(ctx context.Context, sessionID, title string) error
-```
+- Trims and validates `title` (non-empty, ≤ 200 runes) at the handler layer.
+- Calls `UpdateSession(ctx, id, &SessionUpdate{Title: trimmed})`.
+- Maps `storage.ErrNotFound` → 404; other errors → 500.
+- On success fetches the fresh session via `GetSession` and returns it as
+  `SessionDTO`.
 
-SQLite implementation is a single `UPDATE sessions SET title = ? WHERE id = ?`
-with `RowsAffected() == 0` mapped to `ErrSessionNotFound`.
+The storage layer does not need to add new validation (empty-string reject is
+handler-layer); storage tests stay focused on the SQL path.
 
 ### Frontend: session creation
 
@@ -263,37 +267,60 @@ optimistically inserts a placeholder into the sidebar. Change it to:
 - Do **not** insert a placeholder row into the sidebar.
 - Clear composer state.
 
-A new session only appears in the sidebar after the user sends their first
-message and the backend's `POST /api/sessions/{id}/messages` response returns
-a non-null `session` field (see below).
+A new session only appears in the sidebar after the backend emits a
+`session_created` SSE event (or the next poll fetch returns it — see below).
 
-### Frontend: session appears via `POST /messages` response
+### Frontend: session appears via `session_created` SSE event + polling
 
-The existing SSE hub (`api/stream_hook.go::MemoryStreamHub`) is *session-scoped*
-— subscribers register against a specific `sessionID`. A brand-new session has
-no subscriber for the sidebar, so a hub-broadcast "session_created" event
-can't reach it. Rather than bolt on a global channel, reuse the POST response:
+Two delivery channels, covering the two creation sources:
 
-```go
-// api/dto.go — MessageSubmitResponse gains a Session field, populated only
-// when this call created a brand-new row.
-type MessageSubmitResponse struct {
-    SessionID string       `json:"session_id"`
-    Status    string       `json:"status"`
-    Session   *SessionDTO  `json:"session,omitempty"` // new
-}
-```
+**(a) Web-chat (same-browser):** existing per-session SSE hub. Flow:
 
-`handlers_session_run.go` fills `Session` iff `ensureSession` materialized a new
-row during this call (the handler can detect this by doing `storage.GetSession`
-before the agent call — returning `ErrNotFound` signals new row ahead).
+1. User clicks "+ New conversation". Frontend generates a UUID and sets
+   `sessionId` in hash state. **Does not** insert anything into the sidebar
+   list state.
+2. `ChatWorkspace` re-renders with the new `sessionId`; `useChatStream` opens an
+   SSE subscription for that id.
+3. User types and hits send. `POST /api/sessions/{id}/messages` → 202 accepted,
+   goroutine starts.
+4. Inside `sessionrun.Run`, after `engine.RunConversation`'s internal
+   `ensureSession` successfully creates a row, publish a new `StreamEvent`:
 
-Frontend: `useChatStream` (or whoever handles the POST response) passes
-`response.session` to the reducer as `chat/session/created`. Reducer inserts at
-the top of the sidebar list; a duplicate id is a no-op (idempotent).
+   ```go
+   // api/stream_hook.go — Event Type values add "session_created"
+   hub.Publish(StreamEvent{
+       Type:      "session_created",
+       SessionID: sessionID,
+       Data:      sessionToDTO(session),  // full SessionDTO payload
+   })
+   ```
 
-This keeps all "new session in list" signalling on a single HTTP round-trip
-with no new wire event types.
+5. Frontend receives the event on its already-open subscription, dispatches
+   `chat/session/created`, reducer inserts at the top of the sidebar list
+   (idempotent on duplicate id).
+
+No race: step 2 completes before step 3 (the user types in between), so the
+subscription is registered before the goroutine publishes in step 4.
+
+**Refinement — how `ensureSession` triggers the publish:** `sessionrun.Run`
+calls `engine.RunConversation` which calls `engine.ensureSession`. To notify
+the hub, `ensureSession` returns the `*storage.Session` and a `bool` flag
+(`created`). `sessionrun.Run` reads the result via a new callback on
+`RunOptions` or from the returned `ConversationResult`. Simpler option: the
+engine exposes an optional `OnSessionCreated func(*storage.Session)` callback;
+`sessionrun.Run` sets it to publish the `session_created` event.
+
+**(b) IM-gateway-created sessions:** the web browser has no way to know about
+a Telegram-user-initiated session in realtime. Add lightweight polling:
+
+- `useSessionList` refetches `GET /api/sessions` every 10 seconds.
+- Also refetches on `window.focus`.
+- Merges results with local state by id (SSE-delivered rows take precedence
+  if they arrive first; identical ids are deduped).
+
+Polling is kept minimal (small payload, browser-only when tab focused) — good
+enough for a single-operator local tool. A future spec can replace polling
+with a websocket / server-push channel if latency becomes a concern.
 
 ### Frontend: source badge
 
@@ -427,9 +454,10 @@ are already empty. No reverse migration needed.
   `Title`.
 - `RunConversation` uses `session.SystemPrompt` unchanged across turns; later
   edits to `config.agent.system_prompt` do not affect in-flight sessions.
-- `storage.UpdateSessionTitle`: happy path, `ErrSessionNotFound` on missing id,
-  empty-string rejected at the handler (not storage) layer — storage does not
-  re-validate.
+- `storage.UpdateSession` with `Title` set: happy path writes the new title
+  and reports `ErrNotFound` on missing id. This path already exists and has a
+  test (`storage/sqlite/session_test.go`); add one more assertion for the
+  not-found branch if it isn't covered.
 - Migration `v2`: starting from a DB populated with multiple sessions and
   messages at `schema_meta.version = '1'`, run `Migrate()`, assert both
   `sessions` and `messages` are empty, assert `memories` is untouched, assert
@@ -468,15 +496,13 @@ are already empty. No reverse migration needed.
 | `agent/title.go` | New: `DeriveTitle` pure function |
 | `agent/conversation.go::ensureSession` | Compose prompt + derive title |
 | `agent/conversation.go::RunConversation` | Read frozen `session.SystemPrompt`, stop rebuilding per-turn |
-| `storage/storage.go` | Interface adds `UpdateSessionTitle` |
-| `storage/sqlite/sessions.go` | Implement `UpdateSessionTitle`; map zero-rows to `ErrSessionNotFound` |
 | `storage/sqlite/migrate.go` | Add `schema_meta` table, version-runner, v2 step |
-| `api/dto.go` | `MessageSubmitResponse` gains optional `session` field |
 | `api/handlers_sessions.go` | `PATCH /api/sessions/{id}`; confirm `listSessions` has no source filter |
-| `api/handlers_session_run.go` | Detect brand-new session on POST; fill `Session` in response |
-| `web/src/api/schemas.ts` | Widen `SessionSummarySchema`; widen `MessageSubmitResponseSchema`; new `PatchSessionBodySchema` |
-| `web/src/hooks/useSessionList.ts` | `newSession()` no longer inserts placeholder |
-| `web/src/hooks/useChatStream.ts` or `ChatWorkspace` | On POST response with `session`, dispatch `chat/session/created` |
+| `api/stream_hook.go` (docs only) | Add `session_created` as a documented `Type` value |
+| `api/sessionrun/runner.go` | Publish `session_created` event after engine's `ensureSession` creates a row |
+| `web/src/api/schemas.ts` | Widen `SessionSummarySchema`; new `PatchSessionBodySchema` |
+| `web/src/hooks/useSessionList.ts` | `newSession()` no longer inserts placeholder; poll + focus-refetch |
+| `web/src/hooks/useChatStream.ts` | Handle `session_created` SSE event → reducer |
 | `web/src/state/chat.ts` | Reducer action `chat/session/created` (idempotent insert) |
 | `web/src/components/chat/SessionItem.tsx` | Double-click edit state, source badge |
 | `web/src/components/chat/SessionList.tsx` | Pass `source` through |
