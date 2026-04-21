@@ -1,6 +1,6 @@
 import { useState } from 'react';
 import { describe, it, expect, vi } from 'vitest';
-import { render, screen } from '@testing-library/react';
+import { render, screen, fireEvent } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import ConfigSection from './ConfigSection';
 import type { ConfigSection as ConfigSectionT } from '../api/schemas';
@@ -362,5 +362,51 @@ describe('ConfigSection — dotted field names', () => {
       />,
     );
     expect(screen.queryByLabelText(/honcho api key/i)).toBeNull();
+  });
+});
+
+describe('ConfigSection — multiselect dispatch', () => {
+  const section: ConfigSectionT = {
+    key: 'skills',
+    label: 'Skills',
+    group_id: 'skills',
+    shape: 'map',
+    fields: [
+      {
+        name: 'disabled',
+        label: 'Disabled skills',
+        kind: 'multiselect',
+        enum: ['alpha', 'beta'],
+      },
+    ],
+  };
+
+  it('renders MultiSelectField for kind: multiselect', () => {
+    render(
+      <ConfigSection
+        section={section}
+        value={{ disabled: ['alpha'] }}
+        originalValue={{ disabled: [] }}
+        onFieldChange={vi.fn()}
+      />,
+    );
+    const alpha = screen.getByLabelText('alpha') as HTMLInputElement;
+    const beta = screen.getByLabelText('beta') as HTMLInputElement;
+    expect(alpha.checked).toBe(true);
+    expect(beta.checked).toBe(false);
+  });
+
+  it('calls onFieldChange with the new string[] when a checkbox toggles', () => {
+    const onFieldChange = vi.fn();
+    render(
+      <ConfigSection
+        section={section}
+        value={{ disabled: [] }}
+        originalValue={{ disabled: [] }}
+        onFieldChange={onFieldChange}
+      />,
+    );
+    fireEvent.click(screen.getByLabelText('beta'));
+    expect(onFieldChange).toHaveBeenCalledWith('disabled', ['beta']);
   });
 });

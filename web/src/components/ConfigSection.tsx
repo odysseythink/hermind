@@ -6,6 +6,7 @@ import BoolToggle from './fields/BoolToggle';
 import EnumSelect from './fields/EnumSelect';
 import SecretInput from './fields/SecretInput';
 import FloatInput from './fields/FloatInput';
+import MultiSelectField from './fields/MultiSelectField';
 import { getPath } from '../util/path';
 
 export interface ConfigSectionProps {
@@ -62,6 +63,20 @@ export default function ConfigSection({
         const schemaField = f as SchemaField;
         const onChange = (v: string) => onFieldChange(f.name, v);
         switch (f.kind) {
+          case 'multiselect': {
+            const raw = getPath(value, f.name);
+            const arr = Array.isArray(raw)
+              ? (raw as unknown[]).filter((x): x is string => typeof x === 'string')
+              : [];
+            return (
+              <MultiSelectField
+                key={f.name}
+                field={f}
+                value={arr}
+                onChange={(next: string[]) => onFieldChange(f.name, next)}
+              />
+            );
+          }
           case 'int':
             return <NumberInput key={f.name} field={schemaField} value={current} onChange={onChange} />;
           case 'float':
