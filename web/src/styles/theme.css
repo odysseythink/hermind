@@ -144,37 +144,42 @@ code, kbd, samp, pre {
 
 /* ============================================================
  * App shell grid.
- * 48px top bar + content region. Chat + Settings both occupy the
- * content region; their internal layouts are defined per-component.
+ * Settings mode (default shape): 48px top + (240px side | 1fr main) + 32px foot.
+ * Chat mode: 48px top + 1fr main. ChatWorkspace provides its own
+ * internal sidebar + conversation split so we don't want a side
+ * column at the shell level.
+ * App.tsx applies either .settings-mode or .chat-mode.
  * ============================================================ */
 
 .app-shell {
   display: grid;
-  grid-template-columns: 1fr;
-  grid-template-rows: 48px 1fr 32px;
-  grid-template-areas:
-    "top"
-    "main"
-    "foot";
-  height: 100vh;
-  min-height: 0;
-}
-
-.app-shell > header { grid-area: top; }
-.app-shell > main   { grid-area: main; overflow: hidden; min-width: 0; }
-.app-shell > footer { grid-area: foot; }
-
-/* Settings-mode overrides: legacy two-column grid. Chat mode uses its
- * own internal split and fills the whole main area. */
-.app-shell.settings-mode {
   grid-template-columns: 240px 1fr;
+  grid-template-rows: 48px 1fr 32px;
   grid-template-areas:
     "top  top"
     "side main"
     "foot foot";
+  height: 100vh;
+  min-height: 0;
+  background: var(--bg);
+  color: var(--text);
 }
-.app-shell.settings-mode > aside { grid-area: side; overflow-y: auto; border-right: 1px solid var(--border); }
-.app-shell.settings-mode > main  { grid-area: main; overflow-y: auto; min-width: 0; }
+
+.app-shell > header { grid-area: top; }
+.app-shell > aside  { grid-area: side; overflow-y: auto; }
+.app-shell > main   { grid-area: main; overflow-y: auto; min-width: 0; background: var(--bg); }
+.app-shell > footer { grid-area: foot; }
+
+/* Chat mode: collapse to a single column; ChatWorkspace creates its
+ * own internal sidebar + conversation split. */
+.app-shell.chat-mode {
+  grid-template-columns: 1fr;
+  grid-template-rows: 48px 1fr;
+  grid-template-areas:
+    "top"
+    "main";
+}
+.app-shell.chat-mode > main { overflow: hidden; }
 
 /* ============================================================
  * Utility classes — use from JSX when a component needs mono/tabular

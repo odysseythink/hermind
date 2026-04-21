@@ -3,7 +3,5 @@
   background: var(--surface);
   border-right: 1px solid var(--border);
   overflow-y: auto;
-  width: 240px;
-  flex-shrink: 0;
   height: 100%;
 }

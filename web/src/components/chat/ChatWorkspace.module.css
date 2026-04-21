@@ -1,7 +1,7 @@
 .workspace {
   display: grid;
   grid-template-columns: 240px 1fr;
-  height: calc(100vh - 48px);
+  height: 100%;
   min-height: 0;
   background: var(--bg);
 }

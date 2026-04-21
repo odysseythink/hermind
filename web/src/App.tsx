@@ -333,7 +333,7 @@ export default function App() {
       (state.config as { providers?: Record<string, { api_key?: string }> }).providers ?? {},
     ).some((p) => typeof p?.api_key === 'string' && p.api_key.length > 0);
     return (
-      <div className="app-shell">
+      <div className="app-shell chat-mode">
         <TopBar dirtyCount={0} status={state.status} onSave={() => {}} mode="chat" onModeChange={setMode} />
         <ChatWorkspace
           sessionId={hashState.sessionId ?? null}
@@ -358,7 +358,7 @@ export default function App() {
     : null;
 
   return (
-    <div className="app-shell">
+    <div className="app-shell settings-mode">
       <TopBar dirtyCount={dirty} status={state.status} onSave={onSave} mode="settings" onModeChange={setMode} />
       <SettingsSidebar
         activeGroup={state.shell.activeGroup}
