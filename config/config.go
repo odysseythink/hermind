@@ -256,9 +256,10 @@ type AuxiliaryConfig struct {
 
 // AgentConfig holds engine-level settings.
 type AgentConfig struct {
-	MaxTurns       int               `yaml:"max_turns"`
-	GatewayTimeout int               `yaml:"gateway_timeout,omitempty"`
-	Compression    CompressionConfig `yaml:"compression,omitempty"`
+	MaxTurns            int               `yaml:"max_turns"`
+	GatewayTimeout      int               `yaml:"gateway_timeout,omitempty"`
+	Compression         CompressionConfig `yaml:"compression,omitempty"`
+	DefaultSystemPrompt string            `yaml:"default_system_prompt,omitempty"`
 }
 
 // TerminalConfig holds settings for the terminal (shell exec) backend.

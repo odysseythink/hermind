@@ -26,6 +26,13 @@ func init() {
 				Kind:    FieldInt,
 				Default: 1800,
 			},
+			{
+				Name:    "default_system_prompt",
+				Label:   "Default system prompt",
+				Help:    "Prepended to every new session's system prompt, right after the agent identity block. Empty means no extra prompt.",
+				Kind:    FieldString, // flipped to FieldText in Task 2
+				Default: "",
+			},
 		},
 	})
 }

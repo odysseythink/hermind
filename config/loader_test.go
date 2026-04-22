@@ -203,6 +203,26 @@ web:
 	assert.Equal(t, "exa-789", cfg.Web.Search.Providers.Exa.APIKey)
 }
 
+func TestLoad_AgentDefaultSystemPrompt(t *testing.T) {
+	dir := t.TempDir()
+	yamlPath := filepath.Join(dir, "config.yaml")
+	err := os.WriteFile(yamlPath, []byte(`
+agent:
+  max_turns: 10
+  default_system_prompt: "You are a sardonic assistant."
+`), 0o644)
+	if err != nil {
+		t.Fatalf("WriteFile: %v", err)
+	}
+	cfg, err := LoadFromPath(yamlPath)
+	if err != nil {
+		t.Fatalf("Load: %v", err)
+	}
+	if got, want := cfg.Agent.DefaultSystemPrompt, "You are a sardonic assistant."; got != want {
+		t.Errorf("DefaultSystemPrompt = %q, want %q", got, want)
+	}
+}
+
 func TestLoadPreservesLiteralEnvString(t *testing.T) {
 	// After dropping env:VAR expansion, a config value that happens to start
 	// with "env:" must round-trip as a literal string, not trigger lookup.
