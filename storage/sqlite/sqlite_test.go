@@ -227,6 +227,58 @@ func TestWithTxRollsBackOnPanic(t *testing.T) {
 	assert.ErrorIs(t, err, storage.ErrNotFound)
 }
 
+func TestUpdateSession_PatchesModelAndSystemPrompt(t *testing.T) {
+	store := newTestStore(t)
+	ctx := context.Background()
+
+	require.NoError(t, store.CreateSession(ctx, &storage.Session{
+		ID:           "s-patch-1",
+		Source:       "web",
+		Model:        "claude-opus-4-7",
+		SystemPrompt: "orig",
+		Title:        "orig title",
+		StartedAt:    time.Now().UTC(),
+	}))
+
+	newModel := "claude-sonnet-4-6"
+	newPrompt := "You are a concise assistant."
+	require.NoError(t, store.UpdateSession(ctx, "s-patch-1", &storage.SessionUpdate{
+		Model:        &newModel,
+		SystemPrompt: &newPrompt,
+	}))
+
+	got, err := store.GetSession(ctx, "s-patch-1")
+	require.NoError(t, err)
+	assert.Equal(t, newModel, got.Model)
+	assert.Equal(t, newPrompt, got.SystemPrompt)
+	assert.Equal(t, "orig title", got.Title) // untouched
+}
+
+func TestUpdateSession_EmptyStringClearsFields(t *testing.T) {
+	store := newTestStore(t)
+	ctx := context.Background()
+
+	require.NoError(t, store.CreateSession(ctx, &storage.Session{
+		ID:           "s-patch-2",
+		Source:       "web",
+		Model:        "claude-opus-4-7",
+		SystemPrompt: "orig",
+		Title:        "t",
+		StartedAt:    time.Now().UTC(),
+	}))
+
+	empty := ""
+	require.NoError(t, store.UpdateSession(ctx, "s-patch-2", &storage.SessionUpdate{
+		Model:        &empty,
+		SystemPrompt: &empty,
+	}))
+
+	got, err := store.GetSession(ctx, "s-patch-2")
+	require.NoError(t, err)
+	assert.Equal(t, "", got.Model)
+	assert.Equal(t, "", got.SystemPrompt)
+}
+
 func TestUpdateUsageReturnsNotFoundForMissingSession(t *testing.T) {
 	store := newTestStore(t)
 	ctx := context.Background()

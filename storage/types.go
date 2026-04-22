@@ -61,6 +61,8 @@ type SessionUpdate struct {
 	EndReason    string
 	Title        string
 	MessageCount *int
+	Model        *string // nil = unchanged; "" = clear
+	SystemPrompt *string // nil = unchanged; "" = clear
 }
 
 // UsageUpdate holds a usage delta to add to a session.

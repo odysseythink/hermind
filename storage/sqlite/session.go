@@ -116,6 +116,14 @@ func (s *Store) UpdateSession(ctx context.Context, id string, upd *storage.Sessi
 		setClauses = append(setClauses, "message_count = ?")
 		args = append(args, *upd.MessageCount)
 	}
+	if upd.Model != nil {
+		setClauses = append(setClauses, "model = ?")
+		args = append(args, *upd.Model)
+	}
+	if upd.SystemPrompt != nil {
+		setClauses = append(setClauses, "system_prompt = ?")
+		args = append(args, *upd.SystemPrompt)
+	}
 	if len(setClauses) == 0 {
 		return nil
 	}
