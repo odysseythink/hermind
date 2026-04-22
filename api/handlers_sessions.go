@@ -137,6 +137,17 @@ func (s *Server) handleSessionPatch(w http.ResponseWriter, r *http.Request) {
 		http.Error(w, err.Error(), http.StatusInternalServerError)
 		return
 	}
+	if s.streams != nil {
+		s.streams.Publish(StreamEvent{
+			Type:      EventTypeSessionUpdated,
+			SessionID: id,
+			Data: map[string]any{
+				"title":         sess.Title,
+				"model":         sess.Model,
+				"system_prompt": sess.SystemPrompt,
+			},
+		})
+	}
 	writeJSON(w, dtoFromSession(sess))
 }
 

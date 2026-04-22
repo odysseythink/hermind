@@ -26,6 +26,11 @@ const (
 	// EventTypeStatus is a coarse lifecycle event ("started",
 	// "turn_complete", "error"). Data is a string.
 	EventTypeStatus = "status"
+
+	// EventTypeSessionUpdated fires after a successful PATCH /api/sessions/{id}.
+	// Data is a map with the updated title / model / system_prompt — whichever
+	// fields changed. Clients merge the payload into their local session cache.
+	EventTypeSessionUpdated = "session_updated"
 )
 
 // encodeStreamEvent produces the JSON frame a WebSocket or SSE client

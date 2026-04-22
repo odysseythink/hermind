@@ -459,3 +459,30 @@ func TestPatchSession_AllowsEmptyStringToClear(t *testing.T) {
 	require.NoError(t, json.NewDecoder(rr.Body).Decode(&dto))
 	assert.Equal(t, "", dto.SystemPrompt)
 }
+
+func TestPatchSession_BroadcastsSessionUpdatedEvent(t *testing.T) {
+	s, store := newTestServerWithStore(t)
+	store.seedSessionFull("s-evt", "web", "claude-opus-4-7", "orig", "t")
+
+	// Subscribe to the hub before triggering the PATCH.
+	ctx, cancel := context.WithCancel(context.Background())
+	defer cancel()
+	ch, subID := s.streams.Subscribe(ctx, "s-evt")
+	defer s.streams.Unsubscribe("s-evt", subID)
+
+	rr := httptest.NewRecorder()
+	req := httptest.NewRequest("PATCH", "/api/sessions/s-evt",
+		strings.NewReader(`{"system_prompt":"new"}`))
+	req.Header.Set("Authorization", "Bearer t")
+	req.Header.Set("Content-Type", "application/json")
+	s.Router().ServeHTTP(rr, req)
+	require.Equal(t, http.StatusOK, rr.Code)
+
+	select {
+	case ev := <-ch:
+		assert.Equal(t, "session_updated", ev.Type)
+		assert.Equal(t, "s-evt", ev.SessionID)
+	case <-time.After(1 * time.Second):
+		t.Fatal("timed out waiting for session_updated event")
+	}
+}
