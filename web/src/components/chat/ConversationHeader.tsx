@@ -1,18 +1,23 @@
-import ModelSelector from './ModelSelector';
+import { useTranslation } from 'react-i18next';
+import SettingsButton from './SettingsButton';
 import styles from './ConversationHeader.module.css';
 
 type Props = {
   title: string;
-  model: string;
-  modelOptions: string[];
-  onModelChange: (v: string) => void;
+  onOpenSettings: () => void;
+  settingsDisabled?: boolean;
 };
 
-export default function ConversationHeader({ title, model, modelOptions, onModelChange }: Props) {
+export default function ConversationHeader({ title, onOpenSettings, settingsDisabled }: Props) {
+  const { t } = useTranslation('ui');
   return (
     <header className={styles.header}>
       <h2 className={styles.title}>{title}</h2>
-      <ModelSelector value={model} options={modelOptions} onChange={onModelChange} />
+      <SettingsButton
+        onClick={onOpenSettings}
+        disabled={settingsDisabled}
+        ariaLabel={t('chat.settings.title')}
+      />
     </header>
   );
 }
