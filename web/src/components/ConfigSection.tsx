@@ -1,6 +1,7 @@
 import styles from './ConfigSection.module.css';
 import type { ConfigField, ConfigSection as ConfigSectionT, SchemaField } from '../api/schemas';
 import TextInput from './fields/TextInput';
+import TextAreaInput from './fields/TextAreaInput';
 import NumberInput from './fields/NumberInput';
 import BoolToggle from './fields/BoolToggle';
 import EnumSelect from './fields/EnumSelect';
@@ -112,6 +113,16 @@ export default function ConfigSection({
                 dirty={current !== original}
                 disableReveal
                 onChange={onChange}
+              />
+            );
+          case 'text':
+            return (
+              <TextAreaInput
+                key={f.name}
+                value={typeof value[f.name] === 'string' ? value[f.name] as string : current}
+                onChange={(v) => onFieldChange(f.name, v)}
+                placeholder={localized.help ?? ''}
+                aria-label={localized.label}
               />
             );
           case 'string':

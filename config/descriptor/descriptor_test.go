@@ -378,6 +378,12 @@ func TestFieldSpec_DatalistSourceDefaultsToNil(t *testing.T) {
 	}
 }
 
+func TestFieldKindString_IncludesText(t *testing.T) {
+	if got := FieldText.String(); got != "text" {
+		t.Errorf("FieldText.String() = %q, want %q", got, "text")
+	}
+}
+
 func TestShapeListInvariant_FlagsEmptyFields(t *testing.T) {
 	key := "__test_list_empty_fields"
 	defer delete(registry, key)

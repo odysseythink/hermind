@@ -1,0 +1,22 @@
+.textarea {
+  width: 100%;
+  min-height: 120px;
+  padding: 6px 8px;
+  font-family: ui-monospace, SF Mono, Menlo, monospace;
+  font-size: 13px;
+  line-height: 1.5;
+  color: var(--fg, #d4d4d4);
+  background: var(--bg-elevated, #111);
+  border: 1px solid var(--border, #333);
+  border-radius: 2px;
+  resize: vertical;
+  box-sizing: border-box;
+}
+.textarea:focus {
+  outline: none;
+  border-color: #FFB800;
+}
+.textarea:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}

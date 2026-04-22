@@ -22,6 +22,7 @@ const (
 	FieldEnum
 	FieldFloat
 	FieldMultiSelect
+	FieldText
 )
 
 // String returns a lowercase name suitable for JSON ("string", "secret", …).
@@ -41,6 +42,8 @@ func (k FieldKind) String() string {
 		return "float"
 	case FieldMultiSelect:
 		return "multiselect"
+	case FieldText:
+		return "text"
 	}
 	return "unknown"
 }
