@@ -487,6 +487,30 @@ func TestPatchSession_BroadcastsSessionUpdatedEvent(t *testing.T) {
 	}
 }
 
+func TestPatchSession_DecodesPercentEncodedID(t *testing.T) {
+	// Session IDs like "telegram:760061130" encode the colon as %3A in URLs.
+	// chi.URLParam returns the still-encoded value, so handlers must call
+	// sessionIDParam (which wraps url.PathUnescape) to get the raw id back
+	// before looking it up in storage.
+	s, store := newTestServerWithStore(t)
+	store.seedSessionFull("telegram:760061130", "telegram", "claude-opus-4-7", "orig", "/start")
+
+	rr := httptest.NewRecorder()
+	req := httptest.NewRequest("PATCH", "/api/sessions/telegram%3A760061130",
+		strings.NewReader(`{"system_prompt":"new"}`))
+	req.Header.Set("Authorization", "Bearer t")
+	req.Header.Set("Content-Type", "application/json")
+	s.Router().ServeHTTP(rr, req)
+
+	if rr.Code != http.StatusOK {
+		t.Fatalf("code=%d body=%s — expected 200, not 404", rr.Code, rr.Body.String())
+	}
+	var dto SessionDTO
+	require.NoError(t, json.NewDecoder(rr.Body).Decode(&dto))
+	assert.Equal(t, "telegram:760061130", dto.ID)
+	assert.Equal(t, "new", dto.SystemPrompt)
+}
+
 func TestPostMessage_IgnoresDeprecatedModelField(t *testing.T) {
 	// POST /api/sessions/{id}/messages no longer accepts a model field.
 	// The Model field has been removed from MessageSubmitRequest; this is

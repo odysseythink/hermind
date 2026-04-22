@@ -2,8 +2,6 @@ package api
 
 import (
 	"net/http"
-
-	"github.com/go-chi/chi/v5"
 )
 
 // handleSessionMessages responds to GET /api/sessions/{id}/messages.
@@ -14,7 +12,7 @@ func (s *Server) handleSessionMessages(w http.ResponseWriter, r *http.Request) {
 		http.Error(w, "storage not configured", http.StatusServiceUnavailable)
 		return
 	}
-	id := chi.URLParam(r, "id")
+	id := sessionIDParam(r)
 	limit := atoiDefault(r.URL.Query().Get("limit"), 50)
 	offset := atoiDefault(r.URL.Query().Get("offset"), 0)
 

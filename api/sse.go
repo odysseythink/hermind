@@ -4,8 +4,6 @@ import (
 	"fmt"
 	"net/http"
 	"time"
-
-	"github.com/go-chi/chi/v5"
 )
 
 // handleSessionStreamSSE serves GET /api/sessions/{id}/stream/sse. It
@@ -18,7 +16,7 @@ import (
 // WebSocket endpoint exactly so a frontend can pick either transport
 // without duplicating parsing logic.
 func (s *Server) handleSessionStreamSSE(w http.ResponseWriter, r *http.Request) {
-	sessionID := chi.URLParam(r, "id")
+	sessionID := sessionIDParam(r)
 	if sessionID == "" {
 		http.Error(w, "missing session id", http.StatusBadRequest)
 		return

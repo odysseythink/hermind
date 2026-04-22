@@ -6,7 +6,6 @@ import (
 	"time"
 
 	"github.com/coder/websocket"
-	"github.com/go-chi/chi/v5"
 )
 
 // handleSessionStreamWS serves GET /api/sessions/{id}/stream/ws. It
@@ -20,7 +19,7 @@ import (
 // REST POST /api/sessions/{id}/messages is how prompts are pushed
 // today.
 func (s *Server) handleSessionStreamWS(w http.ResponseWriter, r *http.Request) {
-	sessionID := chi.URLParam(r, "id")
+	sessionID := sessionIDParam(r)
 	if sessionID == "" {
 		http.Error(w, "missing session id", http.StatusBadRequest)
 		return

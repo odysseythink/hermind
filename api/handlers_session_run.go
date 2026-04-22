@@ -5,13 +5,11 @@ import (
 	"encoding/json"
 	"net/http"
 
-	"github.com/go-chi/chi/v5"
-
 	"github.com/odysseythink/hermind/api/sessionrun"
 )
 
 func (s *Server) handleSessionMessagesPost(w http.ResponseWriter, r *http.Request) {
-	sessionID := chi.URLParam(r, "id")
+	sessionID := sessionIDParam(r)
 	if sessionID == "" {
 		writeErr(w, http.StatusBadRequest, "missing session id")
 		return
@@ -54,7 +52,7 @@ func (s *Server) handleSessionMessagesPost(w http.ResponseWriter, r *http.Reques
 }
 
 func (s *Server) handleSessionCancel(w http.ResponseWriter, r *http.Request) {
-	sessionID := chi.URLParam(r, "id")
+	sessionID := sessionIDParam(r)
 	if sessionID == "" {
 		writeErr(w, http.StatusBadRequest, "missing session id")
 		return

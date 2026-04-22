@@ -8,8 +8,6 @@ import (
 	"strings"
 	"time"
 
-	"github.com/go-chi/chi/v5"
-
 	"github.com/odysseythink/hermind/storage"
 )
 
@@ -57,7 +55,7 @@ func (s *Server) handleSessionGet(w http.ResponseWriter, r *http.Request) {
 		http.Error(w, "storage not configured", http.StatusServiceUnavailable)
 		return
 	}
-	id := chi.URLParam(r, "id")
+	id := sessionIDParam(r)
 	row, err := s.opts.Storage.GetSession(r.Context(), id)
 	if errors.Is(err, storage.ErrNotFound) {
 		http.Error(w, "session not found", http.StatusNotFound)
@@ -78,7 +76,7 @@ func (s *Server) handleSessionPatch(w http.ResponseWriter, r *http.Request) {
 		http.Error(w, "storage not configured", http.StatusServiceUnavailable)
 		return
 	}
-	id := chi.URLParam(r, "id")
+	id := sessionIDParam(r)
 	if id == "" {
 		http.Error(w, "missing session id", http.StatusBadRequest)
 		return
