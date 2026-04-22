@@ -36,13 +36,15 @@ type PromptOptions struct {
 // PromptBuilder assembles system prompts for the agent engine.
 // Stateless — safe to share a single instance across conversations.
 type PromptBuilder struct {
-	platform string
+	platform            string
+	defaultSystemPrompt string
 }
 
 // NewPromptBuilder creates a PromptBuilder for a specific platform.
 // Valid platforms: "cli", "telegram", "discord", etc.
-func NewPromptBuilder(platform string) *PromptBuilder {
-	return &PromptBuilder{platform: platform}
+// defaultSystemPrompt is appended after the identity block when non-empty.
+func NewPromptBuilder(platform, defaultSystemPrompt string) *PromptBuilder {
+	return &PromptBuilder{platform: platform, defaultSystemPrompt: defaultSystemPrompt}
 }
 
 // Build assembles the system prompt. The output is stable for equivalent
@@ -52,11 +54,12 @@ func NewPromptBuilder(platform string) *PromptBuilder {
 func (pb *PromptBuilder) Build(opts *PromptOptions) string {
 	var parts []string
 	parts = append(parts, defaultIdentity)
-
+	if strings.TrimSpace(pb.defaultSystemPrompt) != "" {
+		parts = append(parts, pb.defaultSystemPrompt)
+	}
 	if opts != nil && len(opts.ActiveSkills) > 0 {
 		parts = append(parts, renderActiveSkills(opts.ActiveSkills))
 	}
-
 	return strings.Join(parts, "\n\n")
 }
 

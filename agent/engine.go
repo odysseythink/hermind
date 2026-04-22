@@ -64,7 +64,7 @@ func NewEngineWithToolsAndAux(p, aux provider.Provider, s storage.Storage, tools
 		tools:       tools,
 		config:      cfg,
 		platform:    platform,
-		prompt:      NewPromptBuilder(platform),
+		prompt:      NewPromptBuilder(platform, cfg.DefaultSystemPrompt),
 	}
 	if cfg.Compression.Enabled && aux != nil {
 		e.compressor = NewCompressor(cfg.Compression, aux)
