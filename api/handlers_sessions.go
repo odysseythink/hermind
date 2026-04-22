@@ -88,6 +88,10 @@ func (s *Server) handleSessionPatch(w http.ResponseWriter, r *http.Request) {
 		SystemPrompt *string `json:"system_prompt,omitempty"`
 		Model        *string `json:"model,omitempty"`
 	}
+	// Cap total body at MaxSystemPromptBytes + 1KB JSON overhead so a
+	// malicious client cannot force the server to buffer an unbounded
+	// request before the per-field length checks below run.
+	r.Body = http.MaxBytesReader(w, r.Body, MaxSystemPromptBytes+1024)
 	if err := json.NewDecoder(r.Body).Decode(&body); err != nil {
 		http.Error(w, "invalid json", http.StatusBadRequest)
 		return

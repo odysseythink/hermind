@@ -53,8 +53,9 @@ export function useChatStream(
           break;
         }
         case 'session_updated': {
+          if (!parsed.session_id) break;
           const payload = SessionUpdatedPayloadSchema.parse(parsed.data);
-          onSessionUpdatedRef.current?.(parsed.session_id!, payload);
+          onSessionUpdatedRef.current?.(parsed.session_id, payload);
           break;
         }
         case 'token': {

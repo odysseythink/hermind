@@ -90,7 +90,8 @@ export default function ChatWorkspace({ sessionId, onChangeSession, providerConf
         method: 'PATCH',
         body: { title },
       });
-      patchSession(id, { title });
+      // Local state refresh flows through the session_updated SSE event,
+      // which useChatStream pipes to patchSession. No optimistic write here.
     } catch (err) {
       setToast(t('chat.renameFailed', { msg: err instanceof Error ? err.message : '' }));
       throw err;
@@ -115,7 +116,7 @@ export default function ChatWorkspace({ sessionId, onChangeSession, providerConf
         method: 'PATCH',
         body: patch,
       });
-      patchSession(sessionId, patch);
+      // Local state refresh flows through the session_updated SSE event.
     } catch (err) {
       if (err instanceof ApiError && err.status === 400) {
         setToast(t('chat.settings.saveTooLong'));

@@ -27,6 +27,11 @@ const (
 	// "turn_complete", "error"). Data is a string.
 	EventTypeStatus = "status"
 
+	// EventTypeSessionCreated fires after ensureSession materializes a new
+	// session row. Data mirrors SessionDTO so clients can merge into their
+	// local sessions list.
+	EventTypeSessionCreated = "session_created"
+
 	// EventTypeSessionUpdated fires after a successful PATCH /api/sessions/{id}.
 	// Data is a map with the updated title / model / system_prompt — whichever
 	// fields changed. Clients merge the payload into their local session cache.

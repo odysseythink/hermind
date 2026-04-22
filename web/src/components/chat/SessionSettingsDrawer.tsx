@@ -65,15 +65,36 @@ export default function SessionSettingsDrawer({
 
   if (!open) return null;
 
+  function handleKeyDown(e: React.KeyboardEvent<HTMLDivElement>) {
+    if (e.key === 'Escape') {
+      handleCancel();
+      return;
+    }
+    if (e.key !== 'Tab') return;
+    const root = e.currentTarget;
+    const focusable = root.querySelectorAll<HTMLElement>(
+      'button:not([disabled]), select, textarea, input, [tabindex]:not([tabindex="-1"])',
+    );
+    if (focusable.length === 0) return;
+    const first = focusable[0];
+    const last = focusable[focusable.length - 1];
+    const active = document.activeElement as HTMLElement | null;
+    if (e.shiftKey && active === first) {
+      e.preventDefault();
+      last.focus();
+    } else if (!e.shiftKey && active === last) {
+      e.preventDefault();
+      first.focus();
+    }
+  }
+
   return (
     <div
       role="dialog"
       aria-modal="true"
       aria-label={t('chat.settings.title')}
       className={styles.drawer}
-      onKeyDown={(e) => {
-        if (e.key === 'Escape') handleCancel();
-      }}
+      onKeyDown={handleKeyDown}
       tabIndex={-1}
     >
       <header className={styles.header}>

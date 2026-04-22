@@ -94,6 +94,31 @@ describe('SessionSettingsDrawer', () => {
     expect(onClose).toHaveBeenCalled();
   });
 
+  it('traps Tab focus inside the drawer (Shift+Tab from first wraps to last)', () => {
+    render(
+      <SessionSettingsDrawer
+        open
+        session={session}
+        modelOptions={['', 'claude-opus-4-7']}
+        onClose={vi.fn()}
+        onSave={vi.fn()}
+      />,
+    );
+    const combo = screen.getByRole('combobox');
+    // Make the draft dirty so the Save button is enabled and counted
+    // as the last focusable element.
+    fireEvent.change(screen.getByRole('textbox'), { target: { value: 'changed' } });
+    const saveBtn = screen.getByRole('button', { name: /save/i });
+
+    combo.focus();
+    expect(document.activeElement).toBe(combo);
+    fireEvent.keyDown(screen.getByRole('dialog'), {
+      key: 'Tab',
+      shiftKey: true,
+    });
+    expect(document.activeElement).toBe(saveBtn);
+  });
+
   it('shows conflict banner when session prop updates while drawer is open with unsaved draft', () => {
     const { rerender } = render(
       <SessionSettingsDrawer
