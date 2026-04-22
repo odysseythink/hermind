@@ -8,7 +8,7 @@ func init() {
 	Register(Section{
 		Key:     "agent",
 		Label:   "Agent",
-		Summary: "Engine turn limit and gateway request budget.",
+		Summary: "Engine turn limit, gateway request budget, and default system prompt.",
 		GroupID: "runtime",
 		Fields: []FieldSpec{
 			{

@@ -211,16 +211,10 @@ agent:
   max_turns: 10
   default_system_prompt: "You are a sardonic assistant."
 `), 0o644)
-	if err != nil {
-		t.Fatalf("WriteFile: %v", err)
-	}
+	require.NoError(t, err)
 	cfg, err := LoadFromPath(yamlPath)
-	if err != nil {
-		t.Fatalf("Load: %v", err)
-	}
-	if got, want := cfg.Agent.DefaultSystemPrompt, "You are a sardonic assistant."; got != want {
-		t.Errorf("DefaultSystemPrompt = %q, want %q", got, want)
-	}
+	require.NoError(t, err)
+	assert.Equal(t, "You are a sardonic assistant.", cfg.Agent.DefaultSystemPrompt)
 }
 
 func TestLoadPreservesLiteralEnvString(t *testing.T) {
