@@ -134,6 +134,7 @@ func dtoFromSession(s *storage.Session) SessionDTO {
 		ID:           s.ID,
 		Source:       s.Source,
 		Model:        s.Model,
+		SystemPrompt: s.SystemPrompt,
 		StartedAt:    toEpoch(s.StartedAt),
 		EndedAt:      endedAt,
 		MessageCount: s.MessageCount,

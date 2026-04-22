@@ -38,6 +38,7 @@ type SessionDTO struct {
 	ID           string  `json:"id"`
 	Source       string  `json:"source"`
 	Model        string  `json:"model"`
+	SystemPrompt string  `json:"system_prompt"`
 	StartedAt    float64 `json:"started_at"`
 	EndedAt      float64 `json:"ended_at"`
 	MessageCount int     `json:"message_count"`

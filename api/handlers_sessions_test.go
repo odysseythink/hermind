@@ -9,6 +9,8 @@ import (
 	"testing"
 	"time"
 
+	"github.com/stretchr/testify/require"
+
 	"github.com/odysseythink/hermind/config"
 	"github.com/odysseythink/hermind/storage"
 )
@@ -40,6 +42,19 @@ func (m *mockStorage) seedSession(id string) {
 		{ID: 1, SessionID: id, Role: "user", Content: "hi", Timestamp: time.Now().UTC()},
 		{ID: 2, SessionID: id, Role: "assistant", Content: "hello", Timestamp: time.Now().UTC()},
 	}
+}
+
+func (m *mockStorage) seedSessionFull(id, source, model, systemPrompt, title string) {
+	m.sessions = append([]*storage.Session{{
+		ID:           id,
+		Source:       source,
+		Model:        model,
+		SystemPrompt: systemPrompt,
+		StartedAt:    time.Now().UTC(),
+		MessageCount: 0,
+		Title:        title,
+	}}, m.sessions...)
+	m.messages[id] = []*storage.StoredMessage{}
 }
 
 func (m *mockStorage) CreateSession(ctx context.Context, s *storage.Session) error {
@@ -325,5 +340,24 @@ func TestPatchSession_MissingToken_Returns401(t *testing.T) {
 	s.Router().ServeHTTP(rr, req)
 	if rr.Code != http.StatusUnauthorized {
 		t.Errorf("code=%d, want 401", rr.Code)
+	}
+}
+
+func TestGetSession_ReturnsSystemPromptField(t *testing.T) {
+	s, store := newTestServerWithStore(t)
+	store.seedSessionFull("s-dto-1", "web", "claude-opus-4-7", "You are a helper.", "Title 1")
+
+	rr := httptest.NewRecorder()
+	req := httptest.NewRequest("GET", "/api/sessions/s-dto-1", nil)
+	req.Header.Set("Authorization", "Bearer t")
+	s.Router().ServeHTTP(rr, req)
+
+	if rr.Code != http.StatusOK {
+		t.Fatalf("code=%d body=%s", rr.Code, rr.Body.String())
+	}
+	var dto SessionDTO
+	require.NoError(t, json.NewDecoder(rr.Body).Decode(&dto))
+	if got, want := dto.SystemPrompt, "You are a helper."; got != want {
+		t.Errorf("SystemPrompt = %q, want %q", got, want)
 	}
 }

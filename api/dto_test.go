@@ -17,7 +17,7 @@ func TestSessionListResponse_JSONShape(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	want := `{"sessions":[{"id":"s1","source":"cli","model":"m","started_at":0,"ended_at":0,"message_count":3,"title":""}],"total":1}`
+	want := `{"sessions":[{"id":"s1","source":"cli","model":"m","system_prompt":"","started_at":0,"ended_at":0,"message_count":3,"title":""}],"total":1}`
 	if string(data) != want {
 		t.Errorf("got %s\nwant %s", data, want)
 	}
