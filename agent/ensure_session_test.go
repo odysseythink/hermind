@@ -30,7 +30,7 @@ func newEngineWithStorage(t *testing.T, store storage.Storage, platform string) 
 	return NewEngineWithToolsAndAux(nil, nil, store, nil, config.AgentConfig{MaxTurns: 3}, platform)
 }
 
-func TestEnsureSession_NewRow_ComposesPromptAndTitle(t *testing.T) {
+func TestEnsureSession_NewRow_UsesDefaultPromptOnly(t *testing.T) {
 	store := newTestStoreForEngine(t)
 	eng := newEngineWithStorage(t, store, "web")
 
@@ -44,8 +44,8 @@ func TestEnsureSession_NewRow_ComposesPromptAndTitle(t *testing.T) {
 	require.NoError(t, err)
 	require.NotNil(t, sess)
 	assert.True(t, created)
-	assert.Equal(t, "You are helpful.\n\nBuild me a haiku generator", sess.SystemPrompt)
-	assert.Equal(t, "Build me a", sess.Title) // first 10 runes
+	assert.Equal(t, "You are helpful.", sess.SystemPrompt) // no concatenation
+	assert.Equal(t, "Build me a", sess.Title)              // title still derived from firstMsg
 	assert.Equal(t, "web", sess.Source)
 }
 

@@ -6,7 +6,6 @@ import (
 	"errors"
 	"fmt"
 	"io"
-	"strings"
 	"time"
 
 	"github.com/odysseythink/hermind/config"
@@ -290,9 +289,8 @@ func (e *Engine) ensureSession(
 	}
 
 	composed := defaultPrompt
-	if strings.TrimSpace(firstMsg) != "" {
-		composed = defaultPrompt + "\n\n" + firstMsg
-	}
+	// Note: firstMsg intentionally no longer concatenated here.
+	// It still feeds DeriveTitle below.
 	s := &storage.Session{
 		ID:           opts.SessionID,
 		Source:       e.platform,
