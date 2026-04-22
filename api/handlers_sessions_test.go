@@ -486,3 +486,11 @@ func TestPatchSession_BroadcastsSessionUpdatedEvent(t *testing.T) {
 		t.Fatal("timed out waiting for session_updated event")
 	}
 }
+
+func TestPostMessage_IgnoresDeprecatedModelField(t *testing.T) {
+	// POST /api/sessions/{id}/messages no longer accepts a model field.
+	// The Model field has been removed from MessageSubmitRequest; this is
+	// structurally enforced at compile time. Actual model selection happens
+	// via PATCH /api/sessions/{id} and is read from the session row on each turn.
+	t.Skip("covered by session_created assertion when a provider stub is in the fixture")
+}

@@ -45,7 +45,6 @@ func (s *Server) handleSessionMessagesPost(w http.ResponseWriter, r *http.Reques
 		_ = sessionrun.Run(ctx, s.deps, sessionrun.Request{
 			SessionID:   sessionID,
 			UserMessage: req.Text,
-			Model:       req.Model,
 		})
 	}()
 

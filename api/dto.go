@@ -69,8 +69,7 @@ type MessagesResponse struct {
 
 // MessageSubmitRequest is the body of POST /api/sessions/{id}/messages.
 type MessageSubmitRequest struct {
-	Text  string `json:"text"`
-	Model string `json:"model,omitempty"`
+	Text string `json:"text"`
 }
 
 // MessageSubmitResponse is returned on 202.

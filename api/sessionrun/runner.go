@@ -45,7 +45,6 @@ type Deps struct {
 type Request struct {
 	SessionID   string
 	UserMessage string
-	Model       string
 }
 
 // Run builds an Engine, wires stream callbacks into Hub, and invokes
@@ -122,7 +121,6 @@ func Run(ctx context.Context, deps Deps, req Request) (err error) {
 	result, err := engine.RunConversation(ctx, &agent.RunOptions{
 		UserMessage: req.UserMessage,
 		SessionID:   req.SessionID,
-		Model:       req.Model,
 	})
 
 	switch {

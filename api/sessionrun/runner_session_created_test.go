@@ -55,7 +55,6 @@ func TestRun_PublishesSessionCreated_OnBrandNewSession(t *testing.T) {
 	err := Run(context.Background(), deps, Request{
 		SessionID:   "brand-new-sess",
 		UserMessage: "Build me a haiku generator",
-		Model:       "stub",
 	})
 	require.NoError(t, err)
 
@@ -68,7 +67,8 @@ func TestRun_PublishesSessionCreated_OnBrandNewSession(t *testing.T) {
 	assert.Equal(t, "brand-new-sess", dto["id"])
 	assert.Equal(t, "Build me a", dto["title"]) // 10 runes of "Build me a haiku generator"
 	assert.Equal(t, "web", dto["source"])
-	assert.Equal(t, "stub", dto["model"])
+	// model is no longer passed via Request; the engine falls back to "claude-opus-4-6"
+	assert.Equal(t, "claude-opus-4-6", dto["model"])
 	// started_at is a non-zero float64 (time in unix seconds, sub-second precision)
 	startedAt, ok := dto["started_at"].(float64)
 	require.True(t, ok, "started_at must be float64, got %T", dto["started_at"])
@@ -102,7 +102,6 @@ func TestRun_NoSessionCreated_OnExistingSession(t *testing.T) {
 	err := Run(context.Background(), deps, Request{
 		SessionID:   "already-there",
 		UserMessage: "hi again",
-		Model:       "stub",
 	})
 	require.NoError(t, err)
 
