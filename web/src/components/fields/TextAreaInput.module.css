@@ -14,7 +14,7 @@
 }
 .textarea:focus {
   outline: none;
-  border-color: #FFB800;
+  border-color: var(--accent);
 }
 .textarea:disabled {
   opacity: 0.5;

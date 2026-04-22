@@ -119,7 +119,7 @@ export default function ConfigSection({
             return (
               <TextAreaInput
                 key={f.name}
-                value={typeof value[f.name] === 'string' ? value[f.name] as string : current}
+                value={current}
                 onChange={(v) => onFieldChange(f.name, v)}
                 placeholder={localized.help ?? ''}
                 aria-label={localized.label}
