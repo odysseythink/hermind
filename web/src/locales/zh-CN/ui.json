@@ -100,6 +100,14 @@
   "chat.errorNoProvider":    "Provider 未配置 — 请打开 设置 → 模型。",
   "chat.errorSendFailed":    "发送失败:{{msg}}",
 
+  "chat.settings.title":          "会话设置",
+  "chat.settings.model":          "模型",
+  "chat.settings.defaultModel":   "（默认）",
+  "chat.settings.systemPrompt":   "系统提示词",
+  "chat.settings.save":           "保存",
+  "chat.settings.cancel":         "取消",
+  "chat.settings.updatedElsewhere":"该会话已在另一个窗口被修改。你有未保存的草稿——保存会覆盖，取消会丢弃。",
+
   "group.models.description":       "默认模型及 Provider 配置。",
   "group.gateway.description":      "消息平台实例(飞书、钉钉、微信 …)。",
   "group.memory.description":       "长期记忆后端配置。",
