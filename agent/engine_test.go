@@ -7,10 +7,12 @@ import (
 	"errors"
 	"io"
 	"testing"
+	"time"
 
 	"github.com/odysseythink/hermind/config"
 	"github.com/odysseythink/hermind/message"
 	"github.com/odysseythink/hermind/provider"
+	"github.com/odysseythink/hermind/storage"
 	"github.com/odysseythink/hermind/tool"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
@@ -18,10 +20,11 @@ import (
 
 // fakeProvider returns a canned response for tests.
 type fakeProvider struct {
-	name     string
-	response *provider.Response
-	err      error
-	streamFn func() (provider.Stream, error)
+	name      string
+	response  *provider.Response
+	err       error
+	streamFn  func() (provider.Stream, error)
+	lastModel string // records the Model field from the most recent Stream call
 }
 
 func (f *fakeProvider) Name() string { return f.name }
@@ -32,6 +35,7 @@ func (f *fakeProvider) Complete(ctx context.Context, req *provider.Request) (*pr
 	return f.response, nil
 }
 func (f *fakeProvider) Stream(ctx context.Context, req *provider.Request) (provider.Stream, error) {
+	f.lastModel = req.Model
 	if f.streamFn != nil {
 		return f.streamFn()
 	}
@@ -267,4 +271,34 @@ func TestEngineBudgetExhaustion(t *testing.T) {
 	// Budget exhaustion is not an error — it returns the partial result
 	require.NoError(t, err)
 	assert.Equal(t, 3, result.Iterations, "should run exactly MaxTurns iterations")
+}
+
+func TestRunConversation_PrefersSessionModelOverRunOptions(t *testing.T) {
+	store := newTestStoreForEngine(t)
+	ctx := context.Background()
+
+	// Pre-seed a session with a model that differs from what RunOptions will carry.
+	require.NoError(t, store.CreateSession(ctx, &storage.Session{
+		ID:           "s-model-pref",
+		Source:       "web",
+		Model:        "claude-sonnet-4-6", // what the session wants
+		SystemPrompt: "",
+		Title:        "t",
+		StartedAt:    time.Now().UTC(),
+	}))
+
+	// Fake provider that records the model it received.
+	fp := &fakeProvider{}
+	eng := NewEngineWithToolsAndAux(fp, nil, store, nil, config.AgentConfig{MaxTurns: 1}, "web")
+
+	_, err := eng.RunConversation(ctx, &RunOptions{
+		SessionID:   "s-model-pref",
+		UserMessage: "hi",
+		Model:       "claude-opus-4-7", // loser — session value should win
+	})
+	_ = err // provider may return early; we only care which model it saw
+
+	if got, want := fp.lastModel, "claude-sonnet-4-6"; got != want {
+		t.Errorf("provider saw model = %q, want %q (session value must win over RunOptions)", got, want)
+	}
 }

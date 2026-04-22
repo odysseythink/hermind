@@ -61,6 +61,9 @@ func (e *Engine) RunConversation(ctx context.Context, opts *RunOptions) (*Conver
 			return nil, fmt.Errorf("engine: ensure session: %w", err)
 		}
 		effectivePrompt = sess.SystemPrompt
+		if sess.Model != "" {
+			model = sess.Model
+		}
 		if err := e.persistMessage(ctx, opts.SessionID, &history[len(history)-1]); err != nil {
 			return nil, fmt.Errorf("engine: persist user message: %w", err)
 		}
