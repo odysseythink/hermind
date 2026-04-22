@@ -119,6 +119,28 @@ describe('SessionSettingsDrawer', () => {
     expect(document.activeElement).toBe(saveBtn);
   });
 
+  it('shows only models pulled from configured providers — never a synthetic option for an orphaned session.model', () => {
+    // Contract: the dropdown is strictly the modelOptions the parent passed
+    // in. App builds that list from successful /api/providers/{name}/models
+    // fetches; providers without a valid api_key fail upstream and never
+    // contribute. If the session was set to a model whose provider is no
+    // longer configured (api_key removed, provider deleted), that orphan
+    // must NOT appear here.
+    render(
+      <SessionSettingsDrawer
+        open
+        session={{ ...session, model: 'claude-opus-4-6' }}
+        modelOptions={['', 'gpt-4']}
+        onClose={vi.fn()}
+        onSave={vi.fn()}
+      />,
+    );
+    const combo = screen.getByRole('combobox') as HTMLSelectElement;
+    const optionValues = Array.from(combo.options).map((o) => o.value);
+    expect(optionValues).toEqual(['', 'gpt-4']);
+    expect(optionValues).not.toContain('claude-opus-4-6');
+  });
+
   it('shows conflict banner when session prop updates while drawer is open with unsaved draft', () => {
     const { rerender } = render(
       <SessionSettingsDrawer

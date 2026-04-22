@@ -275,6 +275,7 @@ export default function App() {
       method: 'POST',
       schema: ProviderModelsResponseSchema,
     });
+    dispatch({ type: 'provider/models/loaded', providerKey: instanceKey, models: res.models });
     return res;
   }, []);
 
@@ -289,6 +290,29 @@ export default function App() {
   const dirtyGroupIds = useMemo(() => selectDirtyGroups(state), [state]);
   const dirty = totalDirtyCount(state);
   const busy = state.status === 'saving' || state.status === 'applying';
+
+  const allModels = useMemo(() => {
+    const seen = new Set<string>();
+    for (const models of Object.values(state.providerModels)) {
+      for (const m of models) seen.add(m);
+    }
+    return ['', ...Array.from(seen).sort()];
+  }, [state.providerModels]);
+
+  // Triggered by ChatWorkspace when the session settings drawer opens, so the
+  // model dropdown shows real options the first time without forcing the user
+  // to visit the providers panel. Per-provider failures (no API key, network)
+  // are swallowed — partial results are still better than an empty list.
+  const onEnsureModelsLoaded = useCallback(async () => {
+    const providers = ((state.config as Record<string, unknown>).providers as
+      | Record<string, unknown>
+      | undefined) ?? {};
+    const missing = Object.keys(providers).filter(
+      (k) => !(k in state.providerModels),
+    );
+    if (missing.length === 0) return;
+    await Promise.allSettled(missing.map((k) => onFetchProviderModels(k)));
+  }, [state.config, state.providerModels, onFetchProviderModels]);
 
   // Selecting a group always lands the user on a real editor by auto-picking
   // the first valid subsection. Prevents the "XXX — 即将上线" fallback panel
@@ -335,6 +359,12 @@ export default function App() {
     }
   }, []);
 
+  const setMode = (m: 'chat' | 'settings') => {
+    window.location.hash = stringifyHash(
+      m === 'chat' ? { mode: 'chat' } : { mode: 'settings', groupId: 'models' },
+    );
+  };
+
   if (state.status === 'booting') {
     return <div style={{ padding: '2rem' }}>{t('status.loading')}</div>;
   }
@@ -346,22 +376,27 @@ export default function App() {
     );
   }
 
-  const setMode = (m: 'chat' | 'settings') => {
-    window.location.hash = stringifyHash(
-      m === 'chat' ? { mode: 'chat' } : { mode: 'settings', groupId: 'models' },
-    );
-  };
 
   if (hashState.mode === 'chat') {
-    const providerConfigured = Object.values(
-      (state.config as { providers?: Record<string, { api_key?: string }> }).providers ?? {},
-    ).some((p) => typeof p?.api_key === 'string' && p.api_key.length > 0);
+    // api_key is always blanked on the wire by the config redactor
+    // (api/handlers_config.go:redactSecrets), so checking
+    // p.api_key.length > 0 is always false and wrongly disables the
+    // composer even when the YAML is fully configured. Treat any
+    // declared provider as "configured" — if the server-side api_key is
+    // actually empty, POST /api/sessions/{id}/messages returns 503 and
+    // ChatWorkspace already toasts chat.errorNoProvider.
+    const providerConfigured =
+      Object.keys(
+        (state.config as { providers?: Record<string, unknown> }).providers ?? {},
+      ).length > 0;
     return (
       <div className="app-shell chat-mode">
         <TopBar dirtyCount={0} status={state.status} onSave={() => {}} mode="chat" onModeChange={setMode} />
         <ChatWorkspace
           sessionId={hashState.sessionId ?? null}
           providerConfigured={providerConfigured}
+          modelOptions={allModels}
+          onEnsureModelsLoaded={onEnsureModelsLoaded}
           onChangeSession={(id) => {
             window.location.hash = stringifyHash({ mode: 'chat', sessionId: id });
           }}

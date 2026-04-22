@@ -67,6 +67,28 @@
 
 ## Unreleased
 
+### Fixed
+
+- **Session settings model dropdown now lists models from configured
+  providers.** Previously the dropdown only showed "Default" because
+  `state.providerModels` was empty until you visited the providers
+  Settings panel and clicked "Fetch models" — opening the chat-mode
+  drawer never triggered a fetch. Now the drawer fires
+  `onEnsureModelsLoaded` on open: for every declared provider missing
+  from the cache, `/api/providers/{name}/models` is called via
+  `Promise.allSettled`, so providers with valid API keys contribute
+  their models and providers without keys (the upstream returns 502)
+  are silently dropped. Result: the dropdown is strictly the union of
+  models pulled from API-key-configured providers — no synthetic
+  fallback for orphaned `session.model` values.
+- **Removed a duplicate `if (state.status === 'booting')` early-return
+  in `App.tsx`** that was placed before three later `useCallback` hooks
+  (`handleSelectGroup`, `onSave`, `onApplyGateway`). The post-return
+  hooks ran on `'ready'` renders but were skipped on `'booting'`
+  renders, violating React's Rules of Hooks. Latent on the existing
+  branch — adding one more `useCallback` reliably tripped "Rendered
+  more hooks than during the previous render".
+
 ### Added
 
 - **Web chat frontend**: React chat workspace is now the default

@@ -27,6 +27,7 @@ export interface AppState {
   selectedKey: string | null;
   flash: Flash | null;
   shell: ShellSliceState;
+  providerModels: Record<string, string[]>;
 }
 
 export type Action =
@@ -55,7 +56,8 @@ export type Action =
   | { type: 'list-instance/delete'; sectionKey: string; subkey?: string; index: number }
   | { type: 'list-instance/move-up'; sectionKey: string; subkey?: string; index: number }
   | { type: 'list-instance/move-down'; sectionKey: string; subkey?: string; index: number }
-  | { type: 'list-instance/move'; sectionKey: string; subkey?: string; from: number; to: number };
+  | { type: 'list-instance/move'; sectionKey: string; subkey?: string; from: number; to: number }
+  | { type: 'provider/models/loaded'; providerKey: string; models: string[] };
 
 export const initialState: AppState = {
   status: 'booting',
@@ -70,6 +72,7 @@ export const initialState: AppState = {
     activeSubKey: null,
     expandedGroups: loadExpandedGroups(),
   },
+  providerModels: {},
 };
 
 export function reducer(state: AppState, action: Action): AppState {
@@ -296,6 +299,14 @@ export function reducer(state: AppState, action: Action): AppState {
         config: writeContainer(state.config, action.sectionKey, action.subkey, nextList),
       };
     }
+    case 'provider/models/loaded':
+      return {
+        ...state,
+        providerModels: {
+          ...state.providerModels,
+          [action.providerKey]: action.models,
+        },
+      };
   }
 }
 

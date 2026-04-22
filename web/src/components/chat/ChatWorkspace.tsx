@@ -14,22 +14,27 @@ import { apiFetch, ApiError } from '../../api/client';
 import {
   MessageSubmitResponseSchema,
   MessagesResponseSchema,
+  SessionSummarySchema,
   type SessionPatch,
+  type SessionSummary,
 } from '../../api/schemas';
-import { MODEL_OPTIONS } from '../../api/models';
+
 
 type Props = {
   sessionId: string | null;
   onChangeSession: (id: string) => void;
   providerConfigured?: boolean;
+  modelOptions: string[];
+  onEnsureModelsLoaded?: () => Promise<void>;
 };
 
-export default function ChatWorkspace({ sessionId, onChangeSession, providerConfigured = true }: Props) {
+export default function ChatWorkspace({ sessionId, onChangeSession, providerConfigured = true, modelOptions, onEnsureModelsLoaded }: Props) {
   const { t } = useTranslation('ui');
   const [state, dispatch] = useReducer(chatReducer, initialChatState);
   const { sessions, newSession, insertSession, patchSession } = useSessionList();
   const [toast, setToast] = useState<string | null>(null);
   const [settingsOpen, setSettingsOpen] = useState(false);
+  const [drawerSession, setDrawerSession] = useState<SessionSummary | null>(null);
 
   useChatStream(sessionId, dispatch, insertSession, (id, patch) => patchSession(id, patch));
 
@@ -45,7 +50,7 @@ export default function ChatWorkspace({ sessionId, onChangeSession, providerConf
           type: 'chat/messages/loaded',
           sessionId,
           messages: r.messages.map((m) => ({
-            id: m.id,
+            id: String(m.id),
             role: m.role,
             content: m.content,
             timestamp: m.timestamp ?? Date.now(),
@@ -109,6 +114,46 @@ export default function ChatWorkspace({ sessionId, onChangeSession, providerConf
     }
   }
 
+  async function handleOpenSettings() {
+    if (!sessionId) return;
+    // Fire-and-forget: populate the model dropdown from all configured
+    // providers. The drawer opens immediately with whatever's already cached;
+    // newly-fetched models appear as they arrive.
+    if (onEnsureModelsLoaded) void onEnsureModelsLoaded();
+    // Fetch authoritative session state before mounting the drawer so the
+    // user always sees the current stored model + system_prompt, even if
+    // the cached sessions list is stale or missing this row entirely.
+    try {
+      const fresh = await apiFetch(`/api/sessions/${encodeURIComponent(sessionId)}`, {
+        schema: SessionSummarySchema,
+      });
+      setDrawerSession(fresh);
+      setSettingsOpen(true);
+      patchSession(fresh.id, {
+        title: fresh.title,
+        model: fresh.model,
+        system_prompt: fresh.system_prompt,
+      });
+    } catch (err) {
+      if (err instanceof ApiError && err.status === 404) {
+        setToast(t('chat.settings.loadFailed', { msg: 'session not found' }));
+        return;
+      }
+      // Fall back to the cached row so the user can at least see stale data
+      // and attempt a save; flag the degraded state via toast.
+      const cached = sessions.find((s) => s.id === sessionId) ?? null;
+      if (cached) {
+        setDrawerSession(cached);
+        setSettingsOpen(true);
+      }
+      setToast(
+        t('chat.settings.loadFailed', {
+          msg: err instanceof Error ? err.message : 'network error',
+        }),
+      );
+    }
+  }
+
   async function handleSettingsSave(patch: SessionPatch) {
     if (!sessionId) return;
     try {
@@ -145,8 +190,8 @@ export default function ChatWorkspace({ sessionId, onChangeSession, providerConf
       <main className={styles.main}>
         <ConversationHeader
           title={activeTitle}
-          onOpenSettings={() => setSettingsOpen(true)}
-          settingsDisabled={!activeSession}
+          onOpenSettings={handleOpenSettings}
+          settingsDisabled={!sessionId}
         />
         <MessageList
           messages={state.messagesBySession[sessionId ?? ''] ?? []}
@@ -176,7 +221,7 @@ export default function ChatWorkspace({ sessionId, onChangeSession, providerConf
                 break;
               }
               case 'settings':
-                if (activeSession) setSettingsOpen(true);
+                if (sessionId) void handleOpenSettings();
                 dispatch({ type: 'chat/composer/setText', text: '' });
                 break;
               // /model used to trigger a header dropdown; open the drawer instead.
@@ -187,12 +232,15 @@ export default function ChatWorkspace({ sessionId, onChangeSession, providerConf
             }
           }}
         />
-        {activeSession && (
+        {settingsOpen && drawerSession && (
           <SessionSettingsDrawer
             open={settingsOpen}
-            session={activeSession}
-            modelOptions={[...MODEL_OPTIONS]}
-            onClose={() => setSettingsOpen(false)}
+            session={drawerSession}
+            modelOptions={modelOptions}
+            onClose={() => {
+              setSettingsOpen(false);
+              setDrawerSession(null);
+            }}
             onSave={handleSettingsSave}
           />
         )}

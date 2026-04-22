@@ -109,6 +109,7 @@
   "chat.settings.updatedElsewhere":"该会话已在另一个窗口被修改。你有未保存的草稿——保存会覆盖，取消会丢弃。",
   "chat.settings.saveFailed":     "保存设置失败：{{msg}}",
   "chat.settings.saveTooLong":    "提示词或模型名超出长度限制",
+  "chat.settings.loadFailed":     "无法加载当前会话设置：{{msg}}",
 
   "group.models.description":       "默认模型及 Provider 配置。",
   "group.gateway.description":      "消息平台实例(飞书、钉钉、微信 …)。",

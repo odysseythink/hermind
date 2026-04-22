@@ -127,3 +127,66 @@ describe('App integration — chat mode', () => {
     });
   });
 });
+
+// Regression: the backend redacts every api_key to "" before sending the
+// config to the browser (api/handlers_config.go:redactSecrets). An earlier
+// providerConfigured predicate read p.api_key.length > 0 on the redacted
+// payload, which was always false — so the composer was permanently
+// disabled even when the YAML had a real key configured.
+describe('App integration — composer enabled when providers are declared (redacted api_key)', () => {
+  beforeEach(() => {
+    window.location.hash = '#/chat/s1';
+    FakeEventSource.install();
+    FakeEventSource.reset();
+    vi.spyOn(globalThis, 'fetch').mockImplementation(async (input) => {
+      const url = typeof input === 'string' ? input : (input as Request).url;
+      if (url.endsWith('/api/platforms/schema')) return jsonResponse({ descriptors: [] });
+      if (url.endsWith('/api/config/schema')) return jsonResponse({ sections: [] });
+      if (url.endsWith('/api/config')) {
+        // Mirror what the live server sends: api_key is blanked.
+        return jsonResponse({
+          config: {
+            providers: {
+              openai_main: { provider: 'openai', model: 'openai/gpt-5', api_key: '' },
+            },
+          },
+        });
+      }
+      if (url.includes('/api/sessions?limit=50')) return jsonResponse({ sessions: [] });
+      if (url.match(/\/api\/sessions\/[^/]+\/messages$/)) {
+        return jsonResponse({ messages: [] });
+      }
+      return jsonResponse({}, 200);
+    });
+  });
+  afterEach(() => {
+    vi.restoreAllMocks();
+    window.location.hash = '';
+  });
+
+  it('enables the composer when at least one provider is declared, even if api_key comes back blank', async () => {
+    render(<App />);
+    const textarea = await screen.findByPlaceholderText(/Type a message/i);
+    expect(textarea).toBeInTheDocument();
+    expect(textarea).not.toBeDisabled();
+  });
+
+  it('disables the composer only when providers is absent or empty', async () => {
+    vi.restoreAllMocks();
+    FakeEventSource.reset();
+    vi.spyOn(globalThis, 'fetch').mockImplementation(async (input) => {
+      const url = typeof input === 'string' ? input : (input as Request).url;
+      if (url.endsWith('/api/platforms/schema')) return jsonResponse({ descriptors: [] });
+      if (url.endsWith('/api/config/schema')) return jsonResponse({ sections: [] });
+      if (url.endsWith('/api/config')) return jsonResponse({ config: { providers: {} } });
+      if (url.includes('/api/sessions?limit=50')) return jsonResponse({ sessions: [] });
+      if (url.match(/\/api\/sessions\/[^/]+\/messages$/)) {
+        return jsonResponse({ messages: [] });
+      }
+      return jsonResponse({}, 200);
+    });
+    render(<App />);
+    const textarea = await screen.findByPlaceholderText(/Configure a provider/i);
+    expect(textarea).toBeDisabled();
+  });
+});

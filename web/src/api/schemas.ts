@@ -169,7 +169,9 @@ export const SessionsListResponseSchema = z.object({
 export type SessionsListResponse = z.infer<typeof SessionsListResponseSchema>;
 
 export const ChatMessageSchema = z.object({
-  id: z.string(),
+  // The REST server emits int64 row ids as JSON numbers; callers normalize
+  // to a string at the use-site (see ChatWorkspace.tsx). Accept either shape.
+  id: z.union([z.string(), z.number()]),
   role: z.enum(['user', 'assistant', 'system', 'tool']),
   content: z.string(),
   timestamp: z.number().optional(),
