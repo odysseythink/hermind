@@ -273,10 +273,9 @@ func (e *Engine) executeToolCalls(ctx context.Context, calls []message.ContentBl
 }
 
 // ensureSession creates a new session row if it doesn't exist. On new rows,
-// the stored system prompt is composed as `defaultPrompt + "\n\n" + firstMsg`
-// (frozen at creation) and title is DeriveTitle(firstMsg). Returns the session
-// (existing or freshly created) and a bool indicating whether this call
-// created it.
+// the stored system prompt is set to defaultPrompt only (frozen at creation)
+// and title is DeriveTitle(firstMsg). Returns the session (existing or freshly
+// created) and a bool indicating whether this call created it.
 func (e *Engine) ensureSession(
 	ctx context.Context,
 	opts *RunOptions,
