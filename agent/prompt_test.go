@@ -52,11 +52,7 @@ func TestPromptBuilder_AppendsDefaultSystemPrompt(t *testing.T) {
 func TestPromptBuilder_EmptyDefaultPreservesIdentityOnly(t *testing.T) {
 	pb := NewPromptBuilder("cli", "")
 	got := pb.Build(&PromptOptions{Model: "claude-opus-4-7"})
-	if !strings.Contains(got, "Hermind Agent") {
-		t.Errorf("expected identity block, got %q", got)
-	}
-	// When no skills and no default, the result is the identity ONLY.
-	if strings.Count(got, "\n\n") > 0 && !strings.HasSuffix(strings.TrimSpace(got), "tool's directory.") {
-		t.Errorf("unexpected extra block when default prompt is empty: %q", got)
+	if got != defaultIdentity {
+		t.Errorf("expected identity-only output\nwant: %q\n got: %q", defaultIdentity, got)
 	}
 }

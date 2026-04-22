@@ -34,7 +34,7 @@ type PromptOptions struct {
 }
 
 // PromptBuilder assembles system prompts for the agent engine.
-// Stateless — safe to share a single instance across conversations.
+// Immutable after construction — safe to share a single instance across conversations.
 type PromptBuilder struct {
 	platform            string
 	defaultSystemPrompt string
