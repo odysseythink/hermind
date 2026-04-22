@@ -1,5 +1,56 @@
 # Changelog
 
+## [0.2.0] - 2026-04-22
+
+### Added
+
+- **Per-session settings drawer**: a new gear button in the top-right of
+  the conversation header opens a right-side drawer where you set the
+  model and the system prompt for that session. Changes apply from the
+  next turn. Includes draft state, Cancel/Save semantics, Esc to cancel,
+  a conflict banner when another tab edits the same session, and a
+  Tab/Shift+Tab focus trap so keyboard users cannot escape the dialog.
+- **`config.agent.default_system_prompt`**: a new YAML field (rendered
+  as a textarea in `/settings/agent`) that every new conversation
+  inherits. The prompt is appended after the baked-in Hermind identity
+  block, before any active-skill blocks.
+- **`FieldText` descriptor kind**: multi-line string variant of
+  `FieldString`. Wires through the `/api/config/schema` JSON, the TS
+  `ConfigFieldKindSchema` enum, and a new `TextAreaInput` field
+  component.
+- **`PATCH /api/sessions/{id}`**: extended to accept optional `model`,
+  `system_prompt`, and `title` pointer fields. Size caps:
+  `MaxSessionTitleBytes=256`, `MaxSystemPromptBytes=32KB`,
+  `MaxModelNameBytes=128`. Body is capped via `http.MaxBytesReader`
+  before JSON decode. Emits a new `session_updated` SSE event on success
+  so open tabs stay in sync.
+- **`SessionSummary.system_prompt`** and a new `GET /api/sessions/{id}`
+  hydrate the drawer with the current session's prompt.
+
+### Changed
+
+- **New sessions no longer splice the first user message into the
+  stored `SystemPrompt`**. The stored value is the configured default
+  only, frozen at session creation. `Title` derivation from the first
+  message is unchanged. Existing session rows with the historical
+  concatenation are not migrated.
+- **`RunConversation` prefers `Session.Model`** over `RunOptions.Model`
+  whenever the session row carries a non-empty value. This lets users
+  switch models mid-conversation via PATCH and have the next turn honor
+  the new choice.
+- **Top-right model `<select>` replaced by a gear button** in
+  `ConversationHeader`. Model is now a session attribute, not a
+  composer-local ephemeral state.
+
+### Removed
+
+- **`model` field on `POST /api/sessions/{id}/messages`**. Model is set
+  once per session via PATCH and read from the session row on every
+  turn. `composer.selectedModel` state and the `chat/composer/setModel`
+  reducer action are gone.
+- **`ModelSelector` component**. Superseded by `SettingsButton` +
+  `SessionSettingsDrawer`.
+
 ## Unreleased
 
 ### Added

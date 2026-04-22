@@ -141,7 +141,10 @@ func (s *Server) handleSessionPatch(w http.ResponseWriter, r *http.Request) {
 		http.Error(w, err.Error(), http.StatusInternalServerError)
 		return
 	}
-	if s.streams != nil {
+	// Only broadcast if at least one field was actually changed. An empty
+	// body `{}` hits UpdateSession's no-op fast path, and we should not
+	// fan out a session_updated event that carries no new information.
+	if s.streams != nil && (body.Title != nil || body.SystemPrompt != nil || body.Model != nil) {
 		s.streams.Publish(StreamEvent{
 			Type:      EventTypeSessionUpdated,
 			SessionID: id,
