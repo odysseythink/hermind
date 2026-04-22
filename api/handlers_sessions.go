@@ -7,7 +7,6 @@ import (
 	"strconv"
 	"strings"
 	"time"
-	"unicode/utf8"
 
 	"github.com/go-chi/chi/v5"
 
@@ -71,8 +70,9 @@ func (s *Server) handleSessionGet(w http.ResponseWriter, r *http.Request) {
 	writeJSON(w, dtoFromSession(row))
 }
 
-// handleSessionPatch updates a session's title. Only title is editable in
-// this version — system_prompt stays frozen at creation time.
+// handleSessionPatch applies partial updates to a session. All fields are
+// optional; a missing JSON key means "leave unchanged", an explicit empty
+// string clears the field (where applicable).
 func (s *Server) handleSessionPatch(w http.ResponseWriter, r *http.Request) {
 	if s.opts.Storage == nil {
 		http.Error(w, "storage not configured", http.StatusServiceUnavailable)
@@ -84,23 +84,45 @@ func (s *Server) handleSessionPatch(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	var body struct {
-		Title string `json:"title"`
+		Title        *string `json:"title,omitempty"`
+		SystemPrompt *string `json:"system_prompt,omitempty"`
+		Model        *string `json:"model,omitempty"`
 	}
 	if err := json.NewDecoder(r.Body).Decode(&body); err != nil {
 		http.Error(w, "invalid json", http.StatusBadRequest)
 		return
 	}
-	title := strings.TrimSpace(body.Title)
-	if title == "" {
-		http.Error(w, "title must not be empty", http.StatusBadRequest)
-		return
+
+	upd := &storage.SessionUpdate{}
+
+	if body.Title != nil {
+		title := strings.TrimSpace(*body.Title)
+		if title == "" {
+			http.Error(w, "title must not be empty", http.StatusBadRequest)
+			return
+		}
+		if len(title) > MaxSessionTitleBytes {
+			http.Error(w, "title too long", http.StatusBadRequest)
+			return
+		}
+		upd.Title = title
 	}
-	if utf8.RuneCountInString(title) > 200 {
-		http.Error(w, "title too long (max 200 runes)", http.StatusBadRequest)
-		return
+	if body.SystemPrompt != nil {
+		if len(*body.SystemPrompt) > MaxSystemPromptBytes {
+			http.Error(w, "system_prompt too long", http.StatusBadRequest)
+			return
+		}
+		upd.SystemPrompt = body.SystemPrompt
+	}
+	if body.Model != nil {
+		if len(*body.Model) > MaxModelNameBytes {
+			http.Error(w, "model name too long", http.StatusBadRequest)
+			return
+		}
+		upd.Model = body.Model
 	}
 
-	err := s.opts.Storage.UpdateSession(r.Context(), id, &storage.SessionUpdate{Title: title})
+	err := s.opts.Storage.UpdateSession(r.Context(), id, upd)
 	if errors.Is(err, storage.ErrNotFound) {
 		http.Error(w, "session not found", http.StatusNotFound)
 		return

@@ -3,12 +3,14 @@ package api
 import (
 	"context"
 	"encoding/json"
+	"fmt"
 	"net/http"
 	"net/http/httptest"
 	"strings"
 	"testing"
 	"time"
 
+	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 
 	"github.com/odysseythink/hermind/config"
@@ -86,6 +88,12 @@ func (m *mockStorage) UpdateSession(ctx context.Context, id string, u *storage.S
 			}
 			if u.MessageCount != nil {
 				s.MessageCount = *u.MessageCount
+			}
+			if u.SystemPrompt != nil {
+				s.SystemPrompt = *u.SystemPrompt
+			}
+			if u.Model != nil {
+				s.Model = *u.Model
 			}
 			return nil
 		}
@@ -306,7 +314,8 @@ func TestPatchSession_EmptyTitle_Returns400(t *testing.T) {
 func TestPatchSession_TooLong_Returns400(t *testing.T) {
 	s, store := newTestServerWithStore(t)
 	store.seedSession("s2")
-	body := `{"title":"` + strings.Repeat("x", 201) + `"}`
+	// Use MaxSessionTitleBytes+1 bytes so the new byte-length limit triggers.
+	body := `{"title":"` + strings.Repeat("x", MaxSessionTitleBytes+1) + `"}`
 	rr := httptest.NewRecorder()
 	req := httptest.NewRequest("PATCH", "/api/sessions/s2", strings.NewReader(body))
 	req.Header.Set("Authorization", "Bearer t")
@@ -360,4 +369,93 @@ func TestGetSession_ReturnsSystemPromptField(t *testing.T) {
 	if got, want := dto.SystemPrompt, "You are a helper."; got != want {
 		t.Errorf("SystemPrompt = %q, want %q", got, want)
 	}
+}
+
+func TestPatchSession_UpdatesModelAndSystemPrompt(t *testing.T) {
+	s, store := newTestServerWithStore(t)
+	store.seedSessionFull("s-p1", "web", "claude-opus-4-7", "orig", "t")
+
+	body := `{"model":"claude-sonnet-4-6","system_prompt":"new prompt"}`
+	rr := httptest.NewRecorder()
+	req := httptest.NewRequest("PATCH", "/api/sessions/s-p1", strings.NewReader(body))
+	req.Header.Set("Authorization", "Bearer t")
+	req.Header.Set("Content-Type", "application/json")
+	s.Router().ServeHTTP(rr, req)
+
+	if rr.Code != http.StatusOK {
+		t.Fatalf("code=%d body=%s", rr.Code, rr.Body.String())
+	}
+	var dto SessionDTO
+	require.NoError(t, json.NewDecoder(rr.Body).Decode(&dto))
+	assert.Equal(t, "claude-sonnet-4-6", dto.Model)
+	assert.Equal(t, "new prompt", dto.SystemPrompt)
+	assert.Equal(t, "t", dto.Title) // unchanged
+}
+
+func TestPatchSession_OnlyTitle_StillWorks(t *testing.T) {
+	s, store := newTestServerWithStore(t)
+	store.seedSessionFull("s-p2", "web", "claude-opus-4-7", "orig", "old")
+
+	rr := httptest.NewRecorder()
+	req := httptest.NewRequest("PATCH", "/api/sessions/s-p2",
+		strings.NewReader(`{"title":"new"}`))
+	req.Header.Set("Authorization", "Bearer t")
+	req.Header.Set("Content-Type", "application/json")
+	s.Router().ServeHTTP(rr, req)
+
+	assert.Equal(t, http.StatusOK, rr.Code)
+	var dto SessionDTO
+	require.NoError(t, json.NewDecoder(rr.Body).Decode(&dto))
+	assert.Equal(t, "new", dto.Title)
+	assert.Equal(t, "orig", dto.SystemPrompt)
+}
+
+func TestPatchSession_EnforcesSystemPromptSizeLimit(t *testing.T) {
+	s, store := newTestServerWithStore(t)
+	store.seedSessionFull("s-p3", "web", "claude-opus-4-7", "orig", "t")
+
+	tooBig := strings.Repeat("a", MaxSystemPromptBytes+1)
+	body := fmt.Sprintf(`{"system_prompt":%q}`, tooBig)
+	rr := httptest.NewRecorder()
+	req := httptest.NewRequest("PATCH", "/api/sessions/s-p3", strings.NewReader(body))
+	req.Header.Set("Authorization", "Bearer t")
+	req.Header.Set("Content-Type", "application/json")
+	s.Router().ServeHTTP(rr, req)
+
+	if rr.Code != http.StatusBadRequest {
+		t.Errorf("code=%d, want 400", rr.Code)
+	}
+}
+
+func TestPatchSession_EnforcesModelNameLimit(t *testing.T) {
+	s, store := newTestServerWithStore(t)
+	store.seedSessionFull("s-p4", "web", "claude-opus-4-7", "orig", "t")
+
+	body := fmt.Sprintf(`{"model":%q}`, strings.Repeat("m", MaxModelNameBytes+1))
+	rr := httptest.NewRecorder()
+	req := httptest.NewRequest("PATCH", "/api/sessions/s-p4", strings.NewReader(body))
+	req.Header.Set("Authorization", "Bearer t")
+	req.Header.Set("Content-Type", "application/json")
+	s.Router().ServeHTTP(rr, req)
+
+	if rr.Code != http.StatusBadRequest {
+		t.Errorf("code=%d, want 400", rr.Code)
+	}
+}
+
+func TestPatchSession_AllowsEmptyStringToClear(t *testing.T) {
+	s, store := newTestServerWithStore(t)
+	store.seedSessionFull("s-p5", "web", "claude-opus-4-7", "orig", "t")
+
+	rr := httptest.NewRecorder()
+	req := httptest.NewRequest("PATCH", "/api/sessions/s-p5",
+		strings.NewReader(`{"system_prompt":""}`))
+	req.Header.Set("Authorization", "Bearer t")
+	req.Header.Set("Content-Type", "application/json")
+	s.Router().ServeHTTP(rr, req)
+
+	assert.Equal(t, http.StatusOK, rr.Code)
+	var dto SessionDTO
+	require.NoError(t, json.NewDecoder(rr.Body).Decode(&dto))
+	assert.Equal(t, "", dto.SystemPrompt)
 }
