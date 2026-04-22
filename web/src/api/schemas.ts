@@ -127,7 +127,6 @@ export type ProviderModelsResponse = z.infer<typeof ProviderModelsResponseSchema
 
 export const MessageSubmitRequestSchema = z.object({
   text: z.string().min(1),
-  model: z.string().optional(),
 });
 export type MessageSubmitRequest = z.infer<typeof MessageSubmitRequestSchema>;
 
@@ -142,11 +141,26 @@ export const SessionSummarySchema = z.object({
   title: z.string().optional(),
   source: z.string(),
   model: z.string().optional(),
+  system_prompt: z.string().optional(),
   started_at: z.number().optional(),
   ended_at: z.number().optional(),
   message_count: z.number().optional(),
 });
 export type SessionSummary = z.infer<typeof SessionSummarySchema>;
+
+export const SessionPatchSchema = z.object({
+  title: z.string().optional(),
+  model: z.string().optional(),
+  system_prompt: z.string().optional(),
+});
+export type SessionPatch = z.infer<typeof SessionPatchSchema>;
+
+export const SessionUpdatedPayloadSchema = z.object({
+  title: z.string().optional(),
+  model: z.string().optional(),
+  system_prompt: z.string().optional(),
+});
+export type SessionUpdatedPayload = z.infer<typeof SessionUpdatedPayloadSchema>;
 
 export const SessionsListResponseSchema = z.object({
   sessions: z.array(SessionSummarySchema),
