@@ -30,7 +30,7 @@ export default function ChatWorkspace({ sessionId, onChangeSession, providerConf
   const [toast, setToast] = useState<string | null>(null);
 
   // Subscribe to SSE for the active session.
-  useChatStream(sessionId, dispatch, insertSession);
+  useChatStream(sessionId, dispatch, insertSession, (id, patch) => patchSession(id, patch));
 
   // Load message history when sessionId changes.
   useEffect(() => {

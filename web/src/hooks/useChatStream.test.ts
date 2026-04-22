@@ -83,3 +83,29 @@ describe('useChatStream', () => {
     );
   });
 });
+
+describe('useChatStream session_updated', () => {
+  afterEach(() => vi.clearAllMocks());
+
+  it('invokes onSessionUpdated when a session_updated event arrives', async () => {
+    const dispatch = vi.fn();
+    const onSessionUpdated = vi.fn();
+    renderHook(() =>
+      useChatStream('sess-1', dispatch, undefined, onSessionUpdated),
+    );
+    await waitFor(() => expect(FakeEventSource.instances[0]?.readyState).toBe(1));
+    act(() => {
+      FakeEventSource.instances[0].dispatchMessage({
+        type: 'session_updated',
+        session_id: 'sess-1',
+        data: { model: 'claude-sonnet-4-6', system_prompt: 'new', title: 't' },
+      });
+    });
+
+    expect(onSessionUpdated).toHaveBeenCalledWith('sess-1', {
+      model: 'claude-sonnet-4-6',
+      system_prompt: 'new',
+      title: 't',
+    });
+  });
+});

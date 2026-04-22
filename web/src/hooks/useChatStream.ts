@@ -1,6 +1,11 @@
 import { useEffect, useRef } from 'react';
 import type { ChatAction } from '../state/chat';
-import { SessionSummarySchema, type SessionSummary } from '../api/schemas';
+import {
+  SessionSummarySchema,
+  SessionUpdatedPayloadSchema,
+  type SessionSummary,
+  type SessionUpdatedPayload,
+} from '../api/schemas';
 
 type Dispatch = (a: ChatAction) => void;
 
@@ -8,11 +13,14 @@ export function useChatStream(
   sessionId: string | null,
   dispatch: Dispatch,
   onSessionCreated?: (session: SessionSummary) => void,
+  onSessionUpdated?: (id: string, patch: SessionUpdatedPayload) => void,
 ) {
   const tokenBufRef = useRef('');
   const rafPendingRef = useRef(false);
   const onSessionCreatedRef = useRef(onSessionCreated);
+  const onSessionUpdatedRef = useRef(onSessionUpdated);
   onSessionCreatedRef.current = onSessionCreated;
+  onSessionUpdatedRef.current = onSessionUpdated;
 
   useEffect(() => {
     if (!sessionId) return;
@@ -42,6 +50,11 @@ export function useChatStream(
           const payload = SessionSummarySchema.parse(parsed.data);
           dispatch({ type: 'chat/session/created', session: payload });
           onSessionCreatedRef.current?.(payload);
+          break;
+        }
+        case 'session_updated': {
+          const payload = SessionUpdatedPayloadSchema.parse(parsed.data);
+          onSessionUpdatedRef.current?.(parsed.session_id!, payload);
           break;
         }
         case 'token': {
