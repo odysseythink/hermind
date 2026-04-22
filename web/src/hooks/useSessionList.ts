@@ -56,11 +56,14 @@ export function useSessionList() {
     );
   }, []);
 
-  const renameSession = useCallback((id: string, title: string) => {
-    setSessions((prev) =>
-      prev.map((s) => (s.id === id ? { ...s, title } : s)),
-    );
-  }, []);
+  const patchSession = useCallback(
+    (id: string, patch: Partial<Pick<SessionSummary, 'title' | 'model' | 'system_prompt'>>) => {
+      setSessions((prev) =>
+        prev.map((s) => (s.id === id ? { ...s, ...patch } : s)),
+      );
+    },
+    [],
+  );
 
-  return { sessions, error, newSession, insertSession, renameSession, refetch };
+  return { sessions, error, newSession, insertSession, patchSession, refetch };
 }

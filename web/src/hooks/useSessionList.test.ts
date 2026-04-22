@@ -42,11 +42,11 @@ describe('useSessionList', () => {
     expect(result.current.sessions.length).toBe(1); // idempotent
   });
 
-  it('renameSession updates title locally', async () => {
+  it('patchSession updates fields locally', async () => {
     mockFetchOnce({ sessions: [{ id: 's1', title: 'old', source: 'web' }], total: 1 });
     const { result } = renderHook(() => useSessionList());
     await waitFor(() => expect(result.current.sessions.length).toBe(1));
-    act(() => result.current.renameSession('s1', 'new name'));
+    act(() => result.current.patchSession('s1', { title: 'new name' }));
     expect(result.current.sessions[0].title).toBe('new name');
   });
 
