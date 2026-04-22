@@ -51,6 +51,20 @@
 - **`ModelSelector` component**. Superseded by `SettingsButton` +
   `SessionSettingsDrawer`.
 
+### Fixed
+
+- **Session-id URL decoding on every `/api/sessions/{id}` endpoint**.
+  chi's URL param returns the still-percent-encoded path segment, so
+  session ids that contain `:` (all Telegram sessions use the format
+  `telegram:<chat_id>`) were being looked up as
+  `telegram%3A<chat_id>` in the database, returning 404 Not Found even
+  when the row existed. Added a `sessionIDParam` helper that wraps
+  `url.PathUnescape` and routed every session-id handler through it —
+  GET, PATCH, messages, cancel, SSE, WS. This was a pre-existing bug
+  surfaced for the first time when the new settings drawer tried to
+  PATCH a Telegram session. SSE/WS subscribers using encoded URLs now
+  also receive events correctly.
+
 ## Unreleased
 
 ### Added
