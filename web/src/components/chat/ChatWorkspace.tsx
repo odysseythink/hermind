@@ -4,6 +4,7 @@ import ChatSidebar from './ChatSidebar';
 import ConversationHeader from './ConversationHeader';
 import MessageList from './MessageList';
 import ComposerBar from './ComposerBar';
+import SessionSettingsDrawer from './SessionSettingsDrawer';
 import Toast from './Toast';
 import styles from './ChatWorkspace.module.css';
 import { useSessionList } from '../../hooks/useSessionList';
@@ -13,7 +14,9 @@ import { apiFetch, ApiError } from '../../api/client';
 import {
   MessageSubmitResponseSchema,
   MessagesResponseSchema,
+  type SessionPatch,
 } from '../../api/schemas';
+import { MODEL_OPTIONS } from '../../api/models';
 
 type Props = {
   sessionId: string | null;
@@ -21,18 +24,15 @@ type Props = {
   providerConfigured?: boolean;
 };
 
-const MODEL_OPTIONS = ['', 'claude-opus-4-7', 'claude-sonnet-4-6', 'gpt-4'];
-
 export default function ChatWorkspace({ sessionId, onChangeSession, providerConfigured = true }: Props) {
   const { t } = useTranslation('ui');
   const [state, dispatch] = useReducer(chatReducer, initialChatState);
   const { sessions, newSession, insertSession, patchSession } = useSessionList();
   const [toast, setToast] = useState<string | null>(null);
+  const [settingsOpen, setSettingsOpen] = useState(false);
 
-  // Subscribe to SSE for the active session.
   useChatStream(sessionId, dispatch, insertSession, (id, patch) => patchSession(id, patch));
 
-  // Load message history when sessionId changes.
   useEffect(() => {
     if (!sessionId) return;
     const ctrl = new AbortController();
@@ -54,7 +54,6 @@ export default function ChatWorkspace({ sessionId, onChangeSession, providerConf
       })
       .catch((err) => {
         if (ctrl.signal.aborted) return;
-        // 404 = new session, no history yet — silent.
         if (err instanceof ApiError && err.status === 404) return;
         console.warn('load messages failed', err);
       });
@@ -70,7 +69,7 @@ export default function ChatWorkspace({ sessionId, onChangeSession, providerConf
     try {
       await apiFetch(`/api/sessions/${encodeURIComponent(sessionId)}/messages`, {
         method: 'POST',
-        body: { text, model: state.composer.selectedModel || undefined },
+        body: { text },
         schema: MessageSubmitResponseSchema,
       });
     } catch (err) {
@@ -93,10 +92,8 @@ export default function ChatWorkspace({ sessionId, onChangeSession, providerConf
       });
       patchSession(id, { title });
     } catch (err) {
-      setToast(
-        t('chat.renameFailed', { msg: err instanceof Error ? err.message : '' }),
-      );
-      throw err; // let SessionItem reset its local draft
+      setToast(t('chat.renameFailed', { msg: err instanceof Error ? err.message : '' }));
+      throw err;
     }
   }
 
@@ -111,8 +108,26 @@ export default function ChatWorkspace({ sessionId, onChangeSession, providerConf
     }
   }
 
-  const activeTitle =
-    sessions.find((s) => s.id === sessionId)?.title ?? t('chat.newConversation');
+  async function handleSettingsSave(patch: SessionPatch) {
+    if (!sessionId) return;
+    try {
+      await apiFetch(`/api/sessions/${encodeURIComponent(sessionId)}`, {
+        method: 'PATCH',
+        body: patch,
+      });
+      patchSession(sessionId, patch);
+    } catch (err) {
+      if (err instanceof ApiError && err.status === 400) {
+        setToast(t('chat.settings.saveTooLong'));
+      } else {
+        setToast(t('chat.settings.saveFailed', { msg: err instanceof Error ? err.message : '' }));
+      }
+      throw err;
+    }
+  }
+
+  const activeSession = sessions.find((s) => s.id === sessionId);
+  const activeTitle = activeSession?.title ?? t('chat.newConversation');
 
   return (
     <div className={styles.workspace}>
@@ -129,9 +144,8 @@ export default function ChatWorkspace({ sessionId, onChangeSession, providerConf
       <main className={styles.main}>
         <ConversationHeader
           title={activeTitle}
-          model={state.composer.selectedModel}
-          modelOptions={MODEL_OPTIONS}
-          onModelChange={(m) => dispatch({ type: 'chat/composer/setModel', model: m })}
+          onOpenSettings={() => setSettingsOpen(true)}
+          settingsDisabled={!activeSession}
         />
         <MessageList
           messages={state.messagesBySession[sessionId ?? ''] ?? []}
@@ -161,9 +175,10 @@ export default function ChatWorkspace({ sessionId, onChangeSession, providerConf
                 break;
               }
               case 'settings':
-                window.location.hash = '#/settings/models';
+                if (activeSession) setSettingsOpen(true);
                 dispatch({ type: 'chat/composer/setText', text: '' });
                 break;
+              // /model used to trigger a header dropdown; open the drawer instead.
               case 'model':
               case 'clear':
                 dispatch({ type: 'chat/composer/setText', text: '' });
@@ -171,6 +186,15 @@ export default function ChatWorkspace({ sessionId, onChangeSession, providerConf
             }
           }}
         />
+        {activeSession && (
+          <SessionSettingsDrawer
+            open={settingsOpen}
+            session={activeSession}
+            modelOptions={[...MODEL_OPTIONS]}
+            onClose={() => setSettingsOpen(false)}
+            onSave={handleSettingsSave}
+          />
+        )}
       </main>
       {toast && <Toast message={toast} onDismiss={() => setToast(null)} />}
     </div>

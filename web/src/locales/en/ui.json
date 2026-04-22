@@ -108,6 +108,8 @@
   "chat.settings.save":           "Save",
   "chat.settings.cancel":         "Cancel",
   "chat.settings.updatedElsewhere":"This session was updated in another window. Your changes are unsaved — Save to overwrite, or Cancel to discard.",
+  "chat.settings.saveFailed":     "Failed to save settings: {{msg}}",
+  "chat.settings.saveTooLong":    "Prompt or model name is too long",
 
   "group.models.description":       "Default model and provider configuration.",
   "group.gateway.description":      "Messaging platform instances (Feishu, DingTalk, WeChat, …).",

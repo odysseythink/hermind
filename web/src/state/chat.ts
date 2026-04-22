@@ -32,7 +32,6 @@ export type ChatState = {
   };
   composer: {
     text: string;
-    selectedModel: string;
   };
 };
 
@@ -47,7 +46,7 @@ export const initialChatState: ChatState = {
     status: 'idle',
     error: null,
   },
-  composer: { text: '', selectedModel: '' },
+  composer: { text: '' },
 };
 
 export type ChatAction =
@@ -63,8 +62,7 @@ export type ChatAction =
   | { type: 'chat/stream/complete'; text: string; messageId: string }
   | { type: 'chat/stream/cancelled' }
   | { type: 'chat/stream/error'; message: string }
-  | { type: 'chat/composer/setText'; text: string }
-  | { type: 'chat/composer/setModel'; model: string };
+  | { type: 'chat/composer/setText'; text: string };
 
 export function chatReducer(state: ChatState, action: ChatAction): ChatState {
   switch (action.type) {
@@ -219,9 +217,6 @@ export function chatReducer(state: ChatState, action: ChatAction): ChatState {
 
     case 'chat/composer/setText':
       return { ...state, composer: { ...state.composer, text: action.text } };
-
-    case 'chat/composer/setModel':
-      return { ...state, composer: { ...state.composer, selectedModel: action.model } };
 
     default:
       return state;

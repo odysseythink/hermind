@@ -96,10 +96,8 @@ describe('chatReducer', () => {
     expect(s.streaming.status).toBe('idle');
   });
 
-  it('composer/setText + setModel', () => {
-    let s = chatReducer(initialChatState, { type: 'chat/composer/setText', text: 'hello' });
+  it('composer/setText updates text', () => {
+    const s = chatReducer(initialChatState, { type: 'chat/composer/setText', text: 'hello' });
     expect(s.composer.text).toBe('hello');
-    s = chatReducer(s, { type: 'chat/composer/setModel', model: 'claude' });
-    expect(s.composer.selectedModel).toBe('claude');
   });
 });
