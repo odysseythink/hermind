@@ -7,9 +7,12 @@ import (
 )
 
 func TestStatusResponse_JSONShape(t *testing.T) {
-	resp := StatusResponse{Version: "v1", UptimeSec: 10, StorageDriver: "sqlite", InstanceRoot: "/tmp/i"}
+	resp := StatusResponse{
+		Version: "v1", UptimeSec: 10, StorageDriver: "sqlite",
+		InstanceRoot: "/tmp/i", CurrentModel: "anthropic/claude-opus-4-6",
+	}
 	data, _ := json.Marshal(resp)
-	want := `{"version":"v1","uptime_sec":10,"storage_driver":"sqlite","instance_root":"/tmp/i"}`
+	want := `{"version":"v1","uptime_sec":10,"storage_driver":"sqlite","instance_root":"/tmp/i","current_model":"anthropic/claude-opus-4-6"}`
 	if string(data) != want {
 		t.Errorf("got %s\nwant %s", data, want)
 	}

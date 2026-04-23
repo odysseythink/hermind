@@ -12,6 +12,7 @@ func (s *Server) handleStatus(w http.ResponseWriter, _ *http.Request) {
 		UptimeSec:     int64(time.Since(s.bootedAt).Seconds()),
 		StorageDriver: s.driverName(),
 		InstanceRoot:  s.opts.InstanceRoot,
+		CurrentModel:  s.opts.Config.Model,
 	})
 }
 
