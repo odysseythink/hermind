@@ -42,6 +42,11 @@
 - Cron jobs run ephemerally: each run gets its own
   `<instance>/trajectories/cron-*.jsonl` and does not pollute the main
   conversation.
+- **IM gateway configuration UI**: web settings panel for configuring
+  multi-platform IM adapters (Feishu, Telegram, etc.) within the
+  single-conversation model. Platform instances are managed per
+  conversation, enabling users to integrate various messaging platforms
+  without the deleted gateway subcommand.
 
 ## [0.2.0] - 2026-04-22
 
