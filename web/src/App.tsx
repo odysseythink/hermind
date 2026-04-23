@@ -34,6 +34,7 @@ export default function App() {
   const { t } = useTranslation('ui');
   const [state, dispatch] = useReducer(reducer, initialState);
   const [newDialogOpen, setNewDialogOpen] = useState(false);
+  const [instanceRoot, setInstanceRoot] = useState<string>('');
 
   // Hash-driven top-level mode router. parseHash returns { mode: 'chat' | 'settings', ... }.
   const [hashState, setHashState] = useState(() => parseHash(window.location.hash));
@@ -43,7 +44,7 @@ export default function App() {
     return () => window.removeEventListener('hashchange', onChange);
   }, []);
 
-  // Boot: fetch schema + config
+  // Boot: fetch schema + config + instance meta
   useEffect(() => {
     const ctrl = new AbortController();
     (async () => {
@@ -74,6 +75,9 @@ export default function App() {
         dispatch({ type: 'boot/failed', error: msg });
       }
     })();
+    apiFetch<{ instance_root?: string }>('/api/status', { signal: ctrl.signal })
+      .then((s) => setInstanceRoot(s.instance_root ?? ''))
+      .catch(() => { /* leave empty; header hides the label */ });
     return () => ctrl.abort();
   }, []);
 
@@ -394,6 +398,7 @@ export default function App() {
         <TopBar dirtyCount={0} status={state.status} onSave={() => {}} mode="chat" onModeChange={setMode} />
         <ChatWorkspace
           sessionId={hashState.sessionId ?? null}
+          instanceRoot={instanceRoot}
           providerConfigured={providerConfigured}
           modelOptions={allModels}
           onEnsureModelsLoaded={onEnsureModelsLoaded}

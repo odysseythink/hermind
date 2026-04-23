@@ -23,12 +23,13 @@ import {
 type Props = {
   sessionId: string | null;
   onChangeSession: (id: string) => void;
+  instanceRoot: string;
   providerConfigured?: boolean;
   modelOptions: string[];
   onEnsureModelsLoaded?: () => Promise<void>;
 };
 
-export default function ChatWorkspace({ sessionId, onChangeSession, providerConfigured = true, modelOptions, onEnsureModelsLoaded }: Props) {
+export default function ChatWorkspace({ sessionId, onChangeSession, instanceRoot, providerConfigured = true, modelOptions, onEnsureModelsLoaded }: Props) {
   const { t } = useTranslation('ui');
   const [state, dispatch] = useReducer(chatReducer, initialChatState);
   const { sessions, newSession, insertSession, patchSession } = useSessionList();
@@ -190,6 +191,7 @@ export default function ChatWorkspace({ sessionId, onChangeSession, providerConf
       <main className={styles.main}>
         <ConversationHeader
           title={activeTitle}
+          instanceRoot={instanceRoot}
           onOpenSettings={handleOpenSettings}
           settingsDisabled={!sessionId}
         />

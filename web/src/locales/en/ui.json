@@ -87,6 +87,7 @@
   "mode.chat": "Chat",
   "mode.settings": "Settings",
 
+  "chat.instance.label":     "Instance",
   "chat.newConversation":    "+ New conversation",
   "chat.untitledConversation":"New conversation",
   "chat.untitled":           "Untitled",

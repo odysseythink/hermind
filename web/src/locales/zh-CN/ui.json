@@ -86,6 +86,7 @@
   "mode.chat": "对话",
   "mode.settings": "设置",
 
+  "chat.instance.label":     "实例",
   "chat.newConversation":    "+ 新建对话",
   "chat.untitledConversation":"新对话",
   "chat.untitled":           "未命名",
