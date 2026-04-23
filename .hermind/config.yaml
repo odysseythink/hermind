@@ -20,3 +20,8 @@ storage:
     sqlite_path: /Users/ranwei/workspace/go_work/hermes-agent-rewrite/hermind/.hermind/state.db
 memory:
     provider: holographic
+gateway:
+    platforms:
+        tg_main:
+            enabled: false
+            type: ""
