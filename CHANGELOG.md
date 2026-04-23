@@ -1,24 +1,47 @@
 # Changelog
 
-## Unreleased
+## 0.3.0 — Instance-bound, single-conversation model
 
 ### Breaking
-- Config directory is now `./.hermind/` (cwd-rooted). The legacy
+- **Config directory is now `./.hermind/`** (cwd-rooted). The legacy
   `~/.hermind/` path is no longer read. `HERMIND_HOME` still overrides
   verbatim. A one-time stderr hint is printed on first boot if
   `~/.hermind/` exists.
-- Web server binds to a random port in `[30000, 40000)` instead of the
-  fixed `9119`. Use `--addr host:port` to pin.
-- Bearer token auth removed from the web UI. Access is gated solely by
-  127.0.0.1 binding.
-- `HERMIND_PROFILE` env var and `profiles/<name>/` directory layout
-  removed. The `hermind profile` subcommand tree is gone — each cwd is
-  its own profile.
+- **Web server binds to a random port in `[30000, 40000)`** instead of
+  the fixed `9119`. Use `--addr host:port` to pin.
+- **Bearer token auth removed** from the web UI. Access is gated solely
+  by 127.0.0.1 binding.
+- **`HERMIND_PROFILE` env var and `profiles/<name>/` layout removed.**
+  The `hermind profile` subcommand tree is gone — each cwd is its own
+  profile.
+- **The multi-session model is removed.** Each hermind instance is a
+  single persistent conversation. The UI no longer has a session
+  sidebar, new-chat button, or per-session settings drawer.
+- **`hermind gateway` and `hermind acp` subcommands are deleted.**
+  `gateway/` and all multi-platform bot adapters are gone. Users who
+  need a bot framework should pin to the 0.2.x branch.
+- **HTTP API: `/api/sessions*` routes removed.** Use:
+  - `GET /api/conversation?limit=&offset=` for history
+  - `POST /api/conversation/messages` to send a user message
+  - `POST /api/conversation/cancel` to stop an in-flight run
+  - `GET /api/sse` for the single streaming event source
+- **`state.db` schema v3**: `sessions` table is dropped; `messages`
+  loses its `session_id` column. On upgrade, an existing v1 DB is
+  renamed to `state.db.v1-backup` (with a unix-ms suffix on collision)
+  and a fresh v3 DB is created. **Your message history is preserved in
+  the backup but is not migrated into the new schema.**
+- **Per-session `system_prompt` field is removed.** System prompt lives
+  in `config.yaml` under `agent.default_system_prompt`.
 
 ### Added
-- `GET /api/status` now returns `instance_root`.
+- `GET /api/status` returns `instance_root` and `current_model`.
 - Frontend displays the absolute instance path in the conversation
   header and in the browser tab title.
+- Runtime model dropdown in the conversation header (ephemeral
+  override — reloads reset to `config.yaml:model`).
+- Cron jobs run ephemerally: each run gets its own
+  `<instance>/trajectories/cron-*.jsonl` and does not pollute the main
+  conversation.
 
 ## [0.2.0] - 2026-04-22
 
