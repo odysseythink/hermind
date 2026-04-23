@@ -1,5 +1,25 @@
 # Changelog
 
+## Unreleased
+
+### Breaking
+- Config directory is now `./.hermind/` (cwd-rooted). The legacy
+  `~/.hermind/` path is no longer read. `HERMIND_HOME` still overrides
+  verbatim. A one-time stderr hint is printed on first boot if
+  `~/.hermind/` exists.
+- Web server binds to a random port in `[30000, 40000)` instead of the
+  fixed `9119`. Use `--addr host:port` to pin.
+- Bearer token auth removed from the web UI. Access is gated solely by
+  127.0.0.1 binding.
+- `HERMIND_PROFILE` env var and `profiles/<name>/` directory layout
+  removed. The `hermind profile` subcommand tree is gone — each cwd is
+  its own profile.
+
+### Added
+- `GET /api/status` now returns `instance_root`.
+- Frontend displays the absolute instance path in the conversation
+  header and in the browser tab title.
+
 ## [0.2.0] - 2026-04-22
 
 ### Added
