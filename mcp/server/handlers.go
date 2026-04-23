@@ -96,75 +96,41 @@ func (s *Server) dispatchTool(ctx context.Context, name string, args json.RawMes
 
 // ---- tool implementations ----
 
+// In the single-conversation model, there is only ever one conversation
+// per hermind instance. The legacy conversations/session API returns a
+// synthetic single row so existing MCP clients can continue to probe
+// for history.
 func (s *Server) conversationsList(ctx context.Context, args json.RawMessage) (string, error) {
-	var a struct {
-		Platform string `json:"platform"`
-		Limit    int    `json:"limit"`
-	}
-	_ = json.Unmarshal(args, &a)
-	if a.Limit <= 0 {
-		a.Limit = 50
-	}
-	rows, err := s.opts.Storage.ListSessions(ctx, &storage.ListOptions{Limit: a.Limit})
-	if err != nil {
-		return "", err
-	}
-	out := make([]map[string]any, 0, len(rows))
-	for _, r := range rows {
-		if a.Platform != "" && r.Source != a.Platform {
-			continue
-		}
-		out = append(out, map[string]any{
-			"session_key": r.ID,
-			"session_id":  r.ID,
-			"platform":    r.Source,
-			"chat_name":   r.Title,
-			"updated_at":  r.EndedAt,
-		})
-	}
 	data, _ := json.MarshalIndent(map[string]any{
-		"count":         len(out),
-		"conversations": out,
+		"count":         1,
+		"conversations": []map[string]any{{"session_key": "instance", "platform": "web"}},
 	}, "", "  ")
 	return string(data), nil
 }
 
-func (s *Server) conversationGet(ctx context.Context, args json.RawMessage) (string, error) {
-	var a struct {
-		SessionKey string `json:"session_key"`
-	}
-	_ = json.Unmarshal(args, &a)
-	if a.SessionKey == "" {
-		return "", fmt.Errorf("session_key is required")
-	}
-	sess, err := s.opts.Storage.GetSession(ctx, a.SessionKey)
-	if err != nil {
-		return "", err
-	}
-	data, _ := json.MarshalIndent(sess, "", "  ")
+func (s *Server) conversationGet(_ context.Context, _ json.RawMessage) (string, error) {
+	data, _ := json.MarshalIndent(map[string]any{
+		"session_key": "instance",
+		"platform":    "web",
+	}, "", "  ")
 	return string(data), nil
 }
 
 func (s *Server) messagesRead(ctx context.Context, args json.RawMessage) (string, error) {
 	var a struct {
-		SessionKey string `json:"session_key"`
-		Limit      int    `json:"limit"`
+		Limit int `json:"limit"`
 	}
 	_ = json.Unmarshal(args, &a)
-	if a.SessionKey == "" {
-		return "", fmt.Errorf("session_key is required")
-	}
 	if a.Limit <= 0 {
 		a.Limit = 50
 	}
-	msgs, err := s.opts.Storage.GetMessages(ctx, a.SessionKey, a.Limit, 0)
+	msgs, err := s.opts.Storage.GetHistory(ctx, a.Limit, 0)
 	if err != nil {
 		return "", err
 	}
 	data, _ := json.MarshalIndent(map[string]any{
-		"session_key": a.SessionKey,
-		"count":       len(msgs),
-		"messages":    msgs,
+		"count":    len(msgs),
+		"messages": msgs,
 	}, "", "  ")
 	return string(data), nil
 }
@@ -251,28 +217,7 @@ func (s *Server) permissionsRespond(_ context.Context, args json.RawMessage) (st
 	return `{"status":"recorded"}`, nil
 }
 
-func (s *Server) channelsList(ctx context.Context, args json.RawMessage) (string, error) {
-	var a struct {
-		Platform string `json:"platform"`
-	}
-	_ = json.Unmarshal(args, &a)
-	rows, err := s.opts.Storage.ListSessions(ctx, &storage.ListOptions{Limit: 200})
-	if err != nil {
-		return "", err
-	}
-	seen := map[string]struct{}{}
-	out := []string{}
-	for _, r := range rows {
-		if a.Platform != "" && r.Source != a.Platform {
-			continue
-		}
-		key := r.Source + ":" + r.ID
-		if _, ok := seen[key]; ok {
-			continue
-		}
-		seen[key] = struct{}{}
-		out = append(out, key)
-	}
-	data, _ := json.MarshalIndent(map[string]any{"channels": out}, "", "  ")
+func (s *Server) channelsList(_ context.Context, _ json.RawMessage) (string, error) {
+	data, _ := json.MarshalIndent(map[string]any{"channels": []string{"web:instance"}}, "", "  ")
 	return string(data), nil
 }
