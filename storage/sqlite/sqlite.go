@@ -4,7 +4,7 @@ package sqlite
 import (
 	"database/sql"
 	"fmt"
-	"path/filepath"
+	"os"
 
 	_ "modernc.org/sqlite" // pure-Go SQLite driver
 )
@@ -19,10 +19,23 @@ type Store struct {
 // Open creates or opens a SQLite database at the given path.
 // The file is created if it does not exist. WAL mode is enabled.
 // Call Migrate() after Open() to apply schema.
+//
+// If an existing file has a v1 `sessions` table, it is renamed to
+// `<path>.v1-backup` and a fresh v3 DB is created in its place. The
+// user's message history is preserved in the backup but is not
+// migrated.
 func Open(path string) (*Store, error) {
-	// Ensure parent directory exists
-	if dir := filepath.Dir(path); dir != "" && dir != "." {
-		// Caller is responsible for creating the parent directory.
+	backedUp, backupPath, err := backupLegacyDBIfNeeded(path)
+	if err != nil {
+		return nil, fmt.Errorf("sqlite: %w", err)
+	}
+	if backedUp {
+		fmt.Fprintln(os.Stderr,
+			"hermind: legacy state.db (v1 multi-session) backed up to "+backupPath+".")
+		fmt.Fprintln(os.Stderr,
+			"  The new schema is single-conversation; your message history has been")
+		fmt.Fprintln(os.Stderr,
+			"  preserved in the backup but is not migrated.")
 	}
 
 	// modernc.org/sqlite uses the name "sqlite" not "sqlite3"
@@ -56,3 +69,7 @@ func Open(path string) (*Store, error) {
 func (s *Store) Close() error {
 	return s.db.Close()
 }
+
+// DB returns the underlying *sql.DB. Intended for tests that need to
+// issue direct queries; production code should go through storage.Tx.
+func (s *Store) DB() *sql.DB { return s.db }

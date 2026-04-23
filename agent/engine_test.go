@@ -18,10 +18,11 @@ import (
 
 // fakeProvider returns a canned response for tests.
 type fakeProvider struct {
-	name     string
-	response *provider.Response
-	err      error
-	streamFn func() (provider.Stream, error)
+	name      string
+	response  *provider.Response
+	err       error
+	streamFn  func() (provider.Stream, error)
+	lastModel string
 }
 
 func (f *fakeProvider) Name() string { return f.name }
@@ -32,6 +33,7 @@ func (f *fakeProvider) Complete(ctx context.Context, req *provider.Request) (*pr
 	return f.response, nil
 }
 func (f *fakeProvider) Stream(ctx context.Context, req *provider.Request) (provider.Stream, error) {
+	f.lastModel = req.Model
 	if f.streamFn != nil {
 		return f.streamFn()
 	}
@@ -39,7 +41,7 @@ func (f *fakeProvider) Stream(ctx context.Context, req *provider.Request) (provi
 }
 func (f *fakeProvider) ModelInfo(string) *provider.ModelInfo       { return nil }
 func (f *fakeProvider) EstimateTokens(string, string) (int, error) { return 0, nil }
-func (f *fakeProvider) Available() bool                             { return true }
+func (f *fakeProvider) Available() bool                            { return true }
 
 // fakeStream returns a single delta then Done.
 type fakeStream struct {
@@ -87,7 +89,6 @@ func TestEngineSingleTurn(t *testing.T) {
 
 	result, err := e.RunConversation(context.Background(), &RunOptions{
 		UserMessage: "hi",
-		SessionID:   "test-session",
 	})
 	require.NoError(t, err)
 	assert.Equal(t, "Hello back!", result.Response.Content.Text())
@@ -102,16 +103,14 @@ func TestEngineRespectsContextCancellation(t *testing.T) {
 	e := NewEngine(p, nil, config.AgentConfig{MaxTurns: 10}, "cli")
 
 	ctx, cancel := context.WithCancel(context.Background())
-	cancel() // cancel before run
+	cancel()
 
 	_, err := e.RunConversation(ctx, &RunOptions{
 		UserMessage: "hi",
-		SessionID:   "cancelled-session",
 	})
 	assert.ErrorIs(t, err, context.Canceled)
 }
 
-// newFakeProviderForScript replays a fixed sequence of responses on each Stream call.
 func newFakeProviderForScript(responses []*provider.Response) *fakeProvider {
 	idx := 0
 	return &fakeProvider{
@@ -132,7 +131,6 @@ func newFakeProviderForScript(responses []*provider.Response) *fakeProvider {
 }
 
 func TestEngineToolLoopSingleToolCall(t *testing.T) {
-	// Prepare a registry with a fake "echo_args" tool
 	reg := tool.NewRegistry()
 	reg.Register(&tool.Entry{
 		Name: "echo_args",
@@ -149,7 +147,6 @@ func TestEngineToolLoopSingleToolCall(t *testing.T) {
 		},
 	})
 
-	// Provider returns: turn 1 = tool_use, turn 2 = final text
 	responses := []*provider.Response{
 		{
 			Message: message.Message{
@@ -181,20 +178,17 @@ func TestEngineToolLoopSingleToolCall(t *testing.T) {
 
 	result, err := e.RunConversation(context.Background(), &RunOptions{
 		UserMessage: "run echo",
-		SessionID:   "tool-test",
 	})
 	require.NoError(t, err)
 	assert.Equal(t, "Done. Got echoed=true.", result.Response.Content.Text())
 	assert.Equal(t, 2, result.Iterations)
 
-	// History should have: user, assistant(tool_use), user(tool_result), assistant(text) = 4
 	require.Len(t, result.Messages, 4)
 	assert.Equal(t, message.RoleUser, result.Messages[0].Role)
 	assert.Equal(t, message.RoleAssistant, result.Messages[1].Role)
-	assert.Equal(t, message.RoleUser, result.Messages[2].Role) // tool_result
+	assert.Equal(t, message.RoleUser, result.Messages[2].Role)
 	assert.Equal(t, message.RoleAssistant, result.Messages[3].Role)
 
-	// The tool_result message should be a BlockContent with a tool_result block
 	require.False(t, result.Messages[2].Content.IsText())
 	blocks := result.Messages[2].Content.Blocks()
 	require.Len(t, blocks, 1)
@@ -204,7 +198,6 @@ func TestEngineToolLoopSingleToolCall(t *testing.T) {
 }
 
 func TestEngineUsesFallbackChainOnRetryableError(t *testing.T) {
-	// failingProvider returns a retryable ErrRateLimit from Stream
 	failing := &fakeProvider{
 		name: "failing",
 		streamFn: func() (provider.Stream, error) {
@@ -212,7 +205,6 @@ func TestEngineUsesFallbackChainOnRetryableError(t *testing.T) {
 		},
 	}
 
-	// succeedingProvider returns a normal text response
 	succeeding := newFakeStreamingProvider("fallback response")
 	succeeding.name = "succeeding"
 
@@ -221,7 +213,6 @@ func TestEngineUsesFallbackChainOnRetryableError(t *testing.T) {
 
 	result, err := e.RunConversation(context.Background(), &RunOptions{
 		UserMessage: "hello",
-		SessionID:   "fallback-test",
 	})
 	require.NoError(t, err)
 	assert.Equal(t, "fallback response", result.Response.Content.Text())
@@ -229,7 +220,6 @@ func TestEngineUsesFallbackChainOnRetryableError(t *testing.T) {
 }
 
 func TestEngineBudgetExhaustion(t *testing.T) {
-	// Provider that ALWAYS returns a tool_use — should exhaust budget
 	reg := tool.NewRegistry()
 	reg.Register(&tool.Entry{
 		Name: "loop_tool",
@@ -255,16 +245,25 @@ func TestEngineBudgetExhaustion(t *testing.T) {
 		FinishReason: "tool_use",
 	}
 
-	// Script of 10 tool_use responses — budget is 3, so only 3 should execute
 	responses := []*provider.Response{toolUseResp, toolUseResp, toolUseResp, toolUseResp, toolUseResp}
 	p := newFakeProviderForScript(responses)
 
 	e := NewEngineWithTools(p, nil, reg, config.AgentConfig{MaxTurns: 3}, "cli")
 	result, err := e.RunConversation(context.Background(), &RunOptions{
 		UserMessage: "loop forever",
-		SessionID:   "budget-test",
 	})
-	// Budget exhaustion is not an error — it returns the partial result
 	require.NoError(t, err)
 	assert.Equal(t, 3, result.Iterations, "should run exactly MaxTurns iterations")
+}
+
+func TestRunConversation_EphemeralDoesNotPersist(t *testing.T) {
+	p := newFakeStreamingProvider("ephemeral")
+	// Storage is nil — even if we passed one, Ephemeral would skip it.
+	e := NewEngine(p, nil, config.AgentConfig{MaxTurns: 2}, "test")
+
+	_, err := e.RunConversation(context.Background(), &RunOptions{
+		UserMessage: "hi",
+		Ephemeral:   true,
+	})
+	require.NoError(t, err)
 }

@@ -5,6 +5,7 @@ import (
 	"os"
 	"path/filepath"
 
+	"github.com/odysseythink/hermind/config"
 	"github.com/spf13/cobra"
 	"gopkg.in/yaml.v3"
 )
@@ -21,8 +22,11 @@ type credentialsFile struct {
 }
 
 func defaultCredentialsPath() string {
-	home, _ := os.UserHomeDir()
-	return filepath.Join(home, ".hermind", "credentials.yaml")
+	p, err := config.InstancePath("credentials.yaml")
+	if err != nil {
+		return ".hermind/credentials.yaml"
+	}
+	return p
 }
 
 func loadCredentials() (*credentialsFile, error) {

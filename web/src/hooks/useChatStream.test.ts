@@ -1,5 +1,5 @@
-import { describe, it, expect, beforeEach, vi } from 'vitest';
-import { renderHook, act, waitFor } from '@testing-library/react';
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
+import { act, renderHook, waitFor } from '@testing-library/react';
 import { FakeEventSource } from '../test/fakeEventSource';
 import { useChatStream } from './useChatStream';
 
@@ -8,33 +8,24 @@ beforeEach(() => {
   FakeEventSource.reset();
 });
 
+afterEach(() => vi.clearAllMocks());
+
 describe('useChatStream', () => {
   it('subscribes on mount, closes on unmount', () => {
     const dispatch = vi.fn();
-    const { unmount } = renderHook(() => useChatStream('s1', dispatch));
+    const { unmount } = renderHook(() => useChatStream(dispatch));
     expect(FakeEventSource.instances.length).toBe(1);
     unmount();
     expect(FakeEventSource.instances[0].readyState).toBe(2);
   });
 
-  it('reconnects on activeSessionId change', () => {
+  it('dispatches stream/token on message_chunk event', async () => {
     const dispatch = vi.fn();
-    const { rerender } = renderHook(({ id }) => useChatStream(id, dispatch), {
-      initialProps: { id: 's1' as string | null },
-    });
-    expect(FakeEventSource.instances.length).toBe(1);
-    rerender({ id: 's2' });
-    expect(FakeEventSource.instances.length).toBe(2);
-    expect(FakeEventSource.instances[0].readyState).toBe(2);
-  });
-
-  it('dispatches stream/token on token event', async () => {
-    const dispatch = vi.fn();
-    renderHook(() => useChatStream('s1', dispatch));
+    renderHook(() => useChatStream(dispatch));
     await waitFor(() => expect(FakeEventSource.instances[0]?.readyState).toBe(1));
     act(() => {
       FakeEventSource.instances[0].dispatchMessage({
-        type: 'token', session_id: 's1', data: { text: 'Hi' },
+        type: 'message_chunk', data: { text: 'Hi' },
       });
     });
     await new Promise((r) => requestAnimationFrame(() => r(null)));
@@ -43,14 +34,60 @@ describe('useChatStream', () => {
     );
   });
 
-  it('filters events for stale session_id', () => {
+  it('dispatches stream/toolCall on tool_call event', async () => {
     const dispatch = vi.fn();
-    renderHook(() => useChatStream('s1', dispatch));
+    renderHook(() => useChatStream(dispatch));
+    await waitFor(() => expect(FakeEventSource.instances[0]?.readyState).toBe(1));
     act(() => {
       FakeEventSource.instances[0].dispatchMessage({
-        type: 'token', session_id: 'OTHER', data: { text: 'stale' },
+        type: 'tool_call',
+        data: { id: 't1', name: 'read_file', input: { path: '/x' } },
       });
     });
-    expect(dispatch).not.toHaveBeenCalled();
+    expect(dispatch).toHaveBeenCalledWith({
+      type: 'chat/stream/toolCall',
+      call: expect.objectContaining({ id: 't1', name: 'read_file', state: 'running' }),
+    });
+  });
+
+  it('dispatches stream/toolResult on tool_result event', async () => {
+    const dispatch = vi.fn();
+    renderHook(() => useChatStream(dispatch));
+    await waitFor(() => expect(FakeEventSource.instances[0]?.readyState).toBe(1));
+    act(() => {
+      FakeEventSource.instances[0].dispatchMessage({
+        type: 'tool_result',
+        data: { id: 't1', result: 'ok' },
+      });
+    });
+    expect(dispatch).toHaveBeenCalledWith({
+      type: 'chat/stream/toolResult', id: 't1', result: 'ok',
+    });
+  });
+
+  it('dispatches stream/done on done event', async () => {
+    const dispatch = vi.fn();
+    renderHook(() => useChatStream(dispatch));
+    await waitFor(() => expect(FakeEventSource.instances[0]?.readyState).toBe(1));
+    act(() => {
+      FakeEventSource.instances[0].dispatchMessage({ type: 'done' });
+    });
+    expect(dispatch).toHaveBeenCalledWith(
+      expect.objectContaining({ type: 'chat/stream/done' }),
+    );
+  });
+
+  it('dispatches stream/error on error event', async () => {
+    const dispatch = vi.fn();
+    renderHook(() => useChatStream(dispatch));
+    await waitFor(() => expect(FakeEventSource.instances[0]?.readyState).toBe(1));
+    act(() => {
+      FakeEventSource.instances[0].dispatchMessage({
+        type: 'error', data: { message: 'boom' },
+      });
+    });
+    expect(dispatch).toHaveBeenCalledWith({
+      type: 'chat/stream/error', message: 'boom',
+    });
   });
 });

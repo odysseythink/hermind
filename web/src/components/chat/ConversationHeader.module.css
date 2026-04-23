@@ -1,7 +1,7 @@
 .header {
   display: flex;
-  justify-content: space-between;
   align-items: center;
+  gap: var(--space-3);
   padding: var(--space-2) var(--space-4);
   background: var(--bg);
   border-bottom: 1px solid var(--border);
@@ -9,15 +9,42 @@
   flex-shrink: 0;
 }
 
-.title {
-  margin: 0;
+.instancePath {
   font-family: var(--font-mono);
   font-size: var(--fs-sm);
-  font-weight: 600;
-  text-transform: uppercase;
-  letter-spacing: 0.08em;
-  color: var(--text);
-  white-space: nowrap;
+  color: var(--muted);
   overflow: hidden;
   text-overflow: ellipsis;
+  white-space: nowrap;
+  max-width: 40ch;
+  direction: rtl;
+  unicode-bidi: plaintext;
+}
+
+.spacer { flex: 1; }
+
+.modelSelect {
+  font-family: var(--font-mono);
+  font-size: var(--fs-sm);
+  padding: 4px 8px;
+  border: 1px solid var(--border);
+  border-radius: 2px;
+  background: var(--bg);
+  color: var(--text);
+}
+
+.stopBtn {
+  font-family: var(--font-mono);
+  font-size: var(--fs-sm);
+  padding: 4px 12px;
+  border: 1px solid var(--border);
+  border-radius: 2px;
+  background: transparent;
+  color: var(--text);
+  cursor: pointer;
+}
+
+.stopBtn:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
 }

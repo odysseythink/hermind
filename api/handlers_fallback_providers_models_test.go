@@ -23,12 +23,11 @@ func TestFallbackProvidersModels_HappyPath(t *testing.T) {
 	cfg := &config.Config{FallbackProviders: []config.ProviderConfig{
 		{Provider: "__fake_fb_happy", APIKey: "k"},
 	}}
-	srv, err := api.NewServer(&api.ServerOpts{Config: cfg, Token: "t"})
+	srv, err := api.NewServer(&api.ServerOpts{Config: cfg})
 	if err != nil {
 		t.Fatalf("NewServer: %v", err)
 	}
 	req := httptest.NewRequest("POST", "/api/fallback_providers/0/models", nil)
-	req.Header.Set("Authorization", "Bearer t")
 	w := httptest.NewRecorder()
 	srv.Router().ServeHTTP(w, req)
 
@@ -50,9 +49,8 @@ func TestFallbackProvidersModels_IndexOutOfRange(t *testing.T) {
 	cfg := &config.Config{FallbackProviders: []config.ProviderConfig{
 		{Provider: "x", APIKey: "k"},
 	}}
-	srv, _ := api.NewServer(&api.ServerOpts{Config: cfg, Token: "t"})
+	srv, _ := api.NewServer(&api.ServerOpts{Config: cfg})
 	req := httptest.NewRequest("POST", "/api/fallback_providers/5/models", nil)
-	req.Header.Set("Authorization", "Bearer t")
 	w := httptest.NewRecorder()
 	srv.Router().ServeHTTP(w, req)
 
@@ -65,9 +63,8 @@ func TestFallbackProvidersModels_NegativeIndex(t *testing.T) {
 	cfg := &config.Config{FallbackProviders: []config.ProviderConfig{
 		{Provider: "x", APIKey: "k"},
 	}}
-	srv, _ := api.NewServer(&api.ServerOpts{Config: cfg, Token: "t"})
+	srv, _ := api.NewServer(&api.ServerOpts{Config: cfg})
 	req := httptest.NewRequest("POST", "/api/fallback_providers/-1/models", nil)
-	req.Header.Set("Authorization", "Bearer t")
 	w := httptest.NewRecorder()
 	srv.Router().ServeHTTP(w, req)
 
@@ -80,9 +77,8 @@ func TestFallbackProvidersModels_NonIntegerIndex(t *testing.T) {
 	cfg := &config.Config{FallbackProviders: []config.ProviderConfig{
 		{Provider: "x", APIKey: "k"},
 	}}
-	srv, _ := api.NewServer(&api.ServerOpts{Config: cfg, Token: "t"})
+	srv, _ := api.NewServer(&api.ServerOpts{Config: cfg})
 	req := httptest.NewRequest("POST", "/api/fallback_providers/abc/models", nil)
-	req.Header.Set("Authorization", "Bearer t")
 	w := httptest.NewRecorder()
 	srv.Router().ServeHTTP(w, req)
 
@@ -100,9 +96,8 @@ func TestFallbackProvidersModels_FactoryError(t *testing.T) {
 	cfg := &config.Config{FallbackProviders: []config.ProviderConfig{
 		{Provider: "__fake_fb_factory_err"},
 	}}
-	srv, _ := api.NewServer(&api.ServerOpts{Config: cfg, Token: "t"})
+	srv, _ := api.NewServer(&api.ServerOpts{Config: cfg})
 	req := httptest.NewRequest("POST", "/api/fallback_providers/0/models", nil)
-	req.Header.Set("Authorization", "Bearer t")
 	w := httptest.NewRecorder()
 	srv.Router().ServeHTTP(w, req)
 
@@ -120,9 +115,8 @@ func TestFallbackProvidersModels_NotListModelsCapable(t *testing.T) {
 	cfg := &config.Config{FallbackProviders: []config.ProviderConfig{
 		{Provider: "__fake_fb_no_lister"},
 	}}
-	srv, _ := api.NewServer(&api.ServerOpts{Config: cfg, Token: "t"})
+	srv, _ := api.NewServer(&api.ServerOpts{Config: cfg})
 	req := httptest.NewRequest("POST", "/api/fallback_providers/0/models", nil)
-	req.Header.Set("Authorization", "Bearer t")
 	w := httptest.NewRecorder()
 	srv.Router().ServeHTTP(w, req)
 
@@ -140,9 +134,8 @@ func TestFallbackProvidersModels_UpstreamError(t *testing.T) {
 	cfg := &config.Config{FallbackProviders: []config.ProviderConfig{
 		{Provider: "__fake_fb_upstream_err"},
 	}}
-	srv, _ := api.NewServer(&api.ServerOpts{Config: cfg, Token: "t"})
+	srv, _ := api.NewServer(&api.ServerOpts{Config: cfg})
 	req := httptest.NewRequest("POST", "/api/fallback_providers/0/models", nil)
-	req.Header.Set("Authorization", "Bearer t")
 	w := httptest.NewRecorder()
 	srv.Router().ServeHTTP(w, req)
 

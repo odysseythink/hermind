@@ -1,40 +1,39 @@
 import { useCallback, useEffect, useMemo, useReducer, useState } from 'react';
 import { useTranslation } from 'react-i18next';
-import { apiFetch, ApiError } from './api/client';
+import { apiFetch } from './api/client';
 import {
-  ApplyResultSchema,
   ConfigResponseSchema,
   ConfigSchemaResponseSchema,
-  PlatformsSchemaResponseSchema,
+  MetaResponseSchema,
   ProviderModelsResponseSchema,
 } from './api/schemas';
 import {
   dirtyGroups as selectDirtyGroups,
   initialState,
-  instanceDirty,
-  listInstances,
   reducer,
   totalDirtyCount,
 } from './state';
 import { keyedInstanceDirty } from './shell/keyedInstances';
 import { listInstanceDirty } from './shell/listInstances';
-import { migrateLegacyHash, parseHash, stringifyHash } from './shell/hash';
+import { parseHash, stringifyHash } from './shell/hash';
 import type { GroupId } from './shell/groups';
+import { firstSubkeyForGroup } from './shell/firstSubkey';
 import TopBar from './components/shell/TopBar';
 import SettingsSidebar from './components/shell/SettingsSidebar';
 import SettingsPanel from './components/shell/SettingsPanel';
 import Footer from './components/Footer';
-import NewInstanceDialog from './components/NewInstanceDialog';
 import NewProviderDialog from './components/groups/models/NewProviderDialog';
 import NewMcpServerDialog from './components/groups/advanced/NewMcpServerDialog';
+import NewPlatformDialog from './components/groups/gateway/NewPlatformDialog';
 import ChatWorkspace from './components/chat/ChatWorkspace';
 
 export default function App() {
   const { t } = useTranslation('ui');
   const [state, dispatch] = useReducer(reducer, initialState);
-  const [newDialogOpen, setNewDialogOpen] = useState(false);
+  const [instanceRoot, setInstanceRoot] = useState<string>('');
+  const [currentModel, setCurrentModel] = useState<string>('');
 
-  // Hash-driven top-level mode router. parseHash returns { mode: 'chat' | 'settings', ... }.
+  // Hash-driven top-level mode router.
   const [hashState, setHashState] = useState(() => parseHash(window.location.hash));
   useEffect(() => {
     const onChange = () => setHashState(parseHash(window.location.hash));
@@ -42,16 +41,12 @@ export default function App() {
     return () => window.removeEventListener('hashchange', onChange);
   }, []);
 
-  // Boot: fetch schema + config
+  // Boot: fetch schema + config + instance meta
   useEffect(() => {
     const ctrl = new AbortController();
     (async () => {
       try {
-        const [schema, cfgSchema, cfg] = await Promise.all([
-          apiFetch('/api/platforms/schema', {
-            schema: PlatformsSchemaResponseSchema,
-            signal: ctrl.signal,
-          }),
+        const [cfgSchema, cfg] = await Promise.all([
           apiFetch('/api/config/schema', {
             schema: ConfigSchemaResponseSchema,
             signal: ctrl.signal,
@@ -63,7 +58,6 @@ export default function App() {
         ]);
         dispatch({
           type: 'boot/loaded',
-          descriptors: schema.descriptors,
           configSections: cfgSchema.sections,
           config: cfg.config,
         });
@@ -73,32 +67,36 @@ export default function App() {
         dispatch({ type: 'boot/failed', error: msg });
       }
     })();
+    apiFetch('/api/status', { schema: MetaResponseSchema, signal: ctrl.signal })
+      .then((s) => {
+        setInstanceRoot(s.instance_root);
+        setCurrentModel(s.current_model);
+      })
+      .catch(() => {
+        /* header hides the label when empty */
+      });
     return () => ctrl.abort();
   }, []);
 
-  // Resolve initial hash (including legacy migration) once config is available.
+  // Resolve initial hash once config is available.
   useEffect(() => {
     if (state.status !== 'ready') return;
     if (state.shell.activeGroup !== null) return;
-    const currentHash = window.location.hash;
-    const platforms = Object.keys(state.config.gateway?.platforms ?? {});
-    const migrated = migrateLegacyHash(currentHash, platforms);
-    const effective = migrated ?? currentHash;
-    if (migrated) {
-      history.replaceState(null, '', window.location.pathname + window.location.search + migrated);
-    }
-    const parsed = parseHash(effective);
+    const parsed = parseHash(window.location.hash);
     if (parsed.mode === 'settings') {
       dispatch({ type: 'shell/selectGroup', group: parsed.groupId });
       if (parsed.sub) {
         dispatch({ type: 'shell/selectSub', key: parsed.sub });
+      } else if (parsed.groupId) {
+        const providerKeys = Object.keys(
+          ((state.config as Record<string, unknown>).providers as
+            | Record<string, unknown>
+            | undefined) ?? {},
+        ).sort();
+        const firstSub = firstSubkeyForGroup(parsed.groupId, state.configSections, providerKeys);
+        if (firstSub) dispatch({ type: 'shell/selectSub', key: firstSub });
       }
     }
-    // If parsed.group is null, stay in EmptyState — no dispatch needed.
-    // platforms is read here but deliberately NOT a dep — this effect is a
-    // one-shot migration on status transition; re-running on platform edits
-    // would re-dispatch selectGroup/selectSub unnecessarily (the inner guard
-    // bails out anyway, but this is faster).
   }, [state.status, state.shell.activeGroup]); // eslint-disable-line react-hooks/exhaustive-deps
 
   // Sync hash whenever active group/sub changes.
@@ -120,36 +118,13 @@ export default function App() {
     }
   }, [state.shell.activeGroup, state.shell.activeSubKey, state.status]);
 
-  const instances = useMemo(() => {
-    const plats = state.config.gateway?.platforms ?? {};
-    return listInstances(state).map(key => ({
-      key,
-      type: plats[key]?.type ?? '',
-      enabled: plats[key]?.enabled ?? false,
-    }));
-  }, [state]);
-
-  const dirtyInstanceKeys = useMemo(() => {
-    const a = state.config.gateway?.platforms ?? {};
-    const b = state.originalConfig.gateway?.platforms ?? {};
-    const keys = new Set([...Object.keys(a), ...Object.keys(b)]);
-    const out = new Set<string>();
-    for (const k of keys) {
-      if (instanceDirty(state, k)) out.add(k);
-    }
-    return out;
-    // state is read here (via instanceDirty) but deliberately narrowed to only
-    // the platform slices it accesses — this memo doesn't need to re-run on
-    // other state changes like activeGroup or flash.
-  }, [state.config.gateway?.platforms, state.originalConfig.gateway?.platforms]); // eslint-disable-line react-hooks/exhaustive-deps
-
   const providerInstances = useMemo(() => {
     const p = ((state.config as Record<string, unknown>).providers as
       | Record<string, Record<string, unknown>>
       | undefined) ?? {};
     return Object.keys(p)
       .sort()
-      .map(k => ({
+      .map((k) => ({
         key: k,
         type: (p[k].provider as string) ?? '',
       }));
@@ -174,7 +149,7 @@ export default function App() {
     const list = ((state.config as Record<string, unknown>).fallback_providers as
       | Array<Record<string, unknown>>
       | undefined) ?? [];
-    return list.map(item => ({ provider: (item.provider as string) ?? '' }));
+    return list.map((item) => ({ provider: (item.provider as string) ?? '' }));
   }, [state.config]);
 
   const dirtyFallbackIndices = useMemo(() => {
@@ -197,7 +172,7 @@ export default function App() {
       | { jobs?: Array<Record<string, unknown>> }
       | undefined;
     const list = sec?.jobs ?? [];
-    return list.map(j => ({
+    return list.map((j) => ({
       name: typeof j.name === 'string' ? j.name : '',
       schedule: typeof j.schedule === 'string' ? j.schedule : '',
     }));
@@ -225,12 +200,12 @@ export default function App() {
     const servers = sec?.servers ?? {};
     return Object.keys(servers)
       .sort()
-      .map(key => {
+      .map((key) => {
         const inst = servers[key];
         return {
           key,
           command: typeof inst?.command === 'string' ? inst.command : '',
-          enabled: inst?.enabled !== false, // default-true when unset (matches Go IsEnabled)
+          enabled: inst?.enabled !== false,
         };
       });
   }, [state.config]);
@@ -250,6 +225,38 @@ export default function App() {
     return out;
   }, [state.config, state.originalConfig]);
 
+  const gatewayInstances = useMemo(() => {
+    const sec = (state.config as Record<string, unknown>).gateway as
+      | { platforms?: Record<string, Record<string, unknown>> }
+      | undefined;
+    const platforms = sec?.platforms ?? {};
+    return Object.keys(platforms)
+      .sort()
+      .map((key) => {
+        const inst = platforms[key];
+        return {
+          key,
+          type: typeof inst?.type === 'string' ? inst.type : '',
+          enabled: inst?.enabled !== false,
+        };
+      });
+  }, [state.config]);
+
+  const dirtyGatewayKeys = useMemo(() => {
+    const cur = ((state.config as Record<string, unknown>).gateway as
+      | { platforms?: Record<string, Record<string, unknown>> }
+      | undefined)?.platforms ?? {};
+    const orig = ((state.originalConfig as Record<string, unknown>).gateway as
+      | { platforms?: Record<string, Record<string, unknown>> }
+      | undefined)?.platforms ?? {};
+    const out = new Set<string>();
+    const keys = new Set<string>([...Object.keys(cur), ...Object.keys(orig)]);
+    for (const k of keys) {
+      if (!shallowEqualRecord(cur[k], orig[k])) out.add(k);
+    }
+    return out;
+  }, [state.config, state.originalConfig]);
+
   const sectionSubkey = useMemo(() => {
     const m = new Map<string, string | undefined>();
     for (const s of state.configSections) {
@@ -260,12 +267,14 @@ export default function App() {
 
   const [newProviderDialogOpen, setNewProviderDialogOpen] = useState(false);
   const [newMcpDialogOpen, setNewMcpDialogOpen] = useState(false);
+  const [newPlatformDialogOpen, setNewPlatformDialogOpen] = useState(false);
 
   const onFetchProviderModels = useCallback(async (instanceKey: string) => {
     const res = await apiFetch(`/api/providers/${encodeURIComponent(instanceKey)}/models`, {
       method: 'POST',
       schema: ProviderModelsResponseSchema,
     });
+    dispatch({ type: 'provider/models/loaded', providerKey: instanceKey, models: res.models });
     return res;
   }, []);
 
@@ -279,7 +288,27 @@ export default function App() {
 
   const dirtyGroupIds = useMemo(() => selectDirtyGroups(state), [state]);
   const dirty = totalDirtyCount(state);
-  const busy = state.status === 'saving' || state.status === 'applying';
+
+  const allModels = useMemo(() => {
+    const seen = new Set<string>();
+    for (const models of Object.values(state.providerModels)) {
+      for (const m of models) seen.add(m);
+    }
+    if (currentModel) seen.add(currentModel);
+    return Array.from(seen).sort();
+  }, [state.providerModels, currentModel]);
+
+  const handleSelectGroup = useCallback(
+    (id: GroupId) => {
+      dispatch({ type: 'shell/selectGroup', group: id });
+      const keys = providerInstances.map((p) => p.key);
+      const firstSub = firstSubkeyForGroup(id, state.configSections, keys);
+      if (firstSub) {
+        dispatch({ type: 'shell/selectSub', key: firstSub });
+      }
+    },
+    [providerInstances, state.configSections],
+  );
 
   const onSave = useCallback(async () => {
     dispatch({ type: 'save/start' });
@@ -290,37 +319,9 @@ export default function App() {
       });
       dispatch({ type: 'save/done' });
     } catch (err) {
-      dispatch({ type: 'save/done', error: toErrMsg(err) });
+      dispatch({ type: 'save/done', error: err instanceof Error ? err.message : String(err) });
     }
   }, [state.config]);
-
-  const onApplyGateway = useCallback(async () => {
-    dispatch({ type: 'apply/start' });
-    try {
-      const res = await apiFetch('/api/platforms/apply', {
-        method: 'POST',
-        schema: ApplyResultSchema,
-      });
-      if (res.ok) {
-        dispatch({ type: 'apply/done' });
-      } else {
-        dispatch({ type: 'apply/done', error: res.error ?? 'apply failed' });
-      }
-    } catch (err) {
-      dispatch({ type: 'apply/done', error: toErrMsg(err) });
-    }
-  }, []);
-
-  if (state.status === 'booting') {
-    return <div style={{ padding: '2rem' }}>{t('status.loading')}</div>;
-  }
-  if (state.status === 'error' && state.descriptors.length === 0) {
-    return (
-      <div style={{ padding: '2rem', color: 'var(--error)' }}>
-        {t('status.bootFailedPrefix')} {state.flash?.msg ?? t('status.unknownError')}
-      </div>
-    );
-  }
 
   const setMode = (m: 'chat' | 'settings') => {
     window.location.hash = stringifyHash(
@@ -328,34 +329,34 @@ export default function App() {
     );
   };
 
-  if (hashState.mode === 'chat') {
-    const providerConfigured = Object.values(
-      (state.config as { providers?: Record<string, { api_key?: string }> }).providers ?? {},
-    ).some((p) => typeof p?.api_key === 'string' && p.api_key.length > 0);
+  if (state.status === 'booting') {
+    return <div style={{ padding: '2rem' }}>{t('status.loading')}</div>;
+  }
+  if (state.status === 'error' && state.configSections.length === 0) {
     return (
-      <div className="app-shell chat-mode">
-        <TopBar dirtyCount={0} status={state.status} onSave={() => {}} mode="chat" onModeChange={setMode} />
-        <ChatWorkspace
-          sessionId={hashState.sessionId ?? null}
-          providerConfigured={providerConfigured}
-          onChangeSession={(id) => {
-            window.location.hash = stringifyHash({ mode: 'chat', sessionId: id });
-          }}
-        />
+      <div style={{ padding: '2rem', color: 'var(--error)' }}>
+        {t('status.bootFailedPrefix')} {state.flash?.msg ?? t('status.unknownError')}
       </div>
     );
   }
 
-  const selectedKey = state.shell.activeSubKey;
-  const selectedInstance = selectedKey
-    ? state.config.gateway?.platforms?.[selectedKey] ?? null
-    : null;
-  const selectedOriginal = selectedKey
-    ? state.originalConfig.gateway?.platforms?.[selectedKey] ?? null
-    : null;
-  const selectedDescriptor = selectedInstance
-    ? state.descriptors.find(d => d.type === selectedInstance.type) ?? null
-    : null;
+  if (hashState.mode === 'chat') {
+    const providerConfigured =
+      Object.keys(
+        (state.config as { providers?: Record<string, unknown> }).providers ?? {},
+      ).length > 0;
+    return (
+      <div className="app-shell chat-mode">
+        <TopBar dirtyCount={0} status={state.status} onSave={() => {}} mode="chat" onModeChange={setMode} />
+        <ChatWorkspace
+          instanceRoot={instanceRoot}
+          providerConfigured={providerConfigured}
+          modelOptions={allModels}
+          currentModel={currentModel}
+        />
+      </div>
+    );
+  }
 
   return (
     <div className="app-shell settings-mode">
@@ -365,26 +366,21 @@ export default function App() {
         activeSubKey={state.shell.activeSubKey}
         expandedGroups={state.shell.expandedGroups}
         dirtyGroups={dirtyGroupIds}
-        instances={instances}
-        selectedKey={selectedKey}
-        descriptors={state.descriptors}
         configSections={state.configSections}
-        dirtyInstanceKeys={dirtyInstanceKeys}
         providerInstances={providerInstances}
         dirtyProviderKeys={dirtyProviderKeys}
         fallbackProviders={fallbackProviders}
         dirtyFallbackIndices={dirtyFallbackIndices}
-        onSelectGroup={(id: GroupId) => dispatch({ type: 'shell/selectGroup', group: id })}
+        onSelectGroup={handleSelectGroup}
         onSelectSub={(key: string) => dispatch({ type: 'shell/selectSub', key })}
         onToggleGroup={(id: GroupId) => dispatch({ type: 'shell/toggleGroup', group: id })}
-        onNewInstance={() => setNewDialogOpen(true)}
         onNewProvider={() => setNewProviderDialogOpen(true)}
         onAddFallback={() => {
           const list = ((state.config as Record<string, unknown>).fallback_providers as
             | Array<unknown>
             | undefined) ?? [];
-          const section = state.configSections.find(s => s.key === 'fallback_providers');
-          const providerField = section?.fields.find(f => f.name === 'provider');
+          const section = state.configSections.find((s) => s.key === 'fallback_providers');
+          const providerField = section?.fields.find((f) => f.name === 'provider');
           const firstType = providerField?.enum?.[0] ?? '';
           dispatch({
             type: 'list-instance/create',
@@ -412,6 +408,10 @@ export default function App() {
         mcpInstances={mcpInstances}
         dirtyMcpKeys={dirtyMcpKeys}
         onAddMcpServer={() => setNewMcpDialogOpen(true)}
+        platformInstances={gatewayInstances}
+        dirtyPlatformKeys={dirtyGatewayKeys}
+        onSelectPlatform={(key) => dispatch({ type: 'shell/selectSub', key: `gateway:${key}` })}
+        onAddPlatform={() => setNewPlatformDialogOpen(true)}
         cronJobs={cronJobs}
         dirtyCronIndices={dirtyCronIndices}
         onAddCronJob={() => {
@@ -431,10 +431,7 @@ export default function App() {
           const list = (((state.config as Record<string, unknown>).cron as
             { jobs?: Array<unknown> } | undefined)?.jobs) ?? [];
           const newIndex = direction === 'up' ? index - 1 : index + 1;
-          if (newIndex < 0 || newIndex >= list.length) {
-            // Button is disabled at the edges; this is defensive only.
-            return;
-          }
+          if (newIndex < 0 || newIndex >= list.length) return;
           dispatch({
             type: direction === 'up' ? 'list-instance/move-up' : 'list-instance/move-down',
             sectionKey: 'cron',
@@ -451,21 +448,7 @@ export default function App() {
           config={state.config}
           originalConfig={state.originalConfig}
           configSections={state.configSections}
-          selectedKey={selectedKey}
-          instance={selectedInstance}
-          originalInstance={selectedOriginal}
-          descriptor={selectedDescriptor}
-          dirtyGateway={dirtyGroupIds.has('gateway')}
-          busy={busy}
-          onField={(field, value) =>
-            selectedKey && dispatch({ type: 'edit/field', key: selectedKey, field, value })
-          }
-          onToggleEnabled={enabled =>
-            selectedKey && dispatch({ type: 'edit/enabled', key: selectedKey, enabled })
-          }
-          onDelete={() => selectedKey && dispatch({ type: 'instance/delete', key: selectedKey })}
-          onApply={onApplyGateway}
-          onSelectGroup={(id: GroupId) => dispatch({ type: 'shell/selectGroup', group: id })}
+          onSelectGroup={handleSelectGroup}
           onConfigField={(sectionKey, field, value) =>
             dispatch({ type: 'edit/config-field', sectionKey, field, value })
           }
@@ -496,27 +479,12 @@ export default function App() {
               index,
             });
             const newIndex = direction === 'up' ? index - 1 : index + 1;
-            // fallback_providers uses the shorter "fallback:N" sub-key prefix (legacy
-            // from stage-4c). All new list-shaped sections use "${sectionKey}:N".
             const prefix = sectionKey === 'fallback_providers' ? 'fallback:' : `${sectionKey}:`;
             dispatch({ type: 'shell/selectSub', key: `${prefix}${newIndex}` });
           }}
         />
       </main>
       <Footer flash={state.flash} />
-      {newDialogOpen && (
-        <NewInstanceDialog
-          descriptors={state.descriptors}
-          existingKeys={new Set(Object.keys(state.config.gateway?.platforms ?? {}))}
-          onCancel={() => setNewDialogOpen(false)}
-          onCreate={(key, platformType) => {
-            dispatch({ type: 'instance/create', key, platformType });
-            dispatch({ type: 'shell/selectGroup', group: 'gateway' });
-            dispatch({ type: 'shell/selectSub', key });
-            setNewDialogOpen(false);
-          }}
-        />
-      )}
       {newMcpDialogOpen && (() => {
         const existingKeys = new Set(Object.keys(
           (((state.config as Record<string, unknown>).mcp as
@@ -526,7 +494,7 @@ export default function App() {
           <NewMcpServerDialog
             existingKeys={existingKeys}
             onCancel={() => setNewMcpDialogOpen(false)}
-            onCreate={key => {
+            onCreate={(key) => {
               dispatch({
                 type: 'keyed-instance/create',
                 sectionKey: 'mcp',
@@ -542,8 +510,8 @@ export default function App() {
         );
       })()}
       {newProviderDialogOpen && (() => {
-        const section = state.configSections.find(s => s.key === 'providers');
-        const providerField = section?.fields.find(f => f.name === 'provider');
+        const section = state.configSections.find((s) => s.key === 'providers');
+        const providerField = section?.fields.find((f) => f.name === 'provider');
         const types = (providerField?.enum ?? []) as readonly string[];
         const existingKeys = new Set(
           Object.keys(
@@ -571,6 +539,36 @@ export default function App() {
           />
         );
       })()}
+      {newPlatformDialogOpen && (() => {
+        const section = state.configSections.find((s) => s.key === 'gateway');
+        const typeField = section?.fields.find((f) => f.name === 'type');
+        const platformTypes = (typeField?.enum ?? []) as readonly string[];
+        const existingKeys = new Set(
+          Object.keys(
+            (((state.config as Record<string, unknown>).gateway as
+              { platforms?: Record<string, unknown> } | undefined)?.platforms) ?? {}
+          ),
+        );
+        return (
+          <NewPlatformDialog
+            platformTypes={Array.from(platformTypes)}
+            existingKeys={existingKeys}
+            onCancel={() => setNewPlatformDialogOpen(false)}
+            onCreate={(key, type) => {
+              dispatch({
+                type: 'keyed-instance/create',
+                sectionKey: 'gateway',
+                subkey: 'platforms',
+                instanceKey: key,
+                initial: { type, enabled: true, options: '' },
+              });
+              dispatch({ type: 'shell/selectGroup', group: 'gateway' });
+              dispatch({ type: 'shell/selectSub', key: `gateway:${key}` });
+              setNewPlatformDialogOpen(false);
+            }}
+          />
+        );
+      })()}
     </div>
   );
 }
@@ -584,17 +582,30 @@ function shallowEqualRecord(
   const ak = Object.keys(a);
   const bk = Object.keys(b);
   if (ak.length !== bk.length) return false;
-  for (const k of ak) if (a[k] !== b[k]) return false;
+  for (const k of ak) {
+    if (!deepEqual(a[k], b[k])) return false;
+  }
   return true;
 }
 
-function toErrMsg(err: unknown): string {
-  if (err instanceof ApiError) {
-    if (typeof err.body === 'object' && err.body !== null && 'error' in err.body) {
-      const e = (err.body as { error?: unknown }).error;
-      if (typeof e === 'string') return e;
+function deepEqual(a: unknown, b: unknown): boolean {
+  if (a === b) return true;
+  if (a === null || b === null) return false;
+  if (typeof a !== typeof b) return false;
+  if (typeof a !== 'object') return false;
+  if (Array.isArray(a) || Array.isArray(b)) {
+    if (!Array.isArray(a) || !Array.isArray(b)) return false;
+    if (a.length !== b.length) return false;
+    for (let i = 0; i < a.length; i++) {
+      if (!deepEqual(a[i], b[i])) return false;
     }
-    return `HTTP ${err.status}`;
+    return true;
   }
-  return err instanceof Error ? err.message : String(err);
+  const ao = a as Record<string, unknown>;
+  const bo = b as Record<string, unknown>;
+  const keys = new Set<string>([...Object.keys(ao), ...Object.keys(bo)]);
+  for (const k of keys) {
+    if (!deepEqual(ao[k], bo[k])) return false;
+  }
+  return true;
 }

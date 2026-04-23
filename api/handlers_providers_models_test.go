@@ -63,12 +63,11 @@ func TestProvidersModels_HappyPath(t *testing.T) {
 	cfg := &config.Config{Providers: map[string]config.ProviderConfig{
 		"p1": {Provider: "__fake_happy", APIKey: "k"},
 	}}
-	srv, err := api.NewServer(&api.ServerOpts{Config: cfg, Token: "t"})
+	srv, err := api.NewServer(&api.ServerOpts{Config: cfg})
 	if err != nil {
 		t.Fatalf("NewServer: %v", err)
 	}
 	req := httptest.NewRequest("POST", "/api/providers/p1/models", nil)
-	req.Header.Set("Authorization", "Bearer t")
 	w := httptest.NewRecorder()
 	srv.Router().ServeHTTP(w, req)
 
@@ -88,9 +87,8 @@ func TestProvidersModels_HappyPath(t *testing.T) {
 
 func TestProvidersModels_UnknownName(t *testing.T) {
 	cfg := &config.Config{Providers: map[string]config.ProviderConfig{}}
-	srv, _ := api.NewServer(&api.ServerOpts{Config: cfg, Token: "t"})
+	srv, _ := api.NewServer(&api.ServerOpts{Config: cfg})
 	req := httptest.NewRequest("POST", "/api/providers/does-not-exist/models", nil)
-	req.Header.Set("Authorization", "Bearer t")
 	w := httptest.NewRecorder()
 	srv.Router().ServeHTTP(w, req)
 
@@ -108,9 +106,8 @@ func TestProvidersModels_FactoryError(t *testing.T) {
 	cfg := &config.Config{Providers: map[string]config.ProviderConfig{
 		"p1": {Provider: "__fake_factory_err"},
 	}}
-	srv, _ := api.NewServer(&api.ServerOpts{Config: cfg, Token: "t"})
+	srv, _ := api.NewServer(&api.ServerOpts{Config: cfg})
 	req := httptest.NewRequest("POST", "/api/providers/p1/models", nil)
-	req.Header.Set("Authorization", "Bearer t")
 	w := httptest.NewRecorder()
 	srv.Router().ServeHTTP(w, req)
 
@@ -128,9 +125,8 @@ func TestProvidersModels_NotListModelsCapable(t *testing.T) {
 	cfg := &config.Config{Providers: map[string]config.ProviderConfig{
 		"p1": {Provider: "__fake_no_lister"},
 	}}
-	srv, _ := api.NewServer(&api.ServerOpts{Config: cfg, Token: "t"})
+	srv, _ := api.NewServer(&api.ServerOpts{Config: cfg})
 	req := httptest.NewRequest("POST", "/api/providers/p1/models", nil)
-	req.Header.Set("Authorization", "Bearer t")
 	w := httptest.NewRecorder()
 	srv.Router().ServeHTTP(w, req)
 
@@ -148,9 +144,8 @@ func TestProvidersModels_UpstreamError(t *testing.T) {
 	cfg := &config.Config{Providers: map[string]config.ProviderConfig{
 		"p1": {Provider: "__fake_upstream_err"},
 	}}
-	srv, _ := api.NewServer(&api.ServerOpts{Config: cfg, Token: "t"})
+	srv, _ := api.NewServer(&api.ServerOpts{Config: cfg})
 	req := httptest.NewRequest("POST", "/api/providers/p1/models", nil)
-	req.Header.Set("Authorization", "Bearer t")
 	w := httptest.NewRecorder()
 	srv.Router().ServeHTTP(w, req)
 

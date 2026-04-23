@@ -2,9 +2,9 @@ import { describe, it, expect, vi } from 'vitest';
 import { render, screen } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import TextInput from './TextInput';
-import type { SchemaField } from '../../api/schemas';
+import type { ConfigField } from '../../api/schemas';
 
-const baseField: SchemaField = {
+const baseField: ConfigField = {
   name: 'thing',
   label: 'Thing',
   kind: 'string',

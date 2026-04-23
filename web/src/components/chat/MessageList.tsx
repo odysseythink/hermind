@@ -3,20 +3,20 @@ import MessageBubble from './MessageBubble';
 import MessageContent from './MessageContent';
 import StreamingCursor from './StreamingCursor';
 import ToolCallCard from './ToolCallCard';
-import type { ChatMessage, ToolCallSnapshot } from '../../state/chat';
+import type { ChatMessage, ToolCall } from '../../state/chat';
 import styles from './MessageList.module.css';
 import bubble from './MessageBubble.module.css';
 
 type Props = {
   messages: ChatMessage[];
   streamingDraft: string;
-  streamingToolCalls: ToolCallSnapshot[];
-  streamingSessionId: string | null;
-  activeSessionId: string | null;
+  streamingToolCalls: ToolCall[];
 };
 
 export default function MessageList({
-  messages, streamingDraft, streamingToolCalls, streamingSessionId, activeSessionId,
+  messages,
+  streamingDraft,
+  streamingToolCalls,
 }: Props) {
   const ref = useRef<HTMLDivElement>(null);
   useEffect(() => {
@@ -29,8 +29,7 @@ export default function MessageList({
     }
   }, [messages, streamingDraft]);
 
-  const showStreamingBubble =
-    streamingSessionId === activeSessionId && (!!streamingDraft || streamingToolCalls.length > 0);
+  const showStreamingBubble = !!streamingDraft || streamingToolCalls.length > 0;
 
   return (
     <div ref={ref} className={styles.list}>

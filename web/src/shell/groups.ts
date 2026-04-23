@@ -1,10 +1,10 @@
 export type GroupId =
   | 'models'
-  | 'gateway'
   | 'memory'
   | 'skills'
   | 'runtime'
   | 'advanced'
+  | 'gateway'
   | 'observability';
 
 export interface GroupDef {
@@ -29,14 +29,6 @@ export const GROUPS: readonly GroupDef[] = [
       'Fallback providers',
       'Per-provider fetch-models button',
     ],
-  },
-  {
-    id: 'gateway',
-    label: 'Gateway',
-    plannedStage: 'done',
-    configKeys: ['gateway'],
-    description: 'Messaging platform instances (Feishu, DingTalk, WeChat, …).',
-    bullets: ['Per-platform instance configuration', 'Secret handling', 'Connection test'],
   },
   {
     id: 'memory',
@@ -82,6 +74,18 @@ export const GROUPS: readonly GroupDef[] = [
     configKeys: ['mcp', 'browser', 'cron'],
     description: 'MCP servers, browser automation, and scheduled jobs.',
     bullets: ['MCP server list', 'Browser (Browserbase / Camofox) config', 'Cron jobs'],
+  },
+  {
+    id: 'gateway',
+    label: 'IM Channels',
+    plannedStage: 'done',
+    configKeys: ['gateway'],
+    description: 'Multi-platform IM adapters (Feishu, Telegram, …)',
+    bullets: [
+      'Telegram long-polling adapter',
+      'Feishu webhook adapter',
+      'Per-platform credentials and options',
+    ],
   },
   {
     id: 'observability',

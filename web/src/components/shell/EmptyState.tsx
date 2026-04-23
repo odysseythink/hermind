@@ -24,9 +24,7 @@ export default function EmptyState({ onSelectGroup }: EmptyStateProps) {
             <div className={styles.cardLabel}>{dt.groupLabel(g.id, g.label)}</div>
             <div className={styles.cardDesc}>{t(`group.${g.id}.description`)}</div>
             <span className={styles.cardStage}>
-              {g.plannedStage === 'done'
-                ? t('empty.available')
-                : t('empty.stage', { stage: g.plannedStage })}
+              {t('empty.available')}
             </span>
           </button>
         ))}

@@ -13,12 +13,11 @@ import (
 
 // TrajectoryEvent is one line in the trajectory dump.
 type TrajectoryEvent struct {
-	Time      time.Time `json:"time"`
-	SessionID string    `json:"session_id"`
-	Kind      string    `json:"kind"` // "user", "assistant", "tool_call", "tool_result", "usage"
-	Content   string    `json:"content,omitempty"`
-	ToolName  string    `json:"tool_name,omitempty"`
-	Usage     *message.Usage `json:"usage,omitempty"`
+	Time     time.Time      `json:"time"`
+	Kind     string         `json:"kind"` // "user", "assistant", "tool_call", "tool_result", "usage"
+	Content  string         `json:"content,omitempty"`
+	ToolName string         `json:"tool_name,omitempty"`
+	Usage    *message.Usage `json:"usage,omitempty"`
 }
 
 // TrajectoryWriter appends JSON-lines events to a file on disk.
@@ -30,13 +29,18 @@ type TrajectoryWriter struct {
 }
 
 // DefaultTrajectoryDir returns the default directory for trajectory
-// dumps, usually ~/.hermind/trajectories.
+// dumps under the current hermind instance (<instance>/trajectories).
+// Honors $HERMIND_HOME; falls back to ./.hermind/trajectories if cwd
+// resolution fails.
 func DefaultTrajectoryDir() string {
 	if v := os.Getenv("HERMIND_HOME"); v != "" {
 		return filepath.Join(v, "trajectories")
 	}
-	home, _ := os.UserHomeDir()
-	return filepath.Join(home, ".hermind", "trajectories")
+	cwd, err := os.Getwd()
+	if err != nil {
+		return ".hermind/trajectories"
+	}
+	return filepath.Join(cwd, ".hermind", "trajectories")
 }
 
 // NewTrajectoryWriter opens (or creates) a trajectory file for a session.

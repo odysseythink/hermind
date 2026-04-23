@@ -10,7 +10,6 @@ import (
 
 	"github.com/odysseythink/hermind/config"
 	"github.com/odysseythink/hermind/config/descriptor"
-	"github.com/odysseythink/hermind/gateway/platforms"
 )
 
 // handleConfigGet responds to GET /api/config with the current Config
@@ -31,48 +30,11 @@ func (s *Server) handleConfigGet(w http.ResponseWriter, _ *http.Request) {
 	writeJSON(w, ConfigResponse{Config: m})
 }
 
-// redactSecrets blanks every secret field in m, covering two universes:
-//
-//  1. gateway.platforms[*].options — fields of Kind FieldSecret on the
-//     platform descriptor registered in gateway/platforms.
-//  2. m[section.Key][field.Name] — fields of Kind FieldSecret on every
-//     config section registered in config/descriptor.
-//
-// Silently ignores unknown types, missing keys, or non-map values —
-// we're redacting defensively, not validating.
+// redactSecrets blanks every secret field of every config section
+// registered in config/descriptor. Silently ignores unknown types,
+// missing keys, or non-map values.
 func redactSecrets(m map[string]any) {
-	redactPlatformSecrets(m)
 	redactSectionSecrets(m)
-}
-
-func redactPlatformSecrets(m map[string]any) {
-	gw, _ := m["gateway"].(map[string]any)
-	plats, _ := gw["platforms"].(map[string]any)
-	for _, raw := range plats {
-		inst, ok := raw.(map[string]any)
-		if !ok {
-			continue
-		}
-		typ, _ := inst["type"].(string)
-		if typ == "" {
-			continue
-		}
-		d, ok := platforms.Get(typ)
-		if !ok {
-			continue
-		}
-		opts, _ := inst["options"].(map[string]any)
-		if opts == nil {
-			continue
-		}
-		for _, f := range d.Fields {
-			if f.Kind == platforms.FieldSecret {
-				if _, present := opts[f.Name]; present {
-					opts[f.Name] = ""
-				}
-			}
-		}
-	}
 }
 
 // unwrapSection returns the payload for sec from m, walking sec.Subkey
@@ -210,38 +172,11 @@ func (s *Server) handleConfigPut(w http.ResponseWriter, r *http.Request) {
 	writeJSON(w, OKResponse{OK: true})
 }
 
-// preserveSecrets copies every blank secret in updated back from current,
-// covering both platform secrets (gateway.platforms[*].options) and
-// section secrets registered in config/descriptor. Keys missing from
-// current (new platforms, new providers, …) are left as-is.
+// preserveSecrets copies every blank secret in updated back from
+// current, covering secrets registered in config/descriptor. Keys
+// missing from current (new providers, new mcp servers, …) are left as-is.
 func preserveSecrets(updated, current *config.Config) {
-	preservePlatformSecrets(updated, current)
 	preserveSectionSecrets(updated, current)
-}
-
-func preservePlatformSecrets(updated, current *config.Config) {
-	for key, newPC := range updated.Gateway.Platforms {
-		curPC, ok := current.Gateway.Platforms[key]
-		if !ok {
-			continue
-		}
-		d, ok := platforms.Get(newPC.Type)
-		if !ok {
-			continue
-		}
-		if newPC.Options == nil {
-			newPC.Options = map[string]string{}
-		}
-		for _, f := range d.Fields {
-			if f.Kind != platforms.FieldSecret {
-				continue
-			}
-			if newPC.Options[f.Name] == "" {
-				newPC.Options[f.Name] = curPC.Options[f.Name]
-			}
-		}
-		updated.Gateway.Platforms[key] = newPC
-	}
 }
 
 // preserveSectionSecrets round-trips blanks for every FieldSecret on a

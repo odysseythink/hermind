@@ -9,9 +9,8 @@ import (
 	"github.com/odysseythink/hermind/tool"
 )
 
-// Engine is single-use per conversation. NOT thread-safe.
-// The gateway creates a fresh Engine per incoming message.
-// The CLI creates a fresh Engine per /run invocation.
+// Engine is single-use per conversation turn. NOT thread-safe.
+// Callers construct a fresh Engine per incoming user message.
 type Engine struct {
 	provider    provider.Provider
 	auxProvider provider.Provider  // optional, used by Compressor
@@ -20,35 +19,27 @@ type Engine struct {
 	config      config.AgentConfig // value, not pointer — immutable snapshot
 	platform    string
 	prompt      *PromptBuilder
-	compressor  *Compressor        // optional, nil means compression disabled
+	compressor  *Compressor // optional, nil means compression disabled
 
-	// Auxiliary sub-capabilities: cheap LLM calls and composed memory
-	// backends. Both are optional; when nil the engine behaves exactly
-	// as before. Callers wire them via NewEngineWithToolsAndAux (which
-	// constructs an AuxClient and an empty MemoryManager when aux is set)
-	// or via SetAuxClient / SetMemoryManager for finer control.
 	aux    *provider.AuxClient
 	memory *MemoryManager
 
 	// Callbacks — optional. Nil means no-op.
 	onStreamDelta func(delta *provider.StreamDelta)
-	onToolStart   func(call message.ContentBlock)                // fired before tool execution
-	onToolResult  func(call message.ContentBlock, result string) // fired after
+	onToolStart   func(call message.ContentBlock)
+	onToolResult  func(call message.ContentBlock, result string)
 
 	// activeSkills returns the skills whose bodies should be prepended to
-	// the system prompt. Called once per turn so the set can change as the
-	// user runs /skill-name commands mid-session. Nil means no skills.
+	// the system prompt. Called once per turn.
 	activeSkills func() []ActiveSkill
 }
 
-// NewEngine constructs an Engine without tools. Use NewEngineWithTools if
-// you want the LLM to be able to invoke tools.
+// NewEngine constructs an Engine without tools.
 func NewEngine(p provider.Provider, s storage.Storage, cfg config.AgentConfig, platform string) *Engine {
 	return NewEngineWithTools(p, s, nil, cfg, platform)
 }
 
 // NewEngineWithTools constructs an Engine with tools and no auxiliary provider.
-// Compression will be a no-op without an auxiliary provider.
 func NewEngineWithTools(p provider.Provider, s storage.Storage, tools *tool.Registry, cfg config.AgentConfig, platform string) *Engine {
 	return NewEngineWithToolsAndAux(p, nil, s, tools, cfg, platform)
 }
@@ -63,19 +54,14 @@ func NewEngineWithToolsAndAux(p, aux provider.Provider, s storage.Storage, tools
 		tools:       tools,
 		config:      cfg,
 		platform:    platform,
-		prompt:      NewPromptBuilder(platform),
+		prompt:      NewPromptBuilder(platform, cfg.DefaultSystemPrompt),
 	}
 	if cfg.Compression.Enabled && aux != nil {
 		e.compressor = NewCompressor(cfg.Compression, aux)
 	}
 	if aux != nil {
-		// Aux client: prefer the auxiliary provider, fall back to the
-		// primary model so cheap calls still succeed when the aux side
-		// is misconfigured.
 		e.aux = provider.NewAuxClient([]provider.Provider{aux, p})
 	}
-	// MemoryManager is always constructed — even without backends it
-	// provides a built-in turn-history digest the engine can use.
 	e.memory = NewMemoryManager(nil)
 	if e.aux != nil {
 		e.memory.SetAuxClient(e.aux)
@@ -86,20 +72,13 @@ func NewEngineWithToolsAndAux(p, aux provider.Provider, s storage.Storage, tools
 	return e
 }
 
-// Aux returns the engine's auxiliary client, or nil if no auxiliary
-// provider was supplied. Callers (e.g. MemoryManager, compressor) use
-// this for cheap secondary LLM calls.
+// Aux returns the engine's auxiliary client, or nil.
 func (e *Engine) Aux() *provider.AuxClient { return e.aux }
 
-// Memory returns the engine's memory manager. It is always non-nil
-// (even without registered backends it provides a turn-history
-// digest). Callers may AddProvider or ObserveTurn on it directly.
+// Memory returns the engine's memory manager. Always non-nil.
 func (e *Engine) Memory() *MemoryManager { return e.memory }
 
-// SetAuxClient overrides the engine's auxiliary client. Intended for
-// callers that build a custom fallback chain (e.g. OpenRouter -> Nous
-// -> Codex -> Anthropic) instead of relying on the default two-provider
-// chain constructed in NewEngineWithToolsAndAux.
+// SetAuxClient overrides the engine's auxiliary client.
 func (e *Engine) SetAuxClient(ac *provider.AuxClient) {
 	e.aux = ac
 	if e.memory != nil {
@@ -107,9 +86,7 @@ func (e *Engine) SetAuxClient(ac *provider.AuxClient) {
 	}
 }
 
-// SetMemoryManager overrides the engine's memory manager. Intended for
-// CLI / gateway bootstrap code that loads config-driven memprovider
-// backends and wants to hand the engine a pre-populated manager.
+// SetMemoryManager overrides the engine's memory manager.
 func (e *Engine) SetMemoryManager(mm *MemoryManager) {
 	e.memory = mm
 	if mm != nil {
@@ -123,7 +100,6 @@ func (e *Engine) SetMemoryManager(mm *MemoryManager) {
 }
 
 // SetStreamDeltaCallback registers a callback invoked for each streaming delta.
-// Must be called before RunConversation. Calling after is undefined behavior.
 func (e *Engine) SetStreamDeltaCallback(fn func(delta *provider.StreamDelta)) {
 	e.onStreamDelta = fn
 }
@@ -139,8 +115,7 @@ func (e *Engine) SetToolResultCallback(fn func(call message.ContentBlock, result
 }
 
 // SetActiveSkillsProvider registers a callback that returns the currently
-// active skills. The provider is invoked at the start of each turn and the
-// bodies are prepended to the system prompt.
+// active skills.
 func (e *Engine) SetActiveSkillsProvider(fn func() []ActiveSkill) {
 	e.activeSkills = fn
 }
@@ -148,17 +123,21 @@ func (e *Engine) SetActiveSkillsProvider(fn func() []ActiveSkill) {
 // RunOptions parameterizes a conversation run.
 type RunOptions struct {
 	UserMessage string
-	History     []message.Message // previous conversation turns, if any
-	SessionID   string
-	UserID      string
 	Model       string
+
+	// Ephemeral runs do not read or write storage. The engine uses only
+	// the provided History for context. Used by cron jobs.
+	Ephemeral bool
+
+	// History is consulted only when Ephemeral=true. Non-ephemeral runs
+	// load history from storage.
+	History []message.Message
 }
 
 // ConversationResult is returned by RunConversation.
 type ConversationResult struct {
 	Response   message.Message
 	Messages   []message.Message // full history after the run
-	SessionID  string
 	Usage      message.Usage
 	Iterations int
 }
