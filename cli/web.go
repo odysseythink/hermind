@@ -15,9 +15,6 @@ import (
 	"github.com/spf13/cobra"
 
 	"github.com/odysseythink/hermind/api"
-	"github.com/odysseythink/hermind/cli/gatewayctl"
-	"github.com/odysseythink/hermind/config"
-	"github.com/odysseythink/hermind/gateway"
 )
 
 // webRunOptions parameterize runWeb. Shared by newWebCmd, newRunCmd,
@@ -46,24 +43,6 @@ func runWeb(ctx context.Context, app *App, opts webRunOptions) error {
 		return fmt.Errorf("web: build engine deps: %w", err)
 	}
 
-	ctrl := gatewayctl.New(app.Config, func(cfg config.Config) (*gateway.Gateway, error) {
-		return BuildGateway(BuildGatewayDeps{
-			Config:  cfg,
-			Primary: deps.Provider,
-			Aux:     deps.AuxProvider,
-			Storage: deps.Storage,
-			Tools:   deps.ToolReg,
-		})
-	})
-	if err := ctrl.Start(ctx); err != nil {
-		return fmt.Errorf("web: start gateway controller: %w", err)
-	}
-	defer func() {
-		shutCtx, c2 := context.WithTimeout(context.Background(), 2*time.Second)
-		defer c2()
-		ctrl.Shutdown(shutCtx)
-	}()
-
 	streams := api.NewMemoryStreamHub()
 	srv, err := api.NewServer(&api.ServerOpts{
 		Config:       app.Config,
@@ -72,7 +51,6 @@ func runWeb(ctx context.Context, app *App, opts webRunOptions) error {
 		Storage:      app.Storage,
 		Version:      Version,
 		Streams:      streams,
-		Controller:   ctrl,
 		Deps:         deps,
 	})
 	if err != nil {
