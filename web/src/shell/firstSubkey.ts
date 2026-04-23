@@ -10,15 +10,21 @@ import type { GroupId } from './groups';
 //   - models prefers the first configured provider instance so users land
 //     on an editable credential form when providers already exist, and
 //     falls back to the scalar "model" section otherwise.
+//   - gateway prefers the first configured platform instance and prefixes
+//     with "gateway:", falls back to null if no instances exist.
 //   - everyone else picks the first configSection whose shape is scalar or
 //     map. keyed_map/list shapes require an element selection, so skipped.
 export function firstSubkeyForGroup(
   group: GroupId,
   configSections: readonly ConfigSection[],
   providerKeys: readonly string[],
+  platformKeys: readonly string[] = [],
 ): string | null {
   if (group === 'models' && providerKeys.length > 0) {
     return providerKeys[0];
+  }
+  if (group === 'gateway' && platformKeys.length > 0) {
+    return `gateway:${platformKeys[0]}`;
   }
 
   const candidates = configSections.filter((s) => s.group_id === group);
