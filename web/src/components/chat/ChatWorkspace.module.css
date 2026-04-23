@@ -1,17 +1,9 @@
 .workspace {
   display: grid;
-  grid-template-columns: 240px 1fr;
+  grid-template-rows: auto 1fr auto;
   height: 100%;
   min-height: 0;
   background: var(--bg);
-}
-
-.main {
-  display: flex;
-  flex-direction: column;
-  min-width: 0;
-  min-height: 0;
-  border-left: 1px solid var(--border);
 }
 
 .errorBanner {

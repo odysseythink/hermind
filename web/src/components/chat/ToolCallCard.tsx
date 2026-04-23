@@ -1,8 +1,8 @@
 import { useState } from 'react';
-import type { ToolCallSnapshot } from '../../state/chat';
+import type { ToolCall } from '../../state/chat';
 import styles from './ToolCallCard.module.css';
 
-type Props = { call: ToolCallSnapshot };
+type Props = { call: ToolCall };
 
 export default function ToolCallCard({ call }: Props) {
   const [open, setOpen] = useState(false);
