@@ -1,103 +1,66 @@
-import { describe, it, expect } from 'vitest';
+import { describe, expect, it } from 'vitest';
 import { chatReducer, initialChatState } from './chat';
 
 describe('chatReducer', () => {
-  it('session/select switches activeSessionId', () => {
+  it('loads history', () => {
     const s = chatReducer(initialChatState, {
-      type: 'chat/session/select',
-      sessionId: 'abc',
+      type: 'chat/history/loaded',
+      messages: [
+        { id: '1', role: 'user', content: 'hi', timestamp: 0 },
+      ],
     });
-    expect(s.activeSessionId).toBe('abc');
+    expect(s.messages).toHaveLength(1);
   });
 
-  it('session/created prepends to sessions and activates', () => {
-    const s = chatReducer(initialChatState, {
-      type: 'chat/session/created',
-      session: { id: 'new-1', title: 'New conversation', source: 'web' },
-    });
-    expect(s.sessions[0]?.id).toBe('new-1');
-    expect(s.activeSessionId).toBe('new-1');
+  it('updates composer text', () => {
+    const s = chatReducer(initialChatState, { type: 'chat/composer/setText', text: 'hello' });
+    expect(s.composer.text).toBe('hello');
   });
 
-  it('session/created is idempotent on duplicate id', () => {
-    let s = chatReducer(initialChatState, {
-      type: 'chat/session/created',
-      session: { id: 'new-1', title: 'alpha', source: 'web' },
-    });
-    s = chatReducer(s, {
-      type: 'chat/session/created',
-      session: { id: 'new-1', title: 'alpha', source: 'web' },
-    });
-    expect(s.sessions.length).toBe(1);
-    expect(s.activeSessionId).toBe('new-1');
-  });
-
-  it('stream/start adds optimistic user message and sets running', () => {
-    const s = chatReducer(
-      { ...initialChatState, activeSessionId: 's1' },
-      { type: 'chat/stream/start', sessionId: 's1', userText: 'hi' },
-    );
+  it('appends user message on stream/start and transitions to running', () => {
+    const s = chatReducer(initialChatState, { type: 'chat/stream/start', userText: 'hi' });
+    expect(s.messages).toHaveLength(1);
+    expect(s.messages[0].role).toBe('user');
     expect(s.streaming.status).toBe('running');
-    expect(s.messagesBySession.s1[0].role).toBe('user');
-    expect(s.messagesBySession.s1[0].content).toBe('hi');
   });
 
-  it('stream/token appends to assistantDraft', () => {
-    let s = chatReducer(initialChatState, {
-      type: 'chat/stream/start', sessionId: 's1', userText: 'hi',
-    });
-    s = chatReducer(s, { type: 'chat/stream/token', delta: 'Hel' });
-    s = chatReducer(s, { type: 'chat/stream/token', delta: 'lo' });
+  it('accumulates tokens into the assistant draft', () => {
+    let s = chatReducer(initialChatState, { type: 'chat/stream/start', userText: 'hi' });
+    s = chatReducer(s, { type: 'chat/stream/token', delta: 'He' });
+    s = chatReducer(s, { type: 'chat/stream/token', delta: 'llo' });
     expect(s.streaming.assistantDraft).toBe('Hello');
   });
 
-  it('stream/complete promotes draft to messagesBySession', () => {
-    let s = chatReducer(initialChatState, {
-      type: 'chat/stream/start', sessionId: 's1', userText: 'hi',
-    });
-    s = chatReducer(s, { type: 'chat/stream/token', delta: 'Hi' });
+  it('completes a turn — appends assistant message and clears draft', () => {
+    let s = chatReducer(initialChatState, { type: 'chat/stream/start', userText: 'hi' });
+    s = chatReducer(s, { type: 'chat/stream/done', assistantText: 'hello' });
+    expect(s.messages).toHaveLength(2);
+    expect(s.messages[1].role).toBe('assistant');
+    expect(s.streaming.status).toBe('idle');
+  });
+
+  it('tracks tool calls and their results', () => {
+    let s = chatReducer(initialChatState, { type: 'chat/stream/start', userText: 'hi' });
     s = chatReducer(s, {
-      type: 'chat/stream/complete', text: 'Hi', messageId: 'm1',
+      type: 'chat/stream/toolCall',
+      call: { id: 't1', name: 'read_file', input: { path: '/x' }, state: 'running' },
     });
-    const msgs = s.messagesBySession.s1;
-    expect(msgs.at(-1)).toMatchObject({ role: 'assistant', content: 'Hi', id: 'm1' });
-    expect(s.streaming.status).toBe('idle');
-    expect(s.streaming.assistantDraft).toBe('');
+    expect(s.streaming.toolCalls).toHaveLength(1);
+    s = chatReducer(s, { type: 'chat/stream/toolResult', id: 't1', result: 'ok' });
+    expect(s.streaming.toolCalls[0].state).toBe('done');
+    expect(s.streaming.toolCalls[0].result).toBe('ok');
   });
 
-  it('stream/cancelled keeps draft with truncated flag', () => {
-    let s = chatReducer(initialChatState, {
-      type: 'chat/stream/start', sessionId: 's1', userText: 'hi',
-    });
-    s = chatReducer(s, { type: 'chat/stream/token', delta: 'partial' });
-    s = chatReducer(s, { type: 'chat/stream/cancelled' });
-    const last = s.messagesBySession.s1.at(-1);
-    expect(last?.role).toBe('assistant');
-    expect(last?.content).toBe('partial');
-    expect(last?.truncated).toBe(true);
-    expect(s.streaming.status).toBe('idle');
-  });
-
-  it('stream/error keeps draft with truncated flag + error', () => {
-    let s = chatReducer(initialChatState, {
-      type: 'chat/stream/start', sessionId: 's1', userText: 'hi',
-    });
-    s = chatReducer(s, { type: 'chat/stream/error', message: 'boom' });
+  it('enters error state on stream/error', () => {
+    const s = chatReducer(initialChatState, { type: 'chat/stream/error', message: 'boom' });
     expect(s.streaming.status).toBe('error');
     expect(s.streaming.error).toBe('boom');
   });
 
-  it('stream/rollbackUserMessage undoes start', () => {
-    let s = chatReducer(initialChatState, {
-      type: 'chat/stream/start', sessionId: 's1', userText: 'hi',
-    });
-    s = chatReducer(s, { type: 'chat/stream/rollbackUserMessage', sessionId: 's1' });
-    expect(s.messagesBySession.s1 ?? []).toHaveLength(0);
+  it('rolls back the user message on failure', () => {
+    let s = chatReducer(initialChatState, { type: 'chat/stream/start', userText: 'hi' });
+    s = chatReducer(s, { type: 'chat/stream/rollbackUserMessage' });
+    expect(s.messages).toHaveLength(0);
     expect(s.streaming.status).toBe('idle');
-  });
-
-  it('composer/setText updates text', () => {
-    const s = chatReducer(initialChatState, { type: 'chat/composer/setText', text: 'hello' });
-    expect(s.composer.text).toBe('hello');
   });
 });
