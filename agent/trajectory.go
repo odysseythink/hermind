@@ -30,13 +30,18 @@ type TrajectoryWriter struct {
 }
 
 // DefaultTrajectoryDir returns the default directory for trajectory
-// dumps, usually ~/.hermind/trajectories.
+// dumps under the current hermind instance (<instance>/trajectories).
+// Honors $HERMIND_HOME; falls back to ./.hermind/trajectories if cwd
+// resolution fails.
 func DefaultTrajectoryDir() string {
 	if v := os.Getenv("HERMIND_HOME"); v != "" {
 		return filepath.Join(v, "trajectories")
 	}
-	home, _ := os.UserHomeDir()
-	return filepath.Join(home, ".hermind", "trajectories")
+	cwd, err := os.Getwd()
+	if err != nil {
+		return ".hermind/trajectories"
+	}
+	return filepath.Join(cwd, ".hermind", "trajectories")
 }
 
 // NewTrajectoryWriter opens (or creates) a trajectory file for a session.

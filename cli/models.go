@@ -3,8 +3,8 @@ package cli
 import (
 	"fmt"
 	"os"
-	"path/filepath"
 
+	"github.com/odysseythink/hermind/config"
 	"github.com/spf13/cobra"
 	"gopkg.in/yaml.v3"
 )
@@ -61,11 +61,13 @@ func newModelsListCmd() *cobra.Command {
 func newModelsSwitchCmd() *cobra.Command {
 	return &cobra.Command{
 		Use:   "switch <provider/model>",
-		Short: "Switch the active model in ~/.hermind/config.yaml",
+		Short: "Switch the active model in <instance>/config.yaml",
 		Args:  cobra.ExactArgs(1),
 		RunE: func(cmd *cobra.Command, args []string) error {
-			home, _ := os.UserHomeDir()
-			cfgPath := filepath.Join(home, ".hermind", "config.yaml")
+			cfgPath, err := config.InstancePath(config.DefaultConfigFile)
+			if err != nil {
+				return err
+			}
 			data, err := os.ReadFile(cfgPath)
 			if err != nil {
 				return fmt.Errorf("read %s: %w", cfgPath, err)

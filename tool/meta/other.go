@@ -233,8 +233,11 @@ func defaultCheckpointDir() string {
 	if v := os.Getenv("HERMIND_HOME"); v != "" {
 		return filepath.Join(v, "checkpoints")
 	}
-	home, _ := os.UserHomeDir()
-	return filepath.Join(home, ".hermind", "checkpoints")
+	cwd, err := os.Getwd()
+	if err != nil {
+		return ".hermind/checkpoints"
+	}
+	return filepath.Join(cwd, ".hermind", "checkpoints")
 }
 
 func validName(name string) bool {

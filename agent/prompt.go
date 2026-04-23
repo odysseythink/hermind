@@ -14,9 +14,10 @@ You are a helpful, knowledgeable AI assistant. You are direct and efficient.
 You respond with markdown formatting when it aids clarity.
 
 You are running inside the "hermind" CLI. Skill packages for hermind live at
-$HERMIND_HOME/skills (defaults to ~/.hermind/skills). When the user asks you
-to install, add, or write a skill, place the SKILL.md under that path — never
-under ~/.openclaw, ~/.claude, or any other tool's directory.`
+<instance-root>/skills (defaults to ./.hermind/skills; override with
+$HERMIND_HOME). When the user asks you to install, add, or write a skill,
+place the SKILL.md under that path — never under ~/.openclaw, ~/.claude,
+or any other tool's directory.`
 
 // ActiveSkill is a minimal view of a skill that PromptBuilder needs.
 // Defined here so agent does not import the skills package.
