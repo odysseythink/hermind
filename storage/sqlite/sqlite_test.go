@@ -29,18 +29,10 @@ func TestOpenCreatesDatabaseFile(t *testing.T) {
 	assert.NotNil(t, store)
 }
 
-func TestMigrateIsIdempotent(t *testing.T) {
-	store := newTestStore(t)
-	// Running migrate twice must not error.
-	err := store.Migrate()
-	assert.NoError(t, err)
-}
-
-func TestMigrateCreatesRequiredTables(t *testing.T) {
+func TestMigrateCreatesV3Tables(t *testing.T) {
 	store := newTestStore(t)
 	ctx := context.Background()
 
-	// Query sqlite_master to confirm tables exist.
 	rows, err := store.db.QueryContext(ctx,
 		`SELECT name FROM sqlite_master WHERE type='table' ORDER BY name`)
 	require.NoError(t, err)
@@ -52,96 +44,29 @@ func TestMigrateCreatesRequiredTables(t *testing.T) {
 		require.NoError(t, rows.Scan(&name))
 		tables[name] = true
 	}
-	assert.True(t, tables["sessions"], "sessions table should exist")
 	assert.True(t, tables["messages"], "messages table should exist")
+	assert.True(t, tables["conversation_state"], "conversation_state table should exist")
+	assert.True(t, tables["memories"], "memories table should exist")
+	assert.False(t, tables["sessions"], "sessions table must not exist in v3")
 }
 
-func TestCreateAndGetSession(t *testing.T) {
-	store := newTestStore(t)
-	ctx := context.Background()
-
-	now := time.Now().UTC().Truncate(time.Millisecond)
-	session := &storage.Session{
-		ID:        "sess-001",
-		Source:    "cli",
-		UserID:    "user-1",
-		Model:     "claude-opus-4-6",
-		StartedAt: now,
-		Title:     "my session",
-	}
-
-	err := store.CreateSession(ctx, session)
-	require.NoError(t, err)
-
-	got, err := store.GetSession(ctx, "sess-001")
-	require.NoError(t, err)
-	assert.Equal(t, "sess-001", got.ID)
-	assert.Equal(t, "cli", got.Source)
-	assert.Equal(t, "user-1", got.UserID)
-	assert.Equal(t, "claude-opus-4-6", got.Model)
-	assert.Equal(t, "my session", got.Title)
-	assert.WithinDuration(t, now, got.StartedAt, time.Second)
-}
-
-func TestGetSessionNotFound(t *testing.T) {
-	store := newTestStore(t)
-	ctx := context.Background()
-
-	_, err := store.GetSession(ctx, "nonexistent")
-	require.Error(t, err)
-	assert.ErrorIs(t, err, storage.ErrNotFound)
-}
-
-func TestUpdateSession(t *testing.T) {
+func TestAppendAndGetHistory(t *testing.T) {
 	store := newTestStore(t)
 	ctx := context.Background()
 
 	now := time.Now().UTC()
-	require.NoError(t, store.CreateSession(ctx, &storage.Session{
-		ID: "sess-002", Source: "cli", Model: "test", StartedAt: now,
-	}))
-
-	end := now.Add(time.Minute)
-	err := store.UpdateSession(ctx, "sess-002", &storage.SessionUpdate{
-		EndedAt:   &end,
-		EndReason: "user_exit",
-		Title:     "done",
-	})
-	require.NoError(t, err)
-
-	got, err := store.GetSession(ctx, "sess-002")
-	require.NoError(t, err)
-	require.NotNil(t, got.EndedAt)
-	assert.Equal(t, "user_exit", got.EndReason)
-	assert.Equal(t, "done", got.Title)
-}
-
-func TestAddAndGetMessages(t *testing.T) {
-	store := newTestStore(t)
-	ctx := context.Background()
-
-	now := time.Now().UTC()
-	require.NoError(t, store.CreateSession(ctx, &storage.Session{
-		ID: "sess-msg-1", Source: "cli", Model: "test", StartedAt: now,
-	}))
-
-	err := store.AddMessage(ctx, "sess-msg-1", &storage.StoredMessage{
-		SessionID: "sess-msg-1",
+	require.NoError(t, store.AppendMessage(ctx, &storage.StoredMessage{
 		Role:      "user",
 		Content:   `"hello"`,
 		Timestamp: now,
-	})
-	require.NoError(t, err)
-
-	err = store.AddMessage(ctx, "sess-msg-1", &storage.StoredMessage{
-		SessionID: "sess-msg-1",
+	}))
+	require.NoError(t, store.AppendMessage(ctx, &storage.StoredMessage{
 		Role:      "assistant",
 		Content:   `"hi there"`,
 		Timestamp: now.Add(time.Second),
-	})
-	require.NoError(t, err)
+	}))
 
-	msgs, err := store.GetMessages(ctx, "sess-msg-1", 10, 0)
+	msgs, err := store.GetHistory(ctx, 10, 0)
 	require.NoError(t, err)
 	require.Len(t, msgs, 2)
 	assert.Equal(t, "user", msgs[0].Role)
@@ -153,17 +78,15 @@ func TestSearchMessagesFTS(t *testing.T) {
 	ctx := context.Background()
 
 	now := time.Now().UTC()
-	require.NoError(t, store.CreateSession(ctx, &storage.Session{
-		ID: "sess-fts-1", Source: "cli", Model: "test", StartedAt: now,
+	require.NoError(t, store.AppendMessage(ctx, &storage.StoredMessage{
+		Role:    "user",
+		Content: "the quick brown fox jumps",
+		Timestamp: now,
 	}))
-
-	require.NoError(t, store.AddMessage(ctx, "sess-fts-1", &storage.StoredMessage{
-		SessionID: "sess-fts-1", Role: "user",
-		Content: "the quick brown fox jumps", Timestamp: now,
-	}))
-	require.NoError(t, store.AddMessage(ctx, "sess-fts-1", &storage.StoredMessage{
-		SessionID: "sess-fts-1", Role: "assistant",
-		Content: "lazy dogs sleep", Timestamp: now.Add(time.Second),
+	require.NoError(t, store.AppendMessage(ctx, &storage.StoredMessage{
+		Role:    "assistant",
+		Content: "lazy dogs sleep",
+		Timestamp: now.Add(time.Second),
 	}))
 
 	results, err := store.SearchMessages(ctx, "fox", &storage.SearchOptions{Limit: 10})
@@ -172,23 +95,54 @@ func TestSearchMessagesFTS(t *testing.T) {
 	assert.Contains(t, results[0].Message.Content, "fox")
 }
 
+func TestUpdateSystemPromptCache(t *testing.T) {
+	store := newTestStore(t)
+	ctx := context.Background()
+
+	require.NoError(t, store.UpdateSystemPromptCache(ctx, "cached prompt"))
+
+	var got string
+	require.NoError(t, store.db.QueryRowContext(ctx,
+		`SELECT system_prompt_cache FROM conversation_state WHERE id=1`).Scan(&got))
+	assert.Equal(t, "cached prompt", got)
+}
+
+func TestUpdateUsageAggregates(t *testing.T) {
+	store := newTestStore(t)
+	ctx := context.Background()
+
+	require.NoError(t, store.UpdateUsage(ctx, &storage.UsageUpdate{
+		InputTokens: 100, OutputTokens: 50, CostUSD: 0.25,
+	}))
+	require.NoError(t, store.UpdateUsage(ctx, &storage.UsageUpdate{
+		InputTokens: 10, OutputTokens: 5,
+	}))
+
+	var inTok, outTok int
+	var cost float64
+	require.NoError(t, store.db.QueryRowContext(ctx,
+		`SELECT total_input_tokens, total_output_tokens, total_cost_usd FROM conversation_state WHERE id=1`,
+	).Scan(&inTok, &outTok, &cost))
+	assert.Equal(t, 110, inTok)
+	assert.Equal(t, 55, outTok)
+	assert.InDelta(t, 0.25, cost, 0.0001)
+}
+
 func TestWithTxCommitsOnSuccess(t *testing.T) {
 	store := newTestStore(t)
 	ctx := context.Background()
 
 	err := store.WithTx(ctx, func(tx storage.Tx) error {
-		return tx.CreateSession(ctx, &storage.Session{
-			ID:        "tx-commit",
-			Source:    "cli",
-			Model:     "test",
-			StartedAt: time.Now().UTC(),
+		return tx.AppendMessage(ctx, &storage.StoredMessage{
+			Role: "user", Content: `"tx commit"`, Timestamp: time.Now().UTC(),
 		})
 	})
 	require.NoError(t, err)
 
-	sess, err := store.GetSession(ctx, "tx-commit")
+	msgs, err := store.GetHistory(ctx, 10, 0)
 	require.NoError(t, err)
-	assert.Equal(t, "tx-commit", sess.ID)
+	require.Len(t, msgs, 1)
+	assert.Contains(t, msgs[0].Content, "tx commit")
 }
 
 func TestWithTxRollsBackOnError(t *testing.T) {
@@ -197,8 +151,8 @@ func TestWithTxRollsBackOnError(t *testing.T) {
 
 	wantErr := errors.New("rollback me")
 	err := store.WithTx(ctx, func(tx storage.Tx) error {
-		if err := tx.CreateSession(ctx, &storage.Session{
-			ID: "tx-rollback", Source: "cli", Model: "test", StartedAt: time.Now().UTC(),
+		if err := tx.AppendMessage(ctx, &storage.StoredMessage{
+			Role: "user", Content: `"should roll back"`, Timestamp: time.Now().UTC(),
 		}); err != nil {
 			return err
 		}
@@ -206,8 +160,9 @@ func TestWithTxRollsBackOnError(t *testing.T) {
 	})
 	assert.ErrorIs(t, err, wantErr)
 
-	_, err = store.GetSession(ctx, "tx-rollback")
-	assert.ErrorIs(t, err, storage.ErrNotFound)
+	msgs, err := store.GetHistory(ctx, 10, 0)
+	require.NoError(t, err)
+	assert.Empty(t, msgs)
 }
 
 func TestWithTxRollsBackOnPanic(t *testing.T) {
@@ -216,75 +171,14 @@ func TestWithTxRollsBackOnPanic(t *testing.T) {
 
 	assert.Panics(t, func() {
 		_ = store.WithTx(ctx, func(tx storage.Tx) error {
-			_ = tx.CreateSession(ctx, &storage.Session{
-				ID: "tx-panic", Source: "cli", Model: "test", StartedAt: time.Now().UTC(),
+			_ = tx.AppendMessage(ctx, &storage.StoredMessage{
+				Role: "user", Content: `"panic"`, Timestamp: time.Now().UTC(),
 			})
 			panic("boom")
 		})
 	})
 
-	_, err := store.GetSession(ctx, "tx-panic")
-	assert.ErrorIs(t, err, storage.ErrNotFound)
-}
-
-func TestUpdateSession_PatchesModelAndSystemPrompt(t *testing.T) {
-	store := newTestStore(t)
-	ctx := context.Background()
-
-	require.NoError(t, store.CreateSession(ctx, &storage.Session{
-		ID:           "s-patch-1",
-		Source:       "web",
-		Model:        "claude-opus-4-7",
-		SystemPrompt: "orig",
-		Title:        "orig title",
-		StartedAt:    time.Now().UTC(),
-	}))
-
-	newModel := "claude-sonnet-4-6"
-	newPrompt := "You are a concise assistant."
-	require.NoError(t, store.UpdateSession(ctx, "s-patch-1", &storage.SessionUpdate{
-		Model:        &newModel,
-		SystemPrompt: &newPrompt,
-	}))
-
-	got, err := store.GetSession(ctx, "s-patch-1")
+	msgs, err := store.GetHistory(ctx, 10, 0)
 	require.NoError(t, err)
-	assert.Equal(t, newModel, got.Model)
-	assert.Equal(t, newPrompt, got.SystemPrompt)
-	assert.Equal(t, "orig title", got.Title) // untouched
-}
-
-func TestUpdateSession_EmptyStringClearsFields(t *testing.T) {
-	store := newTestStore(t)
-	ctx := context.Background()
-
-	require.NoError(t, store.CreateSession(ctx, &storage.Session{
-		ID:           "s-patch-2",
-		Source:       "web",
-		Model:        "claude-opus-4-7",
-		SystemPrompt: "orig",
-		Title:        "t",
-		StartedAt:    time.Now().UTC(),
-	}))
-
-	empty := ""
-	require.NoError(t, store.UpdateSession(ctx, "s-patch-2", &storage.SessionUpdate{
-		Model:        &empty,
-		SystemPrompt: &empty,
-	}))
-
-	got, err := store.GetSession(ctx, "s-patch-2")
-	require.NoError(t, err)
-	assert.Equal(t, "", got.Model)
-	assert.Equal(t, "", got.SystemPrompt)
-}
-
-func TestUpdateUsageReturnsNotFoundForMissingSession(t *testing.T) {
-	store := newTestStore(t)
-	ctx := context.Background()
-
-	err := store.UpdateUsage(ctx, "nonexistent-session", &storage.UsageUpdate{
-		InputTokens: 10,
-	})
-	assert.ErrorIs(t, err, storage.ErrNotFound)
+	assert.Empty(t, msgs)
 }
