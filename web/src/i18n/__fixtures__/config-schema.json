@@ -2,7 +2,7 @@
   {
     "key": "agent",
     "label": "Agent",
-    "summary": "Engine turn limit and gateway request budget.",
+    "summary": "Engine turn limit, gateway request budget, and default system prompt.",
     "group_id": "runtime",
     "fields": [
       {
@@ -19,6 +19,13 @@
         "help": "Seconds a gateway request may run before being cancelled. 0 uses the gateway default.",
         "kind": "int",
         "default": 1800
+      },
+      {
+        "name": "default_system_prompt",
+        "label": "Default system prompt",
+        "help": "Prepended to every new session's system prompt, right after the agent identity block. Empty means no extra prompt.",
+        "kind": "text",
+        "default": ""
       }
     ]
   },
@@ -234,6 +241,208 @@
         "label": "Model",
         "help": "Optional — provider-qualified id used when this fallback is active.",
         "kind": "string"
+      }
+    ]
+  },
+  {
+    "key": "gateway",
+    "label": "IM Channels",
+    "summary": "Multi-platform IM adapters (Feishu, Telegram, Slack, Discord, WeChat, DingTalk)",
+    "group_id": "gateway",
+    "shape": "keyed_map",
+    "subkey": "platforms",
+    "no_discriminator": true,
+    "fields": [
+      {
+        "name": "type",
+        "label": "Platform Type",
+        "kind": "enum",
+        "required": true,
+        "enum": [
+          "feishu",
+          "telegram",
+          "slack",
+          "discord",
+          "wechat",
+          "dingtalk"
+        ]
+      },
+      {
+        "name": "enabled",
+        "label": "Enabled",
+        "kind": "bool",
+        "default": true
+      },
+      {
+        "name": "options.bot_token",
+        "label": "Bot Token",
+        "help": "Bot API token from @BotFather.",
+        "kind": "secret",
+        "required": true,
+        "visible_when": {
+          "field": "type",
+          "in": [
+            "telegram",
+            "slack",
+            "discord"
+          ]
+        }
+      },
+      {
+        "name": "options.proxy_url",
+        "label": "HTTP Proxy URL",
+        "help": "Optional HTTP proxy (useful in restrictive regions).",
+        "kind": "string",
+        "visible_when": {
+          "field": "type",
+          "equals": "telegram"
+        }
+      },
+      {
+        "name": "options.app_id",
+        "label": "App ID",
+        "kind": "string",
+        "required": true,
+        "visible_when": {
+          "field": "type",
+          "equals": "feishu"
+        }
+      },
+      {
+        "name": "options.app_secret",
+        "label": "App Secret",
+        "kind": "secret",
+        "required": true,
+        "visible_when": {
+          "field": "type",
+          "in": [
+            "feishu",
+            "dingtalk"
+          ]
+        }
+      },
+      {
+        "name": "options.verification_token",
+        "label": "Verification Token",
+        "help": "Event webhook verification token.",
+        "kind": "secret",
+        "visible_when": {
+          "field": "type",
+          "equals": "feishu"
+        }
+      },
+      {
+        "name": "options.encrypt_key",
+        "label": "Encrypt Key",
+        "help": "Optional message encryption key.",
+        "kind": "secret",
+        "visible_when": {
+          "field": "type",
+          "equals": "feishu"
+        }
+      },
+      {
+        "name": "options.signing_secret",
+        "label": "Signing Secret",
+        "help": "Webhook request signing secret.",
+        "kind": "secret",
+        "visible_when": {
+          "field": "type",
+          "equals": "slack"
+        }
+      },
+      {
+        "name": "options.app_token",
+        "label": "App-Level Token",
+        "help": "xapp-... token for Socket Mode.",
+        "kind": "secret",
+        "visible_when": {
+          "field": "type",
+          "equals": "slack"
+        }
+      },
+      {
+        "name": "options.application_id",
+        "label": "Application ID",
+        "help": "Discord application / client ID.",
+        "kind": "string",
+        "visible_when": {
+          "field": "type",
+          "equals": "discord"
+        }
+      },
+      {
+        "name": "options.corp_id",
+        "label": "Corp ID",
+        "kind": "string",
+        "required": true,
+        "visible_when": {
+          "field": "type",
+          "equals": "wechat"
+        }
+      },
+      {
+        "name": "options.corp_secret",
+        "label": "Corp Secret",
+        "kind": "secret",
+        "required": true,
+        "visible_when": {
+          "field": "type",
+          "equals": "wechat"
+        }
+      },
+      {
+        "name": "options.agent_id",
+        "label": "Agent ID",
+        "kind": "string",
+        "required": true,
+        "visible_when": {
+          "field": "type",
+          "equals": "wechat"
+        }
+      },
+      {
+        "name": "options.token",
+        "label": "Webhook Token",
+        "help": "Webhook verification token.",
+        "kind": "secret",
+        "visible_when": {
+          "field": "type",
+          "in": [
+            "wechat",
+            "dingtalk"
+          ]
+        }
+      },
+      {
+        "name": "options.encoding_aes_key",
+        "label": "Encoding AES Key",
+        "help": "Message encryption key (43 characters).",
+        "kind": "secret",
+        "visible_when": {
+          "field": "type",
+          "equals": "wechat"
+        }
+      },
+      {
+        "name": "options.app_key",
+        "label": "App Key",
+        "kind": "string",
+        "required": true,
+        "visible_when": {
+          "field": "type",
+          "equals": "dingtalk"
+        }
+      },
+      {
+        "name": "options.robot_code",
+        "label": "Robot Code",
+        "help": "Group robot code.",
+        "kind": "string",
+        "visible_when": {
+          "field": "type",
+          "equals": "dingtalk"
+        }
       }
     ]
   },
@@ -786,6 +995,45 @@
           "field": "enabled",
           "equals": true
         }
+      }
+    ]
+  },
+  {
+    "key": "web",
+    "label": "Web tools",
+    "summary": "Web search provider configuration. DuckDuckGo is the keyless fallback and always available.",
+    "group_id": "advanced",
+    "fields": [
+      {
+        "name": "search.provider",
+        "label": "Search provider",
+        "help": "Leave blank to auto-select by priority (Tavily \u003e Brave \u003e Exa \u003e DuckDuckGo).",
+        "kind": "enum",
+        "enum": [
+          "",
+          "tavily",
+          "brave",
+          "exa",
+          "ddg"
+        ]
+      },
+      {
+        "name": "search.providers.tavily.api_key",
+        "label": "Tavily API key",
+        "help": "Env var TAVILY_API_KEY overrides this value at runtime.",
+        "kind": "secret"
+      },
+      {
+        "name": "search.providers.brave.api_key",
+        "label": "Brave Search API key",
+        "help": "Env var BRAVE_API_KEY overrides this value at runtime.",
+        "kind": "secret"
+      },
+      {
+        "name": "search.providers.exa.api_key",
+        "label": "Exa API key",
+        "help": "Env var EXA_API_KEY overrides this value at runtime.",
+        "kind": "secret"
       }
     ]
   }

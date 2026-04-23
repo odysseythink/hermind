@@ -15,7 +15,8 @@ export type ConfigFieldKind = z.infer<typeof ConfigFieldKindSchema>;
 
 export const ConfigPredicateSchema = z.object({
   field: z.string(),
-  equals: z.unknown(),
+  equals: z.unknown().optional(),
+  in: z.array(z.unknown()).optional(),
 });
 export type ConfigPredicate = z.infer<typeof ConfigPredicateSchema>;
 
