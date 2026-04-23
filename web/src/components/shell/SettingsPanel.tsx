@@ -184,6 +184,31 @@ export default function SettingsPanel(props: ContentPanelProps) {
         );
       }
     }
+    // gateway:<name> addresses config.gateway.platforms[<name>] (Subkey="platforms").
+    if (props.activeGroup === 'gateway' && props.activeSubKey.startsWith('gateway:')) {
+      const instKey = props.activeSubKey.slice('gateway:'.length);
+      const gatewaySection = props.configSections.find(s => s.key === 'gateway');
+      const platforms = ((props.config as Record<string, unknown>).gateway as
+        { platforms?: Record<string, Record<string, unknown>> } | undefined)?.platforms ?? {};
+      const origPlatforms = ((props.originalConfig as Record<string, unknown>).gateway as
+        { platforms?: Record<string, Record<string, unknown>> } | undefined)?.platforms ?? {};
+      const instance = platforms[instKey];
+      if (gatewaySection && gatewaySection.shape === 'keyed_map' && instance) {
+        const dirty = !shallowEqualInstance(instance, origPlatforms[instKey]);
+        return (
+          <KeyedInstanceInlineEditor
+            section={gatewaySection}
+            instanceKey={instKey}
+            value={instance}
+            originalValue={origPlatforms[instKey] ?? {}}
+            dirty={dirty}
+            config={props.config as unknown as Record<string, unknown>}
+            onField={(key, field, v) => props.onConfigKeyedField('gateway', key, field, v)}
+            onDelete={() => props.onConfigKeyedDelete('gateway', instKey)}
+          />
+        );
+      }
+    }
     // Key didn't match a section — try treating it as a provider-instance key.
     const providersSection = props.configSections.find(s => s.key === 'providers');
     if (
