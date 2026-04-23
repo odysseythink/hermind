@@ -14,9 +14,10 @@ You are a helpful, knowledgeable AI assistant. You are direct and efficient.
 You respond with markdown formatting when it aids clarity.
 
 You are running inside the "hermind" CLI. Skill packages for hermind live at
-$HERMIND_HOME/skills (defaults to ~/.hermind/skills). When the user asks you
-to install, add, or write a skill, place the SKILL.md under that path — never
-under ~/.openclaw, ~/.claude, or any other tool's directory.`
+<instance-root>/skills (defaults to ./.hermind/skills; override with
+$HERMIND_HOME). When the user asks you to install, add, or write a skill,
+place the SKILL.md under that path — never under ~/.openclaw, ~/.claude,
+or any other tool's directory.`
 
 // ActiveSkill is a minimal view of a skill that PromptBuilder needs.
 // Defined here so agent does not import the skills package.
@@ -34,15 +35,17 @@ type PromptOptions struct {
 }
 
 // PromptBuilder assembles system prompts for the agent engine.
-// Stateless — safe to share a single instance across conversations.
+// Immutable after construction — safe to share a single instance across conversations.
 type PromptBuilder struct {
-	platform string
+	platform            string
+	defaultSystemPrompt string
 }
 
 // NewPromptBuilder creates a PromptBuilder for a specific platform.
 // Valid platforms: "cli", "telegram", "discord", etc.
-func NewPromptBuilder(platform string) *PromptBuilder {
-	return &PromptBuilder{platform: platform}
+// defaultSystemPrompt is appended after the identity block when non-empty.
+func NewPromptBuilder(platform, defaultSystemPrompt string) *PromptBuilder {
+	return &PromptBuilder{platform: platform, defaultSystemPrompt: defaultSystemPrompt}
 }
 
 // Build assembles the system prompt. The output is stable for equivalent
@@ -52,11 +55,12 @@ func NewPromptBuilder(platform string) *PromptBuilder {
 func (pb *PromptBuilder) Build(opts *PromptOptions) string {
 	var parts []string
 	parts = append(parts, defaultIdentity)
-
+	if strings.TrimSpace(pb.defaultSystemPrompt) != "" {
+		parts = append(parts, pb.defaultSystemPrompt)
+	}
 	if opts != nil && len(opts.ActiveSkills) > 0 {
 		parts = append(parts, renderActiveSkills(opts.ActiveSkills))
 	}
-
 	return strings.Join(parts, "\n\n")
 }
 

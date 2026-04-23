@@ -1,78 +1,15 @@
 import { z } from 'zod';
 
-// FieldKind strings produced by gateway/platforms.FieldKind.String().
-export const FieldKindSchema = z.enum([
-  'unknown', 'string', 'int', 'bool', 'secret', 'enum',
-]);
-export type FieldKind = z.infer<typeof FieldKindSchema>;
-
-export const SchemaFieldSchema = z.object({
-  name: z.string(),
-  label: z.string(),
-  help: z.string().optional(),
-  kind: FieldKindSchema,
-  required: z.boolean().optional(),
-  default: z.unknown().optional(),
-  enum: z.array(z.string()).optional(),
-});
-export type SchemaField = z.infer<typeof SchemaFieldSchema>;
-
-export const SchemaDescriptorSchema = z.object({
-  type: z.string(),
-  display_name: z.string(),
-  summary: z.string().optional(),
-  fields: z.array(SchemaFieldSchema),
-});
-export type SchemaDescriptor = z.infer<typeof SchemaDescriptorSchema>;
-
-export const PlatformsSchemaResponseSchema = z.object({
-  descriptors: z.array(SchemaDescriptorSchema),
-});
-export type PlatformsSchemaResponse = z.infer<typeof PlatformsSchemaResponseSchema>;
-
-// Config is shaped like the backend Config struct, but we only model
-// the gateway.platforms subtree explicitly — everything else is kept
-// as-is in the draft object so PUT round-trips the unknown fields.
-export const PlatformInstanceSchema = z.object({
-  enabled: z.boolean().optional(),
-  type: z.string(),
-  options: z.record(z.string(), z.string()).optional(),
-});
-export type PlatformInstance = z.infer<typeof PlatformInstanceSchema>;
-
-export const ConfigSchema = z.object({
-  gateway: z.object({
-    platforms: z.record(z.string(), PlatformInstanceSchema).optional(),
-  }).optional(),
-}).catchall(z.unknown());
+// Config is shaped like the backend Config struct. We keep it largely
+// opaque so unknown sub-sections round-trip on PUT unchanged.
+export const ConfigSchema = z.object({}).catchall(z.unknown());
 export type Config = z.infer<typeof ConfigSchema>;
 
 export const ConfigResponseSchema = z.object({ config: ConfigSchema });
 
-export const ApplyResultSchema = z.object({
-  ok: z.boolean(),
-  restarted: z.array(z.string()).optional(),
-  errors: z.record(z.string(), z.string()).optional(),
-  took_ms: z.number(),
-  error: z.string().optional(),
-});
-export type ApplyResult = z.infer<typeof ApplyResultSchema>;
-
-export const PlatformTestResponseSchema = z.object({
-  ok: z.boolean(),
-  error: z.string().optional(),
-});
-export type PlatformTestResponse = z.infer<typeof PlatformTestResponseSchema>;
-
-export const RevealResponseSchema = z.object({
-  value: z.string(),
-});
-export type RevealResponse = z.infer<typeof RevealResponseSchema>;
-
-// Config section kinds produced by descriptor.FieldKind.String(). Adds
-// 'float' on top of the platform FieldKind set.
+// Config section kinds produced by descriptor.FieldKind.String().
 export const ConfigFieldKindSchema = z.enum([
-  'string', 'int', 'bool', 'secret', 'enum', 'float', 'multiselect',
+  'string', 'int', 'bool', 'secret', 'enum', 'float', 'multiselect', 'text',
 ]);
 export type ConfigFieldKind = z.infer<typeof ConfigFieldKindSchema>;
 
@@ -106,7 +43,7 @@ export const ConfigSectionSchema = z.object({
   label: z.string(),
   summary: z.string().optional(),
   group_id: z.string(),
-  shape: z.enum(['map', 'scalar', 'keyed_map', 'list']).optional(), // default (absent) = map
+  shape: z.enum(['map', 'scalar', 'keyed_map', 'list']).optional(),
   subkey: z.string().optional(),
   no_discriminator: z.boolean().optional(),
   fields: z.array(ConfigFieldSchema),
@@ -123,54 +60,42 @@ export const ProviderModelsResponseSchema = z.object({
 });
 export type ProviderModelsResponse = z.infer<typeof ProviderModelsResponseSchema>;
 
-// ---- Chat mode (Phase 2/3) ----
+// ---- Chat (single-conversation) ----
 
-export const MessageSubmitRequestSchema = z.object({
-  text: z.string().min(1),
-  model: z.string().optional(),
-});
-export type MessageSubmitRequest = z.infer<typeof MessageSubmitRequestSchema>;
-
-export const MessageSubmitResponseSchema = z.object({
-  session_id: z.string(),
-  status: z.literal('accepted'),
-});
-export type MessageSubmitResponse = z.infer<typeof MessageSubmitResponseSchema>;
-
-export const SessionSummarySchema = z.object({
-  id: z.string(),
-  title: z.string().optional(),
-  source: z.string(),
-  model: z.string().optional(),
-  started_at: z.number().optional(),
-  ended_at: z.number().optional(),
-  message_count: z.number().optional(),
-});
-export type SessionSummary = z.infer<typeof SessionSummarySchema>;
-
-export const SessionsListResponseSchema = z.object({
-  sessions: z.array(SessionSummarySchema),
-  total: z.number().optional(),
-});
-export type SessionsListResponse = z.infer<typeof SessionsListResponseSchema>;
-
-export const ChatMessageSchema = z.object({
-  id: z.string(),
-  role: z.enum(['user', 'assistant', 'system', 'tool']),
+export const StoredMessageSchema = z.object({
+  id: z.number(),
+  role: z.string(),
   content: z.string(),
-  timestamp: z.number().optional(),
-  tool_calls: z.string().optional(),
+  tool_call_id: z.string().optional(),
+  tool_name: z.string().optional(),
+  timestamp: z.number(),
+  finish_reason: z.string().optional(),
+  reasoning: z.string().optional(),
 });
-export type ChatMessage = z.infer<typeof ChatMessageSchema>;
+export type StoredMessage = z.infer<typeof StoredMessageSchema>;
 
-export const MessagesResponseSchema = z.object({
-  messages: z.array(ChatMessageSchema),
-  total: z.number().optional(),
+export const ConversationHistoryResponseSchema = z.object({
+  messages: z.array(StoredMessageSchema),
 });
+export type ConversationHistoryResponse = z.infer<typeof ConversationHistoryResponseSchema>;
 
+export const ConversationPostResponseSchema = z.object({
+  accepted: z.boolean(),
+});
+export type ConversationPostResponse = z.infer<typeof ConversationPostResponseSchema>;
+
+export const MetaResponseSchema = z.object({
+  version: z.string(),
+  uptime_sec: z.number(),
+  storage_driver: z.string(),
+  instance_root: z.string(),
+  current_model: z.string(),
+});
+export type MetaResponse = z.infer<typeof MetaResponseSchema>;
+
+// Backend SSE events — the frontend matches on `type`.
 export const StreamEventSchema = z.object({
   type: z.string(),
-  session_id: z.string(),
   data: z.unknown().optional(),
 });
 export type StreamEvent = z.infer<typeof StreamEventSchema>;

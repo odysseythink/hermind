@@ -1,139 +1,68 @@
-import type { SessionSummary } from '../api/schemas';
-
-export type { SessionSummary };
-
 export type ChatMessage = {
   id: string;
-  role: 'user' | 'assistant' | 'system' | 'tool';
+  role: string;
   content: string;
   timestamp: number;
-  toolCalls?: ToolCallSnapshot[];
-  truncated?: true;
 };
 
-export type ToolCallSnapshot = {
+export type ToolCall = {
   id: string;
   name: string;
   input: unknown;
-  result?: string;
   state: 'running' | 'done' | 'error';
+  result?: string;
+};
+
+export type StreamingState = {
+  status: 'idle' | 'running' | 'error';
+  assistantDraft: string;
+  toolCalls: ToolCall[];
+  error?: string;
 };
 
 export type ChatState = {
-  activeSessionId: string | null;
-  sessions: SessionSummary[];
-  messagesBySession: Record<string, ChatMessage[]>;
-  streaming: {
-    sessionId: string | null;
-    assistantDraft: string;
-    toolCalls: ToolCallSnapshot[];
-    status: 'idle' | 'running' | 'cancelling' | 'error';
-    error: string | null;
-  };
-  composer: {
-    text: string;
-    selectedModel: string;
-  };
+  messages: ChatMessage[];
+  composer: { text: string };
+  streaming: StreamingState;
 };
 
 export const initialChatState: ChatState = {
-  activeSessionId: null,
-  sessions: [],
-  messagesBySession: {},
-  streaming: {
-    sessionId: null,
-    assistantDraft: '',
-    toolCalls: [],
-    status: 'idle',
-    error: null,
-  },
-  composer: { text: '', selectedModel: '' },
+  messages: [],
+  composer: { text: '' },
+  streaming: { status: 'idle', assistantDraft: '', toolCalls: [] },
 };
 
 export type ChatAction =
-  | { type: 'chat/session/select'; sessionId: string }
-  | { type: 'chat/session/created'; session: SessionSummary }
-  | { type: 'chat/session/listLoaded'; sessions: SessionSummary[] }
-  | { type: 'chat/messages/loaded'; sessionId: string; messages: ChatMessage[] }
-  | { type: 'chat/stream/start'; sessionId: string; userText: string }
-  | { type: 'chat/stream/rollbackUserMessage'; sessionId: string }
-  | { type: 'chat/stream/token'; delta: string }
-  | { type: 'chat/stream/toolCall'; call: ToolCallSnapshot }
-  | { type: 'chat/stream/toolResult'; id: string; result: string }
-  | { type: 'chat/stream/complete'; text: string; messageId: string }
-  | { type: 'chat/stream/cancelled' }
-  | { type: 'chat/stream/error'; message: string }
+  | { type: 'chat/history/loaded'; messages: ChatMessage[] }
   | { type: 'chat/composer/setText'; text: string }
-  | { type: 'chat/composer/setModel'; model: string };
+  | { type: 'chat/stream/start'; userText: string }
+  | { type: 'chat/stream/token'; delta: string }
+  | { type: 'chat/stream/toolCall'; call: ToolCall }
+  | { type: 'chat/stream/toolResult'; id: string; result: string }
+  | { type: 'chat/stream/done'; assistantText: string }
+  | { type: 'chat/stream/error'; message: string }
+  | { type: 'chat/stream/rollbackUserMessage' };
 
 export function chatReducer(state: ChatState, action: ChatAction): ChatState {
   switch (action.type) {
-    case 'chat/session/select':
-      return { ...state, activeSessionId: action.sessionId };
-
-    case 'chat/session/created': {
-      const exists = state.sessions.some((s) => s.id === action.session.id);
+    case 'chat/history/loaded':
+      return { ...state, messages: action.messages };
+    case 'chat/composer/setText':
+      return { ...state, composer: { text: action.text } };
+    case 'chat/stream/start':
       return {
         ...state,
-        sessions: exists
-          ? state.sessions
-          : [action.session, ...state.sessions],
-        activeSessionId: action.session.id,
+        messages: [
+          ...state.messages,
+          {
+            id: `user-${Date.now()}`,
+            role: 'user',
+            content: JSON.stringify({ text: action.userText }),
+            timestamp: Date.now(),
+          },
+        ],
+        streaming: { status: 'running', assistantDraft: '', toolCalls: [] },
       };
-    }
-
-    case 'chat/session/listLoaded':
-      return { ...state, sessions: action.sessions };
-
-    case 'chat/messages/loaded':
-      return {
-        ...state,
-        messagesBySession: {
-          ...state.messagesBySession,
-          [action.sessionId]: action.messages,
-        },
-      };
-
-    case 'chat/stream/start': {
-      const existing = state.messagesBySession[action.sessionId] ?? [];
-      const userMsg: ChatMessage = {
-        id: `draft-user-${Date.now()}`,
-        role: 'user',
-        content: action.userText,
-        timestamp: Date.now(),
-      };
-      return {
-        ...state,
-        messagesBySession: {
-          ...state.messagesBySession,
-          [action.sessionId]: [...existing, userMsg],
-        },
-        streaming: {
-          sessionId: action.sessionId,
-          assistantDraft: '',
-          toolCalls: [],
-          status: 'running',
-          error: null,
-        },
-      };
-    }
-
-    case 'chat/stream/rollbackUserMessage': {
-      const existing = state.messagesBySession[action.sessionId] ?? [];
-      const trimmed = existing.slice();
-      while (trimmed.length > 0 && trimmed.at(-1)?.id.startsWith('draft-')) {
-        trimmed.pop();
-      }
-      return {
-        ...state,
-        messagesBySession: {
-          ...state.messagesBySession,
-          [action.sessionId]: trimmed,
-        },
-        streaming: { ...initialChatState.streaming },
-      };
-    }
-
     case 'chat/stream/token':
       return {
         ...state,
@@ -142,7 +71,6 @@ export function chatReducer(state: ChatState, action: ChatAction): ChatState {
           assistantDraft: state.streaming.assistantDraft + action.delta,
         },
       };
-
     case 'chat/stream/toolCall':
       return {
         ...state,
@@ -151,79 +79,40 @@ export function chatReducer(state: ChatState, action: ChatAction): ChatState {
           toolCalls: [...state.streaming.toolCalls, action.call],
         },
       };
-
     case 'chat/stream/toolResult':
       return {
         ...state,
         streaming: {
           ...state.streaming,
           toolCalls: state.streaming.toolCalls.map((c) =>
-            c.id === action.id ? { ...c, result: action.result, state: 'done' } : c,
+            c.id === action.id ? { ...c, state: 'done', result: action.result } : c,
           ),
         },
       };
-
-    case 'chat/stream/complete': {
-      const sid = state.streaming.sessionId;
-      if (!sid) return state;
-      const existing = state.messagesBySession[sid] ?? [];
-      const assistantMsg: ChatMessage = {
-        id: action.messageId,
-        role: 'assistant',
-        content: action.text,
-        timestamp: Date.now(),
-        toolCalls: state.streaming.toolCalls,
-      };
+    case 'chat/stream/done':
       return {
         ...state,
-        messagesBySession: {
-          ...state.messagesBySession,
-          [sid]: [...existing, assistantMsg],
-        },
-        streaming: { ...initialChatState.streaming },
+        messages: [
+          ...state.messages,
+          {
+            id: `asst-${Date.now()}`,
+            role: 'assistant',
+            content: action.assistantText,
+            timestamp: Date.now(),
+          },
+        ],
+        streaming: { status: 'idle', assistantDraft: '', toolCalls: [] },
       };
-    }
-
-    case 'chat/stream/cancelled': {
-      const sid = state.streaming.sessionId;
-      if (!sid) return state;
-      const existing = state.messagesBySession[sid] ?? [];
-      const assistantMsg: ChatMessage = {
-        id: `draft-assistant-cancelled-${Date.now()}`,
-        role: 'assistant',
-        content: state.streaming.assistantDraft,
-        timestamp: Date.now(),
-        toolCalls: state.streaming.toolCalls,
-        truncated: true,
-      };
+    case 'chat/stream/error':
       return {
         ...state,
-        messagesBySession: {
-          ...state.messagesBySession,
-          [sid]: [...existing, assistantMsg],
-        },
-        streaming: { ...initialChatState.streaming },
+        streaming: { ...state.streaming, status: 'error', error: action.message },
       };
-    }
-
-    case 'chat/stream/error': {
+    case 'chat/stream/rollbackUserMessage':
       return {
         ...state,
-        streaming: {
-          ...state.streaming,
-          status: 'error',
-          error: action.message,
-        },
+        messages: state.messages.slice(0, -1),
+        streaming: { status: 'idle', assistantDraft: '', toolCalls: [] },
       };
-    }
-
-    case 'chat/composer/setText':
-      return { ...state, composer: { ...state.composer, text: action.text } };
-
-    case 'chat/composer/setModel':
-      return { ...state, composer: { ...state.composer, selectedModel: action.model } };
-
-    default:
-      return state;
   }
 }

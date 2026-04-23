@@ -1,6 +1,5 @@
 export type GroupId =
   | 'models'
-  | 'gateway'
   | 'memory'
   | 'skills'
   | 'runtime'
@@ -29,14 +28,6 @@ export const GROUPS: readonly GroupDef[] = [
       'Fallback providers',
       'Per-provider fetch-models button',
     ],
-  },
-  {
-    id: 'gateway',
-    label: 'Gateway',
-    plannedStage: 'done',
-    configKeys: ['gateway'],
-    description: 'Messaging platform instances (Feishu, DingTalk, WeChat, …).',
-    bullets: ['Per-platform instance configuration', 'Secret handling', 'Connection test'],
   },
   {
     id: 'memory',

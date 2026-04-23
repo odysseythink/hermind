@@ -1,8 +1,7 @@
-import type { Config, ConfigSection as ConfigSectionT, PlatformInstance, SchemaDescriptor } from '../../api/schemas';
+import type { Config, ConfigSection as ConfigSectionT } from '../../api/schemas';
 import { type GroupId } from '../../shell/groups';
 import ComingSoonPanel from './ComingSoonPanel';
 import EmptyState from './EmptyState';
-import GatewayPanel from '../groups/gateway/GatewayPanel';
 import ConfigSection from '../ConfigSection';
 import ProviderEditor from '../groups/models/ProviderEditor';
 import FallbackProviderEditor from '../groups/models/FallbackProviderEditor';
@@ -15,16 +14,6 @@ export interface ContentPanelProps {
   config: Config;
   originalConfig: Config;
   configSections: ConfigSectionT[];
-  selectedKey: string | null;
-  instance: PlatformInstance | null;
-  originalInstance: PlatformInstance | null;
-  descriptor: SchemaDescriptor | null;
-  dirtyGateway: boolean;
-  busy: boolean;
-  onField: (field: string, value: string) => void;
-  onToggleEnabled: (enabled: boolean) => void;
-  onDelete: () => void;
-  onApply: () => void;
   onSelectGroup: (id: GroupId) => void;
   onConfigField: (sectionKey: string, field: string, value: unknown) => void;
   onConfigScalar: (sectionKey: string, value: unknown) => void;
@@ -53,22 +42,6 @@ function shallowEqualInstance(
 export default function SettingsPanel(props: ContentPanelProps) {
   if (props.activeGroup === null) {
     return <EmptyState onSelectGroup={props.onSelectGroup} />;
-  }
-  if (props.activeGroup === 'gateway') {
-    return (
-      <GatewayPanel
-        selectedKey={props.selectedKey}
-        instance={props.instance}
-        originalInstance={props.originalInstance}
-        descriptor={props.descriptor}
-        dirty={props.dirtyGateway}
-        busy={props.busy}
-        onField={props.onField}
-        onToggleEnabled={props.onToggleEnabled}
-        onDelete={props.onDelete}
-        onApply={props.onApply}
-      />
-    );
   }
   if (props.activeSubKey) {
     const section = props.configSections.find(

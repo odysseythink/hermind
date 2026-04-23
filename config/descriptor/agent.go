@@ -8,7 +8,7 @@ func init() {
 	Register(Section{
 		Key:     "agent",
 		Label:   "Agent",
-		Summary: "Engine turn limit and gateway request budget.",
+		Summary: "Engine turn limit, gateway request budget, and default system prompt.",
 		GroupID: "runtime",
 		Fields: []FieldSpec{
 			{
@@ -25,6 +25,13 @@ func init() {
 				Help:    "Seconds a gateway request may run before being cancelled. 0 uses the gateway default.",
 				Kind:    FieldInt,
 				Default: 1800,
+			},
+			{
+				Name:    "default_system_prompt",
+				Label:   "Default system prompt",
+				Help:    "Prepended to every new session's system prompt, right after the agent identity block. Empty means no extra prompt.",
+				Kind:    FieldText,
+				Default: "",
 			},
 		},
 	})

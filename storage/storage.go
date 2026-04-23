@@ -8,54 +8,40 @@ import (
 
 // Sentinel errors returned by storage implementations.
 var (
-	// ErrNotFound is returned when a session or message does not exist.
+	// ErrNotFound is returned when a record does not exist.
 	ErrNotFound = errors.New("storage: not found")
 )
 
-// Storage is the root storage interface. Implementations must be safe for
-// concurrent use.
+// Storage is the root storage interface. Implementations must be safe
+// for concurrent use. Messages are instance-scoped — there is a single
+// implicit conversation per hermind instance.
 type Storage interface {
-	// Session operations
-	CreateSession(ctx context.Context, session *Session) error
-	GetSession(ctx context.Context, id string) (*Session, error)
-	UpdateSession(ctx context.Context, id string, updates *SessionUpdate) error
-	ListSessions(ctx context.Context, opts *ListOptions) ([]*Session, error)
-
-	// Message operations
-	AddMessage(ctx context.Context, sessionID string, msg *StoredMessage) error
-	GetMessages(ctx context.Context, sessionID string, limit, offset int) ([]*StoredMessage, error)
+	// Conversation log.
+	AppendMessage(ctx context.Context, msg *StoredMessage) error
+	GetHistory(ctx context.Context, limit, offset int) ([]*StoredMessage, error)
 	SearchMessages(ctx context.Context, query string, opts *SearchOptions) ([]*SearchResult, error)
 
-	// System prompt cache (for Anthropic prefix caching)
-	UpdateSystemPrompt(ctx context.Context, sessionID string, prompt string) error
+	// Conversation state (singleton row id=1).
+	UpdateSystemPromptCache(ctx context.Context, prompt string) error
+	UpdateUsage(ctx context.Context, usage *UsageUpdate) error
 
-	// Usage accounting
-	UpdateUsage(ctx context.Context, sessionID string, usage *UsageUpdate) error
-
-	// Memory operations
+	// Memory — unchanged semantics.
 	SaveMemory(ctx context.Context, memory *Memory) error
 	GetMemory(ctx context.Context, id string) (*Memory, error)
 	SearchMemories(ctx context.Context, query string, opts *MemorySearchOptions) ([]*Memory, error)
 	DeleteMemory(ctx context.Context, id string) error
 
 	// Transactions — group multiple operations atomically.
-	// The function is called with a Tx scoped to a single SQL transaction.
-	// Return an error to roll back. Return nil to commit.
 	WithTx(ctx context.Context, fn func(tx Tx) error) error
 
-	// Lifecycle
+	// Lifecycle.
 	Close() error
 	Migrate() error
 }
 
-// Tx is the transaction-scoped interface. Operations are atomic: either
-// all commit or all roll back. Do not retain a Tx reference after the
-// callback returns.
+// Tx is the transaction-scoped interface.
 type Tx interface {
-	CreateSession(ctx context.Context, session *Session) error
-	GetSession(ctx context.Context, id string) (*Session, error)
-	UpdateSession(ctx context.Context, id string, updates *SessionUpdate) error
-	AddMessage(ctx context.Context, sessionID string, msg *StoredMessage) error
-	UpdateSystemPrompt(ctx context.Context, sessionID string, prompt string) error
-	UpdateUsage(ctx context.Context, sessionID string, usage *UsageUpdate) error
+	AppendMessage(ctx context.Context, msg *StoredMessage) error
+	UpdateSystemPromptCache(ctx context.Context, prompt string) error
+	UpdateUsage(ctx context.Context, usage *UsageUpdate) error
 }

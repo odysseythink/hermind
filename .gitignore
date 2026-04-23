@@ -4,6 +4,8 @@ dist/
 *.out
 coverage.txt
 .env
+node_modules/
+/hermind
 
 # Frontend (Stage 3)
 web/node_modules

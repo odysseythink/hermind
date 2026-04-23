@@ -2,6 +2,29 @@ package descriptor
 
 import "testing"
 
+func TestAgentDescriptor_IncludesDefaultSystemPrompt(t *testing.T) {
+	s, ok := Get("agent")
+	if !ok {
+		t.Fatal(`Get("agent") returned ok=false`)
+	}
+	var found *FieldSpec
+	for i := range s.Fields {
+		if s.Fields[i].Name == "default_system_prompt" {
+			found = &s.Fields[i]
+			break
+		}
+	}
+	if found == nil {
+		t.Fatal("default_system_prompt field missing from agent descriptor")
+	}
+	if found.Kind != FieldText {
+		t.Errorf("default_system_prompt.Kind = %v, want FieldText", found.Kind)
+	}
+	if found.Required {
+		t.Error("default_system_prompt should not be Required")
+	}
+}
+
 func TestAgentSectionRegistered(t *testing.T) {
 	s, ok := Get("agent")
 	if !ok {

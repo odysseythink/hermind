@@ -1,9 +1,9 @@
 import { useId } from 'react';
 import styles from './fields.module.css';
-import type { SchemaField } from '../../api/schemas';
+import type { ConfigField } from '../../api/schemas';
 
 export interface FieldProps {
-  field: SchemaField;
+  field: ConfigField;
   value: string;
   onChange: (value: string) => void;
   /** Optional autocomplete suggestions. When non-empty, a sibling <datalist>

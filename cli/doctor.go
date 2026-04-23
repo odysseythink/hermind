@@ -73,8 +73,11 @@ func checkPrimaryProvider(ctx context.Context, app *App) error {
 func checkStorage(ctx context.Context, app *App) error {
 	path := app.Config.Storage.SQLitePath
 	if path == "" {
-		home, _ := os.UserHomeDir()
-		path = filepath.Join(home, ".hermind", "state.db")
+		p, err := config.InstancePath("state.db")
+		if err != nil {
+			return fmt.Errorf("resolve instance root: %w", err)
+		}
+		path = p
 	}
 	// Don't mutate the app's storage — open a throwaway handle.
 	if dir := filepath.Dir(path); dir != "" {

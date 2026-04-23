@@ -20,7 +20,7 @@ func newTestServer(t *testing.T) *Server {
 	s, err := NewServer(&ServerOpts{
 		Config:  cfg,
 		Storage: nil,
-		Token:   "t",
+
 		Version: "dev-test",
 	})
 	if err != nil {
@@ -31,7 +31,6 @@ func newTestServer(t *testing.T) *Server {
 
 func authedReq(method, path, token string) *http.Request {
 	req := httptest.NewRequest(method, path, nil)
-	req.Header.Set("Authorization", "Bearer "+token)
 	return req
 }
 
@@ -85,15 +84,6 @@ func TestConfigGet(t *testing.T) {
 	}
 }
 
-func TestConfigGet_RequiresAuth(t *testing.T) {
-	s := newTestServer(t)
-	rr := httptest.NewRecorder()
-	s.Router().ServeHTTP(rr, httptest.NewRequest("GET", "/api/config", nil))
-	if rr.Code != 401 {
-		t.Errorf("code = %d, want 401", rr.Code)
-	}
-}
-
 func TestConfigPut_501WithoutPath(t *testing.T) {
 	s := newTestServer(t)
 	req := authedReq("PUT", "/api/config", "t")
@@ -104,7 +94,7 @@ func TestConfigPut_501WithoutPath(t *testing.T) {
 	}
 }
 
-func TestIndex_RendersToken(t *testing.T) {
+func TestIndex_ServesHTML(t *testing.T) {
 	s := newTestServer(t)
 	rr := httptest.NewRecorder()
 	s.Router().ServeHTTP(rr, httptest.NewRequest("GET", "/", nil))
@@ -114,8 +104,31 @@ func TestIndex_RendersToken(t *testing.T) {
 	if ct := rr.Header().Get("Content-Type"); ct == "" || !contains(ct, "html") {
 		t.Errorf("content-type = %q", ct)
 	}
-	if !contains(rr.Body.String(), "t") {
-		t.Errorf("token not rendered")
+}
+
+func TestHandleStatus_IncludesInstanceRoot(t *testing.T) {
+	srv, err := NewServer(&ServerOpts{
+		Config:       &config.Config{},
+		Version:      "test",
+		InstanceRoot: "/tmp/test/.hermind",
+	})
+	if err != nil {
+		t.Fatalf("NewServer: %v", err)
+	}
+
+	req := httptest.NewRequest(http.MethodGet, "/api/status", nil)
+	rec := httptest.NewRecorder()
+	srv.Router().ServeHTTP(rec, req)
+
+	if rec.Code != http.StatusOK {
+		t.Fatalf("code = %d, body = %s", rec.Code, rec.Body.String())
+	}
+	var body StatusResponse
+	if err := json.NewDecoder(rec.Body).Decode(&body); err != nil {
+		t.Fatal(err)
+	}
+	if body.InstanceRoot != "/tmp/test/.hermind" {
+		t.Errorf("instance_root = %q, want /tmp/test/.hermind", body.InstanceRoot)
 	}
 }
 
@@ -132,7 +145,7 @@ func TestNewServer_ControllerOptional(t *testing.T) {
 	cfg := &config.Config{}
 	srv, err := NewServer(&ServerOpts{
 		Config: cfg,
-		Token:  "test-token",
+
 		// Controller: nil — acceptable, the platform endpoints will 503.
 	})
 	if err != nil {

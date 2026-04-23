@@ -1,6 +1,5 @@
 import StreamingCursor from './StreamingCursor';
 import MessageContent from './MessageContent';
-import ToolCallCard from './ToolCallCard';
 import type { ChatMessage } from '../../state/chat';
 import styles from './MessageBubble.module.css';
 
@@ -26,14 +25,8 @@ export default function MessageBubble({ message, streaming }: Props) {
           <div className={styles.bubble}>
             <MessageContent content={message.content} />
             {streaming && <StreamingCursor />}
-            {message.toolCalls?.map((c) => (
-              <ToolCallCard key={c.id} call={c} />
-            ))}
           </div>
         </>
-      )}
-      {message.truncated && (
-        <span className={styles.truncated}>— interrupted</span>
       )}
     </div>
   );

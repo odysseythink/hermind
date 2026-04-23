@@ -9,7 +9,7 @@ import (
 
 	"github.com/google/uuid"
 	"github.com/odysseythink/hermind/agent"
-	"github.com/odysseythink/hermind/api/sessionrun"
+	"github.com/odysseythink/hermind/api"
 	"github.com/odysseythink/hermind/config"
 	"github.com/odysseythink/hermind/provider"
 	"github.com/odysseythink/hermind/provider/factory"
@@ -38,7 +38,7 @@ import (
 // this. Leaving repl.go's copy in place keeps TUI behaviour stable
 // while web gets a sharable builder. Plan 5 deletes the TUI so the
 // duplicate disappears naturally.
-func BuildEngineDeps(ctx context.Context, app *App) (sessionrun.Deps, func(), error) {
+func BuildEngineDeps(ctx context.Context, app *App) (api.EngineDeps, func(), error) {
 	cleanupFns := []func(){}
 	cleanup := func() {
 		for i := len(cleanupFns) - 1; i >= 0; i-- {
@@ -53,7 +53,7 @@ func BuildEngineDeps(ctx context.Context, app *App) (sessionrun.Deps, func(), er
 			fmt.Fprintln(os.Stderr, "hermind: starting in degraded mode. Chat will fail until you configure a provider.")
 			primaryProvider = newStubProvider(primaryName)
 		} else {
-			return sessionrun.Deps{}, cleanup, err
+			return api.EngineDeps{}, cleanup, err
 		}
 	}
 
@@ -117,7 +117,7 @@ func BuildEngineDeps(ctx context.Context, app *App) (sessionrun.Deps, func(), er
 	}
 	backend, err := terminal.New(app.Config.Terminal.Backend, termCfg)
 	if err != nil {
-		return sessionrun.Deps{}, cleanup, fmt.Errorf("hermind: create terminal backend %q: %w", app.Config.Terminal.Backend, err)
+		return api.EngineDeps{}, cleanup, fmt.Errorf("hermind: create terminal backend %q: %w", app.Config.Terminal.Backend, err)
 	}
 	cleanupFns = append(cleanupFns, func() { backend.Close() })
 	terminal.RegisterShellExecute(toolRegistry, backend)
@@ -165,8 +165,10 @@ func BuildEngineDeps(ctx context.Context, app *App) (sessionrun.Deps, func(), er
 	}
 
 	delegate.RegisterDelegate(toolRegistry, func(subCtx context.Context, task, extra string, maxTurns int) (*delegate.SubagentResult, error) {
+		// Sub-agent runs are ephemeral — they should not write to the
+		// main conversation history.
 		subEngine := agent.NewEngineWithToolsAndAux(
-			p, auxProvider, app.Storage, toolRegistry,
+			p, auxProvider, nil, toolRegistry,
 			config.AgentConfig{
 				MaxTurns:    maxTurns,
 				Compression: app.Config.Agent.Compression,
@@ -175,8 +177,8 @@ func BuildEngineDeps(ctx context.Context, app *App) (sessionrun.Deps, func(), er
 		)
 		result, err := subEngine.RunConversation(subCtx, &agent.RunOptions{
 			UserMessage: task + "\n\n" + extra,
-			SessionID:   sessionPrefix + "-sub-" + uuid.NewString(),
 			Model:       displayModel,
+			Ephemeral:   true,
 		})
 		if err != nil {
 			return nil, err
@@ -210,12 +212,13 @@ func BuildEngineDeps(ctx context.Context, app *App) (sessionrun.Deps, func(), er
 
 	skillsReg, _ := loadSkills(app)
 
-	return sessionrun.Deps{
+	return api.EngineDeps{
 		Provider:    p,
 		AuxProvider: auxProvider,
 		Storage:     app.Storage,
 		ToolReg:     toolRegistry,
 		SkillsReg:   skillsReg,
 		AgentCfg:    app.Config.Agent,
+		Platform:    "web",
 	}, cleanup, nil
 }

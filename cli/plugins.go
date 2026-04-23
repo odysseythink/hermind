@@ -6,29 +6,26 @@ import (
 	"path/filepath"
 	"sort"
 
+	"github.com/odysseythink/hermind/config"
 	"github.com/odysseythink/hermind/skills"
 	"github.com/spf13/cobra"
 	"gopkg.in/yaml.v3"
 )
 
-// enabledSkillsFile holds the list of active skill names per profile.
-// Format: a YAML list at ~/.hermind/profiles/<name>/enabled_skills.yaml
-// (or ~/.hermind/enabled_skills.yaml for the default profile).
+// enabledSkillsFile holds the list of active skill names for this instance.
+// Format: a YAML list at <instance-root>/enabled_skills.yaml.
 type enabledSkillsFile struct {
 	Path  string
 	Names []string
 }
 
+// enabledSkillsPath returns <instance-root>/enabled_skills.yaml.
 func enabledSkillsPath() string {
-	if v := os.Getenv("HERMIND_HOME"); v != "" {
-		return filepath.Join(v, "enabled_skills.yaml")
+	p, err := config.InstancePath("enabled_skills.yaml")
+	if err != nil {
+		return ".hermind/enabled_skills.yaml"
 	}
-	home, _ := os.UserHomeDir()
-	base := filepath.Join(home, ".hermind")
-	if p := ActiveProfile(); p != "" {
-		base = filepath.Join(base, "profiles", p)
-	}
-	return filepath.Join(base, "enabled_skills.yaml")
+	return p
 }
 
 func loadEnabledSkills() (*enabledSkillsFile, error) {
@@ -128,7 +125,7 @@ func newPluginsListCmd() *cobra.Command {
 func newPluginsEnableCmd() *cobra.Command {
 	return &cobra.Command{
 		Use:   "enable <name>",
-		Short: "Enable a skill for the active profile",
+		Short: "Enable a skill for this instance",
 		Args:  cobra.ExactArgs(1),
 		RunE: func(cmd *cobra.Command, args []string) error {
 			ef, err := loadEnabledSkills()
@@ -139,7 +136,7 @@ func newPluginsEnableCmd() *cobra.Command {
 			if err := ef.save(); err != nil {
 				return err
 			}
-			fmt.Fprintf(cmd.OutOrStdout(), "enabled %s (profile: %s)\n", args[0], profileLabel())
+			fmt.Fprintf(cmd.OutOrStdout(), "enabled %s\n", args[0])
 			return nil
 		},
 	}
@@ -148,7 +145,7 @@ func newPluginsEnableCmd() *cobra.Command {
 func newPluginsDisableCmd() *cobra.Command {
 	return &cobra.Command{
 		Use:   "disable <name>",
-		Short: "Disable a skill for the active profile",
+		Short: "Disable a skill for this instance",
 		Args:  cobra.ExactArgs(1),
 		RunE: func(cmd *cobra.Command, args []string) error {
 			ef, err := loadEnabledSkills()
@@ -159,15 +156,8 @@ func newPluginsDisableCmd() *cobra.Command {
 			if err := ef.save(); err != nil {
 				return err
 			}
-			fmt.Fprintf(cmd.OutOrStdout(), "disabled %s (profile: %s)\n", args[0], profileLabel())
+			fmt.Fprintf(cmd.OutOrStdout(), "disabled %s\n", args[0])
 			return nil
 		},
 	}
-}
-
-func profileLabel() string {
-	if p := ActiveProfile(); p != "" {
-		return p
-	}
-	return "default"
 }

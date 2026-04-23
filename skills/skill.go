@@ -89,12 +89,16 @@ func parseSkillBytes(path string, raw []byte) (*Skill, error) {
 	return &s, nil
 }
 
-// DefaultHome returns the default skills home directory, usually
-// $HERMIND_HOME/skills or ~/.hermind/skills.
+// DefaultHome returns the default skills home directory under the
+// current hermind instance (<instance>/skills). Honors $HERMIND_HOME;
+// falls back to ./.hermind/skills if cwd resolution fails.
 func DefaultHome() string {
 	if v := os.Getenv("HERMIND_HOME"); v != "" {
 		return filepath.Join(v, "skills")
 	}
-	home, _ := os.UserHomeDir()
-	return filepath.Join(home, ".hermind", "skills")
+	cwd, err := os.Getwd()
+	if err != nil {
+		return ".hermind/skills"
+	}
+	return filepath.Join(cwd, ".hermind", "skills")
 }
