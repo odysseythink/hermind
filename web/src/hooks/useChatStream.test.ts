@@ -1,5 +1,5 @@
-import { describe, it, expect, beforeEach, afterEach, vi } from 'vitest';
-import { renderHook, act, waitFor } from '@testing-library/react';
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
+import { act, renderHook, waitFor } from '@testing-library/react';
 import { FakeEventSource } from '../test/fakeEventSource';
 import { useChatStream } from './useChatStream';
 
@@ -8,33 +8,24 @@ beforeEach(() => {
   FakeEventSource.reset();
 });
 
+afterEach(() => vi.clearAllMocks());
+
 describe('useChatStream', () => {
   it('subscribes on mount, closes on unmount', () => {
     const dispatch = vi.fn();
-    const { unmount } = renderHook(() => useChatStream('s1', dispatch));
+    const { unmount } = renderHook(() => useChatStream(dispatch));
     expect(FakeEventSource.instances.length).toBe(1);
     unmount();
     expect(FakeEventSource.instances[0].readyState).toBe(2);
   });
 
-  it('reconnects on activeSessionId change', () => {
+  it('dispatches stream/token on message_chunk event', async () => {
     const dispatch = vi.fn();
-    const { rerender } = renderHook(({ id }) => useChatStream(id, dispatch), {
-      initialProps: { id: 's1' as string | null },
-    });
-    expect(FakeEventSource.instances.length).toBe(1);
-    rerender({ id: 's2' });
-    expect(FakeEventSource.instances.length).toBe(2);
-    expect(FakeEventSource.instances[0].readyState).toBe(2);
-  });
-
-  it('dispatches stream/token on token event', async () => {
-    const dispatch = vi.fn();
-    renderHook(() => useChatStream('s1', dispatch));
+    renderHook(() => useChatStream(dispatch));
     await waitFor(() => expect(FakeEventSource.instances[0]?.readyState).toBe(1));
     act(() => {
       FakeEventSource.instances[0].dispatchMessage({
-        type: 'token', session_id: 's1', data: { text: 'Hi' },
+        type: 'message_chunk', data: { text: 'Hi' },
       });
     });
     await new Promise((r) => requestAnimationFrame(() => r(null)));
@@ -43,69 +34,60 @@ describe('useChatStream', () => {
     );
   });
 
-  it('filters events for stale session_id', () => {
+  it('dispatches stream/toolCall on tool_call event', async () => {
     const dispatch = vi.fn();
-    renderHook(() => useChatStream('s1', dispatch));
-    act(() => {
-      FakeEventSource.instances[0].dispatchMessage({
-        type: 'token', session_id: 'OTHER', data: { text: 'stale' },
-      });
-    });
-    expect(dispatch).not.toHaveBeenCalled();
-  });
-
-  it('dispatches chat/session/created on session_created SSE event', async () => {
-    const dispatch = vi.fn();
-    const onSessionCreated = vi.fn();
-    renderHook(() => useChatStream('s-new', dispatch, onSessionCreated));
+    renderHook(() => useChatStream(dispatch));
     await waitFor(() => expect(FakeEventSource.instances[0]?.readyState).toBe(1));
     act(() => {
       FakeEventSource.instances[0].dispatchMessage({
-        type: 'session_created',
-        session_id: 's-new',
-        data: {
-          id: 's-new',
-          title: 'Build me ',
-          source: 'web',
-          model: 'm',
-          started_at: 1713724000,
-          ended_at: 0,
-          message_count: 1,
-        },
+        type: 'tool_call',
+        data: { id: 't1', name: 'read_file', input: { path: '/x' } },
       });
     });
     expect(dispatch).toHaveBeenCalledWith({
-      type: 'chat/session/created',
-      session: expect.objectContaining({ id: 's-new', title: 'Build me ' }),
+      type: 'chat/stream/toolCall',
+      call: expect.objectContaining({ id: 't1', name: 'read_file', state: 'running' }),
     });
-    expect(onSessionCreated).toHaveBeenCalledWith(
-      expect.objectContaining({ id: 's-new', title: 'Build me ' }),
-    );
   });
-});
 
-describe('useChatStream session_updated', () => {
-  afterEach(() => vi.clearAllMocks());
-
-  it('invokes onSessionUpdated when a session_updated event arrives', async () => {
+  it('dispatches stream/toolResult on tool_result event', async () => {
     const dispatch = vi.fn();
-    const onSessionUpdated = vi.fn();
-    renderHook(() =>
-      useChatStream('sess-1', dispatch, undefined, onSessionUpdated),
-    );
+    renderHook(() => useChatStream(dispatch));
     await waitFor(() => expect(FakeEventSource.instances[0]?.readyState).toBe(1));
     act(() => {
       FakeEventSource.instances[0].dispatchMessage({
-        type: 'session_updated',
-        session_id: 'sess-1',
-        data: { model: 'claude-sonnet-4-6', system_prompt: 'new', title: 't' },
+        type: 'tool_result',
+        data: { id: 't1', result: 'ok' },
       });
     });
+    expect(dispatch).toHaveBeenCalledWith({
+      type: 'chat/stream/toolResult', id: 't1', result: 'ok',
+    });
+  });
 
-    expect(onSessionUpdated).toHaveBeenCalledWith('sess-1', {
-      model: 'claude-sonnet-4-6',
-      system_prompt: 'new',
-      title: 't',
+  it('dispatches stream/done on done event', async () => {
+    const dispatch = vi.fn();
+    renderHook(() => useChatStream(dispatch));
+    await waitFor(() => expect(FakeEventSource.instances[0]?.readyState).toBe(1));
+    act(() => {
+      FakeEventSource.instances[0].dispatchMessage({ type: 'done' });
+    });
+    expect(dispatch).toHaveBeenCalledWith(
+      expect.objectContaining({ type: 'chat/stream/done' }),
+    );
+  });
+
+  it('dispatches stream/error on error event', async () => {
+    const dispatch = vi.fn();
+    renderHook(() => useChatStream(dispatch));
+    await waitFor(() => expect(FakeEventSource.instances[0]?.readyState).toBe(1));
+    act(() => {
+      FakeEventSource.instances[0].dispatchMessage({
+        type: 'error', data: { message: 'boom' },
+      });
+    });
+    expect(dispatch).toHaveBeenCalledWith({
+      type: 'chat/stream/error', message: 'boom',
     });
   });
 });
