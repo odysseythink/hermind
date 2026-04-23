@@ -24,9 +24,8 @@ export function useChatStream(
 
   useEffect(() => {
     if (!sessionId) return;
-    const token = new URLSearchParams(window.location.search).get('t') ?? '';
     const es = new EventSource(
-      `/api/sessions/${encodeURIComponent(sessionId)}/stream/sse?t=${encodeURIComponent(token)}`,
+      `/api/sessions/${encodeURIComponent(sessionId)}/stream/sse`,
     );
 
     function flushTokens() {
