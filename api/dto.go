@@ -117,7 +117,8 @@ type ErrorResponse struct {
 // PredicateDTO is the JSON shape of descriptor.Predicate.
 type PredicateDTO struct {
 	Field  string `json:"field"`
-	Equals any    `json:"equals"`
+	Equals any    `json:"equals,omitempty"`
+	In     []any  `json:"in,omitempty"`
 }
 
 // DatalistSourceDTO is the JSON shape of descriptor.DatalistSource.

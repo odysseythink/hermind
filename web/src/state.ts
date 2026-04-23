@@ -136,10 +136,11 @@ export function reducer(state: AppState, action: Action): AppState {
         (resolveContainer(state.config, action.sectionKey, action.subkey) as
           | Record<string, Record<string, unknown>>
           | undefined) ?? {};
-      const inst = container[action.instanceKey] ?? {};
+      const inst = (container[action.instanceKey] ?? {}) as Record<string, unknown>;
+      const updatedInst = setPath(inst, action.field, action.value);
       const next = {
         ...container,
-        [action.instanceKey]: { ...inst, [action.field]: action.value },
+        [action.instanceKey]: updatedInst,
       };
       return {
         ...state,

@@ -148,7 +148,11 @@ export default function ConfigSection({
 
 function isVisible(f: ConfigField, value: Record<string, unknown>): boolean {
   if (!f.visible_when) return true;
-  return String(getPath(value, f.visible_when.field)) === String(f.visible_when.equals);
+  const actual = String(getPath(value, f.visible_when.field));
+  if (f.visible_when.in) {
+    return f.visible_when.in.some(v => actual === String(v));
+  }
+  return actual === String(f.visible_when.equals ?? '');
 }
 
 function asString(v: unknown): string {

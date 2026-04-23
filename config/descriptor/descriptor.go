@@ -74,11 +74,12 @@ const (
 	ShapeList
 )
 
-// Predicate expresses "show this field only when <Field> equals <Equals>".
-// Stage 2 supports exactly one equality check; boolean algebra is YAGNI.
+// Predicate expresses "show this field only when <Field> equals <Equals>,
+// or (when In is non-nil) when <Field> is one of the values in <In>".
 type Predicate struct {
 	Field  string
 	Equals any
+	In     []any // OR condition: visible when value is in this list
 }
 
 // DatalistSource points a string-kind field at another section's field so the
