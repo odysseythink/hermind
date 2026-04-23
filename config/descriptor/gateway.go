@@ -6,12 +6,13 @@ import (
 
 func init() {
 	Register(Section{
-		Key:        "gateway",
-		Label:      "IM Channels",
-		Summary:    "Multi-platform IM adapters (Feishu, Telegram, …)",
-		GroupID:    "advanced",
-		Shape:      ShapeKeyedMap,
-		Subkey:     "platforms",
+		Key:              "gateway",
+		Label:            "IM Channels",
+		Summary:          "Multi-platform IM adapters (Feishu, Telegram, …)",
+		GroupID:          "advanced",
+		Shape:            ShapeKeyedMap,
+		Subkey:           "platforms",
+		NoDiscriminator:  true,
 		Fields: []FieldSpec{
 			{
 				Name:     "type",
