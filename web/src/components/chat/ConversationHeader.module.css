@@ -21,17 +21,30 @@
   unicode-bidi: plaintext;
 }
 
-.title {
-  flex: 1;
-  margin: 0;
-  text-align: center;
+.spacer { flex: 1; }
+
+.modelSelect {
   font-family: var(--font-mono);
   font-size: var(--fs-sm);
-  font-weight: 600;
-  text-transform: uppercase;
-  letter-spacing: 0.08em;
+  padding: 4px 8px;
+  border: 1px solid var(--border);
+  border-radius: 2px;
+  background: var(--bg);
   color: var(--text);
-  white-space: nowrap;
-  overflow: hidden;
-  text-overflow: ellipsis;
+}
+
+.stopBtn {
+  font-family: var(--font-mono);
+  font-size: var(--fs-sm);
+  padding: 4px 12px;
+  border: 1px solid var(--border);
+  border-radius: 2px;
+  background: transparent;
+  color: var(--text);
+  cursor: pointer;
+}
+
+.stopBtn:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
 }
