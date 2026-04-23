@@ -62,6 +62,20 @@ func TestBackupLegacyDBIfNeeded_NoOpWhenFileMissing(t *testing.T) {
 	assert.False(t, backedUp)
 }
 
+func TestOpen_BacksUpLegacyV1DB(t *testing.T) {
+	dir := t.TempDir()
+	path := filepath.Join(dir, "state.db")
+	makeV1SchemaFile(t, path)
+
+	store, err := Open(path)
+	require.NoError(t, err)
+	defer store.Close()
+
+	// Backup file exists next to fresh empty DB.
+	_, err = os.Stat(filepath.Join(dir, "state.db.v1-backup"))
+	require.NoError(t, err)
+}
+
 func TestBackupLegacyDBIfNeeded_AppendsSuffixOnCollision(t *testing.T) {
 	dir := t.TempDir()
 	path := filepath.Join(dir, "state.db")
