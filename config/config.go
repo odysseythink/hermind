@@ -331,3 +331,26 @@ func Default() *Config {
 		},
 	}
 }
+
+// UnmarshalYAML handles empty options string by converting it to an empty map.
+// This allows the frontend to send empty strings for optional text fields.
+func (pc *PlatformConfig) UnmarshalYAML(unmarshal func(any) error) error {
+	type alias PlatformConfig
+	var tmp struct {
+		*alias
+		Options any `yaml:"options"`
+	}
+	tmp.alias = (*alias)(pc)
+	if err := unmarshal(&tmp); err != nil {
+		return err
+	}
+	// Convert empty string to empty map
+	if tmp.Options == nil {
+		pc.Options = nil
+	} else if str, ok := tmp.Options.(string); ok {
+		if str == "" {
+			pc.Options = map[string]string{}
+		}
+	}
+	return nil
+}
