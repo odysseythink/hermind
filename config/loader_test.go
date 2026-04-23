@@ -217,6 +217,27 @@ agent:
 	assert.Equal(t, "You are a sardonic assistant.", cfg.Agent.DefaultSystemPrompt)
 }
 
+func TestLoad_UsesInstanceRoot(t *testing.T) {
+	tmp := t.TempDir()
+	t.Setenv("HERMIND_HOME", tmp)
+
+	cfgPath := filepath.Join(tmp, "config.yaml")
+	require.NoError(t, os.WriteFile(cfgPath, []byte("model: anthropic/claude-sonnet-4-6\n"), 0o644))
+
+	cfg, err := Load()
+	require.NoError(t, err)
+	assert.Equal(t, "anthropic/claude-sonnet-4-6", cfg.Model)
+}
+
+func TestResolveDefaults_SQLitePathUsesInstanceRoot(t *testing.T) {
+	tmp := t.TempDir()
+	t.Setenv("HERMIND_HOME", tmp)
+
+	cfg, err := Load()
+	require.NoError(t, err)
+	assert.Equal(t, filepath.Join(tmp, "state.db"), cfg.Storage.SQLitePath)
+}
+
 func TestLoadPreservesLiteralEnvString(t *testing.T) {
 	// After dropping env:VAR expansion, a config value that happens to start
 	// with "env:" must round-trip as a literal string, not trigger lookup.
