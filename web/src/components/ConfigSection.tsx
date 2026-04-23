@@ -1,5 +1,5 @@
 import styles from './ConfigSection.module.css';
-import type { ConfigField, ConfigSection as ConfigSectionT, SchemaField } from '../api/schemas';
+import type { ConfigField, ConfigSection as ConfigSectionT } from '../api/schemas';
 import TextInput from './fields/TextInput';
 import TextAreaInput from './fields/TextAreaInput';
 import NumberInput from './fields/NumberInput';
@@ -78,7 +78,7 @@ export default function ConfigSection({
         const current = asString(getPath(value, f.name));
         const original = asString(getPath(originalValue, f.name));
         const localized = localizeField(section, f, dt);
-        const schemaField = localized as SchemaField;
+        const schemaField = localized as ConfigField;
         const onChange = (v: string) => onFieldChange(f.name, v);
         switch (f.kind) {
           case 'multiselect': {

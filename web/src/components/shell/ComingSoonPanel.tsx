@@ -1,7 +1,6 @@
 import styles from './ComingSoonPanel.module.css';
 import type { Config } from '../../api/schemas';
 import { findGroup, type GroupId } from '../../shell/groups';
-import { summaryFor } from '../../shell/summaries';
 import { useTranslation } from 'react-i18next';
 import { useDescriptorT } from '../../i18n/useDescriptorT';
 
@@ -10,7 +9,7 @@ export interface ComingSoonPanelProps {
   config: Config;
 }
 
-export default function ComingSoonPanel({ group, config }: ComingSoonPanelProps) {
+export default function ComingSoonPanel({ group }: ComingSoonPanelProps) {
   const def = findGroup(group);
   const { t } = useTranslation('ui');
   const dt = useDescriptorT();
@@ -23,18 +22,10 @@ export default function ComingSoonPanel({ group, config }: ComingSoonPanelProps)
 
       <div className={styles.label}>{t('empty.thisSectionCovers')}</div>
       <ul className={styles.bullets}>
-        {def.bullets.map(b => (
+        {def.bullets.map((b) => (
           <li key={b}>{b}</li>
         ))}
       </ul>
-
-      <div className={styles.previewLabel}>{t('empty.currentConfig')}</div>
-      <div className={styles.preview}>{summaryFor(group, config)}</div>
-
-      <div className={styles.escape}>
-        {t('empty.escape', { command: '' })}{' '}
-        <code>hermind config --web</code>
-      </div>
     </section>
   );
 }
