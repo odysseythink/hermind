@@ -57,20 +57,3 @@ func TestWS_ForwardsHubEvents(t *testing.T) {
 	t.Fatal("did not receive any event within the deadline")
 }
 
-func TestWS_RejectsMissingToken(t *testing.T) {
-	s := newTestServer(t)
-	httpSrv := httptest.NewServer(s.Router())
-	defer httpSrv.Close()
-
-	wsURL := "ws" + strings.TrimPrefix(httpSrv.URL, "http") + "/api/sessions/sess-x/stream/ws"
-
-	ctx, cancel := context.WithTimeout(context.Background(), 2*time.Second)
-	defer cancel()
-	_, resp, err := websocket.Dial(ctx, wsURL, nil)
-	if err == nil {
-		t.Fatal("expected dial error")
-	}
-	if resp == nil || resp.StatusCode != 401 {
-		t.Errorf("expected 401, got %v", resp)
-	}
-}

@@ -23,14 +23,13 @@ func TestHandleConfigGet_RedactsSecretFields(t *testing.T) {
 	}
 	srv, err := NewServer(&ServerOpts{
 		Config: cfg,
-		Token:  "test-token",
+
 	})
 	if err != nil {
 		t.Fatalf("NewServer: %v", err)
 	}
 
 	req := httptest.NewRequest("GET", "/api/config", nil)
-	req.Header.Set("Authorization", "Bearer test-token")
 	w := httptest.NewRecorder()
 	srv.Router().ServeHTTP(w, req)
 
@@ -81,7 +80,7 @@ func TestHandleConfigPut_PreservesUnchangedSecret(t *testing.T) {
 	srv, err := NewServer(&ServerOpts{
 		Config:     cfg,
 		ConfigPath: path,
-		Token:      "test-token",
+
 	})
 	if err != nil {
 		t.Fatalf("NewServer: %v", err)
@@ -89,7 +88,6 @@ func TestHandleConfigPut_PreservesUnchangedSecret(t *testing.T) {
 
 	put := `{"config":{"gateway":{"platforms":{"tg_main":{"enabled":true,"type":"telegram","options":{"token":""}}}}}}`
 	req := httptest.NewRequest("PUT", "/api/config", strings.NewReader(put))
-	req.Header.Set("Authorization", "Bearer test-token")
 	req.Header.Set("Content-Type", "application/json")
 	w := httptest.NewRecorder()
 	srv.Router().ServeHTTP(w, req)
@@ -119,7 +117,7 @@ func TestHandleConfigPut_OverwritesSecretWhenProvided(t *testing.T) {
 	srv, err := NewServer(&ServerOpts{
 		Config:     cfg,
 		ConfigPath: path,
-		Token:      "test-token",
+
 	})
 	if err != nil {
 		t.Fatalf("NewServer: %v", err)
@@ -127,7 +125,6 @@ func TestHandleConfigPut_OverwritesSecretWhenProvided(t *testing.T) {
 
 	put := `{"config":{"gateway":{"platforms":{"tg_main":{"enabled":true,"type":"telegram","options":{"token":"new-token"}}}}}}`
 	req := httptest.NewRequest("PUT", "/api/config", strings.NewReader(put))
-	req.Header.Set("Authorization", "Bearer test-token")
 	req.Header.Set("Content-Type", "application/json")
 	w := httptest.NewRecorder()
 	srv.Router().ServeHTTP(w, req)
@@ -147,14 +144,13 @@ func TestHandleConfigGet_RedactsSectionSecretFields(t *testing.T) {
 
 	srv, err := NewServer(&ServerOpts{
 		Config: cfg,
-		Token:  "test-token",
+
 	})
 	if err != nil {
 		t.Fatalf("NewServer: %v", err)
 	}
 
 	req := httptest.NewRequest("GET", "/api/config", nil)
-	req.Header.Set("Authorization", "Bearer test-token")
 	w := httptest.NewRecorder()
 	srv.Router().ServeHTTP(w, req)
 
@@ -191,7 +187,7 @@ func TestHandleConfigPut_PreservesSectionSecretOnBlank(t *testing.T) {
 	srv, err := NewServer(&ServerOpts{
 		Config:     cfg,
 		ConfigPath: path,
-		Token:      "test-token",
+
 	})
 	if err != nil {
 		t.Fatalf("NewServer: %v", err)
@@ -201,7 +197,6 @@ func TestHandleConfigPut_PreservesSectionSecretOnBlank(t *testing.T) {
 	// rest of the config round-trips unchanged.
 	putBody := strings.NewReader(`{"config":{"storage":{"driver":"postgres","postgres_url":""}}}`)
 	req := httptest.NewRequest("PUT", "/api/config", putBody)
-	req.Header.Set("Authorization", "Bearer test-token")
 	req.Header.Set("Content-Type", "application/json")
 	w := httptest.NewRecorder()
 	srv.Router().ServeHTTP(w, req)
@@ -412,12 +407,11 @@ func TestConfigGet_RedactsProvidersApiKey_Integration(t *testing.T) {
 			},
 		},
 	}
-	srv, err := NewServer(&ServerOpts{Config: cfg, Token: "t"})
+	srv, err := NewServer(&ServerOpts{Config: cfg})
 	if err != nil {
 		t.Fatalf("NewServer: %v", err)
 	}
 	req := httptest.NewRequest("GET", "/api/config", nil)
-	req.Header.Set("Authorization", "Bearer t")
 	w := httptest.NewRecorder()
 	srv.Router().ServeHTTP(w, req)
 

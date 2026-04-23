@@ -62,18 +62,3 @@ func TestSSE_ForwardsHubEvents(t *testing.T) {
 	t.Fatal("no data frame received")
 }
 
-func TestSSE_RejectsMissingToken(t *testing.T) {
-	s := newTestServer(t)
-	httpSrv := httptest.NewServer(s.Router())
-	defer httpSrv.Close()
-
-	req, _ := http.NewRequest("GET", httpSrv.URL+"/api/sessions/sess-x/stream/sse", nil)
-	resp, err := http.DefaultClient.Do(req)
-	if err != nil {
-		t.Fatal(err)
-	}
-	defer resp.Body.Close()
-	if resp.StatusCode != 401 {
-		t.Errorf("status = %d, want 401", resp.StatusCode)
-	}
-}

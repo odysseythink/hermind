@@ -16,14 +16,13 @@ import (
 func TestPlatformsSchema_ContainsAllRegisteredTypes(t *testing.T) {
 	srv, err := api.NewServer(&api.ServerOpts{
 		Config: &config.Config{},
-		Token:  "test-token",
+
 	})
 	if err != nil {
 		t.Fatalf("NewServer: %v", err)
 	}
 
 	req := httptest.NewRequest("GET", "/api/platforms/schema", nil)
-	req.Header.Set("Authorization", "Bearer test-token")
 	w := httptest.NewRecorder()
 	srv.Router().ServeHTTP(w, req)
 
@@ -57,13 +56,12 @@ func TestPlatformsSchema_ContainsAllRegisteredTypes(t *testing.T) {
 func TestPlatformsSchema_TelegramFieldShape(t *testing.T) {
 	srv, err := api.NewServer(&api.ServerOpts{
 		Config: &config.Config{},
-		Token:  "test-token",
+
 	})
 	if err != nil {
 		t.Fatal(err)
 	}
 	req := httptest.NewRequest("GET", "/api/platforms/schema", nil)
-	req.Header.Set("Authorization", "Bearer test-token")
 	w := httptest.NewRecorder()
 	srv.Router().ServeHTTP(w, req)
 
@@ -115,22 +113,6 @@ func TestPlatformsSchema_TelegramFieldShape(t *testing.T) {
 	}
 }
 
-func TestPlatformsSchema_RequiresAuth(t *testing.T) {
-	srv, err := api.NewServer(&api.ServerOpts{
-		Config: &config.Config{},
-		Token:  "test-token",
-	})
-	if err != nil {
-		t.Fatal(err)
-	}
-	req := httptest.NewRequest("GET", "/api/platforms/schema", nil)
-	w := httptest.NewRecorder()
-	srv.Router().ServeHTTP(w, req)
-	if w.Code != http.StatusUnauthorized {
-		t.Errorf("status = %d, want 401", w.Code)
-	}
-}
-
 func TestPlatformReveal_ReturnsSecretValue(t *testing.T) {
 	cfg := &config.Config{}
 	cfg.Gateway.Platforms = map[string]config.PlatformConfig{
@@ -139,9 +121,8 @@ func TestPlatformReveal_ReturnsSecretValue(t *testing.T) {
 			Options: map[string]string{"token": "live-token"},
 		},
 	}
-	srv, _ := api.NewServer(&api.ServerOpts{Config: cfg, Token: "test-token"})
+	srv, _ := api.NewServer(&api.ServerOpts{Config: cfg})
 	req := httptest.NewRequest("POST", "/api/platforms/tg_main/reveal", strings.NewReader(`{"field":"token"}`))
-	req.Header.Set("Authorization", "Bearer test-token")
 	req.Header.Set("Content-Type", "application/json")
 	w := httptest.NewRecorder()
 	srv.Router().ServeHTTP(w, req)
@@ -166,9 +147,8 @@ func TestPlatformReveal_RejectsNonSecretField(t *testing.T) {
 			Options: map[string]string{"addr": ":9000", "bot_token": "xoxb-y"},
 		},
 	}
-	srv, _ := api.NewServer(&api.ServerOpts{Config: cfg, Token: "test-token"})
+	srv, _ := api.NewServer(&api.ServerOpts{Config: cfg})
 	req := httptest.NewRequest("POST", "/api/platforms/slack_ops/reveal", strings.NewReader(`{"field":"addr"}`))
-	req.Header.Set("Authorization", "Bearer test-token")
 	w := httptest.NewRecorder()
 	srv.Router().ServeHTTP(w, req)
 	if w.Code != http.StatusBadRequest {
@@ -178,9 +158,8 @@ func TestPlatformReveal_RejectsNonSecretField(t *testing.T) {
 
 func TestPlatformReveal_404OnUnknownKey(t *testing.T) {
 	cfg := &config.Config{}
-	srv, _ := api.NewServer(&api.ServerOpts{Config: cfg, Token: "test-token"})
+	srv, _ := api.NewServer(&api.ServerOpts{Config: cfg})
 	req := httptest.NewRequest("POST", "/api/platforms/missing/reveal", strings.NewReader(`{"field":"token"}`))
-	req.Header.Set("Authorization", "Bearer test-token")
 	w := httptest.NewRecorder()
 	srv.Router().ServeHTTP(w, req)
 	if w.Code != http.StatusNotFound {
@@ -204,9 +183,8 @@ func (s *stubController) Apply(_ context.Context) (api.ApplyResult, error) {
 }
 
 func TestPlatformTest_NilControllerReturns503(t *testing.T) {
-	srv, _ := api.NewServer(&api.ServerOpts{Config: &config.Config{}, Token: "test-token"})
+	srv, _ := api.NewServer(&api.ServerOpts{Config: &config.Config{}})
 	req := httptest.NewRequest("POST", "/api/platforms/any/test", nil)
-	req.Header.Set("Authorization", "Bearer test-token")
 	w := httptest.NewRecorder()
 	srv.Router().ServeHTTP(w, req)
 	if w.Code != http.StatusServiceUnavailable {
@@ -217,10 +195,9 @@ func TestPlatformTest_NilControllerReturns503(t *testing.T) {
 func TestPlatformTest_NotImplementedReturns501(t *testing.T) {
 	ctrl := &stubController{testErr: api.ErrTestNotImplemented}
 	srv, _ := api.NewServer(&api.ServerOpts{
-		Config: &config.Config{}, Token: "test-token", Controller: ctrl,
+		Config: &config.Config{}, Controller: ctrl,
 	})
 	req := httptest.NewRequest("POST", "/api/platforms/any/test", nil)
-	req.Header.Set("Authorization", "Bearer test-token")
 	w := httptest.NewRecorder()
 	srv.Router().ServeHTTP(w, req)
 	if w.Code != http.StatusNotImplemented {
@@ -231,10 +208,9 @@ func TestPlatformTest_NotImplementedReturns501(t *testing.T) {
 func TestPlatformTest_SuccessReturnsOK(t *testing.T) {
 	ctrl := &stubController{testErr: nil}
 	srv, _ := api.NewServer(&api.ServerOpts{
-		Config: &config.Config{}, Token: "test-token", Controller: ctrl,
+		Config: &config.Config{}, Controller: ctrl,
 	})
 	req := httptest.NewRequest("POST", "/api/platforms/any/test", nil)
-	req.Header.Set("Authorization", "Bearer test-token")
 	w := httptest.NewRecorder()
 	srv.Router().ServeHTTP(w, req)
 	if w.Code != http.StatusOK {
@@ -250,10 +226,9 @@ func TestPlatformTest_SuccessReturnsOK(t *testing.T) {
 func TestPlatformTest_FailureReturnsOKFalse(t *testing.T) {
 	ctrl := &stubController{testErr: errors.New("auth failed: bad token")}
 	srv, _ := api.NewServer(&api.ServerOpts{
-		Config: &config.Config{}, Token: "test-token", Controller: ctrl,
+		Config: &config.Config{}, Controller: ctrl,
 	})
 	req := httptest.NewRequest("POST", "/api/platforms/any/test", nil)
-	req.Header.Set("Authorization", "Bearer test-token")
 	w := httptest.NewRecorder()
 	srv.Router().ServeHTTP(w, req)
 	if w.Code != http.StatusOK {
@@ -270,9 +245,8 @@ func TestPlatformTest_FailureReturnsOKFalse(t *testing.T) {
 }
 
 func TestPlatformsApply_NilControllerReturns503(t *testing.T) {
-	srv, _ := api.NewServer(&api.ServerOpts{Config: &config.Config{}, Token: "test-token"})
+	srv, _ := api.NewServer(&api.ServerOpts{Config: &config.Config{}})
 	req := httptest.NewRequest("POST", "/api/platforms/apply", nil)
-	req.Header.Set("Authorization", "Bearer test-token")
 	w := httptest.NewRecorder()
 	srv.Router().ServeHTTP(w, req)
 	if w.Code != http.StatusServiceUnavailable {
@@ -285,10 +259,9 @@ func TestPlatformsApply_SuccessReturnsPayload(t *testing.T) {
 		applyRes: api.ApplyResult{OK: true, Restarted: []string{"tg_main"}, TookMS: 42},
 	}
 	srv, _ := api.NewServer(&api.ServerOpts{
-		Config: &config.Config{}, Token: "test-token", Controller: ctrl,
+		Config: &config.Config{}, Controller: ctrl,
 	})
 	req := httptest.NewRequest("POST", "/api/platforms/apply", nil)
-	req.Header.Set("Authorization", "Bearer test-token")
 	w := httptest.NewRecorder()
 	srv.Router().ServeHTTP(w, req)
 
@@ -308,10 +281,9 @@ func TestPlatformsApply_SuccessReturnsPayload(t *testing.T) {
 func TestPlatformsApply_ConcurrentReturns409(t *testing.T) {
 	ctrl := &stubController{applyErr: api.ErrApplyInProgress}
 	srv, _ := api.NewServer(&api.ServerOpts{
-		Config: &config.Config{}, Token: "test-token", Controller: ctrl,
+		Config: &config.Config{}, Controller: ctrl,
 	})
 	req := httptest.NewRequest("POST", "/api/platforms/apply", nil)
-	req.Header.Set("Authorization", "Bearer test-token")
 	w := httptest.NewRecorder()
 	srv.Router().ServeHTTP(w, req)
 	if w.Code != http.StatusConflict {
@@ -322,10 +294,9 @@ func TestPlatformsApply_ConcurrentReturns409(t *testing.T) {
 func TestPlatformsApply_GenericErrorReturnsOKFalse(t *testing.T) {
 	ctrl := &stubController{applyErr: errors.New("rebuild failed: config parse error")}
 	srv, _ := api.NewServer(&api.ServerOpts{
-		Config: &config.Config{}, Token: "test-token", Controller: ctrl,
+		Config: &config.Config{}, Controller: ctrl,
 	})
 	req := httptest.NewRequest("POST", "/api/platforms/apply", nil)
-	req.Header.Set("Authorization", "Bearer test-token")
 	w := httptest.NewRecorder()
 	srv.Router().ServeHTTP(w, req)
 	if w.Code != http.StatusOK {

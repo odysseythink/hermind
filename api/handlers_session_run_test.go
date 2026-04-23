@@ -58,7 +58,7 @@ func buildTestServerWithDeps(t *testing.T, deps sessionrun.Deps) *Server {
 	srv, err := NewServer(&ServerOpts{
 		Config:  &config.Config{},
 		Storage: nil,
-		Token:   "t",
+
 		Streams: NewMemoryStreamHub(),
 		Deps:    deps,
 	})
@@ -80,7 +80,6 @@ func TestMessagesPost_Accepted(t *testing.T) {
 
 	body, _ := json.Marshal(MessageSubmitRequest{Text: "hi"})
 	req := httptest.NewRequest("POST", "/api/sessions/s1/messages", bytes.NewReader(body))
-	req.Header.Set("Authorization", "Bearer t")
 	req.Header.Set("Content-Type", "application/json")
 	w := httptest.NewRecorder()
 	srv.Router().ServeHTTP(w, req)
@@ -104,7 +103,6 @@ func TestMessagesPost_MissingText(t *testing.T) {
 		AgentCfg: config.AgentConfig{MaxTurns: 5},
 	})
 	req := httptest.NewRequest("POST", "/api/sessions/s1/messages", bytes.NewReader([]byte(`{}`)))
-	req.Header.Set("Authorization", "Bearer t")
 	req.Header.Set("Content-Type", "application/json")
 	w := httptest.NewRecorder()
 	srv.Router().ServeHTTP(w, req)
@@ -120,7 +118,6 @@ func TestMessagesPost_InvalidJSON(t *testing.T) {
 		AgentCfg: config.AgentConfig{MaxTurns: 5},
 	})
 	req := httptest.NewRequest("POST", "/api/sessions/s1/messages", bytes.NewReader([]byte(`{`)))
-	req.Header.Set("Authorization", "Bearer t")
 	req.Header.Set("Content-Type", "application/json")
 	w := httptest.NewRecorder()
 	srv.Router().ServeHTTP(w, req)
@@ -133,7 +130,6 @@ func TestMessagesPost_NoProvider(t *testing.T) {
 	srv := buildTestServerWithDeps(t, sessionrun.Deps{}) // Provider == nil
 	req := httptest.NewRequest("POST", "/api/sessions/s1/messages",
 		bytes.NewReader([]byte(`{"text":"hi"}`)))
-	req.Header.Set("Authorization", "Bearer t")
 	w := httptest.NewRecorder()
 	srv.Router().ServeHTTP(w, req)
 	if w.Code != 503 {
@@ -172,21 +168,6 @@ func TestMessagesPost_Busy(t *testing.T) {
 	time.Sleep(20 * time.Millisecond)
 }
 
-func TestMessagesPost_Unauthorized(t *testing.T) {
-	srv := buildTestServerWithDeps(t, sessionrun.Deps{
-		Provider: &slowProvider{block: make(chan struct{})},
-		ToolReg:  tool.NewRegistry(),
-		AgentCfg: config.AgentConfig{MaxTurns: 5},
-	})
-	req := httptest.NewRequest("POST", "/api/sessions/s1/messages",
-		bytes.NewReader([]byte(`{"text":"hi"}`)))
-	w := httptest.NewRecorder()
-	srv.Router().ServeHTTP(w, req)
-	if w.Code != 401 {
-		t.Fatalf("code = %d, want 401", w.Code)
-	}
-}
-
 func TestCancelPost_Running(t *testing.T) {
 	block := make(chan struct{})
 	deps := sessionrun.Deps{
@@ -216,7 +197,6 @@ func TestCancelPost_Running(t *testing.T) {
 func TestCancelPost_NotRunning(t *testing.T) {
 	srv := buildTestServerWithDeps(t, sessionrun.Deps{})
 	req := httptest.NewRequest("POST", "/api/sessions/nobody/cancel", nil)
-	req.Header.Set("Authorization", "Bearer t")
 	w := httptest.NewRecorder()
 	srv.Router().ServeHTTP(w, req)
 	if w.Code != 404 {

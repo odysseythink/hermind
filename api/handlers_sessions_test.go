@@ -156,7 +156,7 @@ func newTestServerWithStore(t *testing.T) (*Server, *mockStorage) {
 	s, err := NewServer(&ServerOpts{
 		Config:  &config.Config{Model: "x"},
 		Storage: store,
-		Token:   "t",
+
 		Version: "dev",
 	})
 	if err != nil {
@@ -276,7 +276,6 @@ func TestPatchSession_RenamesTitle(t *testing.T) {
 	rr := httptest.NewRecorder()
 	body := strings.NewReader(`{"title":"new title"}`)
 	req := httptest.NewRequest("PATCH", "/api/sessions/sess-rename", body)
-	req.Header.Set("Authorization", "Bearer t")
 	req.Header.Set("Content-Type", "application/json")
 	s.Router().ServeHTTP(rr, req)
 
@@ -302,7 +301,6 @@ func TestPatchSession_EmptyTitle_Returns400(t *testing.T) {
 	for _, body := range []string{`{"title":""}`, `{"title":"   "}`} {
 		rr := httptest.NewRecorder()
 		req := httptest.NewRequest("PATCH", "/api/sessions/s1", strings.NewReader(body))
-		req.Header.Set("Authorization", "Bearer t")
 		req.Header.Set("Content-Type", "application/json")
 		s.Router().ServeHTTP(rr, req)
 		if rr.Code != http.StatusBadRequest {
@@ -318,7 +316,6 @@ func TestPatchSession_TooLong_Returns400(t *testing.T) {
 	body := `{"title":"` + strings.Repeat("x", MaxSessionTitleBytes+1) + `"}`
 	rr := httptest.NewRecorder()
 	req := httptest.NewRequest("PATCH", "/api/sessions/s2", strings.NewReader(body))
-	req.Header.Set("Authorization", "Bearer t")
 	req.Header.Set("Content-Type", "application/json")
 	s.Router().ServeHTTP(rr, req)
 	if rr.Code != http.StatusBadRequest {
@@ -331,24 +328,10 @@ func TestPatchSession_NotFound_Returns404(t *testing.T) {
 	rr := httptest.NewRecorder()
 	req := httptest.NewRequest("PATCH", "/api/sessions/ghost",
 		strings.NewReader(`{"title":"anything"}`))
-	req.Header.Set("Authorization", "Bearer t")
 	req.Header.Set("Content-Type", "application/json")
 	s.Router().ServeHTTP(rr, req)
 	if rr.Code != http.StatusNotFound {
 		t.Errorf("code=%d, want 404", rr.Code)
-	}
-}
-
-func TestPatchSession_MissingToken_Returns401(t *testing.T) {
-	s, store := newTestServerWithStore(t)
-	store.seedSession("s3")
-	rr := httptest.NewRecorder()
-	req := httptest.NewRequest("PATCH", "/api/sessions/s3",
-		strings.NewReader(`{"title":"new"}`))
-	req.Header.Set("Content-Type", "application/json")
-	s.Router().ServeHTTP(rr, req)
-	if rr.Code != http.StatusUnauthorized {
-		t.Errorf("code=%d, want 401", rr.Code)
 	}
 }
 
@@ -358,7 +341,6 @@ func TestGetSession_ReturnsSystemPromptField(t *testing.T) {
 
 	rr := httptest.NewRecorder()
 	req := httptest.NewRequest("GET", "/api/sessions/s-dto-1", nil)
-	req.Header.Set("Authorization", "Bearer t")
 	s.Router().ServeHTTP(rr, req)
 
 	if rr.Code != http.StatusOK {
@@ -378,7 +360,6 @@ func TestPatchSession_UpdatesModelAndSystemPrompt(t *testing.T) {
 	body := `{"model":"claude-sonnet-4-6","system_prompt":"new prompt"}`
 	rr := httptest.NewRecorder()
 	req := httptest.NewRequest("PATCH", "/api/sessions/s-p1", strings.NewReader(body))
-	req.Header.Set("Authorization", "Bearer t")
 	req.Header.Set("Content-Type", "application/json")
 	s.Router().ServeHTTP(rr, req)
 
@@ -399,7 +380,6 @@ func TestPatchSession_OnlyTitle_StillWorks(t *testing.T) {
 	rr := httptest.NewRecorder()
 	req := httptest.NewRequest("PATCH", "/api/sessions/s-p2",
 		strings.NewReader(`{"title":"new"}`))
-	req.Header.Set("Authorization", "Bearer t")
 	req.Header.Set("Content-Type", "application/json")
 	s.Router().ServeHTTP(rr, req)
 
@@ -418,7 +398,6 @@ func TestPatchSession_EnforcesSystemPromptSizeLimit(t *testing.T) {
 	body := fmt.Sprintf(`{"system_prompt":%q}`, tooBig)
 	rr := httptest.NewRecorder()
 	req := httptest.NewRequest("PATCH", "/api/sessions/s-p3", strings.NewReader(body))
-	req.Header.Set("Authorization", "Bearer t")
 	req.Header.Set("Content-Type", "application/json")
 	s.Router().ServeHTTP(rr, req)
 
@@ -434,7 +413,6 @@ func TestPatchSession_EnforcesModelNameLimit(t *testing.T) {
 	body := fmt.Sprintf(`{"model":%q}`, strings.Repeat("m", MaxModelNameBytes+1))
 	rr := httptest.NewRecorder()
 	req := httptest.NewRequest("PATCH", "/api/sessions/s-p4", strings.NewReader(body))
-	req.Header.Set("Authorization", "Bearer t")
 	req.Header.Set("Content-Type", "application/json")
 	s.Router().ServeHTTP(rr, req)
 
@@ -450,7 +428,6 @@ func TestPatchSession_AllowsEmptyStringToClear(t *testing.T) {
 	rr := httptest.NewRecorder()
 	req := httptest.NewRequest("PATCH", "/api/sessions/s-p5",
 		strings.NewReader(`{"system_prompt":""}`))
-	req.Header.Set("Authorization", "Bearer t")
 	req.Header.Set("Content-Type", "application/json")
 	s.Router().ServeHTTP(rr, req)
 
@@ -473,7 +450,6 @@ func TestPatchSession_BroadcastsSessionUpdatedEvent(t *testing.T) {
 	rr := httptest.NewRecorder()
 	req := httptest.NewRequest("PATCH", "/api/sessions/s-evt",
 		strings.NewReader(`{"system_prompt":"new"}`))
-	req.Header.Set("Authorization", "Bearer t")
 	req.Header.Set("Content-Type", "application/json")
 	s.Router().ServeHTTP(rr, req)
 	require.Equal(t, http.StatusOK, rr.Code)
@@ -498,7 +474,6 @@ func TestPatchSession_DecodesPercentEncodedID(t *testing.T) {
 	rr := httptest.NewRecorder()
 	req := httptest.NewRequest("PATCH", "/api/sessions/telegram%3A760061130",
 		strings.NewReader(`{"system_prompt":"new"}`))
-	req.Header.Set("Authorization", "Bearer t")
 	req.Header.Set("Content-Type", "application/json")
 	s.Router().ServeHTTP(rr, req)
 

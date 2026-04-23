@@ -22,6 +22,7 @@ type StatusResponse struct {
 	Version       string `json:"version"`
 	UptimeSec     int64  `json:"uptime_sec"`
 	StorageDriver string `json:"storage_driver"`
+	InstanceRoot  string `json:"instance_root"`
 }
 
 // ModelInfoResponse is the payload for GET /api/model/info.

@@ -94,13 +94,13 @@ func TestWebCmd_BindsAndServesStatus(t *testing.T) {
 	}
 	_ = resp.Body.Close()
 
-	// /api/sessions without auth must 401.
+	// /api/sessions needs no auth now (localhost-only is the gate).
 	resp, err = http.Get(addr + "/api/sessions")
 	if err != nil {
 		t.Fatalf("GET /api/sessions: %v", err)
 	}
-	if resp.StatusCode != 401 {
-		t.Errorf("unauth status = %d, want 401", resp.StatusCode)
+	if resp.StatusCode != 200 {
+		t.Errorf("status = %d, want 200", resp.StatusCode)
 	}
 	_ = resp.Body.Close()
 

@@ -8,7 +8,6 @@ import (
 	"fmt"
 	"io/fs"
 	"net/http"
-	"strings"
 	"time"
 
 	"github.com/go-chi/chi/v5"
@@ -60,8 +59,9 @@ type ServerOpts struct {
 	// in that case.
 	Storage storage.Storage
 
-	// Token is the Bearer token required on authed endpoints.
-	Token string
+	// InstanceRoot is the absolute path to this hermind instance's root
+	// directory. Surfaced via GET /api/status so the UI can display it.
+	InstanceRoot string
 
 	// Version stamps GET /api/status.
 	Version string
@@ -97,9 +97,6 @@ type Server struct {
 func NewServer(opts *ServerOpts) (*Server, error) {
 	if opts == nil || opts.Config == nil {
 		return nil, fmt.Errorf("api: ServerOpts.Config is required")
-	}
-	if opts.Token == "" {
-		return nil, fmt.Errorf("api: ServerOpts.Token is required")
 	}
 	streams := opts.Streams
 	if streams == nil {
@@ -137,12 +134,7 @@ func (s *Server) ListenAndServe(addr string) error {
 func (s *Server) buildRouter() chi.Router {
 	r := chi.NewRouter()
 
-	public := []string{"/api/status", "/api/model/info"}
-	auth := NewAuthMiddleware(s.opts.Token, public)
-
 	r.Route("/api", func(r chi.Router) {
-		r.Use(auth)
-
 		r.Get("/status", s.handleStatus)
 		r.Get("/model/info", s.handleModelInfo)
 
@@ -188,18 +180,15 @@ func (s *Server) driverName() string {
 	return s.opts.Config.Storage.Driver
 }
 
-// handleIndex serves the embedded landing page with the server token
-// substituted in so the bundled frontend can authenticate without the
-// user pasting a token.
+// handleIndex serves the embedded landing page.
 func (s *Server) handleIndex(w http.ResponseWriter, _ *http.Request) {
 	data, err := fs.ReadFile(webroot, "webroot/index.html")
 	if err != nil {
 		http.Error(w, err.Error(), http.StatusInternalServerError)
 		return
 	}
-	rendered := strings.ReplaceAll(string(data), "{{TOKEN}}", s.opts.Token)
 	w.Header().Set("Content-Type", "text/html; charset=utf-8")
-	_, _ = w.Write([]byte(rendered))
+	_, _ = w.Write(data)
 }
 
 // handleStatic serves anything under /ui/* from the embedded webroot.

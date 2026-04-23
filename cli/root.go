@@ -49,8 +49,7 @@ func NewRootCmd(app *App) *cobra.Command {
 	// Default action (bare `hermind`): launch the web UI.
 	root.RunE = func(cmd *cobra.Command, args []string) error {
 		return runWeb(cmd.Context(), app, webRunOptions{
-			Addr: "127.0.0.1:9119",
-			Out:  cmd.OutOrStdout(),
+			Out: cmd.OutOrStdout(),
 		})
 	}
 
