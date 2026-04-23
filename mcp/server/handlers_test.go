@@ -29,14 +29,11 @@ func newTestServer(t *testing.T) (*Server, storage.Storage) {
 	return s, store
 }
 
-func seed(t *testing.T, store storage.Storage, id string) {
+func seed(t *testing.T, store storage.Storage, _ string) {
 	t.Helper()
 	ctx := context.Background()
-	if err := store.CreateSession(ctx, &storage.Session{ID: id, Source: "cli", Model: "m", StartedAt: time.Now()}); err != nil {
-		t.Fatalf("create session: %v", err)
-	}
-	if err := store.AddMessage(ctx, id, &storage.StoredMessage{Role: "user", Content: "hi", Timestamp: time.Now()}); err != nil {
-		t.Fatalf("add message: %v", err)
+	if err := store.AppendMessage(ctx, &storage.StoredMessage{Role: "user", Content: "hi", Timestamp: time.Now()}); err != nil {
+		t.Fatalf("append message: %v", err)
 	}
 }
 

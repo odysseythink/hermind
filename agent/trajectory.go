@@ -13,12 +13,11 @@ import (
 
 // TrajectoryEvent is one line in the trajectory dump.
 type TrajectoryEvent struct {
-	Time      time.Time `json:"time"`
-	SessionID string    `json:"session_id"`
-	Kind      string    `json:"kind"` // "user", "assistant", "tool_call", "tool_result", "usage"
-	Content   string    `json:"content,omitempty"`
-	ToolName  string    `json:"tool_name,omitempty"`
-	Usage     *message.Usage `json:"usage,omitempty"`
+	Time     time.Time      `json:"time"`
+	Kind     string         `json:"kind"` // "user", "assistant", "tool_call", "tool_result", "usage"
+	Content  string         `json:"content,omitempty"`
+	ToolName string         `json:"tool_name,omitempty"`
+	Usage    *message.Usage `json:"usage,omitempty"`
 }
 
 // TrajectoryWriter appends JSON-lines events to a file on disk.

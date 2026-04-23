@@ -94,13 +94,13 @@ func TestWebCmd_BindsAndServesStatus(t *testing.T) {
 	}
 	_ = resp.Body.Close()
 
-	// /api/sessions needs no auth now (localhost-only is the gate).
+	// /api/sessions is gone in the single-conversation model — 404 now.
 	resp, err = http.Get(addr + "/api/sessions")
 	if err != nil {
 		t.Fatalf("GET /api/sessions: %v", err)
 	}
-	if resp.StatusCode != 200 {
-		t.Errorf("status = %d, want 200", resp.StatusCode)
+	if resp.StatusCode != 404 {
+		t.Errorf("status = %d, want 404", resp.StatusCode)
 	}
 	_ = resp.Body.Close()
 

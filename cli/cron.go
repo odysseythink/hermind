@@ -93,14 +93,35 @@ func buildCronJob(jc config.CronJobConfig, sched cron.Schedule, prov provider.Pr
 		Schedule: sched,
 		Run: func(ctx context.Context) error {
 			ctx = logging.WithRequestID(ctx, uuid.NewString())
+			// Isolated engine with no storage — cron runs do not touch
+			// the main conversation's messages table.
 			eng := agent.NewEngineWithTools(
-				prov, app.Storage, nil,
+				prov, nil, nil,
 				app.Config.Agent, "cron",
 			)
-			_, err := eng.RunConversation(ctx, &agent.RunOptions{
+
+			// Each job gets its own trajectory file under <instance>/trajectories/.
+			root, err := config.InstancePath("trajectories")
+			if err == nil {
+				tw, twErr := agent.NewTrajectoryWriter(
+					root,
+					fmt.Sprintf("cron-%s-%d", jobName, time.Now().Unix()),
+				)
+				if twErr == nil {
+					defer tw.Close()
+					eng.SetStreamDeltaCallback(func(d *provider.StreamDelta) {
+						_ = tw.Write(agent.TrajectoryEvent{
+							Kind:    "assistant",
+							Content: d.Content,
+						})
+					})
+				}
+			}
+
+			_, err = eng.RunConversation(ctx, &agent.RunOptions{
 				UserMessage: prompt,
-				SessionID:   "cron-" + jobName + "-" + uuid.NewString(),
 				Model:       model,
+				Ephemeral:   true,
 			})
 			return err
 		},

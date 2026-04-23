@@ -165,8 +165,10 @@ func BuildEngineDeps(ctx context.Context, app *App) (api.EngineDeps, func(), err
 	}
 
 	delegate.RegisterDelegate(toolRegistry, func(subCtx context.Context, task, extra string, maxTurns int) (*delegate.SubagentResult, error) {
+		// Sub-agent runs are ephemeral — they should not write to the
+		// main conversation history.
 		subEngine := agent.NewEngineWithToolsAndAux(
-			p, auxProvider, app.Storage, toolRegistry,
+			p, auxProvider, nil, toolRegistry,
 			config.AgentConfig{
 				MaxTurns:    maxTurns,
 				Compression: app.Config.Agent.Compression,
@@ -175,8 +177,8 @@ func BuildEngineDeps(ctx context.Context, app *App) (api.EngineDeps, func(), err
 		)
 		result, err := subEngine.RunConversation(subCtx, &agent.RunOptions{
 			UserMessage: task + "\n\n" + extra,
-			SessionID:   sessionPrefix + "-sub-" + uuid.NewString(),
 			Model:       displayModel,
+			Ephemeral:   true,
 		})
 		if err != nil {
 			return nil, err
