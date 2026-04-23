@@ -1,9 +1,5 @@
 package descriptor
 
-import (
-	"github.com/odysseythink/hermind/gateway/platforms"
-)
-
 func init() {
 	Register(Section{
 		Key:              "gateway",
@@ -19,7 +15,7 @@ func init() {
 				Label:    "Platform Type",
 				Kind:     FieldEnum,
 				Required: true,
-				Enum:     platformTypes(),
+				Enum:     []string{"feishu", "telegram", "slack", "discord", "wechat", "dingtalk"},
 			},
 			{
 				Name:    "enabled",
@@ -35,12 +31,4 @@ func init() {
 			},
 		},
 	})
-}
-
-func platformTypes() []string {
-	var types []string
-	for _, desc := range platforms.All() {
-		types = append(types, desc.Type)
-	}
-	return types
 }
