@@ -14,7 +14,7 @@ export const STATE_VERSION = 2;
 
 // Default expansion on first load or after a version bump. Includes every
 // group that currently has registered descriptors plus gateway (always on).
-const DEFAULT_EXPANDED: readonly GroupId[] = ['gateway', 'runtime', 'observability', 'models'];
+const DEFAULT_EXPANDED: readonly GroupId[] = ['runtime', 'observability', 'models'];
 
 interface StoredState {
   v: number;

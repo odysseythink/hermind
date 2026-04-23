@@ -15,38 +15,50 @@ import (
 
 // App bundles the shared resources (config, storage) across cobra commands.
 type App struct {
-	Config     *config.Config
-	ConfigPath string
-	Storage    storage.Storage
+	Config       *config.Config
+	ConfigPath   string
+	InstanceRoot string
+	Storage      storage.Storage
 }
 
-// NewApp constructs an App by loading config. Storage is opened lazily
-// by the command that needs it.
-//
-// When no config file exists, a minimal default is written to the
-// default path and the user is pointed at `hermind web` for
-// configuration. The legacy bubbletea first-run TUI has been removed.
+// NewApp loads the instance config. First-run behavior:
+//   - creates <instance-root>/ if missing
+//   - writes a default config.yaml if missing
+//   - if ~/.hermind exists and HERMIND_HOME is unset and the instance
+//     has not shown the notice yet, prints a one-time stderr hint and
+//     touches a marker file so the hint does not repeat.
 func NewApp() (*App, error) {
-	path, err := defaultConfigPath()
+	root, err := config.InstanceRoot()
 	if err != nil {
 		return nil, err
 	}
+	cfgPath := filepath.Join(root, config.DefaultConfigFile)
 
-	if _, statErr := os.Stat(path); errors.Is(statErr, os.ErrNotExist) {
-		if err := writeDefaultConfig(path); err != nil {
+	if err := os.MkdirAll(root, 0o755); err != nil {
+		return nil, fmt.Errorf("hermind: create instance root %s: %w", root, err)
+	}
+
+	if _, statErr := os.Stat(cfgPath); errors.Is(statErr, os.ErrNotExist) {
+		if err := writeDefaultConfig(cfgPath); err != nil {
 			return nil, fmt.Errorf("write default config: %w", err)
 		}
 		fmt.Fprintf(os.Stderr,
 			"hermind: wrote default config to %s — run `hermind web` to configure providers.\n",
-			path,
+			cfgPath,
 		)
 	}
 
-	cfg, err := config.LoadFromPath(path)
+	maybePrintMigrationNotice(root)
+
+	cfg, err := config.LoadFromPath(cfgPath)
 	if err != nil {
 		return nil, err
 	}
-	return &App{Config: cfg, ConfigPath: path}, nil
+	return &App{
+		Config:       cfg,
+		ConfigPath:   cfgPath,
+		InstanceRoot: root,
+	}, nil
 }
 
 // Close releases all held resources.
@@ -57,17 +69,37 @@ func (a *App) Close() error {
 	return nil
 }
 
-// defaultConfigPath resolves ~/.hermind/config.yaml with the
-// HERMIND_HOME override taken into account.
-func defaultConfigPath() (string, error) {
-	if v := os.Getenv("HERMIND_HOME"); v != "" {
-		return filepath.Join(v, "config.yaml"), nil
+// maybePrintMigrationNotice emits a one-time stderr hint when the user
+// has a legacy ~/.hermind/ directory but is now running under a new
+// cwd-rooted instance. Respects $HERMIND_HOME (no notice when caller
+// has explicitly chosen a root).
+func maybePrintMigrationNotice(root string) {
+	if os.Getenv("HERMIND_HOME") != "" {
+		return
+	}
+	marker := filepath.Join(root, ".migration_notice_shown")
+	if _, err := os.Stat(marker); err == nil {
+		return
 	}
 	home, err := os.UserHomeDir()
 	if err != nil {
-		return "", err
+		return
 	}
-	return filepath.Join(home, ".hermind", "config.yaml"), nil
+	legacy := filepath.Join(home, ".hermind")
+	if absRoot, errA := filepath.Abs(root); errA == nil {
+		if absLegacy, errL := filepath.Abs(legacy); errL == nil && absRoot == absLegacy {
+			_ = os.WriteFile(marker, []byte("same-as-legacy\n"), 0o644)
+			return
+		}
+	}
+	if _, err := os.Stat(legacy); err != nil {
+		return
+	}
+	fmt.Fprintln(os.Stderr,
+		"hermind: legacy config at ~/.hermind/ is not auto-inherited by this instance.")
+	fmt.Fprintln(os.Stderr,
+		"  If you want to reuse it, copy manually: cp -r ~/.hermind/. "+root+"/")
+	_ = os.WriteFile(marker, []byte("shown\n"), 0o644)
 }
 
 // writeDefaultConfig creates the parent directory (if needed) and

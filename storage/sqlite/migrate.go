@@ -3,44 +3,16 @@ package sqlite
 
 import (
 	"fmt"
+	"strconv"
+	"strings"
 )
 
-// schemaSQL is the full initial schema. The schema is designed to match
-// the Python hermes state.db layout for compatibility.
+// schemaSQL is the v3 schema. messages are instance-scoped (no
+// session_id); conversation_state is a singleton row that tracks
+// per-instance totals; memories and their FTS index are unchanged.
 const schemaSQL = `
-CREATE TABLE IF NOT EXISTS sessions (
-    id TEXT PRIMARY KEY,
-    source TEXT NOT NULL DEFAULT 'cli',
-    user_id TEXT DEFAULT '',
-    model TEXT NOT NULL DEFAULT '',
-    model_config TEXT DEFAULT '{}',
-    system_prompt TEXT DEFAULT '',
-    parent_session_id TEXT DEFAULT '',
-    started_at REAL NOT NULL,
-    ended_at REAL,
-    end_reason TEXT DEFAULT '',
-    message_count INTEGER NOT NULL DEFAULT 0,
-    tool_call_count INTEGER NOT NULL DEFAULT 0,
-    input_tokens INTEGER NOT NULL DEFAULT 0,
-    output_tokens INTEGER NOT NULL DEFAULT 0,
-    cache_read_tokens INTEGER NOT NULL DEFAULT 0,
-    cache_write_tokens INTEGER NOT NULL DEFAULT 0,
-    reasoning_tokens INTEGER NOT NULL DEFAULT 0,
-    billing_provider TEXT DEFAULT '',
-    billing_base_url TEXT DEFAULT '',
-    estimated_cost_usd REAL NOT NULL DEFAULT 0,
-    actual_cost_usd REAL NOT NULL DEFAULT 0,
-    cost_status TEXT DEFAULT '',
-    title TEXT DEFAULT ''
-);
-
-CREATE INDEX IF NOT EXISTS idx_sessions_source ON sessions(source);
-CREATE INDEX IF NOT EXISTS idx_sessions_user ON sessions(user_id);
-CREATE INDEX IF NOT EXISTS idx_sessions_started_at ON sessions(started_at);
-
 CREATE TABLE IF NOT EXISTS messages (
     id INTEGER PRIMARY KEY AUTOINCREMENT,
-    session_id TEXT NOT NULL,
     role TEXT NOT NULL,
     content TEXT NOT NULL DEFAULT '',
     tool_call_id TEXT DEFAULT '',
@@ -50,33 +22,40 @@ CREATE TABLE IF NOT EXISTS messages (
     token_count INTEGER NOT NULL DEFAULT 0,
     finish_reason TEXT DEFAULT '',
     reasoning TEXT DEFAULT '',
-    reasoning_details TEXT DEFAULT '',
-    FOREIGN KEY (session_id) REFERENCES sessions(id) ON DELETE CASCADE
+    reasoning_details TEXT DEFAULT ''
 );
 
-CREATE INDEX IF NOT EXISTS idx_messages_session ON messages(session_id);
 CREATE INDEX IF NOT EXISTS idx_messages_timestamp ON messages(timestamp);
 
--- FTS5 full-text search over message content
 CREATE VIRTUAL TABLE IF NOT EXISTS messages_fts USING fts5(
     content,
     content='messages',
     content_rowid='id'
 );
 
--- Triggers to keep FTS index in sync with messages table
 CREATE TRIGGER IF NOT EXISTS messages_fts_insert AFTER INSERT ON messages BEGIN
     INSERT INTO messages_fts(rowid, content) VALUES (new.id, new.content);
 END;
-
 CREATE TRIGGER IF NOT EXISTS messages_fts_delete AFTER DELETE ON messages BEGIN
     INSERT INTO messages_fts(messages_fts, rowid, content) VALUES ('delete', old.id, old.content);
 END;
-
 CREATE TRIGGER IF NOT EXISTS messages_fts_update AFTER UPDATE ON messages BEGIN
     INSERT INTO messages_fts(messages_fts, rowid, content) VALUES ('delete', old.id, old.content);
     INSERT INTO messages_fts(rowid, content) VALUES (new.id, new.content);
 END;
+
+CREATE TABLE IF NOT EXISTS conversation_state (
+    id INTEGER PRIMARY KEY CHECK (id = 1),
+    system_prompt_cache TEXT DEFAULT '',
+    total_input_tokens INTEGER DEFAULT 0,
+    total_output_tokens INTEGER DEFAULT 0,
+    total_cache_read_tokens INTEGER DEFAULT 0,
+    total_cache_write_tokens INTEGER DEFAULT 0,
+    total_cost_usd REAL DEFAULT 0,
+    updated_at REAL NOT NULL DEFAULT 0
+);
+INSERT OR IGNORE INTO conversation_state
+    (id, updated_at) VALUES (1, 0);
 
 CREATE TABLE IF NOT EXISTS memories (
     id TEXT PRIMARY KEY,
@@ -88,7 +67,6 @@ CREATE TABLE IF NOT EXISTS memories (
     created_at REAL NOT NULL,
     updated_at REAL NOT NULL
 );
-
 CREATE INDEX IF NOT EXISTS idx_memories_user ON memories(user_id);
 CREATE INDEX IF NOT EXISTS idx_memories_created ON memories(created_at);
 
@@ -97,27 +75,84 @@ CREATE VIRTUAL TABLE IF NOT EXISTS memories_fts USING fts5(
     content='memories',
     content_rowid='rowid'
 );
-
 CREATE TRIGGER IF NOT EXISTS memories_fts_insert AFTER INSERT ON memories BEGIN
     INSERT INTO memories_fts(rowid, content) VALUES (new.rowid, new.content);
 END;
-
 CREATE TRIGGER IF NOT EXISTS memories_fts_delete AFTER DELETE ON memories BEGIN
     INSERT INTO memories_fts(memories_fts, rowid, content) VALUES ('delete', old.rowid, old.content);
 END;
-
 CREATE TRIGGER IF NOT EXISTS memories_fts_update AFTER UPDATE ON memories BEGIN
     INSERT INTO memories_fts(memories_fts, rowid, content) VALUES ('delete', old.rowid, old.content);
     INSERT INTO memories_fts(rowid, content) VALUES (new.rowid, new.content);
 END;
+
+CREATE TABLE IF NOT EXISTS schema_meta (
+    key TEXT PRIMARY KEY,
+    value TEXT NOT NULL
+);
+INSERT OR IGNORE INTO schema_meta (key, value) VALUES ('version', '3');
 `
 
-// Migrate applies the schema to the database. Idempotent: safe to call
-// multiple times. Does NOT yet support incremental migrations beyond v1 —
-// future plans will add a migrations table.
+// currentSchemaVersion is the v3 single-conversation schema. v1 and v2
+// DBs are detected by backupLegacyDBIfNeeded() at Open() time and
+// renamed out of the way, so no in-place migration code is needed.
+const currentSchemaVersion = 3
+
+// Migrate applies the base schema. Idempotent. Legacy v1/v2 DBs are
+// never reached here — they are backed up before Migrate() runs.
 func (s *Store) Migrate() error {
 	if _, err := s.db.Exec(schemaSQL); err != nil {
-		return fmt.Errorf("sqlite: migrate: %w", err)
+		return fmt.Errorf("sqlite: migrate base: %w", err)
 	}
-	return nil
+	for {
+		v, err := s.schemaVersion()
+		if err != nil {
+			return err
+		}
+		if v >= currentSchemaVersion {
+			return nil
+		}
+		if err := s.applyVersion(v + 1); err != nil {
+			return fmt.Errorf("sqlite: migrate v%d: %w", v+1, err)
+		}
+	}
+}
+
+func (s *Store) schemaVersion() (int, error) {
+	var raw string
+	err := s.db.QueryRow(
+		`SELECT value FROM schema_meta WHERE key = 'version'`,
+	).Scan(&raw)
+	if err != nil {
+		return 0, fmt.Errorf("sqlite: read schema version: %w", err)
+	}
+	v, err := strconv.Atoi(strings.TrimSpace(raw))
+	if err != nil {
+		return 0, fmt.Errorf("sqlite: parse schema version %q: %w", raw, err)
+	}
+	return v, nil
+}
+
+// applyVersion is a no-op for v3 (the only version this binary speaks).
+func (s *Store) applyVersion(v int) error {
+	tx, err := s.db.Begin()
+	if err != nil {
+		return err
+	}
+	defer tx.Rollback()
+
+	switch v {
+	case 3:
+		// no-op: v3 IS the initial schema emitted by schemaSQL
+	default:
+		return fmt.Errorf("no migration step for v%d", v)
+	}
+
+	if _, err := tx.Exec(
+		`UPDATE schema_meta SET value = ? WHERE key = 'version'`,
+		fmt.Sprintf("%d", v),
+	); err != nil {
+		return err
+	}
+	return tx.Commit()
 }

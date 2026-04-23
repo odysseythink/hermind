@@ -2,22 +2,18 @@ import styles from './SettingsSidebar.module.css';
 import { useTranslation } from 'react-i18next';
 import { GROUPS, type GroupId } from '../../shell/groups';
 import GroupSection from './GroupSection';
-import GatewaySidebar from '../groups/gateway/GatewaySidebar';
 import SectionList from './SectionList';
 import ModelsSidebar from '../groups/models/ModelsSidebar';
 import AdvancedSidebar from '../groups/advanced/AdvancedSidebar';
-import type { ConfigSection, SchemaDescriptor } from '../../api/schemas';
+import GatewaySidebar from '../groups/gateway/GatewaySidebar';
+import type { ConfigSection } from '../../api/schemas';
 
 export interface SidebarProps {
   activeGroup: GroupId | null;
   activeSubKey: string | null;
   expandedGroups: Set<GroupId>;
   dirtyGroups: Set<GroupId>;
-  instances: Array<{ key: string; type: string; enabled: boolean }>;
-  selectedKey: string | null;
-  descriptors: SchemaDescriptor[];
   configSections: ConfigSection[];
-  dirtyInstanceKeys: Set<string>;
   providerInstances: Array<{ key: string; type: string }>;
   dirtyProviderKeys: Set<string>;
   fallbackProviders: Array<{ provider: string }>;
@@ -25,7 +21,6 @@ export interface SidebarProps {
   onSelectGroup: (id: GroupId) => void;
   onSelectSub: (key: string) => void;
   onToggleGroup: (id: GroupId) => void;
-  onNewInstance: () => void;
   onNewProvider: () => void;
   onAddFallback: () => void;
   onMoveFallback: (index: number, direction: 'up' | 'down') => void;
@@ -33,6 +28,10 @@ export interface SidebarProps {
   mcpInstances: Array<{ key: string; command: string; enabled: boolean }>;
   dirtyMcpKeys: Set<string>;
   onAddMcpServer: () => void;
+  platformInstances: Array<{ key: string; type: string; enabled: boolean }>;
+  dirtyPlatformKeys: Set<string>;
+  onSelectPlatform: (key: string) => void;
+  onAddPlatform: () => void;
   cronJobs: Array<{ name: string; schedule: string }>;
   dirtyCronIndices: Set<number>;
   onAddCronJob: () => void;
@@ -43,30 +42,18 @@ export default function SettingsSidebar(props: SidebarProps) {
   const { t } = useTranslation('ui');
   return (
     <aside className={styles.sidebar} aria-label={t('sidebar.ariaLabel')}>
-      {GROUPS.map(g => {
+      {GROUPS.map((g) => {
         const body =
-          g.id === 'gateway' ? (
-            <GatewaySidebar
-              instances={props.instances}
-              selectedKey={props.selectedKey}
-              descriptors={props.descriptors}
-              dirtyKeys={props.dirtyInstanceKeys}
-              onSelect={key => {
-                props.onSelectGroup('gateway');
-                props.onSelectSub(key);
-              }}
-              onNewInstance={props.onNewInstance}
-            />
-          ) : g.id === 'models' ? (
+          g.id === 'models' ? (
             <ModelsSidebar
               instances={props.providerInstances}
               activeSubKey={props.activeGroup === 'models' ? props.activeSubKey : null}
               dirtyKeys={props.dirtyProviderKeys}
-              onSelectScalar={key => {
+              onSelectScalar={(key) => {
                 props.onSelectGroup('models');
                 props.onSelectSub(key);
               }}
-              onSelectInstance={key => {
+              onSelectInstance={(key) => {
                 props.onSelectGroup('models');
                 props.onSelectSub(key);
               }}
@@ -79,7 +66,7 @@ export default function SettingsSidebar(props: SidebarProps) {
                 const n = Number(props.activeSubKey.slice('fallback:'.length));
                 return Number.isInteger(n) ? n : null;
               })()}
-              onSelectFallback={i => {
+              onSelectFallback={(i) => {
                 props.onSelectGroup('models');
                 props.onSelectSub(`fallback:${i}`);
               }}
@@ -90,13 +77,13 @@ export default function SettingsSidebar(props: SidebarProps) {
           ) : g.id === 'advanced' ? (
             <AdvancedSidebar
               activeSubKey={props.activeGroup === 'advanced' ? props.activeSubKey : null}
-              onSelectScalar={key => {
+              onSelectScalar={(key) => {
                 props.onSelectGroup('advanced');
                 props.onSelectSub(key);
               }}
               mcpInstances={props.mcpInstances}
               dirtyMcpKeys={props.dirtyMcpKeys}
-              onSelectMcp={key => {
+              onSelectMcp={(key) => {
                 props.onSelectGroup('advanced');
                 props.onSelectSub(`mcp:${key}`);
               }}
@@ -109,19 +96,29 @@ export default function SettingsSidebar(props: SidebarProps) {
                 const n = Number(props.activeSubKey.slice('cron:'.length));
                 return Number.isInteger(n) ? n : null;
               })()}
-              onSelectCron={i => {
+              onSelectCron={(i) => {
                 props.onSelectGroup('advanced');
                 props.onSelectSub(`cron:${i}`);
               }}
               onAddCronJob={props.onAddCronJob}
               onMoveCron={props.onMoveCron}
             />
+          ) : g.id === 'gateway' ? (
+            <GatewaySidebar
+              activeSubKey={props.activeGroup === 'gateway' ? props.activeSubKey : null}
+              platformInstances={props.platformInstances}
+              dirtyPlatformKeys={props.dirtyPlatformKeys}
+              onSelectPlatform={(key) => {
+                props.onSelectGroup('gateway');
+                props.onSelectSub(`gateway:${key}`);
+              }}
+              onAddPlatform={props.onAddPlatform}
+            />
           ) : (
             <SectionList
-              group={g.id}
-              sections={props.configSections.filter(s => s.group_id === g.id)}
+              sections={props.configSections.filter((s) => s.group_id === g.id)}
               activeSubKey={props.activeGroup === g.id ? props.activeSubKey : null}
-              onSelect={key => {
+              onSelect={(key) => {
                 props.onSelectGroup(g.id);
                 props.onSelectSub(key);
               }}

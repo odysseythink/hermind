@@ -1,121 +1,72 @@
 package api
 
 import (
-	"context"
 	"sync"
 )
 
-// StreamEvent is a single streaming event published to subscribers of a
-// session (token chunk, tool call, status change). The shape is
-// intentionally open so the parallel WebSocket/SSE agent can adopt it
-// without requiring changes to the REST surface.
+// StreamEvent is a single streaming event published to all current SSE
+// subscribers. The shape is intentionally open: the SSE handler
+// JSON-serializes each event verbatim, and the frontend matches on Type.
 type StreamEvent struct {
-	// Type categorizes the event. Examples: "token", "tool_call",
-	// "tool_result", "message_complete", "status".
-	Type string `json:"type"`
-
-	// SessionID identifies the session the event belongs to.
-	SessionID string `json:"session_id"`
-
-	// Data is an opaque payload specific to Type. Must be
-	// JSON-serializable so the WebSocket / SSE layer can forward it
-	// verbatim.
-	Data any `json:"data,omitempty"`
+	Type string         `json:"type"`
+	Data map[string]any `json:"data,omitempty"`
 }
 
-// StreamHub is the hook the WebSocket / SSE agent attaches to. It is a
-// tiny per-session fan-out that the REST server exposes via
-// Server.Streams(). The agent loop calls Publish as it produces events;
-// subscribers receive a channel of events until they unsubscribe or the
-// context is cancelled.
-//
-// The interface is deliberately channel-based rather than callback-based
-// so the WebSocket agent can use select{} with the connection's read
-// loop. A callback-flavor helper (Subscribe + goroutine) can be layered
-// on top without touching this package.
+// StreamHub is the fan-out the SSE handler subscribes to. Publishers
+// call Publish as they produce events; subscribers receive a channel of
+// events until they call the unsubscribe function returned by Subscribe.
 type StreamHub interface {
-	// Publish broadcasts an event to every current subscriber of
-	// ev.SessionID. It never blocks: a slow subscriber loses events
-	// rather than stalling the publisher.
 	Publish(ev StreamEvent)
-
-	// Subscribe registers interest in a given session. The returned
-	// channel receives events until ctx is cancelled or Unsubscribe is
-	// called with the returned id. The buffer size is an
-	// implementation detail but is never zero.
-	Subscribe(ctx context.Context, sessionID string) (<-chan StreamEvent, SubscriptionID)
-
-	// Unsubscribe releases a subscription. Safe to call more than once.
-	Unsubscribe(sessionID string, id SubscriptionID)
+	Subscribe() (<-chan StreamEvent, func())
 }
 
-// SubscriptionID identifies an open Subscribe call.
-type SubscriptionID uint64
-
-// NewMemoryStreamHub returns the default in-process StreamHub. It is
-// safe for concurrent use. The WebSocket agent may swap this for a
-// redis- or nats-backed implementation later by assigning a different
-// StreamHub to ServerOpts.Streams.
+// NewMemoryStreamHub returns an in-process StreamHub.
 func NewMemoryStreamHub() *MemoryStreamHub {
 	return &MemoryStreamHub{
-		subs: make(map[string]map[SubscriptionID]chan StreamEvent),
+		subs: make(map[subID]chan StreamEvent),
 	}
 }
 
-// MemoryStreamHub is an in-process StreamHub backed by a map of
-// per-session subscriber channels.
+type subID uint64
+
+// MemoryStreamHub is the default in-process StreamHub. Single global
+// fan-out — every subscriber gets every event.
 type MemoryStreamHub struct {
 	mu   sync.RWMutex
-	next SubscriptionID
-	subs map[string]map[SubscriptionID]chan StreamEvent
+	next subID
+	subs map[subID]chan StreamEvent
 }
 
 // Publish implements StreamHub.
 func (h *MemoryStreamHub) Publish(ev StreamEvent) {
 	h.mu.RLock()
 	defer h.mu.RUnlock()
-	for _, ch := range h.subs[ev.SessionID] {
+	for _, ch := range h.subs {
 		select {
 		case ch <- ev:
 		default:
-			// Drop rather than block — slow subscriber loses events.
+			// Drop rather than block.
 		}
 	}
 }
 
 // Subscribe implements StreamHub.
-func (h *MemoryStreamHub) Subscribe(ctx context.Context, sessionID string) (<-chan StreamEvent, SubscriptionID) {
+func (h *MemoryStreamHub) Subscribe() (<-chan StreamEvent, func()) {
 	ch := make(chan StreamEvent, 64)
 
 	h.mu.Lock()
 	h.next++
 	id := h.next
-	if h.subs[sessionID] == nil {
-		h.subs[sessionID] = make(map[SubscriptionID]chan StreamEvent)
-	}
-	h.subs[sessionID][id] = ch
+	h.subs[id] = ch
 	h.mu.Unlock()
 
-	// Auto-cleanup when ctx cancels.
-	go func() {
-		<-ctx.Done()
-		h.Unsubscribe(sessionID, id)
-	}()
-
-	return ch, id
-}
-
-// Unsubscribe implements StreamHub.
-func (h *MemoryStreamHub) Unsubscribe(sessionID string, id SubscriptionID) {
-	h.mu.Lock()
-	defer h.mu.Unlock()
-	if m, ok := h.subs[sessionID]; ok {
-		if ch, ok := m[id]; ok {
-			close(ch)
-			delete(m, id)
-		}
-		if len(m) == 0 {
-			delete(h.subs, sessionID)
+	unsubscribe := func() {
+		h.mu.Lock()
+		defer h.mu.Unlock()
+		if c, ok := h.subs[id]; ok {
+			close(c)
+			delete(h.subs, id)
 		}
 	}
+	return ch, unsubscribe
 }

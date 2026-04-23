@@ -1,4 +1,4 @@
-import type { Config, ConfigSection, PlatformInstance, SchemaDescriptor } from './api/schemas';
+import type { Config, ConfigSection } from './api/schemas';
 import { GROUPS, type GroupId } from './shell/groups';
 import { loadExpandedGroups, saveExpandedGroups } from './shell/persistence';
 import { setPath } from './util/path';
@@ -18,30 +18,20 @@ export interface ShellSliceState {
 
 export interface AppState {
   status: Status;
-  descriptors: SchemaDescriptor[];
   configSections: ConfigSection[];
   config: Config;
   originalConfig: Config;
-  /** Legacy field retained for existing IM code paths.
-   *  Mirrors shell.activeSubKey when shell.activeGroup === 'gateway'. */
-  selectedKey: string | null;
   flash: Flash | null;
   shell: ShellSliceState;
+  providerModels: Record<string, string[]>;
 }
 
 export type Action =
-  | { type: 'boot/loaded'; descriptors: SchemaDescriptor[]; configSections: ConfigSection[]; config: Config }
+  | { type: 'boot/loaded'; configSections: ConfigSection[]; config: Config }
   | { type: 'boot/failed'; error: string }
-  | { type: 'select'; key: string | null }
   | { type: 'flash'; flash: Flash | null }
   | { type: 'save/start' }
   | { type: 'save/done'; error?: string }
-  | { type: 'apply/start' }
-  | { type: 'apply/done'; error?: string }
-  | { type: 'edit/field'; key: string; field: string; value: string }
-  | { type: 'edit/enabled'; key: string; enabled: boolean }
-  | { type: 'instance/delete'; key: string }
-  | { type: 'instance/create'; key: string; platformType: string }
   | { type: 'shell/selectGroup'; group: GroupId | null }
   | { type: 'shell/selectSub'; key: string | null }
   | { type: 'shell/toggleGroup'; group: GroupId }
@@ -55,21 +45,21 @@ export type Action =
   | { type: 'list-instance/delete'; sectionKey: string; subkey?: string; index: number }
   | { type: 'list-instance/move-up'; sectionKey: string; subkey?: string; index: number }
   | { type: 'list-instance/move-down'; sectionKey: string; subkey?: string; index: number }
-  | { type: 'list-instance/move'; sectionKey: string; subkey?: string; from: number; to: number };
+  | { type: 'list-instance/move'; sectionKey: string; subkey?: string; from: number; to: number }
+  | { type: 'provider/models/loaded'; providerKey: string; models: string[] };
 
 export const initialState: AppState = {
   status: 'booting',
-  descriptors: [],
   configSections: [],
   config: {},
   originalConfig: {},
-  selectedKey: null,
   flash: null,
   shell: {
     activeGroup: null,
     activeSubKey: null,
     expandedGroups: loadExpandedGroups(),
   },
+  providerModels: {},
 };
 
 export function reducer(state: AppState, action: Action): AppState {
@@ -78,7 +68,6 @@ export function reducer(state: AppState, action: Action): AppState {
       return {
         ...state,
         status: 'ready',
-        descriptors: action.descriptors,
         configSections: action.configSections,
         config: action.config,
         originalConfig: action.config,
@@ -89,8 +78,6 @@ export function reducer(state: AppState, action: Action): AppState {
         status: 'error',
         flash: { kind: 'err', msg: action.error },
       };
-    case 'select':
-      return { ...state, selectedKey: action.key };
     case 'flash':
       return { ...state, flash: action.flash };
     case 'save/start':
@@ -104,37 +91,8 @@ export function reducer(state: AppState, action: Action): AppState {
             originalConfig: state.config,
             flash: { kind: 'ok', msg: 'Saved.' },
           };
-    case 'apply/start':
-      return { ...state, status: 'applying', flash: null };
-    case 'apply/done':
-      return action.error
-        ? { ...state, status: 'ready', flash: { kind: 'err', msg: action.error } }
-        : { ...state, status: 'ready', flash: { kind: 'ok', msg: 'Applied.' } };
-    case 'edit/field':
-      return { ...state, config: setField(state.config, action.key, action.field, action.value) };
-    case 'edit/enabled':
-      return { ...state, config: setEnabled(state.config, action.key, action.enabled) };
-    case 'instance/delete':
+    case 'shell/selectGroup':
       return {
-        ...state,
-        config: deleteInstance(state.config, action.key),
-        selectedKey: state.selectedKey === action.key ? null : state.selectedKey,
-      };
-    case 'instance/create': {
-      const plats = { ...(state.config.gateway?.platforms ?? {}) };
-      plats[action.key] = {
-        enabled: true,
-        type: action.platformType,
-        options: {},
-      };
-      return {
-        ...state,
-        config: { ...state.config, gateway: { ...(state.config.gateway ?? {}), platforms: plats } },
-        selectedKey: action.key,
-      };
-    }
-    case 'shell/selectGroup': {
-      const next = {
         ...state,
         shell: {
           ...state.shell,
@@ -142,15 +100,10 @@ export function reducer(state: AppState, action: Action): AppState {
           activeSubKey: null,
         },
       };
-      // Keep legacy selectedKey in sync so the existing IM Editor path keeps working
-      return { ...next, selectedKey: null };
-    }
     case 'shell/selectSub':
       return {
         ...state,
         shell: { ...state.shell, activeSubKey: action.key },
-        selectedKey:
-          state.shell.activeGroup === 'gateway' ? action.key : state.selectedKey,
       };
     case 'shell/toggleGroup': {
       const expanded = new Set(state.shell.expandedGroups);
@@ -170,7 +123,7 @@ export function reducer(state: AppState, action: Action): AppState {
         } as typeof state.config,
       };
     }
-    case 'edit/config-scalar': {
+    case 'edit/config-scalar':
       return {
         ...state,
         config: {
@@ -178,7 +131,6 @@ export function reducer(state: AppState, action: Action): AppState {
           [action.sectionKey]: action.value,
         } as typeof state.config,
       };
-    }
     case 'edit/keyed-instance-field': {
       const container =
         (resolveContainer(state.config, action.sectionKey, action.subkey) as
@@ -296,58 +248,17 @@ export function reducer(state: AppState, action: Action): AppState {
         config: writeContainer(state.config, action.sectionKey, action.subkey, nextList),
       };
     }
+    case 'provider/models/loaded':
+      return {
+        ...state,
+        providerModels: {
+          ...state.providerModels,
+          [action.providerKey]: action.models,
+        },
+      };
   }
 }
 
-/** listInstances returns keys in the current config.gateway.platforms map, sorted. */
-export function listInstances(state: AppState): string[] {
-  const plats = state.config.gateway?.platforms ?? {};
-  return Object.keys(plats).sort();
-}
-
-/** dirtyCount returns how many instance keys differ between config and
- * originalConfig. Added keys count. Deleted keys count. Any mutation
- * inside a surviving key counts as one. */
-export function dirtyCount(state: AppState): number {
-  const a = state.config.gateway?.platforms ?? {};
-  const b = state.originalConfig.gateway?.platforms ?? {};
-  const keys = new Set<string>([...Object.keys(a), ...Object.keys(b)]);
-  let n = 0;
-  for (const k of keys) {
-    if (!shallowEqualInstance(a[k], b[k])) n++;
-  }
-  return n;
-}
-
-/** instanceDirty returns true when a single key differs between the
- * current config and the snapshot. Used by the Sidebar to render a
- * per-instance unsaved indicator. */
-export function instanceDirty(state: AppState, key: string): boolean {
-  const a = state.config.gateway?.platforms?.[key];
-  const b = state.originalConfig.gateway?.platforms?.[key];
-  return !shallowEqualInstance(a, b);
-}
-
-function shallowEqualInstance(
-  a: PlatformInstance | undefined,
-  b: PlatformInstance | undefined,
-): boolean {
-  if (a === b) return true;
-  if (!a || !b) return false;
-  if (a.type !== b.type) return false;
-  if ((a.enabled ?? false) !== (b.enabled ?? false)) return false;
-  const ao = a.options ?? {};
-  const bo = b.options ?? {};
-  const keys = new Set<string>([...Object.keys(ao), ...Object.keys(bo)]);
-  for (const k of keys) {
-    if ((ao[k] ?? '') !== (bo[k] ?? '')) return false;
-  }
-  return true;
-}
-
-/** resolveContainer returns the object/array at config[sectionKey] when
- *  subkey is empty, or at config[sectionKey][subkey] when set. Returns
- *  undefined when the path doesn't exist or an intermediate isn't a map. */
 function resolveContainer(
   config: Config,
   sectionKey: string,
@@ -361,10 +272,6 @@ function resolveContainer(
   return (top as Record<string, unknown>)[subkey];
 }
 
-/** writeContainer returns a new Config where the value at
- *  config[sectionKey] (subkey empty) OR config[sectionKey][subkey] (subkey set)
- *  is replaced with `next`. Preserves sibling keys under sectionKey when
- *  subkey is set. */
 function writeContainer(
   config: Config,
   sectionKey: string,
@@ -382,38 +289,8 @@ function writeContainer(
   } as typeof config;
 }
 
-function setField(config: Config, key: string, field: string, value: string): Config {
-  const plats = { ...(config.gateway?.platforms ?? {}) };
-  const prev = plats[key];
-  if (!prev) return config;
-  const opts = { ...(prev.options ?? {}), [field]: value };
-  plats[key] = { ...prev, options: opts };
-  return { ...config, gateway: { ...(config.gateway ?? {}), platforms: plats } };
-}
-
-function setEnabled(config: Config, key: string, enabled: boolean): Config {
-  const plats = { ...(config.gateway?.platforms ?? {}) };
-  const prev = plats[key];
-  if (!prev) return config;
-  plats[key] = { ...prev, enabled };
-  return { ...config, gateway: { ...(config.gateway ?? {}), platforms: plats } };
-}
-
-function deleteInstance(config: Config, key: string): Config {
-  const plats = { ...(config.gateway?.platforms ?? {}) };
-  if (!(key in plats)) return config;
-  delete plats[key];
-  return { ...config, gateway: { ...(config.gateway ?? {}), platforms: plats } };
-}
-
-/** groupDirty returns true if the config slice for the group differs from
- *  the originalConfig snapshot. Stage 1: only 'gateway' can be dirty. */
 export function groupDirty(state: AppState, group: GroupId): boolean {
-  if (group === 'gateway') {
-    return dirtyCount(state) > 0;
-  }
-  // For non-gateway groups, compare the relevant configKeys shallowly.
-  const def = GROUPS.find(g => g.id === group);
+  const def = GROUPS.find((g) => g.id === group);
   if (!def) return false;
   const a = state.config as unknown as Record<string, unknown>;
   const b = state.originalConfig as unknown as Record<string, unknown>;
@@ -423,7 +300,6 @@ export function groupDirty(state: AppState, group: GroupId): boolean {
   return false;
 }
 
-/** dirtyGroups returns the set of groups with unsaved changes. */
 export function dirtyGroups(state: AppState): Set<GroupId> {
   const out = new Set<GroupId>();
   for (const g of GROUPS) {
@@ -432,12 +308,9 @@ export function dirtyGroups(state: AppState): Set<GroupId> {
   return out;
 }
 
-/** totalDirtyCount returns how many units have unsaved changes: the
- *  per-instance gateway diff count plus one per dirty non-gateway group. */
 export function totalDirtyCount(state: AppState): number {
-  let n = dirtyCount(state);
+  let n = 0;
   for (const g of GROUPS) {
-    if (g.id === 'gateway') continue;
     if (groupDirty(state, g.id)) n++;
   }
   return n;

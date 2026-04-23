@@ -96,7 +96,6 @@ func TestEngineE2E_ToolRoundTrip(t *testing.T) {
 	engine := agent.NewEngineWithTools(p, store, reg, config.AgentConfig{MaxTurns: 10}, "cli")
 	result, err := engine.RunConversation(context.Background(), &agent.RunOptions{
 		UserMessage: "read " + testFilePath,
-		SessionID:   "e2e-tool-test",
 		Model:       "claude-opus-4-6",
 	})
 	require.NoError(t, err)

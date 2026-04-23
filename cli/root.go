@@ -30,7 +30,6 @@ func NewRootCmd(app *App) *cobra.Command {
 
 	root.AddCommand(
 		newRunCmd(app),
-		newGatewayCmd(app),
 		newCronCmd(app),
 		newSkillsCmd(app),
 		newSetupCmd(app),
@@ -38,7 +37,6 @@ func NewRootCmd(app *App) *cobra.Command {
 		newDoctorCmd(app),
 		newAuthCmd(app),
 		newModelsCmd(app),
-		newProfileCmd(app),
 		newPluginsCmd(app),
 		newUpgradeCmd(app),
 		newRLCmd(app),
@@ -50,8 +48,7 @@ func NewRootCmd(app *App) *cobra.Command {
 	// Default action (bare `hermind`): launch the web UI.
 	root.RunE = func(cmd *cobra.Command, args []string) error {
 		return runWeb(cmd.Context(), app, webRunOptions{
-			Addr: "127.0.0.1:9119",
-			Out:  cmd.OutOrStdout(),
+			Out: cmd.OutOrStdout(),
 		})
 	}
 

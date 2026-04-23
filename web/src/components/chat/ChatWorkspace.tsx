@@ -1,80 +1,75 @@
-import { useReducer, useEffect, useState } from 'react';
+import { useEffect, useReducer, useState } from 'react';
 import { useTranslation } from 'react-i18next';
-import ChatSidebar from './ChatSidebar';
 import ConversationHeader from './ConversationHeader';
 import MessageList from './MessageList';
 import ComposerBar from './ComposerBar';
 import Toast from './Toast';
 import styles from './ChatWorkspace.module.css';
-import { useSessionList } from '../../hooks/useSessionList';
 import { useChatStream } from '../../hooks/useChatStream';
 import { chatReducer, initialChatState } from '../../state/chat';
 import { apiFetch, ApiError } from '../../api/client';
-import {
-  MessageSubmitResponseSchema,
-  MessagesResponseSchema,
-} from '../../api/schemas';
+import { ConversationHistoryResponseSchema } from '../../api/schemas';
 
 type Props = {
-  sessionId: string | null;
-  onChangeSession: (id: string) => void;
+  instanceRoot: string;
   providerConfigured?: boolean;
+  modelOptions: string[];
+  currentModel: string;
 };
 
-const MODEL_OPTIONS = ['', 'claude-opus-4-7', 'claude-sonnet-4-6', 'gpt-4'];
-
-export default function ChatWorkspace({ sessionId, onChangeSession, providerConfigured = true }: Props) {
+export default function ChatWorkspace({
+  instanceRoot,
+  providerConfigured = true,
+  modelOptions,
+  currentModel,
+}: Props) {
   const { t } = useTranslation('ui');
   const [state, dispatch] = useReducer(chatReducer, initialChatState);
-  const { sessions, newSession } = useSessionList();
   const [toast, setToast] = useState<string | null>(null);
+  const [runtimeModel, setRuntimeModel] = useState<string>(currentModel);
 
-  // Subscribe to SSE for the active session.
-  useChatStream(sessionId, dispatch);
+  useChatStream(dispatch);
 
-  // Load message history when sessionId changes.
+  // Track currentModel changes (e.g. settings save reloads meta).
   useEffect(() => {
-    if (!sessionId) return;
+    setRuntimeModel((prev) => (prev === '' && currentModel ? currentModel : prev));
+  }, [currentModel]);
+
+  useEffect(() => {
     const ctrl = new AbortController();
-    apiFetch(`/api/sessions/${encodeURIComponent(sessionId)}/messages`, {
-      schema: MessagesResponseSchema,
+    apiFetch('/api/conversation', {
+      schema: ConversationHistoryResponseSchema,
       signal: ctrl.signal,
     })
-      .then((r) => {
+      .then((r) =>
         dispatch({
-          type: 'chat/messages/loaded',
-          sessionId,
+          type: 'chat/history/loaded',
           messages: r.messages.map((m) => ({
-            id: m.id,
+            id: String(m.id),
             role: m.role,
             content: m.content,
-            timestamp: m.timestamp ?? Date.now(),
+            timestamp: m.timestamp,
           })),
-        });
-      })
-      .catch((err) => {
-        if (ctrl.signal.aborted) return;
-        // 404 = new session, no history yet — silent.
-        if (err instanceof ApiError && err.status === 404) return;
-        console.warn('load messages failed', err);
+        }),
+      )
+      .catch(() => {
+        /* empty history is fine */
       });
     return () => ctrl.abort();
-  }, [sessionId]);
+  }, []);
 
   async function handleSend() {
-    if (!sessionId) return;
     const text = state.composer.text.trim();
     if (!text) return;
     dispatch({ type: 'chat/composer/setText', text: '' });
-    dispatch({ type: 'chat/stream/start', sessionId, userText: text });
+    dispatch({ type: 'chat/stream/start', userText: text });
     try {
-      await apiFetch(`/api/sessions/${encodeURIComponent(sessionId)}/messages`, {
+      await apiFetch('/api/conversation/messages', {
         method: 'POST',
-        body: { text, model: state.composer.selectedModel || undefined },
-        schema: MessageSubmitResponseSchema,
+        body: { user_message: text, model: runtimeModel },
       });
     } catch (err) {
-      dispatch({ type: 'chat/stream/rollbackUserMessage', sessionId });
+      dispatch({ type: 'chat/stream/rollbackUserMessage' });
       if (err instanceof ApiError) {
         if (err.status === 409) setToast(t('chat.errorBusy'));
         else if (err.status === 503) setToast(t('chat.errorNoProvider'));
@@ -86,76 +81,44 @@ export default function ChatWorkspace({ sessionId, onChangeSession, providerConf
   }
 
   async function handleStop() {
-    if (!sessionId) return;
     try {
-      await apiFetch(`/api/sessions/${encodeURIComponent(sessionId)}/cancel`, {
-        method: 'POST',
-      });
+      await apiFetch('/api/conversation/cancel', { method: 'POST' });
     } catch (err) {
       console.warn('cancel failed', err);
     }
   }
 
-  const activeTitle =
-    sessions.find((s) => s.id === sessionId)?.title ?? t('chat.newConversation');
-
   return (
     <div className={styles.workspace}>
-      <ChatSidebar
-        sessions={sessions}
-        activeId={sessionId}
-        onSelect={onChangeSession}
-        onNew={() => {
-          const id = newSession();
-          onChangeSession(id);
+      <ConversationHeader
+        instanceRoot={instanceRoot}
+        modelOptions={modelOptions}
+        selectedModel={runtimeModel}
+        onSelectModel={setRuntimeModel}
+        onStop={handleStop}
+        streaming={state.streaming.status === 'running'}
+      />
+      <MessageList
+        messages={state.messages}
+        streamingDraft={state.streaming.assistantDraft}
+        streamingToolCalls={state.streaming.toolCalls}
+      />
+      {state.streaming.status === 'error' && state.streaming.error && (
+        <div role="alert" className={styles.errorBanner}>
+          {state.streaming.error}
+        </div>
+      )}
+      <ComposerBar
+        text={state.composer.text}
+        onChangeText={(txt) => dispatch({ type: 'chat/composer/setText', text: txt })}
+        onSend={handleSend}
+        onStop={handleStop}
+        disabled={!providerConfigured}
+        streaming={state.streaming.status === 'running'}
+        onSlashCommand={(cmd) => {
+          if (cmd === 'clear') dispatch({ type: 'chat/composer/setText', text: '' });
         }}
       />
-      <main className={styles.main}>
-        <ConversationHeader
-          title={activeTitle}
-          model={state.composer.selectedModel}
-          modelOptions={MODEL_OPTIONS}
-          onModelChange={(m) => dispatch({ type: 'chat/composer/setModel', model: m })}
-        />
-        <MessageList
-          messages={state.messagesBySession[sessionId ?? ''] ?? []}
-          streamingDraft={state.streaming.assistantDraft}
-          streamingToolCalls={state.streaming.toolCalls}
-          streamingSessionId={state.streaming.sessionId}
-          activeSessionId={sessionId}
-        />
-        {state.streaming.status === 'error' && state.streaming.error && (
-          <div role="alert" className={styles.errorBanner}>
-            {state.streaming.error}
-          </div>
-        )}
-        <ComposerBar
-          text={state.composer.text}
-          onChangeText={(txt) => dispatch({ type: 'chat/composer/setText', text: txt })}
-          onSend={handleSend}
-          onStop={handleStop}
-          disabled={!providerConfigured}
-          streaming={state.streaming.status === 'running'}
-          onSlashCommand={(cmd) => {
-            switch (cmd) {
-              case 'new': {
-                const id = newSession();
-                onChangeSession(id);
-                dispatch({ type: 'chat/composer/setText', text: '' });
-                break;
-              }
-              case 'settings':
-                window.location.hash = '#/settings/models';
-                dispatch({ type: 'chat/composer/setText', text: '' });
-                break;
-              case 'model':
-              case 'clear':
-                dispatch({ type: 'chat/composer/setText', text: '' });
-                break;
-            }
-          }}
-        />
-      </main>
       {toast && <Toast message={toast} onDismiss={() => setToast(null)} />}
     </div>
   );

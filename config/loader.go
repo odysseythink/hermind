@@ -5,26 +5,22 @@ import (
 	"fmt"
 	"os"
 	"path/filepath"
-	"strings"
 
 	"gopkg.in/yaml.v3"
 )
 
-// DefaultConfigDir is the default location for hermes config files.
 const (
-	DefaultConfigDir  = "~/.hermind"
 	DefaultConfigFile = "config.yaml"
 	DefaultDBFile     = "state.db"
 )
 
-// Load reads the default config file at ~/.hermind/config.yaml.
-// Missing file is not an error — returns defaults.
+// Load reads <instance-root>/config.yaml. Missing file returns defaults.
 func Load() (*Config, error) {
-	path, err := expandPath(filepath.Join(DefaultConfigDir, DefaultConfigFile))
+	root, err := InstanceRoot()
 	if err != nil {
 		return nil, err
 	}
-	return LoadFromPath(path)
+	return LoadFromPath(filepath.Join(root, DefaultConfigFile))
 }
 
 // LoadFromPath reads a specific config file. Missing file returns defaults.
@@ -33,7 +29,6 @@ func LoadFromPath(path string) (*Config, error) {
 
 	data, err := os.ReadFile(path)
 	if errors.Is(err, os.ErrNotExist) {
-		// Missing config file is OK — defaults apply
 		resolveDefaults(cfg)
 		return cfg, nil
 	}
@@ -49,27 +44,11 @@ func LoadFromPath(path string) (*Config, error) {
 	return cfg, nil
 }
 
-// expandPath resolves ~ in paths to the user home directory.
-// Only handles bare "~" or "~/..." — leaves "~username/..." untouched.
-func expandPath(p string) (string, error) {
-	if p != "~" && !strings.HasPrefix(p, "~/") {
-		return p, nil
-	}
-	home, err := os.UserHomeDir()
-	if err != nil {
-		return "", fmt.Errorf("config: resolve home: %w", err)
-	}
-	if p == "~" {
-		return home, nil
-	}
-	return filepath.Join(home, strings.TrimPrefix(p, "~/")), nil
-}
-
-// resolveDefaults fills in missing values that depend on environment.
+// resolveDefaults fills in environment-dependent values after a load.
 func resolveDefaults(cfg *Config) {
 	if cfg.Storage.SQLitePath == "" {
-		if home, err := os.UserHomeDir(); err == nil {
-			cfg.Storage.SQLitePath = filepath.Join(home, ".hermind", DefaultDBFile)
+		if root, err := InstanceRoot(); err == nil {
+			cfg.Storage.SQLitePath = filepath.Join(root, DefaultDBFile)
 		}
 	}
 }

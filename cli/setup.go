@@ -7,6 +7,7 @@ import (
 	"path/filepath"
 	"strings"
 
+	"github.com/odysseythink/hermind/config"
 	"github.com/spf13/cobra"
 )
 
@@ -22,12 +23,12 @@ func newSetupCmd(app *App) *cobra.Command {
 }
 
 // runSetupInteractive walks the user through minimum config and
-// writes ~/.hermind/config.yaml. The file is rendered from a template
+// writes <instance>/config.yaml. The file is rendered from a template
 // that includes commented-out blocks for every supported provider so
 // users can enable additional ones by uncommenting.
 func runSetupInteractive(reader *bufio.Reader) error {
 	fmt.Println("hermind setup — interactive configuration wizard")
-	fmt.Println("This writes ~/.hermind/config.yaml. Press Enter to accept defaults.")
+	fmt.Println("This writes <instance>/config.yaml. Press Enter to accept defaults.")
 	fmt.Println("Tip: `hermind config` is the interactive TUI editor for an existing config.")
 	fmt.Println()
 
@@ -35,17 +36,16 @@ func runSetupInteractive(reader *bufio.Reader) error {
 	apiKey := prompt(reader, fmt.Sprintf("%s api key (leave blank to snapshot from env)", provider), "")
 	model := prompt(reader, "Default model [claude-opus-4-6]", "claude-opus-4-6")
 	terminalBackend := prompt(reader, "Terminal backend [local]", "local")
-	storagePath := prompt(reader, "SQLite path [~/.hermind/state.db]", "~/.hermind/state.db")
+	storagePath := prompt(reader, "SQLite path [<instance>/state.db]", "")
 
-	home, err := os.UserHomeDir()
+	cfgDir, err := config.InstanceRoot()
 	if err != nil {
 		return err
 	}
-	cfgDir := filepath.Join(home, ".hermind")
 	if err := os.MkdirAll(cfgDir, 0o755); err != nil {
 		return err
 	}
-	cfgPath := filepath.Join(cfgDir, "config.yaml")
+	cfgPath := filepath.Join(cfgDir, config.DefaultConfigFile)
 
 	content := renderConfigTemplate(provider, apiKey, model, terminalBackend, storagePath)
 	if err := os.WriteFile(cfgPath, []byte(content), 0o644); err != nil {
@@ -129,7 +129,9 @@ func renderConfigTemplate(activeProvider, apiKey, model, terminalBackend, storag
 
 	b.WriteString("storage:\n")
 	b.WriteString("  driver: sqlite\n")
-	fmt.Fprintf(&b, "  sqlite_path: %s\n", storagePath)
+	if storagePath != "" {
+		fmt.Fprintf(&b, "  sqlite_path: %s\n", storagePath)
+	}
 
 	return b.String()
 }

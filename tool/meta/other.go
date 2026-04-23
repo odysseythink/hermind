@@ -173,11 +173,15 @@ func RegisterSessionSearch(reg *tool.Registry, store storage.Storage) {
 			}
 			out := make([]map[string]any, 0, len(hits))
 			for _, h := range hits {
-				out = append(out, map[string]any{
-					"session_id": h.SessionID,
-					"snippet":    h.Snippet,
-					"rank":       h.Rank,
-				})
+				entry := map[string]any{
+					"snippet": h.Snippet,
+					"rank":    h.Rank,
+				}
+				if h.Message != nil {
+					entry["id"] = h.Message.ID
+					entry["role"] = h.Message.Role
+				}
+				out = append(out, entry)
 			}
 			return tool.ToolResult(map[string]any{"hits": out}), nil
 		},
@@ -233,8 +237,11 @@ func defaultCheckpointDir() string {
 	if v := os.Getenv("HERMIND_HOME"); v != "" {
 		return filepath.Join(v, "checkpoints")
 	}
-	home, _ := os.UserHomeDir()
-	return filepath.Join(home, ".hermind", "checkpoints")
+	cwd, err := os.Getwd()
+	if err != nil {
+		return ".hermind/checkpoints"
+	}
+	return filepath.Join(cwd, ".hermind", "checkpoints")
 }
 
 func validName(name string) bool {

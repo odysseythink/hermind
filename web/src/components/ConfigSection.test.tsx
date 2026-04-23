@@ -94,19 +94,6 @@ describe('ConfigSection', () => {
     expect(calls[calls.length - 1][1]).toBe('/tmp/x.sqlite');
   });
 
-  it('disables the Show button on secret fields with an explanatory tooltip', () => {
-    render(
-      <ConfigSection
-        section={storage}
-        value={{ driver: 'postgres', postgres_url: '' }}
-        originalValue={{ driver: 'postgres', postgres_url: '' }}
-        onFieldChange={() => {}}
-      />,
-    );
-    const btn = screen.getByRole('button', { name: /show/i });
-    expect(btn).toBeDisabled();
-    expect(btn).toHaveAttribute('title', 'Reveal not supported for this field (stage 2)');
-  });
 });
 
 const tracing: ConfigSectionT = {

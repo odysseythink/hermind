@@ -94,13 +94,13 @@ func TestWebCmd_BindsAndServesStatus(t *testing.T) {
 	}
 	_ = resp.Body.Close()
 
-	// /api/sessions without auth must 401.
+	// /api/sessions is gone in the single-conversation model — 404 now.
 	resp, err = http.Get(addr + "/api/sessions")
 	if err != nil {
 		t.Fatalf("GET /api/sessions: %v", err)
 	}
-	if resp.StatusCode != 401 {
-		t.Errorf("unauth status = %d, want 401", resp.StatusCode)
+	if resp.StatusCode != 404 {
+		t.Errorf("status = %d, want 404", resp.StatusCode)
 	}
 	_ = resp.Body.Close()
 

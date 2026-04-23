@@ -18,14 +18,13 @@ import (
 func TestConfigSchema_IncludesStorageSection(t *testing.T) {
 	srv, err := api.NewServer(&api.ServerOpts{
 		Config: &config.Config{},
-		Token:  "test-token",
+
 	})
 	if err != nil {
 		t.Fatalf("NewServer: %v", err)
 	}
 
 	req := httptest.NewRequest("GET", "/api/config/schema", nil)
-	req.Header.Set("Authorization", "Bearer test-token")
 	w := httptest.NewRecorder()
 	srv.Router().ServeHTTP(w, req)
 
@@ -73,10 +72,9 @@ func TestConfigSchema_IncludesStorageSection(t *testing.T) {
 func TestConfigSchema_SectionsSortedByKey(t *testing.T) {
 	srv, _ := api.NewServer(&api.ServerOpts{
 		Config: &config.Config{},
-		Token:  "test-token",
+
 	})
 	req := httptest.NewRequest("GET", "/api/config/schema", nil)
-	req.Header.Set("Authorization", "Bearer test-token")
 	w := httptest.NewRecorder()
 	srv.Router().ServeHTTP(w, req)
 
@@ -99,13 +97,12 @@ func TestConfigSchema_SectionsSortedByKey(t *testing.T) {
 func TestConfigSchema_IncludesStage3Sections(t *testing.T) {
 	srv, err := api.NewServer(&api.ServerOpts{
 		Config: &config.Config{},
-		Token:  "test-token",
+
 	})
 	if err != nil {
 		t.Fatalf("NewServer: %v", err)
 	}
 	req := httptest.NewRequest("GET", "/api/config/schema", nil)
-	req.Header.Set("Authorization", "Bearer test-token")
 	w := httptest.NewRecorder()
 	srv.Router().ServeHTTP(w, req)
 
@@ -147,13 +144,12 @@ func TestConfigSchema_OmitsShapeForMapSections(t *testing.T) {
 	// JSON. Protects byte-level backwards compat for Stage 2/3 sections.
 	srv, err := api.NewServer(&api.ServerOpts{
 		Config: &config.Config{},
-		Token:  "test-token",
+
 	})
 	if err != nil {
 		t.Fatalf("NewServer: %v", err)
 	}
 	req := httptest.NewRequest("GET", "/api/config/schema", nil)
-	req.Header.Set("Authorization", "Bearer test-token")
 	w := httptest.NewRecorder()
 	srv.Router().ServeHTTP(w, req)
 
@@ -182,13 +178,12 @@ func TestConfigSchema_OmitsShapeForMapSections(t *testing.T) {
 func TestConfigSchema_IncludesStage4aSections(t *testing.T) {
 	srv, err := api.NewServer(&api.ServerOpts{
 		Config: &config.Config{},
-		Token:  "test-token",
+
 	})
 	if err != nil {
 		t.Fatalf("NewServer: %v", err)
 	}
 	req := httptest.NewRequest("GET", "/api/config/schema", nil)
-	req.Header.Set("Authorization", "Bearer test-token")
 	w := httptest.NewRecorder()
 	srv.Router().ServeHTTP(w, req)
 
@@ -249,13 +244,12 @@ func TestConfigSchema_IncludesStage4aSections(t *testing.T) {
 func TestConfigSchema_IncludesStage4cSections(t *testing.T) {
 	srv, err := api.NewServer(&api.ServerOpts{
 		Config: &config.Config{},
-		Token:  "test-token",
+
 	})
 	if err != nil {
 		t.Fatalf("NewServer: %v", err)
 	}
 	req := httptest.NewRequest("GET", "/api/config/schema", nil)
-	req.Header.Set("Authorization", "Bearer test-token")
 	w := httptest.NewRecorder()
 	srv.Router().ServeHTTP(w, req)
 
@@ -323,13 +317,12 @@ func TestConfigSchema_EmitsDatalistSource(t *testing.T) {
 
 	srv, err := api.NewServer(&api.ServerOpts{
 		Config: &config.Config{},
-		Token:  "test-token",
+
 	})
 	if err != nil {
 		t.Fatalf("NewServer: %v", err)
 	}
 	req := httptest.NewRequest("GET", "/api/config/schema", nil)
-	req.Header.Set("Authorization", "Bearer test-token")
 	w := httptest.NewRecorder()
 	srv.Router().ServeHTTP(w, req)
 
@@ -379,10 +372,9 @@ func TestConfigSchema_EmitsDatalistSource(t *testing.T) {
 func TestConfigSchema_OmitsDatalistSourceByDefault(t *testing.T) {
 	srv, _ := api.NewServer(&api.ServerOpts{
 		Config: &config.Config{},
-		Token:  "test-token",
+
 	})
 	req := httptest.NewRequest("GET", "/api/config/schema", nil)
-	req.Header.Set("Authorization", "Bearer test-token")
 	w := httptest.NewRecorder()
 	srv.Router().ServeHTTP(w, req)
 
@@ -426,13 +418,12 @@ func TestConfigSchema_EmitsListShapeString(t *testing.T) {
 
 	srv, err := api.NewServer(&api.ServerOpts{
 		Config: &config.Config{},
-		Token:  "test-token",
+
 	})
 	if err != nil {
 		t.Fatalf("NewServer: %v", err)
 	}
 	req := httptest.NewRequest("GET", "/api/config/schema", nil)
-	req.Header.Set("Authorization", "Bearer test-token")
 	w := httptest.NewRecorder()
 	srv.Router().ServeHTTP(w, req)
 
@@ -481,13 +472,12 @@ func TestConfigSchema_EmitsKeyedMapShapeString(t *testing.T) {
 
 	srv, err := api.NewServer(&api.ServerOpts{
 		Config: &config.Config{},
-		Token:  "test-token",
+
 	})
 	if err != nil {
 		t.Fatalf("NewServer: %v", err)
 	}
 	req := httptest.NewRequest("GET", "/api/config/schema", nil)
-	req.Header.Set("Authorization", "Bearer test-token")
 	w := httptest.NewRecorder()
 	srv.Router().ServeHTTP(w, req)
 
@@ -534,14 +524,13 @@ func TestConfigSchema_SkillsDisabledEnumFromLoader(t *testing.T) {
 
 	srv, err := api.NewServer(&api.ServerOpts{
 		Config: &config.Config{},
-		Token:  "test-token",
+
 	})
 	if err != nil {
 		t.Fatalf("NewServer: %v", err)
 	}
 
 	req := httptest.NewRequest("GET", "/api/config/schema", nil)
-	req.Header.Set("Authorization", "Bearer test-token")
 	w := httptest.NewRecorder()
 	srv.Router().ServeHTTP(w, req)
 
@@ -609,13 +598,12 @@ func TestConfigSchema_EmitsSubkeyAndNoDiscriminator(t *testing.T) {
 
 	srv, err := api.NewServer(&api.ServerOpts{
 		Config: &config.Config{},
-		Token:  "test-token",
+
 	})
 	if err != nil {
 		t.Fatalf("NewServer: %v", err)
 	}
 	req := httptest.NewRequest("GET", "/api/config/schema", nil)
-	req.Header.Set("Authorization", "Bearer test-token")
 	w := httptest.NewRecorder()
 	srv.Router().ServeHTTP(w, req)
 	if w.Code != http.StatusOK {
@@ -660,13 +648,12 @@ func TestConfigSchema_OmitsSubkeyAndNoDiscriminatorWhenUnset(t *testing.T) {
 
 	srv, err := api.NewServer(&api.ServerOpts{
 		Config: &config.Config{},
-		Token:  "test-token",
+
 	})
 	if err != nil {
 		t.Fatalf("NewServer: %v", err)
 	}
 	req := httptest.NewRequest("GET", "/api/config/schema", nil)
-	req.Header.Set("Authorization", "Bearer test-token")
 	w := httptest.NewRecorder()
 	srv.Router().ServeHTTP(w, req)
 	var body struct {

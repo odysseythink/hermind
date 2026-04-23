@@ -68,25 +68,19 @@ func (b *EventBridge) Run(ctx context.Context) {
 }
 
 func (b *EventBridge) pollOnce(ctx context.Context) {
-	sess, err := b.store.ListSessions(ctx, &storage.ListOptions{Limit: 10})
+	msgs, err := b.store.GetHistory(ctx, 5, 0)
 	if err != nil {
 		return
 	}
-	for _, s := range sess {
-		msgs, err := b.store.GetMessages(ctx, s.ID, 5, 0)
-		if err != nil {
-			continue
-		}
-		for _, m := range msgs {
-			b.push(Event{
-				Cursor:     m.Timestamp.UnixMilli(),
-				Kind:       "message",
-				SessionKey: s.ID,
-				Role:       m.Role,
-				Content:    truncate(m.Content, 400),
-				At:         m.Timestamp.Unix(),
-			})
-		}
+	for _, m := range msgs {
+		b.push(Event{
+			Cursor:     m.Timestamp.UnixMilli(),
+			Kind:       "message",
+			SessionKey: "instance",
+			Role:       m.Role,
+			Content:    truncate(m.Content, 400),
+			At:         m.Timestamp.Unix(),
+		})
 	}
 }
 

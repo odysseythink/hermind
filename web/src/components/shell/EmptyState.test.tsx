@@ -8,7 +8,6 @@ describe('EmptyState', () => {
     render(<EmptyState onSelectGroup={() => {}} />);
     for (const label of [
       'Models',
-      'Gateway',
       'Memory',
       'Skills',
       'Runtime',

@@ -1,50 +1,50 @@
 import styles from './GatewaySidebar.module.css';
-import type { SchemaDescriptor } from '../../../api/schemas';
+import { useTranslation } from 'react-i18next';
 
 export interface GatewaySidebarProps {
-  instances: Array<{ key: string; type: string; enabled: boolean }>;
-  selectedKey: string | null;
-  descriptors: SchemaDescriptor[];
-  dirtyKeys: Set<string>;
-  onSelect: (key: string) => void;
-  onNewInstance: () => void;
+  activeSubKey: string | null;
+  platformInstances: Array<{ key: string; type: string; enabled: boolean }>;
+  dirtyPlatformKeys: Set<string>;
+  onSelectPlatform: (key: string) => void;
+  onAddPlatform: () => void;
 }
 
 export default function GatewaySidebar({
-  instances,
-  selectedKey,
-  descriptors,
-  dirtyKeys,
-  onSelect,
-  onNewInstance,
+  activeSubKey,
+  platformInstances,
+  dirtyPlatformKeys,
+  onSelectPlatform,
+  onAddPlatform,
 }: GatewaySidebarProps) {
-  const displayNames = new Map(descriptors.map(d => [d.type, d.display_name]));
+  const { t } = useTranslation('ui');
+
   return (
     <div className={styles.sidebar}>
-      {instances.length === 0 && (
-        <div className={styles.empty}>No instances configured.</div>
+      <div className={styles.groupHeader}>{t('sidebar.imChannels')}</div>
+      {platformInstances.length === 0 && (
+        <div className={styles.empty}>{t('sidebar.noPlatforms')}</div>
       )}
-      {instances.map(inst => (
-        <button
-          key={inst.key}
-          type="button"
-          className={`${styles.item} ${inst.key === selectedKey ? styles.active : ''} ${!inst.enabled ? styles.dimmed : ''}`}
-          onClick={() => onSelect(inst.key)}
-        >
-          <span className={styles.itemRow}>
-            <span className={styles.itemKey}>{inst.key}</span>
-            {dirtyKeys.has(inst.key) && (
-              <span className={styles.dirtyDot} title="Unsaved changes" />
-            )}
-          </span>
-          <span className={styles.itemType}>
-            {displayNames.get(inst.type) ?? inst.type}
-            {!inst.enabled && <span className={styles.offBadge}>off</span>}
-          </span>
-        </button>
-      ))}
-      <button type="button" className={styles.newBtn} onClick={onNewInstance}>
-        + New instance
+      {platformInstances.map(inst => {
+        const active = activeSubKey === `gateway:${inst.key}`;
+        return (
+          <button
+            key={inst.key}
+            type="button"
+            className={`${styles.platformRow} ${active ? styles.active : ''} ${!inst.enabled ? styles.disabled : ''}`}
+            onClick={() => onSelectPlatform(inst.key)}
+          >
+            <span className={styles.platformRowInner}>
+              <span className={styles.platformName}>{inst.key}</span>
+              {dirtyPlatformKeys.has(inst.key) && (
+                <span className={styles.dirtyDot} title={t('empty.unsaved')} />
+              )}
+            </span>
+            <span className={styles.platformType}>{inst.type}</span>
+          </button>
+        );
+      })}
+      <button type="button" className={styles.newBtn} onClick={onAddPlatform}>
+        {t('sidebar.addPlatform')}
       </button>
     </div>
   );

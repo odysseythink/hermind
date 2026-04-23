@@ -32,8 +32,11 @@ func ensureStorage(app *App) error {
 	}
 	path := app.Config.Storage.SQLitePath
 	if path == "" {
-		home, _ := os.UserHomeDir()
-		path = filepath.Join(home, ".hermind", "state.db")
+		p, err := config.InstancePath("state.db")
+		if err != nil {
+			return fmt.Errorf("hermind: resolve instance root: %w", err)
+		}
+		path = p
 	}
 	if dir := filepath.Dir(path); dir != "" {
 		if err := os.MkdirAll(dir, 0o755); err != nil {
@@ -77,7 +80,7 @@ func buildPrimaryProvider(cfg *config.Config) (provider.Provider, string, error)
 	}
 
 	if pCfg.APIKey == "" {
-		return nil, primaryName, fmt.Errorf("%w: provider %q. Set api_key in ~/.hermind/config.yaml or ANTHROPIC_API_KEY env var", errMissingAPIKey, primaryName)
+		return nil, primaryName, fmt.Errorf("%w: provider %q. Set api_key in <instance>/config.yaml or ANTHROPIC_API_KEY env var", errMissingAPIKey, primaryName)
 	}
 
 	if pCfg.Model == "" {

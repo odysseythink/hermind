@@ -105,6 +105,16 @@ func parseTrajectorySpec(spec string) string {
 	return spec
 }
 
+// splitModelRef splits "anthropic/claude-opus-4-6" into ("anthropic",
+// "claude-opus-4-6"). Refs without a slash are treated as the provider
+// name with an empty model.
+func splitModelRef(ref string) (string, string) {
+	if i := strings.Index(ref, "/"); i >= 0 {
+		return ref[:i], ref[i+1:]
+	}
+	return ref, ""
+}
+
 // resolveProviderForModel maps a "<name>/<model>" string (e.g.
 // "bedrock/anthropic.claude-opus-4-v1:0") to a config.ProviderConfig
 // drawn from the loaded hermind config. The model portion after the
