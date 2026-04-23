@@ -24,6 +24,7 @@ import SettingsPanel from './components/shell/SettingsPanel';
 import Footer from './components/Footer';
 import NewProviderDialog from './components/groups/models/NewProviderDialog';
 import NewMcpServerDialog from './components/groups/advanced/NewMcpServerDialog';
+import NewPlatformDialog from './components/groups/gateway/NewPlatformDialog';
 import ChatWorkspace from './components/chat/ChatWorkspace';
 
 export default function App() {
@@ -224,6 +225,38 @@ export default function App() {
     return out;
   }, [state.config, state.originalConfig]);
 
+  const gatewayInstances = useMemo(() => {
+    const sec = (state.config as Record<string, unknown>).gateway as
+      | { platforms?: Record<string, Record<string, unknown>> }
+      | undefined;
+    const platforms = sec?.platforms ?? {};
+    return Object.keys(platforms)
+      .sort()
+      .map((key) => {
+        const inst = platforms[key];
+        return {
+          key,
+          type: typeof inst?.type === 'string' ? inst.type : '',
+          enabled: inst?.enabled !== false,
+        };
+      });
+  }, [state.config]);
+
+  const dirtyGatewayKeys = useMemo(() => {
+    const cur = ((state.config as Record<string, unknown>).gateway as
+      | { platforms?: Record<string, Record<string, unknown>> }
+      | undefined)?.platforms ?? {};
+    const orig = ((state.originalConfig as Record<string, unknown>).gateway as
+      | { platforms?: Record<string, Record<string, unknown>> }
+      | undefined)?.platforms ?? {};
+    const out = new Set<string>();
+    const keys = new Set<string>([...Object.keys(cur), ...Object.keys(orig)]);
+    for (const k of keys) {
+      if (!shallowEqualRecord(cur[k], orig[k])) out.add(k);
+    }
+    return out;
+  }, [state.config, state.originalConfig]);
+
   const sectionSubkey = useMemo(() => {
     const m = new Map<string, string | undefined>();
     for (const s of state.configSections) {
@@ -234,6 +267,7 @@ export default function App() {
 
   const [newProviderDialogOpen, setNewProviderDialogOpen] = useState(false);
   const [newMcpDialogOpen, setNewMcpDialogOpen] = useState(false);
+  const [newPlatformDialogOpen, setNewPlatformDialogOpen] = useState(false);
 
   const onFetchProviderModels = useCallback(async (instanceKey: string) => {
     const res = await apiFetch(`/api/providers/${encodeURIComponent(instanceKey)}/models`, {
@@ -374,6 +408,10 @@ export default function App() {
         mcpInstances={mcpInstances}
         dirtyMcpKeys={dirtyMcpKeys}
         onAddMcpServer={() => setNewMcpDialogOpen(true)}
+        platformInstances={gatewayInstances}
+        dirtyPlatformKeys={dirtyGatewayKeys}
+        onSelectPlatform={(key) => dispatch({ type: 'shell/selectSub', key: `gateway:${key}` })}
+        onAddPlatform={() => setNewPlatformDialogOpen(true)}
         cronJobs={cronJobs}
         dirtyCronIndices={dirtyCronIndices}
         onAddCronJob={() => {
@@ -497,6 +535,36 @@ export default function App() {
               dispatch({ type: 'shell/selectGroup', group: 'models' });
               dispatch({ type: 'shell/selectSub', key });
               setNewProviderDialogOpen(false);
+            }}
+          />
+        );
+      })()}
+      {newPlatformDialogOpen && (() => {
+        const section = state.configSections.find((s) => s.key === 'gateway');
+        const typeField = section?.fields.find((f) => f.name === 'type');
+        const platformTypes = (typeField?.enum ?? []) as readonly string[];
+        const existingKeys = new Set(
+          Object.keys(
+            (((state.config as Record<string, unknown>).gateway as
+              { platforms?: Record<string, unknown> } | undefined)?.platforms) ?? {}
+          ),
+        );
+        return (
+          <NewPlatformDialog
+            platformTypes={Array.from(platformTypes)}
+            existingKeys={existingKeys}
+            onCancel={() => setNewPlatformDialogOpen(false)}
+            onCreate={(key, type) => {
+              dispatch({
+                type: 'keyed-instance/create',
+                sectionKey: 'gateway',
+                subkey: 'platforms',
+                instanceKey: key,
+                initial: { type, enabled: true, options: '' },
+              });
+              dispatch({ type: 'shell/selectGroup', group: 'gateway' });
+              dispatch({ type: 'shell/selectSub', key: `gateway:${key}` });
+              setNewPlatformDialogOpen(false);
             }}
           />
         );

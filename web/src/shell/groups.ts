@@ -4,6 +4,7 @@ export type GroupId =
   | 'skills'
   | 'runtime'
   | 'advanced'
+  | 'gateway'
   | 'observability';
 
 export interface GroupDef {
@@ -73,6 +74,18 @@ export const GROUPS: readonly GroupDef[] = [
     configKeys: ['mcp', 'browser', 'cron'],
     description: 'MCP servers, browser automation, and scheduled jobs.',
     bullets: ['MCP server list', 'Browser (Browserbase / Camofox) config', 'Cron jobs'],
+  },
+  {
+    id: 'gateway',
+    label: 'IM Channels',
+    plannedStage: 'done',
+    configKeys: ['gateway'],
+    description: 'Multi-platform IM adapters (Feishu, Telegram, …)',
+    bullets: [
+      'Telegram long-polling adapter',
+      'Feishu webhook adapter',
+      'Per-platform credentials and options',
+    ],
   },
   {
     id: 'observability',

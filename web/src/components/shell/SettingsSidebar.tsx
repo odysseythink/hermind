@@ -5,6 +5,7 @@ import GroupSection from './GroupSection';
 import SectionList from './SectionList';
 import ModelsSidebar from '../groups/models/ModelsSidebar';
 import AdvancedSidebar from '../groups/advanced/AdvancedSidebar';
+import GatewaySidebar from '../groups/gateway/GatewaySidebar';
 import type { ConfigSection } from '../../api/schemas';
 
 export interface SidebarProps {
@@ -27,6 +28,10 @@ export interface SidebarProps {
   mcpInstances: Array<{ key: string; command: string; enabled: boolean }>;
   dirtyMcpKeys: Set<string>;
   onAddMcpServer: () => void;
+  platformInstances: Array<{ key: string; type: string; enabled: boolean }>;
+  dirtyPlatformKeys: Set<string>;
+  onSelectPlatform: (key: string) => void;
+  onAddPlatform: () => void;
   cronJobs: Array<{ name: string; schedule: string }>;
   dirtyCronIndices: Set<number>;
   onAddCronJob: () => void;
@@ -97,6 +102,17 @@ export default function SettingsSidebar(props: SidebarProps) {
               }}
               onAddCronJob={props.onAddCronJob}
               onMoveCron={props.onMoveCron}
+            />
+          ) : g.id === 'gateway' ? (
+            <GatewaySidebar
+              activeSubKey={props.activeGroup === 'gateway' ? props.activeSubKey : null}
+              platformInstances={props.platformInstances}
+              dirtyPlatformKeys={props.dirtyPlatformKeys}
+              onSelectPlatform={(key) => {
+                props.onSelectGroup('gateway');
+                props.onSelectSub(`gateway:${key}`);
+              }}
+              onAddPlatform={props.onAddPlatform}
             />
           ) : (
             <SectionList

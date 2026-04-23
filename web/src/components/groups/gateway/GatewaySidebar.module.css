@@ -1,0 +1,95 @@
+.sidebar {
+  padding: var(--space-1) 0 var(--space-2);
+}
+
+.groupHeader {
+  padding: var(--space-3) var(--space-3) var(--space-1) var(--space-5);
+  font-family: var(--font-mono);
+  font-size: var(--fs-xs);
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+  color: var(--muted);
+}
+
+.empty {
+  padding: var(--space-1) var(--space-3) var(--space-1) var(--space-5);
+  font-family: var(--font-mono);
+  font-size: var(--fs-xs);
+  font-style: italic;
+  color: var(--muted);
+}
+
+.platformRow {
+  display: block;
+  width: 100%;
+  text-align: left;
+  padding: var(--space-1) var(--space-3) var(--space-1) var(--space-5);
+  background: transparent;
+  border: none;
+  border-left: 2px solid transparent;
+  color: var(--text);
+  font-family: var(--font-sans);
+  font-size: var(--fs-sm);
+  cursor: pointer;
+  transition: background var(--t-fast) ease-out, color var(--t-fast) ease-out;
+}
+
+.platformRow:hover {
+  background: var(--hover-tint);
+}
+
+.platformRow.active {
+  background: var(--accent-bg);
+  border-left-color: var(--accent);
+}
+
+.platformRow.disabled {
+  opacity: 0.5;
+}
+
+.platformRowInner {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+}
+
+.platformName {
+  flex: 1;
+  color: var(--text);
+}
+
+.platformType {
+  display: block;
+  font-family: var(--font-mono);
+  font-size: var(--fs-xs);
+  color: var(--muted);
+}
+
+.dirtyDot {
+  display: inline-block;
+  width: var(--dot);
+  height: var(--dot);
+  border-radius: 50%;
+  background: var(--warning);
+}
+
+.newBtn {
+  display: block;
+  width: calc(100% - var(--space-5));
+  margin: var(--space-2) var(--space-3) var(--space-1) var(--space-5);
+  padding: var(--space-1) var(--space-2);
+  background: transparent;
+  border: 1px dashed var(--border);
+  border-radius: var(--r-sm);
+  color: var(--muted);
+  font-family: var(--font-sans);
+  font-size: var(--fs-sm);
+  cursor: pointer;
+  transition: color var(--t-fast) ease-out, border-color var(--t-fast) ease-out;
+}
+
+.newBtn:hover {
+  border-color: var(--accent);
+  color: var(--accent);
+}
