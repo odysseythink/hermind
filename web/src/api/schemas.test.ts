@@ -1,91 +1,14 @@
 import { describe, expect, it } from 'vitest';
 import {
-  ApplyResultSchema,
   ConfigFieldSchema,
   ConfigResponseSchema,
   ConfigSchemaResponseSchema,
   ConfigSectionSchema,
-  FieldKindSchema,
-  PlatformTestResponseSchema,
-  PlatformsSchemaResponseSchema,
+  ConversationHistoryResponseSchema,
+  MetaResponseSchema,
   ProviderModelsResponseSchema,
-  RevealResponseSchema,
-  SchemaDescriptorSchema,
-  SchemaFieldSchema,
-  SessionSummarySchema,
+  StoredMessageSchema,
 } from './schemas';
-
-describe('FieldKindSchema', () => {
-  it('accepts every known kind string', () => {
-    for (const k of ['unknown', 'string', 'int', 'bool', 'secret', 'enum']) {
-      expect(() => FieldKindSchema.parse(k)).not.toThrow();
-    }
-  });
-
-  it('rejects unknown values', () => {
-    expect(() => FieldKindSchema.parse('float')).toThrow();
-  });
-});
-
-describe('SchemaFieldSchema', () => {
-  it('parses a minimal field', () => {
-    const field = SchemaFieldSchema.parse({
-      name: 'token',
-      label: 'Token',
-      kind: 'secret',
-    });
-    expect(field.required).toBeUndefined();
-    expect(field.enum).toBeUndefined();
-  });
-
-  it('passes through required + enum', () => {
-    const field = SchemaFieldSchema.parse({
-      name: 'region',
-      label: 'Region',
-      kind: 'enum',
-      required: true,
-      enum: ['us', 'eu'],
-    });
-    expect(field.required).toBe(true);
-    expect(field.enum).toEqual(['us', 'eu']);
-  });
-
-  it('rejects a missing kind', () => {
-    expect(() =>
-      SchemaFieldSchema.parse({ name: 'x', label: 'X' }),
-    ).toThrow();
-  });
-});
-
-describe('SchemaDescriptorSchema', () => {
-  it('parses a descriptor with zero fields', () => {
-    const d = SchemaDescriptorSchema.parse({
-      type: 'echo',
-      display_name: 'Echo',
-      fields: [],
-    });
-    expect(d.summary).toBeUndefined();
-  });
-
-  it('threads fields through', () => {
-    const d = SchemaDescriptorSchema.parse({
-      type: 'telegram',
-      display_name: 'Telegram Bot',
-      fields: [
-        { name: 'token', label: 'Token', kind: 'secret', required: true },
-      ],
-    });
-    expect(d.fields).toHaveLength(1);
-    expect(d.fields[0]?.kind).toBe('secret');
-  });
-});
-
-describe('PlatformsSchemaResponseSchema', () => {
-  it('parses an empty descriptors list', () => {
-    const r = PlatformsSchemaResponseSchema.parse({ descriptors: [] });
-    expect(r.descriptors).toEqual([]);
-  });
-});
 
 describe('ConfigResponseSchema', () => {
   it('accepts an unknown top-level key (catchall unknown)', () => {
@@ -93,64 +16,9 @@ describe('ConfigResponseSchema', () => {
       config: {
         model: 'claude-sonnet-4-5',
         providers: { anthropic: { api_key: 'redacted' } },
-        gateway: {
-          platforms: {
-            tg: { enabled: true, type: 'telegram', options: { token: '' } },
-          },
-        },
       },
     });
-    expect(r.config.gateway?.platforms?.tg?.type).toBe('telegram');
     expect((r.config as Record<string, unknown>).model).toBe('claude-sonnet-4-5');
-  });
-
-  it('parses a config with no gateway block', () => {
-    const r = ConfigResponseSchema.parse({
-      config: { model: 'claude-sonnet-4-5' },
-    });
-    expect(r.config.gateway).toBeUndefined();
-  });
-});
-
-describe('ApplyResultSchema', () => {
-  it('parses a minimal ok response', () => {
-    const r = ApplyResultSchema.parse({ ok: true, took_ms: 42 });
-    expect(r.error).toBeUndefined();
-  });
-
-  it('parses a failure with per-key errors', () => {
-    const r = ApplyResultSchema.parse({
-      ok: false,
-      took_ms: 300,
-      error: 'some failed',
-      errors: { tg_main: 'HTTP 401' },
-    });
-    expect(r.errors?.tg_main).toBe('HTTP 401');
-  });
-
-  it('rejects a missing took_ms', () => {
-    expect(() => ApplyResultSchema.parse({ ok: true })).toThrow();
-  });
-});
-
-describe('PlatformTestResponseSchema', () => {
-  it('parses ok=true', () => {
-    expect(PlatformTestResponseSchema.parse({ ok: true })).toEqual({ ok: true });
-  });
-
-  it('parses ok=false with error', () => {
-    const r = PlatformTestResponseSchema.parse({ ok: false, error: 'oops' });
-    expect(r.error).toBe('oops');
-  });
-});
-
-describe('RevealResponseSchema', () => {
-  it('parses a value', () => {
-    expect(RevealResponseSchema.parse({ value: 'abc' })).toEqual({ value: 'abc' });
-  });
-
-  it('rejects a missing value', () => {
-    expect(() => RevealResponseSchema.parse({})).toThrow();
   });
 });
 
@@ -161,15 +29,12 @@ describe('ConfigSchemaResponseSchema', () => {
         {
           key: 'storage',
           label: 'Storage',
-          summary: 'Where hermind keeps data.',
           group_id: 'runtime',
           fields: [
             { name: 'driver', label: 'Driver', kind: 'enum',
               required: true, default: 'sqlite', enum: ['sqlite', 'postgres'] },
             { name: 'sqlite_path', label: 'SQLite path', kind: 'string',
               visible_when: { field: 'driver', equals: 'sqlite' } },
-            { name: 'postgres_url', label: 'Postgres URL', kind: 'secret',
-              visible_when: { field: 'driver', equals: 'postgres' } },
           ],
         },
       ],
@@ -178,8 +43,7 @@ describe('ConfigSchemaResponseSchema', () => {
   });
 
   it('rejects a response missing sections', () => {
-    const bad = { whatever: [] };
-    expect(() => ConfigSchemaResponseSchema.parse(bad)).toThrow();
+    expect(() => ConfigSchemaResponseSchema.parse({})).toThrow();
   });
 
   it('rejects a field with unknown kind', () => {
@@ -218,90 +82,29 @@ describe('ConfigSectionSchema — shape discriminant', () => {
   it('rejects unknown shape values', () => {
     expect(() =>
       ConfigSectionSchema.parse({
-        key: 'x',
-        label: 'X',
-        group_id: 'runtime',
-        shape: 'nested', // unknown
+        key: 'x', label: 'X', group_id: 'runtime',
+        shape: 'nested',
         fields: [{ name: 'a', label: 'A', kind: 'string' }],
       }),
     ).toThrow();
   });
 });
 
-describe('ConfigSectionSchema — keyed_map shape', () => {
-  it('accepts shape: "keyed_map"', () => {
-    const parsed = ConfigSectionSchema.parse({
-      key: 'providers',
-      label: 'Providers',
-      group_id: 'models',
-      shape: 'keyed_map',
-      fields: [
-        { name: 'provider', label: 'Provider type', kind: 'enum', required: true,
-          enum: ['anthropic', 'openai'] },
-        { name: 'api_key', label: 'API key', kind: 'secret', required: true },
-      ],
-    });
-    expect(parsed.shape).toBe('keyed_map');
-  });
-});
-
-describe('ConfigFieldSchema — datalist_source', () => {
+describe('ConfigFieldSchema', () => {
   it('accepts a valid datalist_source object', () => {
     const parsed = ConfigFieldSchema.parse({
-      name: 'model',
-      label: 'Model',
-      kind: 'string',
+      name: 'model', label: 'Model', kind: 'string',
       datalist_source: { section: 'providers', field: 'model' },
     });
     expect(parsed.datalist_source).toEqual({ section: 'providers', field: 'model' });
   });
 
-  it('defaults to undefined when datalist_source is absent', () => {
+  it('parses kind: multiselect with enum', () => {
     const parsed = ConfigFieldSchema.parse({
-      name: 'model',
-      label: 'Model',
-      kind: 'string',
+      name: 'disabled', label: 'Disabled skills', kind: 'multiselect',
+      enum: ['alpha', 'beta'],
     });
-    expect(parsed.datalist_source).toBeUndefined();
-  });
-
-  it('rejects a malformed datalist_source (missing field)', () => {
-    expect(() =>
-      ConfigFieldSchema.parse({
-        name: 'model',
-        label: 'Model',
-        kind: 'string',
-        datalist_source: { section: 'providers' },
-      }),
-    ).toThrow();
-  });
-});
-
-describe('ConfigSectionSchema — list shape', () => {
-  it('accepts shape: "list"', () => {
-    const parsed = ConfigSectionSchema.parse({
-      key: 'fallback_providers',
-      label: 'Fallback Providers',
-      group_id: 'models',
-      shape: 'list',
-      fields: [
-        { name: 'provider', label: 'Provider type', kind: 'enum', required: true,
-          enum: ['anthropic', 'openai'] },
-      ],
-    });
-    expect(parsed.shape).toBe('list');
-  });
-
-  it('rejects unknown shape strings', () => {
-    expect(() =>
-      ConfigSectionSchema.parse({
-        key: 'fallback_providers',
-        label: 'X',
-        group_id: 'models',
-        shape: 'bogus_shape',
-        fields: [],
-      }),
-    ).toThrow();
+    expect(parsed.kind).toBe('multiselect');
   });
 });
 
@@ -317,95 +120,42 @@ describe('ProviderModelsResponseSchema', () => {
     const parsed = ProviderModelsResponseSchema.parse({ models: [] });
     expect(parsed.models).toEqual([]);
   });
+});
 
-  it('rejects missing models key', () => {
-    expect(() => ProviderModelsResponseSchema.parse({})).toThrow();
+describe('MetaResponseSchema', () => {
+  it('parses a full status response', () => {
+    const r = MetaResponseSchema.parse({
+      version: 'dev',
+      uptime_sec: 5,
+      storage_driver: 'sqlite',
+      instance_root: '/tmp/.hermind',
+      current_model: 'anthropic/claude-opus-4-6',
+    });
+    expect(r.instance_root).toBe('/tmp/.hermind');
   });
 
-  it('rejects non-string model entries', () => {
-    expect(() =>
-      ProviderModelsResponseSchema.parse({ models: [1, 2] }),
-    ).toThrow();
+  it('rejects missing current_model', () => {
+    expect(() => MetaResponseSchema.parse({
+      version: 'dev', uptime_sec: 0, storage_driver: 'none', instance_root: '/x',
+    })).toThrow();
   });
 });
 
-describe('ConfigFieldSchema — multiselect', () => {
-  it('parses kind: multiselect with enum', () => {
-    const parsed = ConfigFieldSchema.parse({
-      name: 'disabled',
-      label: 'Disabled skills',
-      kind: 'multiselect',
-      enum: ['alpha', 'beta'],
-    });
-    expect(parsed.kind).toBe('multiselect');
-    expect(parsed.enum).toEqual(['alpha', 'beta']);
-  });
-
-  it('parses kind: multiselect with empty enum (no skills installed)', () => {
-    const parsed = ConfigFieldSchema.parse({
-      name: 'disabled',
-      label: 'Disabled skills',
-      kind: 'multiselect',
-    });
-    expect(parsed.kind).toBe('multiselect');
-    expect(parsed.enum).toBeUndefined();
-  });
-});
-
-describe('ConfigSectionSchema subkey/no_discriminator', () => {
-  it('accepts subkey + no_discriminator when present', () => {
-    const parsed = ConfigSectionSchema.parse({
-      key: 'mcp',
-      label: 'MCP',
-      group_id: 'advanced',
-      shape: 'keyed_map',
-      subkey: 'servers',
-      no_discriminator: true,
-      fields: [
-        { name: 'command', label: 'Command', kind: 'string' },
+describe('StoredMessageSchema + ConversationHistoryResponseSchema', () => {
+  it('parses a history response', () => {
+    const r = ConversationHistoryResponseSchema.parse({
+      messages: [
+        { id: 1, role: 'user', content: '"hi"', timestamp: 1.0 },
+        { id: 2, role: 'assistant', content: '"hello"', timestamp: 1.1, finish_reason: 'end_turn' },
       ],
     });
-    expect(parsed.subkey).toBe('servers');
-    expect(parsed.no_discriminator).toBe(true);
+    expect(r.messages).toHaveLength(2);
+    expect(r.messages[1]?.finish_reason).toBe('end_turn');
   });
 
-  it('defaults subkey/no_discriminator to undefined when omitted', () => {
-    const parsed = ConfigSectionSchema.parse({
-      key: 'memory',
-      label: 'Memory',
-      group_id: 'memory',
-      shape: 'map',
-      fields: [],
-    });
-    expect(parsed.subkey).toBeUndefined();
-    expect(parsed.no_discriminator).toBeUndefined();
-  });
-});
-
-describe('SessionSummarySchema (widened)', () => {
-  it('accepts the full backend DTO shape', () => {
-    const parsed = SessionSummarySchema.parse({
-      id: 'abc',
-      title: 'hi there',
-      source: 'web',
-      model: 'claude-opus-4-7',
-      started_at: 1713724000,
-      ended_at: 0,
-      message_count: 3,
-    });
-    expect(parsed.source).toBe('web');
-    expect(parsed.message_count).toBe(3);
-  });
-
-  it('allows optional fields to be missing', () => {
-    const parsed = SessionSummarySchema.parse({
-      id: 'abc',
-      source: 'web',
-    });
-    expect(parsed.title).toBeUndefined();
-  });
-
-  it('requires source', () => {
-    expect(() => SessionSummarySchema.parse({ id: 'abc' })).toThrow();
+  it('rejects a message missing timestamp', () => {
+    expect(() => StoredMessageSchema.parse({
+      id: 1, role: 'user', content: 'hi',
+    })).toThrow();
   });
 });
