@@ -1,0 +1,8 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(rm -rf api/webroot/*)",
+      "Bash(cp -r web/dist/. api/webroot/)"
+    ]
+  }
+}

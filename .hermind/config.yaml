@@ -1,0 +1,22 @@
+model: qwen_main/qwen3.6-plus
+providers:
+    qwen_main:
+        provider: qwen
+        api_key: sk-ba4ca2a151fd45fb83cad8ce4cf52dec
+        model: qwen3.6-plus
+agent:
+    max_turns: 90
+    gateway_timeout: 1800
+    compression:
+        enabled: true
+        threshold: 0.5
+        target_ratio: 0.2
+        protect_last: 20
+        max_passes: 3
+terminal:
+    backend: local
+storage:
+    driver: sqlite
+    sqlite_path: /Users/ranwei/workspace/go_work/hermes-agent-rewrite/hermind/.hermind/state.db
+memory:
+    provider: holographic

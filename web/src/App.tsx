@@ -93,7 +93,12 @@ export default function App() {
             | Record<string, unknown>
             | undefined) ?? {},
         ).sort();
-        const firstSub = firstSubkeyForGroup(parsed.groupId, state.configSections, providerKeys);
+        const platformKeys = Object.keys(
+          ((state.config as Record<string, unknown>).gateway as
+            | { platforms?: Record<string, unknown> }
+            | undefined)?.platforms ?? {},
+        ).sort();
+        const firstSub = firstSubkeyForGroup(parsed.groupId, state.configSections, providerKeys, platformKeys);
         if (firstSub) dispatch({ type: 'shell/selectSub', key: firstSub });
       }
     }
