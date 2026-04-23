@@ -219,5 +219,6 @@ func BuildEngineDeps(ctx context.Context, app *App) (api.EngineDeps, func(), err
 		ToolReg:     toolRegistry,
 		SkillsReg:   skillsReg,
 		AgentCfg:    app.Config.Agent,
+		Platform:    "web",
 	}, cleanup, nil
 }
