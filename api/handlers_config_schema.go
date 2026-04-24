@@ -51,6 +51,7 @@ func BuildConfigSchema() ConfigSchemaResponse {
 				dto.VisibleWhen = &PredicateDTO{
 					Field:  f.VisibleWhen.Field,
 					Equals: f.VisibleWhen.Equals,
+					In:     f.VisibleWhen.In,
 				}
 			}
 			if f.DatalistSource != nil {

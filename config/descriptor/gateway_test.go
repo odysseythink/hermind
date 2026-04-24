@@ -16,29 +16,36 @@ func TestGatewaySection(t *testing.T) {
 	if s.Subkey != "platforms" {
 		t.Errorf("Subkey = %q, want %q", s.Subkey, "platforms")
 	}
-	if len(s.Fields) != 3 {
-		t.Fatalf("Fields len = %d, want 3", len(s.Fields))
+	if s.GroupID != "gateway" {
+		t.Errorf("GroupID = %q, want %q", s.GroupID, "gateway")
 	}
-
-	want := []struct {
-		name     string
-		kind     FieldKind
-		required bool
-	}{
-		{"type", FieldEnum, true},
-		{"enabled", FieldBool, false},
-		{"options", FieldText, false},
+	if !s.NoDiscriminator {
+		t.Error("NoDiscriminator should be true")
 	}
-	for i, w := range want {
-		got := s.Fields[i]
-		if got.Name != w.name {
-			t.Errorf("Fields[%d].Name = %q, want %q", i, got.Name, w.name)
+	if len(s.Fields) < 5 {
+		t.Fatalf("Fields len = %d, want >= 5", len(s.Fields))
+	}
+	// First two fields are always type and enabled.
+	if s.Fields[0].Name != "type" || s.Fields[0].Kind != FieldEnum {
+		t.Errorf("Fields[0] = {%q, %v}, want {type, FieldEnum}", s.Fields[0].Name, s.Fields[0].Kind)
+	}
+	if s.Fields[1].Name != "enabled" || s.Fields[1].Kind != FieldBool {
+		t.Errorf("Fields[1] = {%q, %v}, want {enabled, FieldBool}", s.Fields[1].Name, s.Fields[1].Kind)
+	}
+	// Verify all per-platform option fields use VisibleWhen.
+	for _, f := range s.Fields[2:] {
+		if f.VisibleWhen == nil {
+			t.Errorf("field %q: per-platform field must have VisibleWhen set", f.Name)
 		}
-		if got.Kind != w.kind {
-			t.Errorf("Fields[%d].Kind = %v, want %v", i, got.Kind, w.kind)
+	}
+	// At least one secret field must exist.
+	var secrets int
+	for _, f := range s.Fields {
+		if f.Kind == FieldSecret {
+			secrets++
 		}
-		if got.Required != w.required {
-			t.Errorf("Fields[%d].Required = %v, want %v", i, got.Required, w.required)
-		}
+	}
+	if secrets == 0 {
+		t.Error("gateway section should have at least one FieldSecret")
 	}
 }

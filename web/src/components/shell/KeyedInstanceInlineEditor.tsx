@@ -34,6 +34,7 @@ export default function KeyedInstanceInlineEditor(props: KeyedInstanceInlineEdit
         originalValue={props.originalValue}
         onFieldChange={(field, v) => props.onField(props.instanceKey, field, v)}
         config={props.config}
+        hideSectionMeta
       />
     </div>
   );

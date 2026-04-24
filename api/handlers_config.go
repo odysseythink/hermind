@@ -85,8 +85,12 @@ func redactSectionSecrets(m map[string]any) {
 					if f.Kind != descriptor.FieldSecret {
 						continue
 					}
-					if _, present := inner[f.Name]; present {
-						inner[f.Name] = ""
+					parent, leaf, found := walkPath(inner, f.Name)
+					if !found {
+						continue
+					}
+					if _, present := parent[leaf]; present {
+						parent[leaf] = ""
 					}
 				}
 			}
@@ -111,8 +115,12 @@ func redactSectionSecrets(m map[string]any) {
 					if f.Kind != descriptor.FieldSecret {
 						continue
 					}
-					if _, present := inner[f.Name]; present {
-						inner[f.Name] = ""
+					parent, leaf, found := walkPath(inner, f.Name)
+					if !found {
+						continue
+					}
+					if _, present := parent[leaf]; present {
+						parent[leaf] = ""
 					}
 				}
 			}
@@ -237,18 +245,26 @@ func preserveSectionSecrets(updated, current *config.Config) {
 					if f.Kind != descriptor.FieldSecret {
 						continue
 					}
-					newVal, _ := inner[f.Name].(string)
+					updParent, leaf, found := walkPath(inner, f.Name)
+					if !found {
+						continue
+					}
+					newVal, _ := updParent[leaf].(string)
 					if newVal != "" {
 						continue
 					}
 					if curInst == nil {
 						continue
 					}
-					prevVal, _ := curInst[f.Name].(string)
+					curParent, curLeaf, curFound := walkPath(curInst, f.Name)
+					if !curFound {
+						continue
+					}
+					prevVal, _ := curParent[curLeaf].(string)
 					if prevVal == "" {
 						continue
 					}
-					inner[f.Name] = prevVal
+					updParent[leaf] = prevVal
 					changed = true
 				}
 			}
@@ -284,15 +300,23 @@ func preserveSectionSecrets(updated, current *config.Config) {
 					if f.Kind != descriptor.FieldSecret {
 						continue
 					}
-					newVal, _ := inner[f.Name].(string)
+					updParent, leaf, found := walkPath(inner, f.Name)
+					if !found {
+						continue
+					}
+					newVal, _ := updParent[leaf].(string)
 					if newVal != "" {
 						continue
 					}
-					prevVal, _ := curInst[f.Name].(string)
+					curParent, curLeaf, curFound := walkPath(curInst, f.Name)
+					if !curFound {
+						continue
+					}
+					prevVal, _ := curParent[curLeaf].(string)
 					if prevVal == "" {
 						continue
 					}
-					inner[f.Name] = prevVal
+					updParent[leaf] = prevVal
 					changed = true
 				}
 			}
@@ -379,18 +403,26 @@ func PreserveSectionSecretsForTest(updated, current map[string]any) {
 					if f.Kind != descriptor.FieldSecret {
 						continue
 					}
-					newVal, _ := inner[f.Name].(string)
+					updParent, leaf, found := walkPath(inner, f.Name)
+					if !found {
+						continue
+					}
+					newVal, _ := updParent[leaf].(string)
 					if newVal != "" {
 						continue
 					}
 					if curInst == nil {
 						continue
 					}
-					prevVal, _ := curInst[f.Name].(string)
+					curParent, curLeaf, curFound := walkPath(curInst, f.Name)
+					if !curFound {
+						continue
+					}
+					prevVal, _ := curParent[curLeaf].(string)
 					if prevVal == "" {
 						continue
 					}
-					inner[f.Name] = prevVal
+					updParent[leaf] = prevVal
 				}
 			}
 			continue
@@ -424,15 +456,23 @@ func PreserveSectionSecretsForTest(updated, current map[string]any) {
 					if f.Kind != descriptor.FieldSecret {
 						continue
 					}
-					newVal, _ := inner[f.Name].(string)
+					updParent, leaf, found := walkPath(inner, f.Name)
+					if !found {
+						continue
+					}
+					newVal, _ := updParent[leaf].(string)
 					if newVal != "" {
 						continue
 					}
-					prevVal, _ := curInst[f.Name].(string)
+					curParent, curLeaf, curFound := walkPath(curInst, f.Name)
+					if !curFound {
+						continue
+					}
+					prevVal, _ := curParent[curLeaf].(string)
 					if prevVal == "" {
 						continue
 					}
-					inner[f.Name] = prevVal
+					updParent[leaf] = prevVal
 				}
 			}
 			continue

@@ -1,16 +1,22 @@
 package api
 
 import (
+	"context"
 	"embed"
 	"encoding/json"
+	"errors"
 	"fmt"
 	"io/fs"
+	"log/slog"
 	"net/http"
+	"sync"
 	"time"
 
 	"github.com/go-chi/chi/v5"
 
+	"github.com/odysseythink/hermind/agent"
 	"github.com/odysseythink/hermind/config"
+	"github.com/odysseythink/hermind/gateway"
 	"github.com/odysseythink/hermind/provider"
 	"github.com/odysseythink/hermind/skills"
 	"github.com/odysseythink/hermind/storage"
@@ -72,6 +78,10 @@ type Server struct {
 	router   chi.Router
 	bootedAt time.Time
 	streams  StreamHub
+
+	// runMu serializes conversation turns — at most one in flight at a time.
+	runMu    sync.Mutex
+	runCancel context.CancelFunc
 }
 
 // NewServer wires routes and middleware.
@@ -176,4 +186,63 @@ func writeJSONStatus(w http.ResponseWriter, code int, v interface{}) {
 	w.Header().Set("Content-Type", "application/json")
 	w.WriteHeader(code)
 	_ = json.NewEncoder(w).Encode(v)
+}
+
+// RunTurn implements gateway.Runner. It runs one engine turn synchronously
+// and returns the assistant reply text. Returns an error if a turn is
+// already in flight.
+func (s *Server) RunTurn(ctx context.Context, userMessage string) (string, error) {
+	if s.opts.Deps.Provider == nil {
+		return "", errors.New("provider not configured")
+	}
+	s.runMu.Lock()
+	if s.runCancel != nil {
+		s.runMu.Unlock()
+		return "", errors.New("another turn is in flight")
+	}
+	runCtx, cancel := context.WithCancel(ctx)
+	s.runCancel = cancel
+	s.runMu.Unlock()
+
+	defer func() {
+		s.runMu.Lock()
+		s.runCancel = nil
+		s.runMu.Unlock()
+		cancel()
+	}()
+
+	eng := agent.NewEngineWithToolsAndAux(
+		s.opts.Deps.Provider, s.opts.Deps.AuxProvider, s.opts.Deps.Storage,
+		s.opts.Deps.ToolReg, s.opts.Deps.AgentCfg, s.opts.Deps.Platform,
+	)
+	wireEngineToHub(eng, s.streams)
+
+	result, err := eng.RunConversation(runCtx, &agent.RunOptions{
+		UserMessage: userMessage,
+	})
+	if err != nil {
+		s.streams.Publish(StreamEvent{
+			Type: EventTypeError,
+			Data: map[string]any{"message": err.Error()},
+		})
+		return "", err
+	}
+	s.streams.Publish(StreamEvent{Type: EventTypeDone})
+	return result.Response.Content.Text(), nil
+}
+
+// StartGateway starts the gateway pump in the background if any platforms
+// are configured and enabled. The pump runs until ctx is cancelled.
+func (s *Server) StartGateway(ctx context.Context) {
+	pump, err := gateway.NewPump(s.opts.Config.Gateway, s)
+	if err != nil {
+		slog.Error("gateway: startup failed", "err", err)
+		return
+	}
+	if !pump.HasPlatforms() {
+		slog.Info("gateway: no enabled platforms, not starting")
+		return
+	}
+	go pump.Start(ctx)
+	slog.Info("gateway: pump started")
 }

@@ -31,9 +31,6 @@ func (e *Engine) RunConversation(ctx context.Context, opts *RunOptions) (*Conver
 	}
 
 	model := opts.Model
-	if model == "" {
-		model = "claude-opus-4-6"
-	}
 
 	var history []message.Message
 	if opts.Ephemeral {

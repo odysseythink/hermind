@@ -93,7 +93,12 @@ export default function App() {
             | Record<string, unknown>
             | undefined) ?? {},
         ).sort();
-        const firstSub = firstSubkeyForGroup(parsed.groupId, state.configSections, providerKeys);
+        const platformKeys = Object.keys(
+          ((state.config as Record<string, unknown>).gateway as
+            | { platforms?: Record<string, unknown> }
+            | undefined)?.platforms ?? {},
+        ).sort();
+        const firstSub = firstSubkeyForGroup(parsed.groupId, state.configSections, providerKeys, platformKeys);
         if (firstSub) dispatch({ type: 'shell/selectSub', key: firstSub });
       }
     }
@@ -301,13 +306,14 @@ export default function App() {
   const handleSelectGroup = useCallback(
     (id: GroupId) => {
       dispatch({ type: 'shell/selectGroup', group: id });
-      const keys = providerInstances.map((p) => p.key);
-      const firstSub = firstSubkeyForGroup(id, state.configSections, keys);
+      const provKeys = providerInstances.map((p) => p.key);
+      const platKeys = gatewayInstances.map((p) => p.key);
+      const firstSub = firstSubkeyForGroup(id, state.configSections, provKeys, platKeys);
       if (firstSub) {
         dispatch({ type: 'shell/selectSub', key: firstSub });
       }
     },
-    [providerInstances, state.configSections],
+    [providerInstances, gatewayInstances, state.configSections],
   );
 
   const onSave = useCallback(async () => {
@@ -560,7 +566,7 @@ export default function App() {
                 sectionKey: 'gateway',
                 subkey: 'platforms',
                 instanceKey: key,
-                initial: { type, enabled: true, options: '' },
+                initial: { type, enabled: true, options: {} },
               });
               dispatch({ type: 'shell/selectGroup', group: 'gateway' });
               dispatch({ type: 'shell/selectSub', key: `gateway:${key}` });
