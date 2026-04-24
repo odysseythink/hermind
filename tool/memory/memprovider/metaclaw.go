@@ -13,6 +13,7 @@ import (
 	"github.com/odysseythink/hermind/storage"
 	"github.com/odysseythink/hermind/tool"
 	"github.com/odysseythink/hermind/tool/embedding"
+	"github.com/odysseythink/hermind/tool/memory/memprovider/citesink"
 )
 
 // MetaClaw is a Provider that extracts typed memories (episodic, semantic,
@@ -366,6 +367,38 @@ func (mc *MetaClaw) RegisterTools(reg *tool.Registry) {
 				"superseded": rep.Superseded,
 				"archived":   rep.Archived,
 			}), nil
+		},
+	})
+
+	reg.Register(&tool.Entry{
+		Name:        "metaclaw_cite_memory",
+		Toolset:     "memory",
+		Description: "Record that a memory influenced the current reply.",
+		Emoji:       "📌",
+		Schema: tool.ToolDefinition{
+			Type: "function",
+			Function: tool.FunctionDef{
+				Name:        "metaclaw_cite_memory",
+				Description: "Signal that the specified memory was used when forming the reply.",
+				Parameters: json.RawMessage(`{
+  "type":"object",
+  "properties":{"memory_id":{"type":"string"}},
+  "required":["memory_id"]
+}`),
+			},
+		},
+		Handler: func(ctx context.Context, raw json.RawMessage) (string, error) {
+			var args struct {
+				MemoryID string `json:"memory_id"`
+			}
+			if err := json.Unmarshal(raw, &args); err != nil {
+				return tool.ToolError("invalid arguments: " + err.Error()), nil
+			}
+			if args.MemoryID == "" {
+				return tool.ToolError("memory_id is required"), nil
+			}
+			citesink.Cite(ctx, args.MemoryID)
+			return tool.ToolResult(map[string]any{"ok": true}), nil
 		},
 	})
 }
