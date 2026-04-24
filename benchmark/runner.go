@@ -7,7 +7,6 @@ import (
 	"fmt"
 	"os"
 	"path/filepath"
-	"strings"
 )
 
 // PresetRunner executes one input against one preset and returns the record.
@@ -75,12 +74,19 @@ func loadDataset(path string) ([]InputItem, error) {
 	s.Buffer(make([]byte, 1<<20), 1<<20)
 	var items []InputItem
 	for s.Scan() {
-		line := s.Text()
-		if strings.Contains(line, `"__meta"`) {
+		// The first line (or any line) may be a meta object. Parse each
+		// line as a generic object first; skip when it looks like meta
+		// (has a top-level "__meta" key) and only parse as InputItem
+		// when it does not.
+		var probe map[string]json.RawMessage
+		if err := json.Unmarshal(s.Bytes(), &probe); err != nil {
+			continue
+		}
+		if _, isMeta := probe["__meta"]; isMeta {
 			continue
 		}
 		var it InputItem
-		if err := json.Unmarshal([]byte(line), &it); err != nil {
+		if err := json.Unmarshal(s.Bytes(), &it); err != nil {
 			continue
 		}
 		if it.ID == "" {
