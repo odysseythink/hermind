@@ -12,10 +12,13 @@ import (
 // Embed calls the OpenAI-compatible /embeddings endpoint.
 // model is the embedding model name (e.g. "text-embedding-3-small").
 func (c *Client) Embed(ctx context.Context, model, text string) ([]float32, error) {
-	body, _ := json.Marshal(map[string]any{
+	body, err := json.Marshal(map[string]any{
 		"model": model,
 		"input": text,
 	})
+	if err != nil {
+		return nil, fmt.Errorf("openaicompat: embed marshal: %w", err)
+	}
 	req, err := http.NewRequestWithContext(ctx, http.MethodPost,
 		c.cfg.BaseURL+"/embeddings", bytes.NewReader(body))
 	if err != nil {
