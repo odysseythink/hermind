@@ -39,3 +39,33 @@ func TestAppendAndListMemoryEvents(t *testing.T) {
 	require.NoError(t, err)
 	require.Len(t, paged, 1)
 }
+
+func TestMemoryStats(t *testing.T) {
+	store := newTestStore(t)
+	ctx := context.Background()
+	now := time.Now().UTC()
+
+	require.NoError(t, store.SaveMemory(ctx, &storage.Memory{
+		ID: "m1", Content: "c1", MemType: storage.MemTypeEpisodic, CreatedAt: now, UpdatedAt: now,
+	}))
+	require.NoError(t, store.SaveMemory(ctx, &storage.Memory{
+		ID: "m2", Content: "c2", MemType: storage.MemTypeSemantic, CreatedAt: now, UpdatedAt: now,
+	}))
+
+	s, err := store.MemoryStats(ctx)
+	require.NoError(t, err)
+	assert.Equal(t, 2, s.Total)
+	assert.Equal(t, 1, s.ByType[storage.MemTypeEpisodic])
+	assert.Equal(t, 1, s.ByType[storage.MemTypeSemantic])
+	assert.Equal(t, 2, s.ByStatus[storage.MemoryStatusActive])
+}
+
+func TestMemoryHealth(t *testing.T) {
+	store := newTestStore(t)
+	ctx := context.Background()
+	h, err := store.MemoryHealth(ctx)
+	require.NoError(t, err)
+	assert.Equal(t, 7, h.SchemaVersion)
+	assert.False(t, h.MigrationsPending)
+	assert.Equal(t, "ok", h.FTSIntegrity)
+}

@@ -150,6 +150,15 @@ func (f *fakeStorage) AppendMemoryEvent(_ context.Context, _ time.Time, _ string
 func (f *fakeStorage) ListMemoryEvents(_ context.Context, _, _ int, _ []string) ([]*storage.MemoryEvent, error) {
 	return nil, nil
 }
+func (f *fakeStorage) MemoryStats(_ context.Context) (*storage.MemoryStats, error) {
+	return &storage.MemoryStats{ByType: map[string]int{}, ByStatus: map[string]int{}}, nil
+}
+func (f *fakeStorage) MemoryHealth(_ context.Context) (*storage.MemoryHealth, error) {
+	return &storage.MemoryHealth{SchemaVersion: 7}, nil
+}
+func (f *fakeStorage) SkillsStats(_ context.Context, _ string) (*storage.SkillsStats, error) {
+	return &storage.SkillsStats{ByCategory: map[string]int{}}, nil
+}
 
 // fakeTx implements the Tx interface for testing.
 type fakeTx struct{}

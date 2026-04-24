@@ -108,3 +108,49 @@ type MemoryEvent struct {
 	Kind string    `json:"kind"`
 	Data []byte    `json:"data"` // raw JSON bytes
 }
+
+// MemoryStats summarizes the memories table for /api/memory/stats.
+type MemoryStats struct {
+	Total          int            `json:"total"`
+	ByType         map[string]int `json:"by_type"`
+	ByStatus       map[string]int `json:"by_status"`
+	VectorCoverage float64        `json:"vector_coverage"`
+	Reinforcement  struct {
+		NeverUsed     int `json:"never_used"`
+		UsedOneToFew  int `json:"used_1_to_3"`
+		UsedMany      int `json:"used_4_plus"`
+		NeglectedOnly int `json:"neglected_only"`
+	} `json:"reinforcement_histogram"`
+	StorageBytes int64 `json:"storage_bytes"`
+}
+
+// MemoryHealth reports schema and FTS health for /api/memory/health.
+type MemoryHealth struct {
+	SchemaVersion           int    `json:"schema_version"`
+	MigrationsPending       bool   `json:"migrations_pending"`
+	FTSIntegrity            string `json:"fts_integrity"`
+	OrphanMemories          int    `json:"orphan_memories"`
+	ConsolidatorLastRunUnix *int64 `json:"consolidator_last_run_unix,omitempty"`
+	ConsolidatorLastReport  *ConsolidateReportView `json:"consolidator_last_report,omitempty"`
+}
+
+// ConsolidateReportView is the JSON shape surfaced via MemoryHealth.
+type ConsolidateReportView struct {
+	Scanned    int `json:"scanned"`
+	Superseded int `json:"superseded"`
+	Archived   int `json:"archived"`
+}
+
+// SkillsStats summarizes the skills directory for /api/skills/stats.
+type SkillsStats struct {
+	Total       int            `json:"total"`
+	ByCategory  map[string]int `json:"by_category"`
+	Recent      []SkillSummary `json:"recent"`
+	UnusedCount int            `json:"unused_count"`
+}
+
+// SkillSummary is a minimal view of a discovered skill file.
+type SkillSummary struct {
+	Name      string `json:"name"`
+	CreatedAt int64  `json:"created_at"`
+}

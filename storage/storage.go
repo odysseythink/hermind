@@ -45,6 +45,13 @@ type Storage interface {
 	// ListMemoryEvents returns events newest-first, optionally filtered by kinds.
 	ListMemoryEvents(ctx context.Context, limit, offset int, kinds []string) ([]*MemoryEvent, error)
 
+	// MemoryStats aggregates counts by type/status + reinforcement histogram.
+	MemoryStats(ctx context.Context) (*MemoryStats, error)
+	// MemoryHealth reports schema version and FTS integrity.
+	MemoryHealth(ctx context.Context) (*MemoryHealth, error)
+	// SkillsStats inspects skillsDir and returns aggregate counts.
+	SkillsStats(ctx context.Context, skillsDir string) (*SkillsStats, error)
+
 	// Transactions — group multiple operations atomically.
 	WithTx(ctx context.Context, fn func(tx Tx) error) error
 
