@@ -60,6 +60,14 @@ type SkillsConfig struct {
 	// Keys match the string passed to the CLI/REPL/gateway startup path
 	// (e.g. "cli", "gateway", "cron").
 	PlatformDisabled map[string][]string `yaml:"platform_disabled,omitempty"`
+	// AutoExtract enables the skills Evolver, which calls the LLM after each
+	// conversation to extract reusable skill snippets and save them to the
+	// instance's skills/ directory. Default false.
+	AutoExtract bool `yaml:"auto_extract,omitempty"`
+	// InjectCount is the maximum number of dynamically retrieved skills
+	// injected into the system prompt per turn. 0 means inject nothing.
+	// Default 3.
+	InjectCount int `yaml:"inject_count,omitempty"`
 }
 
 // CronConfig holds cron scheduler configuration.
@@ -132,7 +140,7 @@ type CamofoxConfig struct {
 // MemoryConfig holds the optional external memory provider configuration.
 // At most one provider is active at a time (see tool/memory/memprovider).
 type MemoryConfig struct {
-	Provider     string             `yaml:"provider,omitempty"` // honcho|mem0|supermemory|hindsight|retaindb|openviking|byterover|holographic
+	Provider     string             `yaml:"provider,omitempty"` // honcho|mem0|supermemory|hindsight|retaindb|openviking|byterover|holographic|metaclaw
 	Honcho       HonchoConfig       `yaml:"honcho,omitempty"`
 	Mem0         Mem0Config         `yaml:"mem0,omitempty"`
 	Supermemory  SupermemoryConfig  `yaml:"supermemory,omitempty"`
@@ -141,6 +149,7 @@ type MemoryConfig struct {
 	OpenViking   OpenVikingConfig   `yaml:"openviking,omitempty"`
 	Byterover    ByteroverConfig    `yaml:"byterover,omitempty"`
 	Holographic  HolographicConfig  `yaml:"holographic,omitempty"`
+	MetaClaw     MetaClawConfig     `yaml:"metaclaw,omitempty"`
 }
 
 // RetainDBConfig holds the RetainDB provider configuration.
@@ -168,6 +177,11 @@ type ByteroverConfig struct {
 // HolographicConfig is a placeholder — the holographic provider uses
 // the shared SQLite storage so there is no backend URL or key.
 type HolographicConfig struct{}
+
+// MetaClawConfig is intentionally empty — the metaclaw provider uses
+// the shared SQLite storage and the main LLM provider for extraction.
+// No external service credentials are required.
+type MetaClawConfig struct{}
 
 // HindsightConfig holds the Hindsight cloud provider configuration.
 type HindsightConfig struct {
