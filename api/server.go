@@ -22,6 +22,7 @@ import (
 	"github.com/odysseythink/hermind/skills"
 	"github.com/odysseythink/hermind/storage"
 	"github.com/odysseythink/hermind/tool"
+	"github.com/odysseythink/hermind/tool/memory/memprovider"
 )
 
 //go:embed webroot/*
@@ -46,6 +47,9 @@ type EngineDeps struct {
 	SkillsRetriever interface {
 		Retrieve(ctx context.Context, query string, k int) ([]string, error)
 	}
+	// MemProvider, if non-nil, is added to the engine's MemoryManager so
+	// SyncTurn is called after each conversation turn.
+	MemProvider memprovider.Provider
 }
 
 // ServerOpts bundles server-wide state.
@@ -224,6 +228,9 @@ func (s *Server) RunTurn(ctx context.Context, userMessage string) (string, error
 		s.opts.Deps.Provider, s.opts.Deps.AuxProvider, s.opts.Deps.Storage,
 		s.opts.Deps.ToolReg, s.opts.Deps.AgentCfg, s.opts.Deps.Platform,
 	)
+	if s.opts.Deps.MemProvider != nil {
+		eng.Memory().AddProvider(s.opts.Deps.MemProvider)
+	}
 	wireEngineToHub(eng, s.streams)
 
 	// Wire skills evolver and retriever

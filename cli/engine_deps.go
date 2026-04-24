@@ -245,5 +245,6 @@ func BuildEngineDeps(ctx context.Context, app *App) (api.EngineDeps, func(), err
 		Platform:        "web",
 		SkillsEvolver:   evolver,
 		SkillsRetriever: retriever,
+		MemProvider:     extMem,
 	}, cleanup, nil
 }

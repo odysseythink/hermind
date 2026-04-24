@@ -156,6 +156,10 @@ func (e *Engine) RunConversation(ctx context.Context, opts *RunOptions) (*Conver
 		}
 	}
 
+	if e.memory != nil && len(e.memory.Providers()) > 0 {
+		_ = e.memory.SyncTurn(ctx, opts.UserMessage, lastResponse.Content.Text())
+	}
+
 	if e.skillsEvolver != nil {
 		_ = e.skillsEvolver.Extract(ctx, history)
 	}
