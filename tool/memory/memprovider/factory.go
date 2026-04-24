@@ -73,6 +73,11 @@ func New(cfg config.MemoryConfig, opts ...FactoryOption) (Provider, error) {
 			return nil, fmt.Errorf("memprovider: holographic requires storage (pass WithStorage)")
 		}
 		return NewHolographic(fo.storage), nil
+	case "metaclaw":
+		if fo.storage == nil {
+			return nil, fmt.Errorf("memprovider: metaclaw requires storage (pass WithStorage)")
+		}
+		return NewMetaClaw(fo.storage, nil, nil), nil
 	default:
 		return nil, fmt.Errorf("memprovider: unknown provider %q", name)
 	}
