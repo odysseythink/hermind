@@ -1,5 +1,21 @@
 # Changelog
 
+## 0.3.1 — 2026-04-24
+
+### Added
+- **Telegram gateway**: revived multi-platform IM front end. Configure a Telegram bot token under Settings → Gateway; hermind long-polls for messages and routes each one through the conversation engine, then replies in-chat. Supports HTTP/HTTPS and SOCKS5 proxies via `proxy_url`.
+- **Gateway dedup**: FIFO-bounded in-memory cache prevents duplicate message processing across network retries.
+
+### Fixed
+- **Model routing**: removed hardcoded `claude-opus-4-6` fallback in the conversation engine. Requests now use the model configured for the active provider, fixing "model does not exist" errors when using non-Anthropic providers (e.g. qwen3.6-plus).
+- **Gateway `enabled` toggle**: boolean fields in the settings UI were stored as strings `"true"`/`"false"` instead of actual booleans, causing the enabled toggle to be silently ignored by the backend. Fixed in `ConfigSection.tsx`.
+- **YAML config**: `PlatformConfig.UnmarshalYAML` now correctly decodes the `enabled` and `type` fields that were previously silently dropped by the yaml.v3 embedded-struct promotion bug.
+- **Server isolation**: `runMu`/`runCancel` moved from package-level globals to `Server` struct fields, preventing test interference and enabling the gateway's synchronous `RunTurn` to share the single-turn serialization lock with the HTTP handler.
+
+### Changed
+- `visible_when` config predicates now support an `in` array in addition to a single `equals` value.
+- `ConfigSection` supports a `hideSectionMeta` prop for embedded use without section headings.
+
 ## 0.3.0 — Instance-bound, single-conversation model
 
 ### Breaking

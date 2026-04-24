@@ -334,22 +334,37 @@ func Default() *Config {
 
 // UnmarshalYAML handles empty options string by converting it to an empty map.
 // This allows the frontend to send empty strings for optional text fields.
+//
+// yaml.v3 does not promote embedded-pointer fields without an explicit
+// ",inline" tag, so the old *alias embedding silently dropped "enabled" and
+// "type". Use a plain map decode instead to avoid that pitfall.
 func (pc *PlatformConfig) UnmarshalYAML(unmarshal func(any) error) error {
-	type alias PlatformConfig
-	var tmp struct {
-		*alias
-		Options any `yaml:"options"`
-	}
-	tmp.alias = (*alias)(pc)
-	if err := unmarshal(&tmp); err != nil {
+	var raw map[string]any
+	if err := unmarshal(&raw); err != nil {
 		return err
 	}
-	// Convert empty string to empty map
-	if tmp.Options == nil {
-		pc.Options = nil
-	} else if str, ok := tmp.Options.(string); ok {
-		if str == "" {
-			pc.Options = map[string]string{}
+	if enabled, ok := raw["enabled"].(bool); ok {
+		pc.Enabled = enabled
+	}
+	if typ, ok := raw["type"].(string); ok {
+		pc.Type = typ
+	}
+	if opts, found := raw["options"]; found {
+		switch v := opts.(type) {
+		case string:
+			if v == "" {
+				pc.Options = map[string]string{}
+			}
+		case map[string]interface{}:
+			m := make(map[string]string, len(v))
+			for k, val := range v {
+				if s, ok := val.(string); ok {
+					m[k] = s
+				}
+			}
+			pc.Options = m
+		case map[string]string:
+			pc.Options = v
 		}
 	}
 	return nil

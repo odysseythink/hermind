@@ -17,6 +17,7 @@ export interface ConfigSectionProps {
   originalValue: Record<string, unknown>;
   onFieldChange: (name: string, value: unknown) => void;
   config?: Record<string, unknown>;
+  hideSectionMeta?: boolean;
 }
 
 function collectDatalistValues(
@@ -63,6 +64,7 @@ export default function ConfigSection({
   originalValue,
   onFieldChange,
   config,
+  hideSectionMeta,
 }: ConfigSectionProps) {
   const dt = useDescriptorT();
   const sectionLabel = dt.sectionLabel(section.key, section.label);
@@ -71,8 +73,8 @@ export default function ConfigSection({
     : '';
   return (
     <section className={styles.section} aria-label={sectionLabel}>
-      <h2 className={styles.title}>{sectionLabel}</h2>
-      {sectionSummary && <p className={styles.summary}>{sectionSummary}</p>}
+      {!hideSectionMeta && <h2 className={styles.title}>{sectionLabel}</h2>}
+      {!hideSectionMeta && sectionSummary && <p className={styles.summary}>{sectionSummary}</p>}
       {section.fields.map(f => {
         if (!isVisible(f, value)) return null;
         const current = asString(getPath(value, f.name));
@@ -100,7 +102,7 @@ export default function ConfigSection({
           case 'float':
             return <FloatInput key={f.name} field={schemaField} value={current} onChange={onChange} />;
           case 'bool':
-            return <BoolToggle key={f.name} field={schemaField} value={current} onChange={onChange} />;
+            return <BoolToggle key={f.name} field={schemaField} value={current} onChange={(v) => onFieldChange(f.name, v === 'true')} />;
           case 'enum':
             return <EnumSelect key={f.name} field={schemaField} value={current} onChange={onChange} />;
           case 'secret':
