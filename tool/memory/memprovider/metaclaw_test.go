@@ -91,6 +91,17 @@ func (f *fakeStorage) Migrate() error {
 	return nil
 }
 
+func (f *fakeStorage) MarkMemorySuperseded(_ context.Context, oldID, newID string) error {
+	for _, m := range f.memories {
+		if m.ID == oldID {
+			m.Status = storage.MemoryStatusSuperseded
+			m.SupersededBy = newID
+			return nil
+		}
+	}
+	return storage.ErrNotFound
+}
+
 // fakeTx implements the Tx interface for testing.
 type fakeTx struct{}
 

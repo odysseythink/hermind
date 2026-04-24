@@ -43,7 +43,13 @@ func (mc *MetaClaw) Initialize(ctx context.Context, sessionID string) error {
 	return nil
 }
 
-func (mc *MetaClaw) Shutdown(ctx context.Context) error { return nil }
+func (mc *MetaClaw) Shutdown(ctx context.Context) error {
+	if mc.store == nil {
+		return nil
+	}
+	_, _ = Consolidate(ctx, mc.store, nil)
+	return nil
+}
 
 // SyncTurn extracts memories from the conversation turn using the LLM,
 // if available. If the LLM is nil or the extraction fails, this is a no-op.
@@ -264,6 +270,47 @@ func (mc *MetaClaw) RegisterTools(reg *tool.Registry) {
 				return tool.ToolError(err.Error()), nil
 			}
 			return tool.ToolResult(map[string]any{"results": results}), nil
+		},
+	})
+
+	reg.Register(&tool.Entry{
+		Name:        "metaclaw_consolidate",
+		Toolset:     "memory",
+		Description: "Deduplicate and decay MetaClaw memories.",
+		Emoji:       "🧹",
+		Schema: tool.ToolDefinition{
+			Type: "function",
+			Function: tool.FunctionDef{
+				Name:        "metaclaw_consolidate",
+				Description: "Run a consolidation pass: mark near-duplicate memories as superseded, optionally archive stale episodic memories.",
+				Parameters: json.RawMessage(`{
+  "type":"object",
+  "properties":{
+    "mem_type":{"type":"string","enum":["episodic","semantic","preference",""]},
+    "decay_days":{"type":"number"}
+  }
+}`),
+			},
+		},
+		Handler: func(ctx context.Context, raw json.RawMessage) (string, error) {
+			var args struct {
+				MemType   string  `json:"mem_type,omitempty"`
+				DecayDays float64 `json:"decay_days,omitempty"`
+			}
+			_ = json.Unmarshal(raw, &args)
+			opts := &ConsolidateOptions{MemType: args.MemType}
+			if args.DecayDays > 0 {
+				opts.DecayAfter = time.Duration(args.DecayDays * float64(24*time.Hour))
+			}
+			rep, err := Consolidate(ctx, mc.store, opts)
+			if err != nil {
+				return tool.ToolError(err.Error()), nil
+			}
+			return tool.ToolResult(map[string]any{
+				"scanned":    rep.Scanned,
+				"superseded": rep.Superseded,
+				"archived":   rep.Archived,
+			}), nil
 		},
 	})
 }
