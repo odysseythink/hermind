@@ -42,6 +42,7 @@ func NewRootCmd(app *App) *cobra.Command {
 		newRLCmd(app),
 		newMCPCmd(app),
 		newWebCmd(app),
+		newBenchCmd(app),
 		newVersionCmd(),
 	)
 
