@@ -14,3 +14,9 @@ web/.env.local
 .DS_Store
 .superpowers/
 .gstack/
+
+# AI tooling / local docs — not tracked by git
+docs/
+CLAUDE.md
+DESIGN.md
+TODOS.md
