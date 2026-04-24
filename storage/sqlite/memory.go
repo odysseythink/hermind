@@ -134,18 +134,19 @@ func (s *Store) GetMemory(ctx context.Context, id string) (*storage.Memory, erro
 // scoredMemory pairs a memory with per-signal raw scores used to build
 // the hybrid ranking in SearchMemories.
 type scoredMemory struct {
-	mem     *storage.Memory
-	fts     float64 // -bm25 (higher = more relevant); 0 when query is empty
-	cosine  float64 // 0 when no vector
-	recency float64 // seconds-since-epoch, used only for relative ordering
+	mem           *storage.Memory
+	fts           float64 // -bm25 (higher = more relevant); 0 when query is empty
+	cosine        float64 // 0 when no vector
+	recency       float64 // seconds-since-epoch, used only for relative ordering
+	reinforcement float64 // (reinforcement - neglect) / max(sum, 1)
 }
 
-// SearchMemories runs a hybrid FTS5 + cosine + recency search.
+// SearchMemories runs a hybrid FTS5 + cosine + recency + reinforcement search.
 //
 // When opts.QueryVector is set we fetch limit*3 candidates via FTS (or
-// a recency scan when the query is empty), score each candidate on three
+// a recency scan when the query is empty), score each candidate on four
 // independently min-max-normalized signals, and return the top limit by
-// weighted sum: 0.4 FTS + 0.5 cosine + 0.1 recency.
+// weighted sum: 0.35 FTS + 0.40 cosine + 0.10 recency + 0.15 reinforcement.
 //
 // When QueryVector is nil we fall back to the legacy FTS-ordered path.
 func (s *Store) SearchMemories(ctx context.Context, query string, opts *storage.MemorySearchOptions) ([]*storage.Memory, error) {
@@ -191,20 +192,20 @@ func (s *Store) SearchMemories(ctx context.Context, query string, opts *storage.
 		c.cosine = float64(embedding.CosineSimilarity(v, queryVec))
 	}
 
-	sort.SliceStable(candidates, func(i, j int) bool {
-		return hybridScore(candidates[i]) > hybridScore(candidates[j])
-	})
 	minF, maxF := scoreRange(candidates, func(c *scoredMemory) float64 { return c.fts })
 	minC, maxC := scoreRange(candidates, func(c *scoredMemory) float64 { return c.cosine })
 	minR, maxR := scoreRange(candidates, func(c *scoredMemory) float64 { return c.recency })
+	minRe, maxRe := scoreRange(candidates, func(c *scoredMemory) float64 { return c.reinforcement })
 
 	sort.SliceStable(candidates, func(i, j int) bool {
-		a := 0.4*normalize(candidates[i].fts, minF, maxF) +
-			0.5*normalize(candidates[i].cosine, minC, maxC) +
-			0.1*normalize(candidates[i].recency, minR, maxR)
-		b := 0.4*normalize(candidates[j].fts, minF, maxF) +
-			0.5*normalize(candidates[j].cosine, minC, maxC) +
-			0.1*normalize(candidates[j].recency, minR, maxR)
+		a := 0.35*normalize(candidates[i].fts, minF, maxF) +
+			0.40*normalize(candidates[i].cosine, minC, maxC) +
+			0.10*normalize(candidates[i].recency, minR, maxR) +
+			0.15*normalize(candidates[i].reinforcement, minRe, maxRe)
+		b := 0.35*normalize(candidates[j].fts, minF, maxF) +
+			0.40*normalize(candidates[j].cosine, minC, maxC) +
+			0.10*normalize(candidates[j].recency, minR, maxR) +
+			0.15*normalize(candidates[j].reinforcement, minRe, maxRe)
 		return a > b
 	})
 
@@ -291,22 +292,22 @@ func (s *Store) fetchMemoryCandidates(ctx context.Context, query string, opts *s
 		if opts != nil && len(opts.Tags) > 0 && !hasAnyTag(m.Tags, opts.Tags) {
 			continue
 		}
+		rein := float64(m.ReinforcementCount - m.NeglectCount)
+		denom := float64(m.ReinforcementCount + m.NeglectCount)
+		if denom < 1 {
+			denom = 1
+		}
 		out = append(out, &scoredMemory{
-			mem:     &m,
-			fts:     -rank,
-			recency: float64(m.CreatedAt.Unix()),
+			mem:           &m,
+			fts:           -rank,
+			recency:       float64(m.CreatedAt.Unix()),
+			reinforcement: rein / denom,
 		})
 	}
 	if err := rows.Err(); err != nil {
 		return nil, err
 	}
 	return out, nil
-}
-
-// hybridScore is only used for the debug-printable pre-normalization pass.
-// The real ranking uses normalized signals.
-func hybridScore(c *scoredMemory) float64 {
-	return c.fts + c.cosine
 }
 
 func scoreRange(cs []*scoredMemory, get func(*scoredMemory) float64) (float64, float64) {

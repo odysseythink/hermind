@@ -211,3 +211,37 @@ func TestBumpMemoryUsage_NotFound(t *testing.T) {
 	err := store.BumpMemoryUsage(context.Background(), "nope", true)
 	assert.ErrorIs(t, err, storage.ErrNotFound)
 }
+
+func TestSearchMemories_ReinforcementBoostsRanking(t *testing.T) {
+	store := newTestStore(t)
+	ctx := context.Background()
+	now := time.Now().UTC()
+
+	vec := []float32{1, 0, 0}
+	vecEnc, err := embedding.EncodeVector(vec)
+	require.NoError(t, err)
+
+	// Two memories with identical content and vectors, same age.
+	for i, id := range []string{"boosted", "neglected"} {
+		require.NoError(t, store.SaveMemory(ctx, &storage.Memory{
+			ID:        id,
+			Content:   "common query term",
+			CreatedAt: now.Add(-time.Duration(i) * time.Second),
+			UpdatedAt: now,
+			Vector:    vecEnc,
+		}))
+	}
+	require.NoError(t, store.BumpMemoryUsage(ctx, "boosted", true))
+	require.NoError(t, store.BumpMemoryUsage(ctx, "boosted", true))
+	require.NoError(t, store.BumpMemoryUsage(ctx, "boosted", true))
+	require.NoError(t, store.BumpMemoryUsage(ctx, "neglected", false))
+	require.NoError(t, store.BumpMemoryUsage(ctx, "neglected", false))
+
+	got, err := store.SearchMemories(ctx, "common query term", &storage.MemorySearchOptions{
+		Limit:       10,
+		QueryVector: vec,
+	})
+	require.NoError(t, err)
+	require.GreaterOrEqual(t, len(got), 2)
+	assert.Equal(t, "boosted", got[0].ID, "reinforced memory should rank first")
+}
