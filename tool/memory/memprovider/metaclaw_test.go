@@ -3,6 +3,7 @@ package memprovider_test
 import (
 	"context"
 	"testing"
+	"time"
 
 	"github.com/odysseythink/hermind/storage"
 	"github.com/odysseythink/hermind/tool/memory/memprovider"
@@ -96,6 +97,21 @@ func (f *fakeStorage) MarkMemorySuperseded(_ context.Context, oldID, newID strin
 		if m.ID == oldID {
 			m.Status = storage.MemoryStatusSuperseded
 			m.SupersededBy = newID
+			return nil
+		}
+	}
+	return storage.ErrNotFound
+}
+
+func (f *fakeStorage) BumpMemoryUsage(_ context.Context, id string, used bool) error {
+	for _, m := range f.memories {
+		if m.ID == id {
+			if used {
+				m.ReinforcementCount++
+				m.LastUsedAt = time.Now().UTC()
+			} else {
+				m.NeglectCount++
+			}
 			return nil
 		}
 	}

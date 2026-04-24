@@ -76,6 +76,31 @@ func (s *Store) MarkMemorySuperseded(ctx context.Context, oldID, newID string) e
 	return nil
 }
 
+// BumpMemoryUsage implements storage.Storage.
+func (s *Store) BumpMemoryUsage(ctx context.Context, id string, used bool) error {
+	var (
+		res sql.Result
+		err error
+	)
+	if used {
+		res, err = s.db.ExecContext(ctx,
+			`UPDATE memories SET reinforcement_count = reinforcement_count + 1,
+                last_used_at = ? WHERE id = ?`,
+			toEpoch(time.Now().UTC()), id)
+	} else {
+		res, err = s.db.ExecContext(ctx,
+			`UPDATE memories SET neglect_count = neglect_count + 1 WHERE id = ?`, id)
+	}
+	if err != nil {
+		return fmt.Errorf("sqlite: bump memory %s: %w", id, err)
+	}
+	affected, _ := res.RowsAffected()
+	if affected == 0 {
+		return storage.ErrNotFound
+	}
+	return nil
+}
+
 // GetMemory fetches a memory by ID.
 func (s *Store) GetMemory(ctx context.Context, id string) (*storage.Memory, error) {
 	var (

@@ -34,6 +34,10 @@ type Storage interface {
 	ListMemoriesByType(ctx context.Context, memType string, limit int) ([]*Memory, error)
 	// MarkMemorySuperseded transitions oldID → superseded by newID.
 	MarkMemorySuperseded(ctx context.Context, oldID, newID string) error
+	// BumpMemoryUsage bumps reinforcement_count or neglect_count on a memory.
+	// used=true increments reinforcement_count and sets last_used_at=now;
+	// used=false increments neglect_count and leaves last_used_at unchanged.
+	BumpMemoryUsage(ctx context.Context, id string, used bool) error
 
 	// Transactions — group multiple operations atomically.
 	WithTx(ctx context.Context, fn func(tx Tx) error) error

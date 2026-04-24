@@ -171,3 +171,43 @@ func TestSaveAndGetMemory_LastUsedAtZeroRoundtrip(t *testing.T) {
 	require.NoError(t, err)
 	assert.True(t, got.LastUsedAt.IsZero(), "LastUsedAt should round-trip as zero time")
 }
+
+func TestBumpMemoryUsage_Used(t *testing.T) {
+	store := newTestStore(t)
+	ctx := context.Background()
+
+	now := time.Now().UTC()
+	require.NoError(t, store.SaveMemory(ctx, &storage.Memory{
+		ID: "m-use", Content: "fact", CreatedAt: now, UpdatedAt: now,
+	}))
+
+	require.NoError(t, store.BumpMemoryUsage(ctx, "m-use", true))
+	got, err := store.GetMemory(ctx, "m-use")
+	require.NoError(t, err)
+	assert.Equal(t, 1, got.ReinforcementCount)
+	assert.Equal(t, 0, got.NeglectCount)
+	assert.False(t, got.LastUsedAt.IsZero())
+}
+
+func TestBumpMemoryUsage_Neglect(t *testing.T) {
+	store := newTestStore(t)
+	ctx := context.Background()
+
+	now := time.Now().UTC()
+	require.NoError(t, store.SaveMemory(ctx, &storage.Memory{
+		ID: "m-neg", Content: "fact", CreatedAt: now, UpdatedAt: now,
+	}))
+
+	require.NoError(t, store.BumpMemoryUsage(ctx, "m-neg", false))
+	got, err := store.GetMemory(ctx, "m-neg")
+	require.NoError(t, err)
+	assert.Equal(t, 0, got.ReinforcementCount)
+	assert.Equal(t, 1, got.NeglectCount)
+	assert.True(t, got.LastUsedAt.IsZero())
+}
+
+func TestBumpMemoryUsage_NotFound(t *testing.T) {
+	store := newTestStore(t)
+	err := store.BumpMemoryUsage(context.Background(), "nope", true)
+	assert.ErrorIs(t, err, storage.ErrNotFound)
+}
