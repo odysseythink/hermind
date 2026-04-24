@@ -4,6 +4,7 @@ package storage
 import (
 	"context"
 	"errors"
+	"time"
 )
 
 // Sentinel errors returned by storage implementations.
@@ -38,6 +39,11 @@ type Storage interface {
 	// used=true increments reinforcement_count and sets last_used_at=now;
 	// used=false increments neglect_count and leaves last_used_at unchanged.
 	BumpMemoryUsage(ctx context.Context, id string, used bool) error
+
+	// AppendMemoryEvent writes one structured event row (best-effort).
+	AppendMemoryEvent(ctx context.Context, ts time.Time, kind string, data []byte) error
+	// ListMemoryEvents returns events newest-first, optionally filtered by kinds.
+	ListMemoryEvents(ctx context.Context, limit, offset int, kinds []string) ([]*MemoryEvent, error)
 
 	// Transactions — group multiple operations atomically.
 	WithTx(ctx context.Context, fn func(tx Tx) error) error

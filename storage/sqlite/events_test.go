@@ -1,0 +1,41 @@
+package sqlite
+
+import (
+	"context"
+	"encoding/json"
+	"testing"
+	"time"
+
+	"github.com/odysseythink/hermind/storage"
+	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/require"
+)
+
+func TestAppendAndListMemoryEvents(t *testing.T) {
+	store := newTestStore(t)
+	ctx := context.Background()
+
+	now := time.Now().UTC()
+	data1, _ := json.Marshal(map[string]int{"scanned": 10})
+	data2, _ := json.Marshal(map[string]string{"outcome": "success"})
+	require.NoError(t, store.AppendMemoryEvent(ctx, now, "memory.consolidated", data1))
+	require.NoError(t, store.AppendMemoryEvent(ctx, now.Add(time.Second), "conversation.judged", data2))
+	require.NoError(t, store.AppendMemoryEvent(ctx, now.Add(2*time.Second), "memory.consolidated", data1))
+
+	all, err := store.ListMemoryEvents(ctx, 10, 0, nil)
+	require.NoError(t, err)
+	assert.Len(t, all, 3)
+	// ts DESC: newest first
+	assert.Equal(t, "memory.consolidated", all[0].Kind)
+	// Verify type
+	assert.IsType(t, (*storage.MemoryEvent)(nil), all[0])
+
+	filtered, err := store.ListMemoryEvents(ctx, 10, 0, []string{"conversation.judged"})
+	require.NoError(t, err)
+	require.Len(t, filtered, 1)
+	assert.Equal(t, "conversation.judged", filtered[0].Kind)
+
+	paged, err := store.ListMemoryEvents(ctx, 1, 1, nil)
+	require.NoError(t, err)
+	require.Len(t, paged, 1)
+}

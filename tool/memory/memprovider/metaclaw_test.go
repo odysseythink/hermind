@@ -144,6 +144,13 @@ func (f *fakeStorage) BumpMemoryUsage(_ context.Context, id string, used bool) e
 	return storage.ErrNotFound
 }
 
+func (f *fakeStorage) AppendMemoryEvent(_ context.Context, _ time.Time, _ string, _ []byte) error {
+	return nil
+}
+func (f *fakeStorage) ListMemoryEvents(_ context.Context, _, _ int, _ []string) ([]*storage.MemoryEvent, error) {
+	return nil, nil
+}
+
 // fakeTx implements the Tx interface for testing.
 type fakeTx struct{}
 

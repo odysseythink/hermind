@@ -100,3 +100,11 @@ type MemorySearchOptions struct {
 	// see superseded/archived memories (e.g., for maintenance tooling).
 	IncludeAll bool
 }
+
+// MemoryEvent is a structured log row surfaced by /api/memory/report.
+type MemoryEvent struct {
+	ID   int64     `json:"id"`
+	TS   time.Time `json:"ts"`
+	Kind string    `json:"kind"`
+	Data []byte    `json:"data"` // raw JSON bytes
+}
