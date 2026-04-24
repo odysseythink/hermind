@@ -13,6 +13,7 @@ import (
 	"github.com/odysseythink/hermind/provider"
 	"github.com/odysseythink/hermind/storage"
 	"github.com/odysseythink/hermind/tool"
+	"github.com/odysseythink/hermind/tool/memory/memprovider"
 )
 
 // RunConversation runs one or more turns of the conversation until:
@@ -68,16 +69,23 @@ func (e *Engine) RunConversation(ctx context.Context, opts *RunOptions) (*Conver
 	if e.activeSkills != nil {
 		activeSkills = e.activeSkills(opts.UserMessage)
 	}
-	var activeMemories []string
+	var injectedMems []memprovider.InjectedMemory
 	if e.activeMemories != nil {
-		activeMemories = e.activeMemories(ctx, opts.UserMessage)
+		injectedMems = e.activeMemories(ctx, opts.UserMessage)
 	}
-	activeSkills, activeMemories = applySynergyBudget(activeSkills, activeMemories, e.synergy)
+	memContents := make([]string, 0, len(injectedMems))
+	for _, m := range injectedMems {
+		memContents = append(memContents, m.Content)
+	}
+	activeSkills, memContents = applySynergyBudget(activeSkills, memContents, e.synergy)
 	systemPrompt := e.prompt.Build(&PromptOptions{
 		Model:          model,
 		ActiveSkills:   activeSkills,
-		ActiveMemories: activeMemories,
+		ActiveMemories: memContents,
 	})
+
+	// Preserve the full injected set for end-of-conversation feedback.
+	conversationInjectedMems := injectedMems
 
 	var toolDefs []tool.ToolDefinition
 	if e.tools != nil {
@@ -177,6 +185,8 @@ func (e *Engine) RunConversation(ctx context.Context, opts *RunOptions) (*Conver
 	if e.skillsEvolver != nil {
 		_ = e.skillsEvolver.Extract(ctx, history)
 	}
+
+	_ = conversationInjectedMems
 
 	return &ConversationResult{
 		Response:   lastResponse,

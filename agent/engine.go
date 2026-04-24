@@ -9,6 +9,7 @@ import (
 	"github.com/odysseythink/hermind/provider"
 	"github.com/odysseythink/hermind/storage"
 	"github.com/odysseythink/hermind/tool"
+	"github.com/odysseythink/hermind/tool/memory/memprovider"
 )
 
 // Engine is single-use per conversation turn. NOT thread-safe.
@@ -35,15 +36,18 @@ type Engine struct {
 	// the system prompt. Called once per turn.
 	activeSkills func(userMsg string) []ActiveSkill
 
-	// activeMemories returns recalled memory snippets that should be
-	// prepended to the system prompt. Called once per turn.
-	activeMemories func(ctx context.Context, userMsg string) []string
+	// activeMemories returns recalled memory snippets (with IDs) that should
+	// be prepended to the system prompt. Called once per turn.
+	activeMemories func(ctx context.Context, userMsg string) []memprovider.InjectedMemory
 
 	// skillsEvolver extracts skills after each conversation.
 	// If nil, skill extraction is disabled.
 	skillsEvolver interface {
 		Extract(ctx context.Context, turns []message.Message) error
 	}
+
+	// conversationJudge scores the conversation at its end. Nil disables.
+	conversationJudge ConversationJudge
 
 	// bufferEvery, if > 0, drives mid-conversation SyncTurn calls every
 	// N assistant replies. 0 means only sync at end-of-conversation.
@@ -156,7 +160,7 @@ func (e *Engine) SetActiveSkillsProvider(fn func(userMsg string) []ActiveSkill) 
 
 // SetActiveMemoriesProvider registers a callback that returns recalled
 // memory snippets for the current turn. Pass nil to disable.
-func (e *Engine) SetActiveMemoriesProvider(fn func(ctx context.Context, userMsg string) []string) {
+func (e *Engine) SetActiveMemoriesProvider(fn func(ctx context.Context, userMsg string) []memprovider.InjectedMemory) {
 	e.activeMemories = fn
 }
 
@@ -181,6 +185,12 @@ func (e *Engine) SetSkillsEvolver(ev interface {
 	Extract(ctx context.Context, turns []message.Message) error
 }) {
 	e.skillsEvolver = ev
+}
+
+// SetConversationJudge registers the judge called at end-of-conversation.
+// Nil disables the entire judge-driven feedback path.
+func (e *Engine) SetConversationJudge(j ConversationJudge) {
+	e.conversationJudge = j
 }
 
 // RunOptions parameterizes a conversation run.

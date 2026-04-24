@@ -236,7 +236,7 @@ func (s *Server) RunTurn(ctx context.Context, userMessage string) (string, error
 			if memK <= 0 {
 				memK = 3
 			}
-			eng.SetActiveMemoriesProvider(func(ctx context.Context, userMsg string) []string {
+			eng.SetActiveMemoriesProvider(func(ctx context.Context, userMsg string) []memprovider.InjectedMemory {
 				out, _ := r.Recall(ctx, userMsg, memK)
 				return out
 			})
