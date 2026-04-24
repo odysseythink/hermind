@@ -250,6 +250,9 @@ func (s *Server) RunTurn(ctx context.Context, userMessage string) (string, error
 					DedupJaccard: 0.5,
 				})
 			}
+			if mc.JudgeEnabled && s.opts.Deps.AuxProvider != nil {
+				eng.SetConversationJudge(agent.NewLLMJudge(s.opts.Deps.AuxProvider))
+			}
 		}
 	}
 	wireEngineToHub(eng, s.streams)

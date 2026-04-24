@@ -202,6 +202,18 @@ type MetaClawConfig struct {
 	// SynergySkillRatio is the fraction of SynergyTokenBudget reserved
 	// for skills (memories get 1 - ratio). Default 0.35.
 	SynergySkillRatio float64 `yaml:"synergy_skill_ratio,omitempty"`
+
+	// JudgeEnabled turns on the ConversationJudge feedback loop at
+	// end-of-conversation. Default false (opt-in).
+	JudgeEnabled bool `yaml:"judge_enabled,omitempty"`
+
+	// SummaryEvery controls working_summary refresh cadence (in SyncTurn
+	// calls). Default 10; 0 disables.
+	SummaryEvery int `yaml:"summary_every,omitempty"`
+
+	// MemoryTypes allow-lists the memory types extraction may emit.
+	// Nil or empty means all six types; non-empty is an allow-list.
+	MemoryTypes []string `yaml:"memory_types,omitempty"`
 }
 
 // HindsightConfig holds the Hindsight cloud provider configuration.
