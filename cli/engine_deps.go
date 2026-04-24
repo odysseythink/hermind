@@ -174,14 +174,10 @@ func BuildEngineDeps(ctx context.Context, app *App) (api.EngineDeps, func(), err
 	if err != nil {
 		fmt.Fprintf(os.Stderr, "hermind: memory provider: %v\n", err)
 	}
-	if mc, ok := extMem.(*memprovider.MetaClaw); ok {
-		if n := app.Config.Memory.MetaClaw.SummaryEvery; n > 0 {
-			mc.SetSummaryEvery(n)
-		} else {
-			mc.SetSummaryEvery(10) // default
-		}
-	}
 	if extMem != nil {
+		if mc, ok := extMem.(*memprovider.MetaClaw); ok {
+			mc.SetSummaryEvery(app.Config.Memory.MetaClaw.SummaryEvery)
+		}
 		if err := extMem.Initialize(ctx, sessionPrefix); err != nil {
 			fmt.Fprintf(os.Stderr, "hermind: memory provider %s init: %v\n", extMem.Name(), err)
 		} else {

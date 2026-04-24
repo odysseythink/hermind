@@ -376,6 +376,11 @@ func Default() *Config {
 		Storage: StorageConfig{
 			Driver: "sqlite",
 		},
+		Memory: MemoryConfig{
+			MetaClaw: MetaClawConfig{
+				SummaryEvery: 10,
+			},
+		},
 	}
 }
 
