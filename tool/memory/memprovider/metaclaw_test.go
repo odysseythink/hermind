@@ -2,6 +2,7 @@ package memprovider_test
 
 import (
 	"context"
+	"fmt"
 	"testing"
 	"time"
 
@@ -169,4 +170,20 @@ func TestMetaClawRecallReturnsInjectedMemory(t *testing.T) {
 	require.Len(t, got, 1)
 	assert.Equal(t, "mc_abc", got[0].ID)
 	assert.Equal(t, "likes Go", got[0].Content)
+}
+
+func TestMetaClawSyncTurnAppendsToRingBuffer(t *testing.T) {
+	mc := memprovider.NewMetaClaw(&fakeStorage{}, nil, nil)
+	require.NoError(t, mc.Initialize(context.Background(), "sess"))
+
+	for i := 0; i < 25; i++ {
+		require.NoError(t, mc.SyncTurn(context.Background(),
+			fmt.Sprintf("u%d", i), fmt.Sprintf("a%d", i)))
+	}
+
+	buf := mc.RecentBufferSnapshot()
+	require.Len(t, buf, 20, "ring buffer should cap at 20")
+	// Oldest kept entry should be turn #5 (0..4 pushed out).
+	assert.Equal(t, "u5", buf[0].User)
+	assert.Equal(t, "a24", buf[len(buf)-1].Assistant)
 }

@@ -5,6 +5,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"strings"
+	"sync"
 	"time"
 
 	"github.com/odysseythink/hermind/message"
@@ -22,14 +23,29 @@ type MetaClaw struct {
 	llm       provider.Provider
 	embedder  embedding.Embedder
 	sessionID string
+
+	mu           sync.Mutex
+	recentBuf    []TurnPair
+	recentCap    int
+	sinceRefresh int
+	summaryEvery int // 0 disables refresh; Task 8 activates it
+}
+
+// TurnPair is one user/assistant exchange kept in MetaClaw's rolling
+// buffer for working-summary generation.
+type TurnPair struct {
+	User      string
+	Assistant string
+	Timestamp time.Time
 }
 
 // NewMetaClaw constructs a MetaClaw provider.
 func NewMetaClaw(store storage.Storage, llm provider.Provider, emb embedding.Embedder) *MetaClaw {
 	return &MetaClaw{
-		store:    store,
-		llm:      llm,
-		embedder: emb,
+		store:     store,
+		llm:       llm,
+		embedder:  emb,
+		recentCap: 20,
 	}
 }
 
@@ -54,6 +70,16 @@ func (mc *MetaClaw) Shutdown(ctx context.Context) error {
 // SyncTurn extracts memories from the conversation turn using the LLM,
 // if available. If the LLM is nil or the extraction fails, this is a no-op.
 func (mc *MetaClaw) SyncTurn(ctx context.Context, userMsg, assistantMsg string) error {
+	mc.mu.Lock()
+	mc.recentBuf = append(mc.recentBuf, TurnPair{
+		User: userMsg, Assistant: assistantMsg, Timestamp: time.Now().UTC(),
+	})
+	if len(mc.recentBuf) > mc.recentCap {
+		mc.recentBuf = mc.recentBuf[len(mc.recentBuf)-mc.recentCap:]
+	}
+	mc.sinceRefresh++
+	mc.mu.Unlock()
+
 	if mc.llm == nil {
 		return nil
 	}
@@ -316,4 +342,14 @@ func (mc *MetaClaw) RegisterTools(reg *tool.Registry) {
 			}), nil
 		},
 	})
+}
+
+// RecentBufferSnapshot returns a copy of the rolling turn buffer.
+// Safe to call concurrently with SyncTurn.
+func (mc *MetaClaw) RecentBufferSnapshot() []TurnPair {
+	mc.mu.Lock()
+	defer mc.mu.Unlock()
+	out := make([]TurnPair, len(mc.recentBuf))
+	copy(out, mc.recentBuf)
+	return out
 }
