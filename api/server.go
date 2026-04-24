@@ -237,7 +237,7 @@ func (s *Server) RunTurn(ctx context.Context, userMessage string) (string, error
 		}
 		ret := s.opts.Deps.SkillsRetriever
 		eng.SetActiveSkillsProvider(func(userMsg string) []agent.ActiveSkill {
-			snippets, _ := ret.Retrieve(context.Background(), userMsg, injectCount)
+			snippets, _ := ret.Retrieve(runCtx, userMsg, injectCount)
 			return snippetsToActiveSkills(snippets)
 		})
 	}
