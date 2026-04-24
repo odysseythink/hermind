@@ -96,8 +96,8 @@ INSERT OR IGNORE INTO schema_meta (key, value) VALUES ('version', '3');
 `
 
 // currentSchemaVersion: v4 added MemType+Vector; v5 added supersession
-// lifecycle columns (status, superseded_by).
-const currentSchemaVersion = 5
+// lifecycle columns (status, superseded_by); v6 adds reinforcement tracking.
+const currentSchemaVersion = 6
 
 // Migrate applies the base schema. Idempotent. Legacy v1/v2 DBs are
 // never reached here — they are backed up before Migrate() runs.
@@ -174,6 +174,25 @@ func (s *Store) applyVersion(v int) error {
 		}
 		if _, err := tx.Exec(`CREATE INDEX IF NOT EXISTS idx_memories_status ON memories(status)`); err != nil {
 			return fmt.Errorf("v5 add status index: %w", err)
+		}
+	case 6:
+		if _, err := tx.Exec(`ALTER TABLE memories ADD COLUMN reinforcement_count INTEGER NOT NULL DEFAULT 0`); err != nil {
+			if !strings.Contains(err.Error(), "duplicate column name") {
+				return fmt.Errorf("v6 add reinforcement_count: %w", err)
+			}
+		}
+		if _, err := tx.Exec(`ALTER TABLE memories ADD COLUMN neglect_count INTEGER NOT NULL DEFAULT 0`); err != nil {
+			if !strings.Contains(err.Error(), "duplicate column name") {
+				return fmt.Errorf("v6 add neglect_count: %w", err)
+			}
+		}
+		if _, err := tx.Exec(`ALTER TABLE memories ADD COLUMN last_used_at REAL NOT NULL DEFAULT 0`); err != nil {
+			if !strings.Contains(err.Error(), "duplicate column name") {
+				return fmt.Errorf("v6 add last_used_at: %w", err)
+			}
+		}
+		if _, err := tx.Exec(`CREATE INDEX IF NOT EXISTS idx_memories_last_used ON memories(last_used_at)`); err != nil {
+			return fmt.Errorf("v6 add last_used_at index: %w", err)
 		}
 	default:
 		return fmt.Errorf("no migration step for v%d", v)

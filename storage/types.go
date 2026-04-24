@@ -72,6 +72,12 @@ type Memory struct {
 	// SupersededBy, when non-empty, is the ID of the memory that replaced
 	// this one. Only meaningful when Status == superseded.
 	SupersededBy string `json:"superseded_by,omitempty"`
+	// ReinforcementCount is incremented each time this memory influenced an assistant reply.
+	ReinforcementCount int `json:"reinforcement_count,omitempty"`
+	// NeglectCount is incremented each time this memory was injected but did not influence the reply.
+	NeglectCount int `json:"neglect_count,omitempty"`
+	// LastUsedAt is the UTC time of the most recent reinforcement. Zero when never used.
+	LastUsedAt time.Time `json:"last_used_at,omitempty"`
 }
 
 // MemorySearchOptions controls MemorySearch behavior.
