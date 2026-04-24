@@ -95,10 +95,9 @@ CREATE TABLE IF NOT EXISTS schema_meta (
 INSERT OR IGNORE INTO schema_meta (key, value) VALUES ('version', '3');
 `
 
-// currentSchemaVersion is the v4 single-conversation schema with MemType and Vector.
-// v1 and v2 DBs are detected by backupLegacyDBIfNeeded() at Open() time and
-// renamed out of the way, so no in-place migration code is needed.
-const currentSchemaVersion = 4
+// currentSchemaVersion: v4 added MemType+Vector; v5 added supersession
+// lifecycle columns (status, superseded_by).
+const currentSchemaVersion = 5
 
 // Migrate applies the base schema. Idempotent. Legacy v1/v2 DBs are
 // never reached here — they are backed up before Migrate() runs.
@@ -161,6 +160,20 @@ func (s *Store) applyVersion(v int) error {
 		}
 		if _, err := tx.Exec(`CREATE INDEX IF NOT EXISTS idx_memories_mem_type ON memories(mem_type)`); err != nil {
 			return fmt.Errorf("v4 add index: %w", err)
+		}
+	case 5:
+		if _, err := tx.Exec(`ALTER TABLE memories ADD COLUMN status TEXT NOT NULL DEFAULT 'active'`); err != nil {
+			if !strings.Contains(err.Error(), "duplicate column name") {
+				return fmt.Errorf("v5 add status: %w", err)
+			}
+		}
+		if _, err := tx.Exec(`ALTER TABLE memories ADD COLUMN superseded_by TEXT NOT NULL DEFAULT ''`); err != nil {
+			if !strings.Contains(err.Error(), "duplicate column name") {
+				return fmt.Errorf("v5 add superseded_by: %w", err)
+			}
+		}
+		if _, err := tx.Exec(`CREATE INDEX IF NOT EXISTS idx_memories_status ON memories(status)`); err != nil {
+			return fmt.Errorf("v5 add status index: %w", err)
 		}
 	default:
 		return fmt.Errorf("no migration step for v%d", v)

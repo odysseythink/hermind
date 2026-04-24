@@ -44,6 +44,13 @@ type SearchResult struct {
 	Rank    float64
 }
 
+// Memory lifecycle statuses. Queries default to MemoryStatusActive.
+const (
+	MemoryStatusActive     = "active"
+	MemoryStatusSuperseded = "superseded"
+	MemoryStatusArchived   = "archived"
+)
+
 // Memory is a persisted agent memory entry.
 type Memory struct {
 	ID        string          `json:"id"`
@@ -59,6 +66,12 @@ type Memory struct {
 	MemType string `json:"mem_type,omitempty"`
 	// Vector is a gob-encoded []float32 embedding. Nil for unembedded memories.
 	Vector []byte `json:"vector,omitempty"`
+	// Status is the lifecycle state: active, superseded, archived.
+	// Empty string is treated as active (legacy rows).
+	Status string `json:"status,omitempty"`
+	// SupersededBy, when non-empty, is the ID of the memory that replaced
+	// this one. Only meaningful when Status == superseded.
+	SupersededBy string `json:"superseded_by,omitempty"`
 }
 
 // MemorySearchOptions controls MemorySearch behavior.
@@ -67,4 +80,7 @@ type MemorySearchOptions struct {
 	Tags        []string
 	Limit       int
 	QueryVector []float32
+	// IncludeAll disables the default active-only filter so callers can
+	// see superseded/archived memories (e.g., for maintenance tooling).
+	IncludeAll bool
 }

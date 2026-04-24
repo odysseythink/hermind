@@ -32,6 +32,8 @@ type Storage interface {
 	DeleteMemory(ctx context.Context, id string) error
 	// ListMemoriesByType returns memories filtered by MemType, newest first.
 	ListMemoriesByType(ctx context.Context, memType string, limit int) ([]*Memory, error)
+	// MarkMemorySuperseded transitions oldID → superseded by newID.
+	MarkMemorySuperseded(ctx context.Context, oldID, newID string) error
 
 	// Transactions — group multiple operations atomically.
 	WithTx(ctx context.Context, fn func(tx Tx) error) error
