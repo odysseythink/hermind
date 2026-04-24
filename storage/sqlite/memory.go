@@ -7,7 +7,10 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
+	"math"
+	"sort"
 	"strings"
+	"time"
 
 	"github.com/odysseythink/hermind/storage"
 	"github.com/odysseythink/hermind/tool/embedding"
@@ -73,9 +76,23 @@ func (s *Store) GetMemory(ctx context.Context, id string) (*storage.Memory, erro
 	return &m, nil
 }
 
-// SearchMemories runs an FTS5 match against the memories table.
-// If opts.QueryVector is set, fetches limit*3 candidates and reranks by cosine similarity.
-// Returns matches ordered by created_at DESC (or by similarity if QueryVector is set).
+// scoredMemory pairs a memory with per-signal raw scores used to build
+// the hybrid ranking in SearchMemories.
+type scoredMemory struct {
+	mem     *storage.Memory
+	fts     float64 // -bm25 (higher = more relevant); 0 when query is empty
+	cosine  float64 // 0 when no vector
+	recency float64 // seconds-since-epoch, used only for relative ordering
+}
+
+// SearchMemories runs a hybrid FTS5 + cosine + recency search.
+//
+// When opts.QueryVector is set we fetch limit*3 candidates via FTS (or
+// a recency scan when the query is empty), score each candidate on three
+// independently min-max-normalized signals, and return the top limit by
+// weighted sum: 0.4 FTS + 0.5 cosine + 0.1 recency.
+//
+// When QueryVector is nil we fall back to the legacy FTS-ordered path.
 func (s *Store) SearchMemories(ctx context.Context, query string, opts *storage.MemorySearchOptions) ([]*storage.Memory, error) {
 	limit := 20
 	fetchLimit := limit
@@ -87,12 +104,68 @@ func (s *Store) SearchMemories(ctx context.Context, query string, opts *storage.
 		queryVec = opts.QueryVector
 		if queryVec != nil {
 			fetchLimit = limit * 3
-		} else {
-			fetchLimit = limit
 		}
 	}
 
-	// If query is empty, list recent memories instead of running FTS.
+	candidates, err := s.fetchMemoryCandidates(ctx, query, opts, fetchLimit)
+	if err != nil {
+		return nil, err
+	}
+	if len(candidates) == 0 {
+		return nil, nil
+	}
+
+	// Legacy path: no query vector → pure FTS ordering already applied.
+	if queryVec == nil {
+		out := make([]*storage.Memory, 0, len(candidates))
+		for _, c := range candidates {
+			out = append(out, c.mem)
+		}
+		return out, nil
+	}
+
+	// Hybrid scoring: fold cosine into each candidate, then min-max-normalize.
+	for _, c := range candidates {
+		if len(c.mem.Vector) == 0 {
+			continue
+		}
+		v, err := embedding.DecodeVector(c.mem.Vector)
+		if err != nil || len(v) == 0 {
+			continue
+		}
+		c.cosine = float64(embedding.CosineSimilarity(v, queryVec))
+	}
+
+	sort.SliceStable(candidates, func(i, j int) bool {
+		return hybridScore(candidates[i]) > hybridScore(candidates[j])
+	})
+	minF, maxF := scoreRange(candidates, func(c *scoredMemory) float64 { return c.fts })
+	minC, maxC := scoreRange(candidates, func(c *scoredMemory) float64 { return c.cosine })
+	minR, maxR := scoreRange(candidates, func(c *scoredMemory) float64 { return c.recency })
+
+	sort.SliceStable(candidates, func(i, j int) bool {
+		a := 0.4*normalize(candidates[i].fts, minF, maxF) +
+			0.5*normalize(candidates[i].cosine, minC, maxC) +
+			0.1*normalize(candidates[i].recency, minR, maxR)
+		b := 0.4*normalize(candidates[j].fts, minF, maxF) +
+			0.5*normalize(candidates[j].cosine, minC, maxC) +
+			0.1*normalize(candidates[j].recency, minR, maxR)
+		return a > b
+	})
+
+	out := make([]*storage.Memory, 0, limit)
+	for i, c := range candidates {
+		if i >= limit {
+			break
+		}
+		out = append(out, c.mem)
+	}
+	return out, nil
+}
+
+// fetchMemoryCandidates runs the FTS/recency query and scans rows into
+// scoredMemory entries with raw fts and recency signals populated.
+func (s *Store) fetchMemoryCandidates(ctx context.Context, query string, opts *storage.MemorySearchOptions, fetchLimit int) ([]*scoredMemory, error) {
 	var rows *sql.Rows
 	var err error
 	if query == "" {
@@ -104,7 +177,7 @@ func (s *Store) SearchMemories(ctx context.Context, query string, opts *storage.
 		}
 		args = append(args, fetchLimit)
 		rows, err = s.db.QueryContext(ctx,
-			`SELECT id, user_id, content, category, tags, metadata, created_at, updated_at, mem_type, vector
+			`SELECT id, user_id, content, category, tags, metadata, created_at, updated_at, mem_type, vector, 0 as rank
              FROM memories`+where+` ORDER BY created_at DESC LIMIT ?`, args...)
 	} else {
 		where := ""
@@ -115,17 +188,17 @@ func (s *Store) SearchMemories(ctx context.Context, query string, opts *storage.
 		}
 		args = append(args, fetchLimit)
 		rows, err = s.db.QueryContext(ctx,
-			`SELECT m.id, m.user_id, m.content, m.category, m.tags, m.metadata, m.created_at, m.updated_at, m.mem_type, m.vector
+			`SELECT m.id, m.user_id, m.content, m.category, m.tags, m.metadata, m.created_at, m.updated_at, m.mem_type, m.vector, bm25(memories_fts) as rank
              FROM memories_fts
              JOIN memories m ON m.rowid = memories_fts.rowid
-             WHERE memories_fts MATCH ?`+where+` ORDER BY m.created_at DESC LIMIT ?`, args...)
+             WHERE memories_fts MATCH ?`+where+` ORDER BY rank LIMIT ?`, args...)
 	}
 	if err != nil {
 		return nil, fmt.Errorf("sqlite: search memories: %w", err)
 	}
 	defer rows.Close()
 
-	var out []*storage.Memory
+	var out []*scoredMemory
 	for rows.Next() {
 		var (
 			m        storage.Memory
@@ -134,8 +207,9 @@ func (s *Store) SearchMemories(ctx context.Context, query string, opts *storage.
 			created  float64
 			updated  float64
 			vecBytes []byte
+			rank     float64
 		)
-		if err := rows.Scan(&m.ID, &m.UserID, &m.Content, &m.Category, &tagsJSON, &metaStr, &created, &updated, &m.MemType, &vecBytes); err != nil {
+		if err := rows.Scan(&m.ID, &m.UserID, &m.Content, &m.Category, &tagsJSON, &metaStr, &created, &updated, &m.MemType, &vecBytes, &rank); err != nil {
 			return nil, fmt.Errorf("sqlite: scan memory: %w", err)
 		}
 		_ = json.Unmarshal([]byte(tagsJSON), &m.Tags)
@@ -144,34 +218,50 @@ func (s *Store) SearchMemories(ctx context.Context, query string, opts *storage.
 		m.UpdatedAt = fromEpoch(updated)
 		m.Vector = vecBytes
 
-		// Optional tag filter (post-query, since tags are stored as JSON)
 		if opts != nil && len(opts.Tags) > 0 && !hasAnyTag(m.Tags, opts.Tags) {
 			continue
 		}
-		out = append(out, &m)
+		out = append(out, &scoredMemory{
+			mem:     &m,
+			fts:     -rank,
+			recency: float64(m.CreatedAt.Unix()),
+		})
 	}
 	if err := rows.Err(); err != nil {
 		return nil, err
 	}
+	_ = time.Now // referenced for future TTL work
+	return out, nil
+}
 
-	// Vector reranking: if QueryVector is set, rerank and trim to limit
-	if queryVec != nil && len(out) > 0 {
-		ranked := embedding.Rerank(out, func(m *storage.Memory) []float32 {
-			if len(m.Vector) == 0 {
-				return nil
-			}
-			v, _ := embedding.DecodeVector(m.Vector)
-			return v
-		}, queryVec)
-		out = make([]*storage.Memory, 0, limit)
-		for i, r := range ranked {
-			if i >= limit {
-				break
-			}
-			out = append(out, r.Value)
+// hybridScore is only used for the debug-printable pre-normalization pass.
+// The real ranking uses normalized signals.
+func hybridScore(c *scoredMemory) float64 {
+	return c.fts + c.cosine
+}
+
+func scoreRange(cs []*scoredMemory, get func(*scoredMemory) float64) (float64, float64) {
+	if len(cs) == 0 {
+		return 0, 0
+	}
+	min, max := math.Inf(1), math.Inf(-1)
+	for _, c := range cs {
+		v := get(c)
+		if v < min {
+			min = v
+		}
+		if v > max {
+			max = v
 		}
 	}
-	return out, nil
+	return min, max
+}
+
+func normalize(v, min, max float64) float64 {
+	if max <= min {
+		return 0
+	}
+	return (v - min) / (max - min)
 }
 
 // DeleteMemory removes a memory by ID.
