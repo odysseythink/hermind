@@ -80,6 +80,17 @@ func (mc *MetaClaw) SyncTurn(ctx context.Context, userMsg, assistantMsg string) 
 	mc.sinceRefresh++
 	mc.mu.Unlock()
 
+	// Check if working summary refresh is triggered
+	mc.mu.Lock()
+	trigger := mc.summaryEvery > 0 && mc.sinceRefresh >= mc.summaryEvery
+	if trigger {
+		mc.sinceRefresh = 0
+	}
+	mc.mu.Unlock()
+	if trigger {
+		go mc.refreshWorkingSummary(context.Background())
+	}
+
 	if mc.llm == nil {
 		return nil
 	}
@@ -341,6 +352,57 @@ func (mc *MetaClaw) RegisterTools(reg *tool.Registry) {
 				"archived":   rep.Archived,
 			}), nil
 		},
+	})
+}
+
+// SetSummaryEvery configures how often (in SyncTurn calls) a rolling
+// working-summary aux call is triggered. Zero disables.
+func (mc *MetaClaw) SetSummaryEvery(n int) {
+	mc.mu.Lock()
+	mc.summaryEvery = n
+	mc.mu.Unlock()
+}
+
+func (mc *MetaClaw) refreshWorkingSummary(ctx context.Context) {
+	mc.mu.Lock()
+	snapshot := make([]TurnPair, len(mc.recentBuf))
+	copy(snapshot, mc.recentBuf)
+	mc.mu.Unlock()
+	if mc.llm == nil || len(snapshot) == 0 {
+		return
+	}
+
+	var transcript strings.Builder
+	for _, p := range snapshot {
+		fmt.Fprintf(&transcript, "User: %s\nAssistant: %s\n\n", p.User, p.Assistant)
+	}
+
+	resp, err := mc.llm.Complete(ctx, &provider.Request{
+		SystemPrompt: "Produce a terse one-paragraph rolling summary of the user's recent activity and current context. Focus on goals, open tasks, and decisions. Replace any prior summary rather than appending. Under 150 words.",
+		Messages: []message.Message{
+			{Role: message.RoleUser, Content: message.TextContent(transcript.String())},
+		},
+	})
+	if err != nil {
+		return
+	}
+	summary := strings.TrimSpace(resp.Message.Content.Text())
+	if summary == "" {
+		return
+	}
+
+	now := time.Now().UTC()
+	created := now
+	if existing, err := mc.store.GetMemory(ctx, "working_summary"); err == nil && existing != nil {
+		created = existing.CreatedAt
+	}
+	_ = mc.store.SaveMemory(ctx, &storage.Memory{
+		ID:        "working_summary",
+		Content:   summary,
+		MemType:   storage.MemTypeWorkingSummary,
+		CreatedAt: created,
+		UpdatedAt: now,
+		Status:    storage.MemoryStatusActive,
 	})
 }
 

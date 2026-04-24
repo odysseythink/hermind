@@ -8,6 +8,8 @@ import (
 
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
+	"github.com/odysseythink/hermind/message"
+	"github.com/odysseythink/hermind/provider"
 	"github.com/odysseythink/hermind/storage"
 	"github.com/odysseythink/hermind/tool/memory/memprovider"
 )
@@ -38,6 +40,13 @@ func (f *fakeStorage) UpdateUsage(_ context.Context, _ *storage.UsageUpdate) err
 }
 
 func (f *fakeStorage) SaveMemory(_ context.Context, m *storage.Memory) error {
+	// Upsert: replace by ID if exists, otherwise append
+	for i, existing := range f.memories {
+		if existing.ID == m.ID {
+			f.memories[i] = m
+			return nil
+		}
+	}
 	f.memories = append(f.memories, m)
 	return nil
 }
@@ -186,4 +195,54 @@ func TestMetaClawSyncTurnAppendsToRingBuffer(t *testing.T) {
 	// Oldest kept entry should be turn #5 (0..4 pushed out).
 	assert.Equal(t, "u5", buf[0].User)
 	assert.Equal(t, "a24", buf[len(buf)-1].Assistant)
+}
+
+type stubLLM struct {
+	lastSystemPrompt string
+	reply            string
+}
+
+func (s *stubLLM) Name() string { return "stub" }
+func (s *stubLLM) Available() bool { return true }
+func (s *stubLLM) Complete(_ context.Context, req *provider.Request) (*provider.Response, error) {
+	s.lastSystemPrompt = req.SystemPrompt
+	return &provider.Response{
+		Message: message.Message{
+			Role:    message.RoleAssistant,
+			Content: message.TextContent(s.reply),
+		},
+	}, nil
+}
+func (s *stubLLM) Stream(ctx context.Context, req *provider.Request) (provider.Stream, error) {
+	panic("stub: Stream not used")
+}
+func (s *stubLLM) ModelInfo(model string) *provider.ModelInfo {
+	return nil
+}
+func (s *stubLLM) EstimateTokens(model string, text string) (int, error) {
+	return 0, nil
+}
+
+func TestMetaClawRefreshWorkingSummaryOnThreshold(t *testing.T) {
+	store := &fakeStorage{}
+	llm := &stubLLM{reply: "Rolling summary: user working on X."}
+	mc := memprovider.NewMetaClaw(store, llm, nil)
+	mc.SetSummaryEvery(3)
+	require.NoError(t, mc.Initialize(context.Background(), "sess"))
+
+	for i := 0; i < 3; i++ {
+		require.NoError(t, mc.SyncTurn(context.Background(),
+			fmt.Sprintf("u%d", i), fmt.Sprintf("a%d", i)))
+	}
+	// Give the goroutine a moment to run.
+	for i := 0; i < 50; i++ {
+		if _, err := store.GetMemory(context.Background(), "working_summary"); err == nil {
+			break
+		}
+		time.Sleep(10 * time.Millisecond)
+	}
+	got, err := store.GetMemory(context.Background(), "working_summary")
+	require.NoError(t, err)
+	assert.Equal(t, "Rolling summary: user working on X.", got.Content)
+	assert.Equal(t, storage.MemTypeWorkingSummary, got.MemType)
 }
