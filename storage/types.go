@@ -51,6 +51,16 @@ const (
 	MemoryStatusArchived   = "archived"
 )
 
+// Memory type tags. Persisted in the mem_type column of the memories table.
+const (
+	MemTypeEpisodic              = "episodic"
+	MemTypeSemantic              = "semantic"
+	MemTypePreference            = "preference"
+	MemTypeProjectState          = "project_state"
+	MemTypeProceduralObservation = "procedural_obs"
+	MemTypeWorkingSummary        = "working_summary"
+)
+
 // Memory is a persisted agent memory entry.
 type Memory struct {
 	ID        string          `json:"id"`
