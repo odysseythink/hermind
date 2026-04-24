@@ -168,6 +168,8 @@ func (s *Server) buildRouter() chi.Router {
 		r.Get("/providers", s.handleProvidersList)
 		r.Post("/providers/{name}/models", s.handleProvidersModels)
 		r.Post("/fallback_providers/{index}/models", s.handleFallbackProvidersModels)
+
+		r.Get("/memory/stats", s.handleMemoryStats)
 	})
 
 	r.Get("/", s.handleIndex)
