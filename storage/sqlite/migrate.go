@@ -96,8 +96,9 @@ INSERT OR IGNORE INTO schema_meta (key, value) VALUES ('version', '3');
 `
 
 // currentSchemaVersion: v4 added MemType+Vector; v5 added supersession
-// lifecycle columns (status, superseded_by); v6 adds reinforcement tracking.
-const currentSchemaVersion = 6
+// lifecycle columns (status, superseded_by); v6 adds reinforcement tracking;
+// v7 adds memory_events table for event-driven memory consolidation.
+const currentSchemaVersion = 7
 
 // Migrate applies the base schema. Idempotent. Legacy v1/v2 DBs are
 // never reached here — they are backed up before Migrate() runs.
@@ -193,6 +194,22 @@ func (s *Store) applyVersion(v int) error {
 		}
 		if _, err := tx.Exec(`CREATE INDEX IF NOT EXISTS idx_memories_last_used ON memories(last_used_at)`); err != nil {
 			return fmt.Errorf("v6 add last_used_at index: %w", err)
+		}
+	case 7:
+		if _, err := tx.Exec(`
+        CREATE TABLE IF NOT EXISTS memory_events (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            ts REAL NOT NULL,
+            kind TEXT NOT NULL,
+            data TEXT NOT NULL DEFAULT '{}'
+        )`); err != nil {
+			return fmt.Errorf("v7 create memory_events: %w", err)
+		}
+		if _, err := tx.Exec(`CREATE INDEX IF NOT EXISTS idx_memory_events_ts ON memory_events(ts DESC)`); err != nil {
+			return fmt.Errorf("v7 memory_events ts index: %w", err)
+		}
+		if _, err := tx.Exec(`CREATE INDEX IF NOT EXISTS idx_memory_events_kind ON memory_events(kind)`); err != nil {
+			return fmt.Errorf("v7 memory_events kind index: %w", err)
 		}
 	default:
 		return fmt.Errorf("no migration step for v%d", v)
