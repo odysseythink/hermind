@@ -161,6 +161,9 @@ func BuildEngineDeps(ctx context.Context, app *App) (api.EngineDeps, func(), err
 	var evolver *skills.Evolver
 	if app.Config.Skills.AutoExtract {
 		evolver = skills.NewEvolver(p, skillsDir)
+		if app.Storage != nil {
+			evolver.SetStorage(app.Storage)
+		}
 	}
 
 	// Set up skills retriever

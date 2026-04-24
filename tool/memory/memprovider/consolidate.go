@@ -2,6 +2,7 @@ package memprovider
 
 import (
 	"context"
+	"encoding/json"
 	"fmt"
 	"strings"
 	"time"
@@ -118,6 +119,12 @@ func Consolidate(ctx context.Context, store storage.Storage, opts *ConsolidateOp
 			}
 		}
 	}
+	data, _ := json.Marshal(map[string]any{
+		"scanned":    report.Scanned,
+		"superseded": report.Superseded,
+		"archived":   report.Archived,
+	})
+	_ = store.AppendMemoryEvent(ctx, time.Now().UTC(), "memory.consolidated", data)
 	return report, nil
 }
 

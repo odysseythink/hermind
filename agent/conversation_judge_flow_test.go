@@ -3,6 +3,7 @@ package agent
 import (
 	"context"
 	"testing"
+	"time"
 
 	"github.com/odysseythink/hermind/config"
 	"github.com/odysseythink/hermind/message"
@@ -51,12 +52,43 @@ func (r *recStore) MarkMemorySuperseded(_ context.Context, _, _ string) error { 
 func (r *recStore) WithTx(ctx context.Context, fn func(storage.Tx) error) error { return fn(nopTx{}) }
 func (r *recStore) Close() error   { return nil }
 func (r *recStore) Migrate() error { return nil }
+func (r *recStore) AppendMemoryEvent(_ context.Context, _ time.Time, _ string, _ []byte) error {
+	return nil
+}
+func (r *recStore) ListMemoryEvents(_ context.Context, _, _ int, _ []string) ([]*storage.MemoryEvent, error) {
+	return nil, nil
+}
+func (r *recStore) MemoryStats(_ context.Context) (*storage.MemoryStats, error) {
+	return &storage.MemoryStats{ByType: map[string]int{}, ByStatus: map[string]int{}}, nil
+}
+func (r *recStore) MemoryHealth(_ context.Context) (*storage.MemoryHealth, error) {
+	return &storage.MemoryHealth{SchemaVersion: 7}, nil
+}
+func (r *recStore) SkillsStats(_ context.Context, _ string) (*storage.SkillsStats, error) {
+	return &storage.SkillsStats{ByCategory: map[string]int{}}, nil
+}
 
 type nopTx struct{}
 
 func (nopTx) AppendMessage(_ context.Context, _ *storage.StoredMessage) error { return nil }
 func (nopTx) UpdateUsage(_ context.Context, _ *storage.UsageUpdate) error     { return nil }
 func (nopTx) UpdateSystemPromptCache(_ context.Context, _ string) error       { return nil }
+
+type recStoreWithEvents struct {
+	recStore
+	events []struct {
+		kind string
+		data []byte
+	}
+}
+
+func (r *recStoreWithEvents) AppendMemoryEvent(_ context.Context, _ time.Time, kind string, data []byte) error {
+	r.events = append(r.events, struct {
+		kind string
+		data []byte
+	}{kind, data})
+	return nil
+}
 
 type flowStubProvider struct {
 	reply string
@@ -137,4 +169,15 @@ func TestRunConversation_NoJudgeSkipsBumps(t *testing.T) {
 	_, err := eng.RunConversation(context.Background(), &RunOptions{UserMessage: "hi"})
 	require.NoError(t, err)
 	assert.Empty(t, store.bumps, "no judge → no feedback calls")
+}
+
+func TestRunConversation_JudgeEventWritten(t *testing.T) {
+	store := &recStoreWithEvents{}
+	p := &flowStubProvider{reply: "reply"}
+	eng := NewEngineWithToolsAndAux(p, nil, store, nil, config.AgentConfig{MaxTurns: 2}, "cli")
+	eng.SetConversationJudge(&fixedJudge{v: &Verdict{Outcome: "success"}})
+	_, err := eng.RunConversation(context.Background(), &RunOptions{UserMessage: "hi"})
+	require.NoError(t, err)
+	require.NotEmpty(t, store.events, "should record conversation.judged event")
+	assert.Equal(t, "conversation.judged", store.events[0].kind)
 }

@@ -3,6 +3,7 @@ package skills
 
 import (
 	"context"
+	"encoding/json"
 	"fmt"
 	"os"
 	"path/filepath"
@@ -13,6 +14,7 @@ import (
 	"github.com/odysseythink/hermind/agent"
 	"github.com/odysseythink/hermind/message"
 	"github.com/odysseythink/hermind/provider"
+	"github.com/odysseythink/hermind/storage"
 )
 
 // Evolver extracts reusable skill snippets from completed conversations
@@ -20,6 +22,7 @@ import (
 type Evolver struct {
 	llm      provider.Provider
 	skillDir string
+	storage  storage.Storage
 }
 
 // NewEvolver constructs an Evolver.
@@ -27,6 +30,12 @@ type Evolver struct {
 // skillDir is the directory where .md skill files are written.
 func NewEvolver(llm provider.Provider, skillDir string) *Evolver {
 	return &Evolver{llm: llm, skillDir: skillDir}
+}
+
+// SetStorage optionally wires a storage.Storage so extraction events
+// are surfaced via /api/memory/report.
+func (ev *Evolver) SetStorage(s storage.Storage) {
+	ev.storage = s
 }
 
 // Extract analyses the conversation history and persists skills.
@@ -52,6 +61,13 @@ func (ev *Evolver) Extract(ctx context.Context, turns []message.Message, verdict
 			path := filepath.Join(ev.skillDir, filename)
 			if err := os.WriteFile(path, []byte(body), 0o644); err != nil {
 				return fmt.Errorf("evolver: write %s: %w", path, err)
+			}
+			if ev.storage != nil {
+				data, _ := json.Marshal(map[string]any{
+					"filename": filepath.Base(path),
+					"reason":   "judge verdict",
+				})
+				_ = ev.storage.AppendMemoryEvent(context.Background(), time.Now().UTC(), "skill.extracted", data)
 			}
 		}
 		return nil
@@ -96,7 +112,15 @@ Conversation:
 	slug := makeSlug(raw)
 	filename := fmt.Sprintf("%s-%s.md", time.Now().UTC().Format("20060102-150405"), slug)
 	path := filepath.Join(ev.skillDir, filename)
-	return os.WriteFile(path, []byte(raw), 0o644)
+	err = os.WriteFile(path, []byte(raw), 0o644)
+	if err == nil && ev.storage != nil {
+		data, _ := json.Marshal(map[string]any{
+			"filename": filepath.Base(path),
+			"reason":   "legacy",
+		})
+		_ = ev.storage.AppendMemoryEvent(context.Background(), time.Now().UTC(), "skill.extracted", data)
+	}
+	return err
 }
 
 func formatTurns(turns []message.Message) string {

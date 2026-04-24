@@ -3,6 +3,7 @@ package agent
 
 import (
 	"context"
+	"encoding/json"
 	"errors"
 	"fmt"
 	"io"
@@ -216,6 +217,15 @@ func (e *Engine) RunConversation(ctx context.Context, opts *RunOptions) (*Conver
 			"skills_extracted", len(verdict.SkillsToExtract),
 			"reasoning", verdict.Reasoning,
 		)
+		if e.storage != nil {
+			data, _ := json.Marshal(map[string]any{
+				"outcome":           verdict.Outcome,
+				"memories_hit":      len(verdict.MemoriesUsed),
+				"memories_injected": len(conversationInjectedMems),
+				"skills_extracted":  len(verdict.SkillsToExtract),
+			})
+			_ = e.storage.AppendMemoryEvent(ctx, time.Now().UTC(), "conversation.judged", data)
+		}
 	}
 
 	return &ConversationResult{
