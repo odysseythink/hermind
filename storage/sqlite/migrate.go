@@ -71,7 +71,6 @@ CREATE TABLE IF NOT EXISTS memories (
 );
 CREATE INDEX IF NOT EXISTS idx_memories_user ON memories(user_id);
 CREATE INDEX IF NOT EXISTS idx_memories_created ON memories(created_at);
-CREATE INDEX IF NOT EXISTS idx_memories_mem_type ON memories(mem_type);
 
 CREATE VIRTUAL TABLE IF NOT EXISTS memories_fts USING fts5(
     content,
@@ -93,7 +92,7 @@ CREATE TABLE IF NOT EXISTS schema_meta (
     key TEXT PRIMARY KEY,
     value TEXT NOT NULL
 );
-INSERT OR IGNORE INTO schema_meta (key, value) VALUES ('version', '4');
+INSERT OR IGNORE INTO schema_meta (key, value) VALUES ('version', '3');
 `
 
 // currentSchemaVersion is the v4 single-conversation schema with MemType and Vector.
@@ -148,11 +147,17 @@ func (s *Store) applyVersion(v int) error {
 	case 3:
 		// no-op: v3 IS the initial schema emitted by schemaSQL
 	case 4:
+		// ALTER TABLE is tolerant of fresh databases where schemaSQL already
+		// created the column — SQLite returns "duplicate column name" in that case.
 		if _, err := tx.Exec(`ALTER TABLE memories ADD COLUMN mem_type TEXT NOT NULL DEFAULT ''`); err != nil {
-			return fmt.Errorf("v4 add mem_type: %w", err)
+			if !strings.Contains(err.Error(), "duplicate column name") {
+				return fmt.Errorf("v4 add mem_type: %w", err)
+			}
 		}
 		if _, err := tx.Exec(`ALTER TABLE memories ADD COLUMN vector BLOB`); err != nil {
-			return fmt.Errorf("v4 add vector: %w", err)
+			if !strings.Contains(err.Error(), "duplicate column name") {
+				return fmt.Errorf("v4 add vector: %w", err)
+			}
 		}
 		if _, err := tx.Exec(`CREATE INDEX IF NOT EXISTS idx_memories_mem_type ON memories(mem_type)`); err != nil {
 			return fmt.Errorf("v4 add index: %w", err)
