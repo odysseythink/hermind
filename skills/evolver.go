@@ -10,6 +10,7 @@ import (
 	"strings"
 	"time"
 
+	"github.com/odysseythink/hermind/agent"
 	"github.com/odysseythink/hermind/message"
 	"github.com/odysseythink/hermind/provider"
 )
@@ -28,13 +29,35 @@ func NewEvolver(llm provider.Provider, skillDir string) *Evolver {
 	return &Evolver{llm: llm, skillDir: skillDir}
 }
 
-// Extract analyses the conversation history with the LLM.
-// If the LLM identifies a reusable skill, it writes a .md file to skillDir.
-// No-op when llm is nil or turns is empty. Always ensures skillDir exists.
-func (ev *Evolver) Extract(ctx context.Context, turns []message.Message) error {
+// Extract analyses the conversation history and persists skills.
+// When verdict is non-nil, directly persists SkillsToExtract from the judge.
+// When verdict is nil, falls back to the legacy LLM-extraction path.
+// Always ensures skillDir exists.
+func (ev *Evolver) Extract(ctx context.Context, turns []message.Message, verdict *agent.Verdict) error {
 	if err := os.MkdirAll(ev.skillDir, 0o755); err != nil {
 		return fmt.Errorf("evolver: mkdir %s: %w", ev.skillDir, err)
 	}
+
+	if verdict != nil {
+		for _, d := range verdict.SkillsToExtract {
+			body := strings.TrimSpace(d.Body)
+			if body == "" {
+				continue
+			}
+			slug := makeSlug(d.Name)
+			if slug == "skill" {
+				slug = makeSlug(body)
+			}
+			filename := fmt.Sprintf("%s-%s.md", time.Now().UTC().Format("20060102-150405"), slug)
+			path := filepath.Join(ev.skillDir, filename)
+			if err := os.WriteFile(path, []byte(body), 0o644); err != nil {
+				return fmt.Errorf("evolver: write %s: %w", path, err)
+			}
+		}
+		return nil
+	}
+
+	// Legacy path: no judge, full LLM extraction.
 	if ev.llm == nil || len(turns) == 0 {
 		return nil
 	}

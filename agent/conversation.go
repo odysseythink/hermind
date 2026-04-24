@@ -183,7 +183,7 @@ func (e *Engine) RunConversation(ctx context.Context, opts *RunOptions) (*Conver
 	}
 
 	if e.skillsEvolver != nil {
-		_ = e.skillsEvolver.Extract(ctx, history)
+		_ = e.skillsEvolver.Extract(ctx, history, nil)
 	}
 
 	_ = conversationInjectedMems

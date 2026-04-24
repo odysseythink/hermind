@@ -41,7 +41,7 @@ type EngineDeps struct {
 	Platform    string
 	// SkillsEvolver, if non-nil, extracts skills after each conversation.
 	SkillsEvolver interface {
-		Extract(ctx context.Context, turns []message.Message) error
+		Extract(ctx context.Context, turns []message.Message, verdict *agent.Verdict) error
 	}
 	// SkillsRetriever, if non-nil, retrieves relevant skills per turn.
 	SkillsRetriever interface {

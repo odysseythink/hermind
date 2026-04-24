@@ -43,7 +43,7 @@ type Engine struct {
 	// skillsEvolver extracts skills after each conversation.
 	// If nil, skill extraction is disabled.
 	skillsEvolver interface {
-		Extract(ctx context.Context, turns []message.Message) error
+		Extract(ctx context.Context, turns []message.Message, verdict *Verdict) error
 	}
 
 	// conversationJudge scores the conversation at its end. Nil disables.
@@ -182,7 +182,7 @@ func (e *Engine) SetSynergyBudget(b SynergyBudget) {
 // SetSkillsEvolver wires a skill evolver that runs after each conversation.
 // Pass nil to disable.
 func (e *Engine) SetSkillsEvolver(ev interface {
-	Extract(ctx context.Context, turns []message.Message) error
+	Extract(ctx context.Context, turns []message.Message, verdict *Verdict) error
 }) {
 	e.skillsEvolver = ev
 }
