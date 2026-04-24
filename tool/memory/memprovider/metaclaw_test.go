@@ -3,6 +3,7 @@ package memprovider_test
 import (
 	"context"
 	"fmt"
+	"sync"
 	"testing"
 	"time"
 
@@ -16,6 +17,7 @@ import (
 
 // fakeStorage is a minimal in-memory storage for testing.
 type fakeStorage struct {
+	mu       sync.Mutex
 	memories []*storage.Memory
 }
 
@@ -40,6 +42,8 @@ func (f *fakeStorage) UpdateUsage(_ context.Context, _ *storage.UsageUpdate) err
 }
 
 func (f *fakeStorage) SaveMemory(_ context.Context, m *storage.Memory) error {
+	f.mu.Lock()
+	defer f.mu.Unlock()
 	// Upsert: replace by ID if exists, otherwise append
 	for i, existing := range f.memories {
 		if existing.ID == m.ID {
@@ -52,6 +56,8 @@ func (f *fakeStorage) SaveMemory(_ context.Context, m *storage.Memory) error {
 }
 
 func (f *fakeStorage) GetMemory(_ context.Context, id string) (*storage.Memory, error) {
+	f.mu.Lock()
+	defer f.mu.Unlock()
 	for _, m := range f.memories {
 		if m.ID == id {
 			return m, nil
@@ -61,6 +67,8 @@ func (f *fakeStorage) GetMemory(_ context.Context, id string) (*storage.Memory, 
 }
 
 func (f *fakeStorage) SearchMemories(_ context.Context, query string, opts *storage.MemorySearchOptions) ([]*storage.Memory, error) {
+	f.mu.Lock()
+	defer f.mu.Unlock()
 	limit := 5
 	if opts != nil && opts.Limit > 0 {
 		limit = opts.Limit
@@ -80,6 +88,8 @@ func (f *fakeStorage) DeleteMemory(_ context.Context, id string) error {
 }
 
 func (f *fakeStorage) ListMemoriesByType(_ context.Context, memType string, limit int) ([]*storage.Memory, error) {
+	f.mu.Lock()
+	defer f.mu.Unlock()
 	var out []*storage.Memory
 	for _, m := range f.memories {
 		if m.MemType == memType {
@@ -105,6 +115,8 @@ func (f *fakeStorage) Migrate() error {
 }
 
 func (f *fakeStorage) MarkMemorySuperseded(_ context.Context, oldID, newID string) error {
+	f.mu.Lock()
+	defer f.mu.Unlock()
 	for _, m := range f.memories {
 		if m.ID == oldID {
 			m.Status = storage.MemoryStatusSuperseded
@@ -116,6 +128,8 @@ func (f *fakeStorage) MarkMemorySuperseded(_ context.Context, oldID, newID strin
 }
 
 func (f *fakeStorage) BumpMemoryUsage(_ context.Context, id string, used bool) error {
+	f.mu.Lock()
+	defer f.mu.Unlock()
 	for _, m := range f.memories {
 		if m.ID == id {
 			if used {
@@ -198,6 +212,7 @@ func TestMetaClawSyncTurnAppendsToRingBuffer(t *testing.T) {
 }
 
 type stubLLM struct {
+	mu               sync.Mutex
 	lastSystemPrompt string
 	reply            string
 }
@@ -205,7 +220,9 @@ type stubLLM struct {
 func (s *stubLLM) Name() string { return "stub" }
 func (s *stubLLM) Available() bool { return true }
 func (s *stubLLM) Complete(_ context.Context, req *provider.Request) (*provider.Response, error) {
+	s.mu.Lock()
 	s.lastSystemPrompt = req.SystemPrompt
+	s.mu.Unlock()
 	return &provider.Response{
 		Message: message.Message{
 			Role:    message.RoleAssistant,
