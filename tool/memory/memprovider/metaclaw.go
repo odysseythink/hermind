@@ -169,15 +169,14 @@ func (mc *MetaClaw) saveMemory(ctx context.Context, content, memType string) err
 	return mc.store.SaveMemory(ctx, mem)
 }
 
-// Recall retrieves memories matching a query, optionally reranked by vector similarity.
-func (mc *MetaClaw) Recall(ctx context.Context, query string, limit int) ([]string, error) {
+// Recall retrieves memories matching a query, returning typed snippets
+// with stable IDs so the feedback loop can credit specific entries.
+func (mc *MetaClaw) Recall(ctx context.Context, query string, limit int) ([]InjectedMemory, error) {
 	if limit <= 0 {
 		limit = 5
 	}
 
 	opts := &storage.MemorySearchOptions{Limit: limit}
-
-	// If an embedder is available, embed the query for vector reranking
 	if mc.embedder != nil {
 		vec, err := mc.embedder.Embed(ctx, query)
 		if err == nil && len(vec) > 0 {
@@ -190,9 +189,9 @@ func (mc *MetaClaw) Recall(ctx context.Context, query string, limit int) ([]stri
 		return nil, err
 	}
 
-	out := make([]string, 0, len(mems))
+	out := make([]InjectedMemory, 0, len(mems))
 	for _, m := range mems {
-		out = append(out, m.Content)
+		out = append(out, InjectedMemory{ID: m.ID, Content: m.Content})
 	}
 	return out, nil
 }
@@ -265,11 +264,15 @@ func (mc *MetaClaw) RegisterTools(reg *tool.Registry) {
 			if err := json.Unmarshal(raw, &args); err != nil {
 				return tool.ToolError("invalid arguments: " + err.Error()), nil
 			}
-			results, err := mc.Recall(ctx, args.Query, args.Limit)
+			recalled, err := mc.Recall(ctx, args.Query, args.Limit)
 			if err != nil {
 				return tool.ToolError(err.Error()), nil
 			}
-			return tool.ToolResult(map[string]any{"results": results}), nil
+			texts := make([]string, 0, len(recalled))
+			for _, r := range recalled {
+				texts = append(texts, r.Content)
+			}
+			return tool.ToolResult(map[string]any{"results": texts}), nil
 		},
 	})
 

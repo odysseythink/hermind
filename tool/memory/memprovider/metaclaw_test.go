@@ -5,6 +5,8 @@ import (
 	"testing"
 	"time"
 
+	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/require"
 	"github.com/odysseythink/hermind/storage"
 	"github.com/odysseythink/hermind/tool/memory/memprovider"
 )
@@ -151,4 +153,20 @@ func TestMetaClawSyncTurnNoLLM(t *testing.T) {
 	if len(store.memories) != 0 {
 		t.Errorf("expected no memories written without LLM, got %d", len(store.memories))
 	}
+}
+
+func TestMetaClawRecallReturnsInjectedMemory(t *testing.T) {
+	store := &fakeStorage{}
+	now := time.Now().UTC()
+	require.NoError(t, store.SaveMemory(context.Background(), &storage.Memory{
+		ID: "mc_abc", Content: "likes Go", MemType: "preference",
+		CreatedAt: now, UpdatedAt: now,
+	}))
+
+	mc := memprovider.NewMetaClaw(store, nil, nil)
+	got, err := mc.Recall(context.Background(), "go", 5)
+	require.NoError(t, err)
+	require.Len(t, got, 1)
+	assert.Equal(t, "mc_abc", got[0].ID)
+	assert.Equal(t, "likes Go", got[0].Content)
 }
