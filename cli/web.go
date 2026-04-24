@@ -88,6 +88,8 @@ func runWeb(ctx context.Context, app *App, opts webRunOptions) error {
 		time.AfterFunc(opts.ExitAfter, cancel)
 	}
 
+	srv.StartGateway(runCtx)
+
 	httpSrv := &http.Server{
 		Handler:           srv.Router(),
 		ReadHeaderTimeout: 5 * time.Second,

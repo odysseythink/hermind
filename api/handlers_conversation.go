@@ -5,16 +5,11 @@ import (
 	"encoding/json"
 	"net/http"
 	"strconv"
-	"sync"
 
 	"github.com/odysseythink/hermind/agent"
 	"github.com/odysseythink/hermind/message"
 	"github.com/odysseythink/hermind/provider"
 )
-
-// runMu serializes conversation runs — at most one turn in-flight.
-var runMu sync.Mutex
-var runCancel context.CancelFunc
 
 func atoiDefault(s string, d int) int {
 	if s == "" {
@@ -76,15 +71,15 @@ func (s *Server) handleConversationPost(w http.ResponseWriter, r *http.Request) 
 		return
 	}
 
-	runMu.Lock()
-	if runCancel != nil {
-		runMu.Unlock()
+	s.runMu.Lock()
+	if s.runCancel != nil {
+		s.runMu.Unlock()
 		http.Error(w, "another turn is in flight", http.StatusConflict)
 		return
 	}
 	runCtx, cancel := context.WithCancel(context.Background())
-	runCancel = cancel
-	runMu.Unlock()
+	s.runCancel = cancel
+	s.runMu.Unlock()
 
 	eng := agent.NewEngineWithToolsAndAux(
 		s.opts.Deps.Provider, s.opts.Deps.AuxProvider, s.opts.Deps.Storage,
@@ -94,9 +89,9 @@ func (s *Server) handleConversationPost(w http.ResponseWriter, r *http.Request) 
 
 	go func() {
 		defer func() {
-			runMu.Lock()
-			runCancel = nil
-			runMu.Unlock()
+			s.runMu.Lock()
+			s.runCancel = nil
+			s.runMu.Unlock()
 			cancel()
 		}()
 		_, err := eng.RunConversation(runCtx, &agent.RunOptions{
@@ -118,11 +113,11 @@ func (s *Server) handleConversationPost(w http.ResponseWriter, r *http.Request) 
 
 // handleConversationCancel cancels the in-flight turn, if any.
 func (s *Server) handleConversationCancel(w http.ResponseWriter, _ *http.Request) {
-	runMu.Lock()
-	defer runMu.Unlock()
-	if runCancel != nil {
-		runCancel()
-		runCancel = nil
+	s.runMu.Lock()
+	defer s.runMu.Unlock()
+	if s.runCancel != nil {
+		s.runCancel()
+		s.runCancel = nil
 	}
 	w.WriteHeader(http.StatusNoContent)
 }

@@ -7,6 +7,7 @@ import (
 
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
+	"gopkg.in/yaml.v3"
 )
 
 func TestDefaultConfigHasSensibleDefaults(t *testing.T) {
@@ -236,6 +237,49 @@ func TestResolveDefaults_SQLitePathUsesInstanceRoot(t *testing.T) {
 	cfg, err := Load()
 	require.NoError(t, err)
 	assert.Equal(t, filepath.Join(tmp, "state.db"), cfg.Storage.SQLitePath)
+}
+
+func TestPlatformConfigUnmarshalYAML_SetsEnabledAndType(t *testing.T) {
+	// Regression: yaml.v3 silently dropped "enabled" and "type" when the old
+	// custom UnmarshalYAML used embedded *alias without ",inline". Verify the
+	// round-trip now works for JSON (sent by the frontend) and YAML (on disk).
+	cases := []struct {
+		name    string
+		input   string
+		enabled bool
+		typ     string
+		opts    map[string]string
+	}{
+		{
+			name:    "json_with_options_object",
+			input:   `{"type":"telegram","enabled":true,"options":{}}`,
+			enabled: true, typ: "telegram", opts: map[string]string{},
+		},
+		{
+			name:    "json_with_options_string_empty",
+			input:   `{"type":"feishu","enabled":true,"options":""}`,
+			enabled: true, typ: "feishu", opts: map[string]string{},
+		},
+		{
+			name:    "json_with_options_populated",
+			input:   `{"type":"telegram","enabled":true,"options":{"bot_token":"abc"}}`,
+			enabled: true, typ: "telegram", opts: map[string]string{"bot_token": "abc"},
+		},
+		{
+			name:    "yaml_disabled",
+			input:   "type: \"\"\nenabled: false\n",
+			enabled: false, typ: "", opts: nil,
+		},
+	}
+	for _, tc := range cases {
+		t.Run(tc.name, func(t *testing.T) {
+			var pc PlatformConfig
+			require.NoError(t, yaml.Unmarshal([]byte(tc.input), &pc))
+			assert.Equal(t, tc.enabled, pc.Enabled, "Enabled")
+			assert.Equal(t, tc.typ, pc.Type, "Type")
+			assert.Equal(t, tc.opts, pc.Options, "Options")
+		})
+	}
 }
 
 func TestLoadPreservesLiteralEnvString(t *testing.T) {
