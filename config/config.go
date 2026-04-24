@@ -178,10 +178,31 @@ type ByteroverConfig struct {
 // the shared SQLite storage so there is no backend URL or key.
 type HolographicConfig struct{}
 
-// MetaClawConfig is intentionally empty — the metaclaw provider uses
-// the shared SQLite storage and the main LLM provider for extraction.
-// No external service credentials are required.
-type MetaClawConfig struct{}
+// MetaClawConfig configures the metaclaw provider. The provider uses
+// the shared SQLite storage and the main LLM provider for extraction,
+// so no external credentials are required — but a few knobs control
+// runtime behavior.
+type MetaClawConfig struct {
+	// InjectCount is the maximum number of recalled memories injected
+	// into the system prompt per turn. 0 disables memory injection.
+	// Default 3.
+	InjectCount int `yaml:"inject_count,omitempty"`
+
+	// BufferEvery, if > 0, calls SyncTurn every N assistant turns inside
+	// the main conversation loop rather than only after the loop ends.
+	// Reduces the mid-session memory blackout window for long turns.
+	// Default 0 (sync only at end).
+	BufferEvery int `yaml:"buffer_every,omitempty"`
+
+	// SynergyTokenBudget caps the combined tokens of injected skills
+	// and recalled memories. 0 disables the combined cap (skills and
+	// memories are each rendered in full). Default 0.
+	SynergyTokenBudget int `yaml:"synergy_token_budget,omitempty"`
+
+	// SynergySkillRatio is the fraction of SynergyTokenBudget reserved
+	// for skills (memories get 1 - ratio). Default 0.35.
+	SynergySkillRatio float64 `yaml:"synergy_skill_ratio,omitempty"`
+}
 
 // HindsightConfig holds the Hindsight cloud provider configuration.
 type HindsightConfig struct {

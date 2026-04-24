@@ -68,7 +68,16 @@ func (e *Engine) RunConversation(ctx context.Context, opts *RunOptions) (*Conver
 	if e.activeSkills != nil {
 		activeSkills = e.activeSkills(opts.UserMessage)
 	}
-	systemPrompt := e.prompt.Build(&PromptOptions{Model: model, ActiveSkills: activeSkills})
+	var activeMemories []string
+	if e.activeMemories != nil {
+		activeMemories = e.activeMemories(ctx, opts.UserMessage)
+	}
+	activeSkills, activeMemories = applySynergyBudget(activeSkills, activeMemories, e.synergy)
+	systemPrompt := e.prompt.Build(&PromptOptions{
+		Model:          model,
+		ActiveSkills:   activeSkills,
+		ActiveMemories: activeMemories,
+	})
 
 	var toolDefs []tool.ToolDefinition
 	if e.tools != nil {
@@ -140,6 +149,11 @@ func (e *Engine) RunConversation(ctx context.Context, opts *RunOptions) (*Conver
 		toolCalls := extractToolCalls(resp.Message.Content)
 		if len(toolCalls) == 0 {
 			break
+		}
+
+		if e.bufferEvery > 0 && iterations%e.bufferEvery == 0 &&
+			e.memory != nil && len(e.memory.Providers()) > 0 {
+			_ = e.memory.SyncTurn(ctx, opts.UserMessage, resp.Message.Content.Text())
 		}
 
 		toolResults := e.executeToolCalls(ctx, toolCalls)

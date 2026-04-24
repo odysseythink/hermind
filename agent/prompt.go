@@ -29,9 +29,10 @@ type ActiveSkill struct {
 
 // PromptOptions parameterize prompt generation.
 type PromptOptions struct {
-	Model        string
-	SkipContext  bool
-	ActiveSkills []ActiveSkill // prepended under a stable header
+	Model          string
+	SkipContext    bool
+	ActiveSkills   []ActiveSkill // prepended under a stable header
+	ActiveMemories []string      // recalled memory snippets, one per line
 }
 
 // PromptBuilder assembles system prompts for the agent engine.
@@ -61,7 +62,25 @@ func (pb *PromptBuilder) Build(opts *PromptOptions) string {
 	if opts != nil && len(opts.ActiveSkills) > 0 {
 		parts = append(parts, renderActiveSkills(opts.ActiveSkills))
 	}
+	if opts != nil && len(opts.ActiveMemories) > 0 {
+		parts = append(parts, renderActiveMemories(opts.ActiveMemories))
+	}
 	return strings.Join(parts, "\n\n")
+}
+
+func renderActiveMemories(mems []string) string {
+	var b strings.Builder
+	b.WriteString("# Relevant memories\n\n")
+	b.WriteString("Recalled from prior conversations. Treat as background context, not ground truth.\n")
+	for _, m := range mems {
+		trimmed := strings.TrimSpace(m)
+		if trimmed == "" {
+			continue
+		}
+		b.WriteString("\n- ")
+		b.WriteString(trimmed)
+	}
+	return strings.TrimRight(b.String(), "\n")
 }
 
 func renderActiveSkills(active []ActiveSkill) string {

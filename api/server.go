@@ -230,6 +230,27 @@ func (s *Server) RunTurn(ctx context.Context, userMessage string) (string, error
 	)
 	if s.opts.Deps.MemProvider != nil {
 		eng.Memory().AddProvider(s.opts.Deps.MemProvider)
+		if r, ok := s.opts.Deps.MemProvider.(memprovider.Recaller); ok {
+			mc := s.opts.Config.Memory.MetaClaw
+			memK := mc.InjectCount
+			if memK <= 0 {
+				memK = 3
+			}
+			eng.SetActiveMemoriesProvider(func(ctx context.Context, userMsg string) []string {
+				out, _ := r.Recall(ctx, userMsg, memK)
+				return out
+			})
+			if mc.BufferEvery > 0 {
+				eng.SetBufferEvery(mc.BufferEvery)
+			}
+			if mc.SynergyTokenBudget > 0 {
+				eng.SetSynergyBudget(agent.SynergyBudget{
+					TokenBudget:  mc.SynergyTokenBudget,
+					SkillRatio:   mc.SynergySkillRatio,
+					DedupJaccard: 0.5,
+				})
+			}
+		}
 	}
 	wireEngineToHub(eng, s.streams)
 
