@@ -6,6 +6,7 @@ import (
 	"errors"
 	"fmt"
 	"io"
+	"log/slog"
 	"time"
 
 	"github.com/odysseythink/hermind/config"
@@ -14,6 +15,7 @@ import (
 	"github.com/odysseythink/hermind/storage"
 	"github.com/odysseythink/hermind/tool"
 	"github.com/odysseythink/hermind/tool/memory/memprovider"
+	"github.com/odysseythink/hermind/tool/memory/memprovider/citesink"
 )
 
 // RunConversation runs one or more turns of the conversation until:
@@ -86,6 +88,9 @@ func (e *Engine) RunConversation(ctx context.Context, opts *RunOptions) (*Conver
 
 	// Preserve the full injected set for end-of-conversation feedback.
 	conversationInjectedMems := injectedMems
+
+	var cited []string
+	ctx = citesink.WithSink(ctx, func(id string) { cited = append(cited, id) })
 
 	var toolDefs []tool.ToolDefinition
 	if e.tools != nil {
@@ -178,15 +183,40 @@ func (e *Engine) RunConversation(ctx context.Context, opts *RunOptions) (*Conver
 		}
 	}
 
+	assistantReply := lastResponse.Content.Text()
+
+	var verdict *Verdict
+	if e.conversationJudge != nil {
+		v, _ := e.conversationJudge.Run(ctx, JudgeInput{
+			History:          history,
+			InjectedMemories: conversationInjectedMems,
+			InjectedSkills:   activeSkills,
+			Platform:         e.platform,
+		})
+		verdict = v
+	}
+
+	if verdict != nil {
+		syncMemoryFeedback(ctx, e.storage, conversationInjectedMems, verdict, cited, assistantReply)
+	}
+
 	if e.memory != nil && len(e.memory.Providers()) > 0 {
-		_ = e.memory.SyncTurn(ctx, opts.UserMessage, lastResponse.Content.Text())
+		_ = e.memory.SyncTurn(ctx, opts.UserMessage, assistantReply)
 	}
 
 	if e.skillsEvolver != nil {
-		_ = e.skillsEvolver.Extract(ctx, history, nil)
+		_ = e.skillsEvolver.Extract(ctx, history, verdict)
 	}
 
-	_ = conversationInjectedMems
+	if verdict != nil {
+		slog.Info("conversation.judged",
+			"outcome", verdict.Outcome,
+			"memories_hit", len(verdict.MemoriesUsed),
+			"memories_injected", len(conversationInjectedMems),
+			"skills_extracted", len(verdict.SkillsToExtract),
+			"reasoning", verdict.Reasoning,
+		)
+	}
 
 	return &ConversationResult{
 		Response:   lastResponse,
