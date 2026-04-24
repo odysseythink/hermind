@@ -20,6 +20,7 @@ type Config struct {
 	Tracing           TracingConfig             `yaml:"tracing,omitempty"`
 	Skills            SkillsConfig              `yaml:"skills,omitempty"`
 	Web               WebConfig                 `yaml:"web,omitempty"`
+	Benchmark         BenchmarkConfig           `yaml:"benchmark,omitempty"`
 }
 
 // WebConfig holds configuration for the `web_*` tool family.
@@ -27,6 +28,14 @@ type Config struct {
 // directly and is not represented here.
 type WebConfig struct {
 	Search SearchConfig `yaml:"search,omitempty"`
+}
+
+// BenchmarkConfig parameterizes `hermind bench` subcommands.
+type BenchmarkConfig struct {
+	DatasetSize int    `yaml:"dataset_size,omitempty"` // default 50
+	Seed        int64  `yaml:"seed,omitempty"`         // default 42
+	JudgeModel  string `yaml:"judge_model,omitempty"`  // "" = aux, then primary
+	OutDir      string `yaml:"out_dir,omitempty"`      // default ".hermind/benchmark"
 }
 
 // SearchConfig configures the web_search tool's provider abstraction.
@@ -389,6 +398,7 @@ func Default() *Config {
 				SummaryEvery: 10,
 			},
 		},
+		Benchmark: BenchmarkConfig{DatasetSize: 50, Seed: 42, OutDir: ".hermind/benchmark"},
 	}
 }
 
