@@ -29,7 +29,7 @@ func TestOpenCreatesDatabaseFile(t *testing.T) {
 	assert.NotNil(t, store)
 }
 
-func TestMigrateCreatesV3Tables(t *testing.T) {
+func TestMigrateCreatesV4Tables(t *testing.T) {
 	store := newTestStore(t)
 	ctx := context.Background()
 
@@ -47,7 +47,7 @@ func TestMigrateCreatesV3Tables(t *testing.T) {
 	assert.True(t, tables["messages"], "messages table should exist")
 	assert.True(t, tables["conversation_state"], "conversation_state table should exist")
 	assert.True(t, tables["memories"], "memories table should exist")
-	assert.False(t, tables["sessions"], "sessions table must not exist in v3")
+	assert.False(t, tables["sessions"], "sessions table must not exist in v4")
 }
 
 func TestAppendAndGetHistory(t *testing.T) {

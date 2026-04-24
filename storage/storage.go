@@ -30,6 +30,8 @@ type Storage interface {
 	GetMemory(ctx context.Context, id string) (*Memory, error)
 	SearchMemories(ctx context.Context, query string, opts *MemorySearchOptions) ([]*Memory, error)
 	DeleteMemory(ctx context.Context, id string) error
+	// ListMemoriesByType returns memories filtered by MemType, newest first.
+	ListMemoriesByType(ctx context.Context, memType string, limit int) ([]*Memory, error)
 
 	// Transactions — group multiple operations atomically.
 	WithTx(ctx context.Context, fn func(tx Tx) error) error

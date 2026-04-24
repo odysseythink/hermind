@@ -7,9 +7,9 @@ import (
 	"strings"
 )
 
-// schemaSQL is the v3 schema. messages are instance-scoped (no
+// schemaSQL is the v4 schema. messages are instance-scoped (no
 // session_id); conversation_state is a singleton row that tracks
-// per-instance totals; memories and their FTS index are unchanged.
+// per-instance totals; memories now include mem_type and vector fields.
 const schemaSQL = `
 CREATE TABLE IF NOT EXISTS messages (
     id INTEGER PRIMARY KEY AUTOINCREMENT,
@@ -65,10 +65,13 @@ CREATE TABLE IF NOT EXISTS memories (
     tags TEXT DEFAULT '',
     metadata TEXT DEFAULT '{}',
     created_at REAL NOT NULL,
-    updated_at REAL NOT NULL
+    updated_at REAL NOT NULL,
+    mem_type TEXT NOT NULL DEFAULT '',
+    vector BLOB
 );
 CREATE INDEX IF NOT EXISTS idx_memories_user ON memories(user_id);
 CREATE INDEX IF NOT EXISTS idx_memories_created ON memories(created_at);
+CREATE INDEX IF NOT EXISTS idx_memories_mem_type ON memories(mem_type);
 
 CREATE VIRTUAL TABLE IF NOT EXISTS memories_fts USING fts5(
     content,
@@ -90,13 +93,13 @@ CREATE TABLE IF NOT EXISTS schema_meta (
     key TEXT PRIMARY KEY,
     value TEXT NOT NULL
 );
-INSERT OR IGNORE INTO schema_meta (key, value) VALUES ('version', '3');
+INSERT OR IGNORE INTO schema_meta (key, value) VALUES ('version', '4');
 `
 
-// currentSchemaVersion is the v3 single-conversation schema. v1 and v2
-// DBs are detected by backupLegacyDBIfNeeded() at Open() time and
+// currentSchemaVersion is the v4 single-conversation schema with MemType and Vector.
+// v1 and v2 DBs are detected by backupLegacyDBIfNeeded() at Open() time and
 // renamed out of the way, so no in-place migration code is needed.
-const currentSchemaVersion = 3
+const currentSchemaVersion = 4
 
 // Migrate applies the base schema. Idempotent. Legacy v1/v2 DBs are
 // never reached here — they are backed up before Migrate() runs.
@@ -133,7 +136,7 @@ func (s *Store) schemaVersion() (int, error) {
 	return v, nil
 }
 
-// applyVersion is a no-op for v3 (the only version this binary speaks).
+// applyVersion applies incremental schema migrations.
 func (s *Store) applyVersion(v int) error {
 	tx, err := s.db.Begin()
 	if err != nil {
@@ -144,6 +147,16 @@ func (s *Store) applyVersion(v int) error {
 	switch v {
 	case 3:
 		// no-op: v3 IS the initial schema emitted by schemaSQL
+	case 4:
+		if _, err := tx.Exec(`ALTER TABLE memories ADD COLUMN mem_type TEXT NOT NULL DEFAULT ''`); err != nil {
+			return fmt.Errorf("v4 add mem_type: %w", err)
+		}
+		if _, err := tx.Exec(`ALTER TABLE memories ADD COLUMN vector BLOB`); err != nil {
+			return fmt.Errorf("v4 add vector: %w", err)
+		}
+		if _, err := tx.Exec(`CREATE INDEX IF NOT EXISTS idx_memories_mem_type ON memories(mem_type)`); err != nil {
+			return fmt.Errorf("v4 add index: %w", err)
+		}
 	default:
 		return fmt.Errorf("no migration step for v%d", v)
 	}

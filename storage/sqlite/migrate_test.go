@@ -9,7 +9,7 @@ import (
 	"github.com/stretchr/testify/require"
 )
 
-func TestMigrate_FreshDBCreatesV3Schema(t *testing.T) {
+func TestMigrate_FreshDBCreatesV4Schema(t *testing.T) {
 	dir := t.TempDir()
 	store, err := Open(filepath.Join(dir, "state.db"))
 	require.NoError(t, err)
@@ -19,7 +19,7 @@ func TestMigrate_FreshDBCreatesV3Schema(t *testing.T) {
 	var ver string
 	require.NoError(t, store.db.QueryRowContext(context.Background(),
 		`SELECT value FROM schema_meta WHERE key='version'`).Scan(&ver))
-	assert.Equal(t, "3", ver)
+	assert.Equal(t, "4", ver)
 }
 
 func TestMigrate_Idempotent(t *testing.T) {
@@ -33,7 +33,7 @@ func TestMigrate_Idempotent(t *testing.T) {
 	var ver string
 	require.NoError(t, store.db.QueryRowContext(context.Background(),
 		`SELECT value FROM schema_meta WHERE key='version'`).Scan(&ver))
-	assert.Equal(t, "3", ver)
+	assert.Equal(t, "4", ver)
 }
 
 func TestMigrate_FreshDBHasNoSessionsTable(t *testing.T) {
@@ -47,7 +47,7 @@ func TestMigrate_FreshDBHasNoSessionsTable(t *testing.T) {
 	err = store.db.QueryRow(
 		`SELECT name FROM sqlite_master WHERE type='table' AND name='sessions'`,
 	).Scan(&name)
-	require.Error(t, err, "expected no sessions table in v3 schema")
+	require.Error(t, err, "expected no sessions table in v4 schema")
 }
 
 func TestMigrate_FreshDBSeedsConversationStateSingleton(t *testing.T) {

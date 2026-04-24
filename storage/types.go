@@ -54,11 +54,17 @@ type Memory struct {
 	Metadata  json.RawMessage `json:"metadata,omitempty"`
 	CreatedAt time.Time       `json:"created_at"`
 	UpdatedAt time.Time       `json:"updated_at"`
+	// MemType classifies the memory: "episodic", "semantic", "preference".
+	// Empty string means unclassified (legacy holographic records).
+	MemType string `json:"mem_type,omitempty"`
+	// Vector is a gob-encoded []float32 embedding. Nil for unembedded memories.
+	Vector []byte `json:"vector,omitempty"`
 }
 
 // MemorySearchOptions controls MemorySearch behavior.
 type MemorySearchOptions struct {
-	UserID string
-	Tags   []string
-	Limit  int
+	UserID      string
+	Tags        []string
+	Limit       int
+	QueryVector []float32
 }
