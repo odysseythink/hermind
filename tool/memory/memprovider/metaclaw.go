@@ -208,9 +208,23 @@ func (mc *MetaClaw) saveMemory(ctx context.Context, content, memType string) err
 
 // Recall retrieves memories matching a query, returning typed snippets
 // with stable IDs so the feedback loop can credit specific entries.
+// The working_summary row (if present and active) is always placed in
+// slot 0; the remaining limit-1 slots come from hybrid search.
 func (mc *MetaClaw) Recall(ctx context.Context, query string, limit int) ([]InjectedMemory, error) {
 	if limit <= 0 {
 		limit = 5
+	}
+
+	out := make([]InjectedMemory, 0, limit)
+
+	if ws, err := mc.store.GetMemory(ctx, "working_summary"); err == nil &&
+		ws != nil && (ws.Status == "" || ws.Status == storage.MemoryStatusActive) {
+		out = append(out, InjectedMemory{ID: ws.ID, Content: ws.Content})
+		limit--
+	}
+
+	if limit <= 0 {
+		return out, nil
 	}
 
 	opts := &storage.MemorySearchOptions{Limit: limit}
@@ -223,11 +237,12 @@ func (mc *MetaClaw) Recall(ctx context.Context, query string, limit int) ([]Inje
 
 	mems, err := mc.store.SearchMemories(ctx, query, opts)
 	if err != nil {
-		return nil, err
+		return out, err
 	}
-
-	out := make([]InjectedMemory, 0, len(mems))
 	for _, m := range mems {
+		if m.ID == "working_summary" {
+			continue // already prepended
+		}
 		out = append(out, InjectedMemory{ID: m.ID, Content: m.Content})
 	}
 	return out, nil

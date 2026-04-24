@@ -246,3 +246,72 @@ func TestMetaClawRefreshWorkingSummaryOnThreshold(t *testing.T) {
 	assert.Equal(t, "Rolling summary: user working on X.", got.Content)
 	assert.Equal(t, storage.MemTypeWorkingSummary, got.MemType)
 }
+
+func TestMetaClawRecallPrependsWorkingSummary(t *testing.T) {
+	store := &fakeStorage{}
+	now := time.Now().UTC()
+	require.NoError(t, store.SaveMemory(context.Background(), &storage.Memory{
+		ID: "working_summary", Content: "rolling summary",
+		MemType: storage.MemTypeWorkingSummary, Status: storage.MemoryStatusActive,
+		CreatedAt: now, UpdatedAt: now,
+	}))
+	require.NoError(t, store.SaveMemory(context.Background(), &storage.Memory{
+		ID: "mc_other", Content: "other fact", MemType: "semantic",
+		CreatedAt: now, UpdatedAt: now,
+	}))
+
+	mc := memprovider.NewMetaClaw(store, nil, nil)
+	got, err := mc.Recall(context.Background(), "fact", 3)
+	require.NoError(t, err)
+	require.NotEmpty(t, got)
+	assert.Equal(t, "working_summary", got[0].ID, "working summary should be first")
+}
+
+func TestMetaClawRecallWorkingSummaryOnlyConsumesOneSlot(t *testing.T) {
+	store := &fakeStorage{}
+	now := time.Now().UTC()
+	// Save non-working_summary items first so search doesn't include them
+	require.NoError(t, store.SaveMemory(context.Background(), &storage.Memory{
+		ID: "mc_fact1", Content: "fact 1", MemType: "semantic",
+		CreatedAt: now, UpdatedAt: now,
+	}))
+	require.NoError(t, store.SaveMemory(context.Background(), &storage.Memory{
+		ID: "mc_fact2", Content: "fact 2", MemType: "semantic",
+		CreatedAt: now, UpdatedAt: now,
+	}))
+	require.NoError(t, store.SaveMemory(context.Background(), &storage.Memory{
+		ID: "working_summary", Content: "rolling summary",
+		MemType: storage.MemTypeWorkingSummary, Status: storage.MemoryStatusActive,
+		CreatedAt: now, UpdatedAt: now,
+	}))
+
+	mc := memprovider.NewMetaClaw(store, nil, nil)
+	got, err := mc.Recall(context.Background(), "fact", 3)
+	require.NoError(t, err)
+	// Should return: working_summary + 2 from search (limit-1 = 3-1 = 2) = 3 total
+	require.Len(t, got, 3)
+	assert.Equal(t, "working_summary", got[0].ID, "working_summary should always be first")
+	assert.Equal(t, "mc_fact1", got[1].ID)
+	assert.Equal(t, "mc_fact2", got[2].ID)
+}
+
+func TestMetaClawRecallIgnoresInactiveWorkingSummary(t *testing.T) {
+	store := &fakeStorage{}
+	now := time.Now().UTC()
+	require.NoError(t, store.SaveMemory(context.Background(), &storage.Memory{
+		ID: "working_summary", Content: "old summary",
+		MemType: storage.MemTypeWorkingSummary, Status: storage.MemoryStatusSuperseded,
+		CreatedAt: now, UpdatedAt: now,
+	}))
+	require.NoError(t, store.SaveMemory(context.Background(), &storage.Memory{
+		ID: "mc_fact", Content: "other fact", MemType: "semantic",
+		CreatedAt: now, UpdatedAt: now,
+	}))
+
+	mc := memprovider.NewMetaClaw(store, nil, nil)
+	got, err := mc.Recall(context.Background(), "fact", 5)
+	require.NoError(t, err)
+	// Should only return mc_fact, not the inactive working_summary
+	require.Len(t, got, 1)
+	assert.Equal(t, "mc_fact", got[0].ID)
+}
