@@ -150,6 +150,12 @@ type MemoryConfig struct {
 	Byterover    ByteroverConfig    `yaml:"byterover,omitempty"`
 	Holographic  HolographicConfig  `yaml:"holographic,omitempty"`
 	MetaClaw     MetaClawConfig     `yaml:"metaclaw,omitempty"`
+	// ConsolidateIntervalSeconds drives the idle consolidation ticker.
+	// Default 900 (15 min). 0 disables the idle path entirely.
+	ConsolidateIntervalSeconds int `yaml:"consolidate_interval_seconds,omitempty"`
+	// ConsolidateIdleAfterSeconds is the required quiet window before the
+	// consolidator runs. Default 300 (5 min).
+	ConsolidateIdleAfterSeconds int `yaml:"consolidate_idle_after_seconds,omitempty"`
 }
 
 // RetainDBConfig holds the RetainDB provider configuration.
@@ -377,6 +383,8 @@ func Default() *Config {
 			Driver: "sqlite",
 		},
 		Memory: MemoryConfig{
+			ConsolidateIntervalSeconds:  900,
+			ConsolidateIdleAfterSeconds: 300,
 			MetaClaw: MetaClawConfig{
 				SummaryEvery: 10,
 			},

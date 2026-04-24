@@ -18,3 +18,16 @@ func TestMetaClawConfigJudgeFields(t *testing.T) {
 		t.Fatal("SummaryEvery not round-tripping")
 	}
 }
+
+func TestMemoryConfigConsolidatorFields(t *testing.T) {
+	c := config.MemoryConfig{
+		ConsolidateIntervalSeconds:  120,
+		ConsolidateIdleAfterSeconds: 60,
+	}
+	if c.ConsolidateIntervalSeconds != 120 {
+		t.Fatal("interval not round-tripping")
+	}
+	if c.ConsolidateIdleAfterSeconds != 60 {
+		t.Fatal("idle_after not round-tripping")
+	}
+}

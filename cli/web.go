@@ -14,6 +14,7 @@ import (
 
 	"github.com/spf13/cobra"
 
+	"github.com/odysseythink/hermind/agent/idle"
 	"github.com/odysseythink/hermind/api"
 )
 
@@ -86,6 +87,14 @@ func runWeb(ctx context.Context, app *App, opts webRunOptions) error {
 	defer cancel()
 	if opts.ExitAfter > 0 {
 		time.AfterFunc(opts.ExitAfter, cancel)
+	}
+
+	if app.Storage != nil {
+		interval := time.Duration(app.Config.Memory.ConsolidateIntervalSeconds) * time.Second
+		idleAfter := time.Duration(app.Config.Memory.ConsolidateIdleAfterSeconds) * time.Second
+		ic := idle.New(app.Storage, interval, idleAfter, nil)
+		srv.SetIdleConsolidator(ic)
+		go ic.Start(runCtx)
 	}
 
 	srv.StartGateway(runCtx)

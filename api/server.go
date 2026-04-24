@@ -15,6 +15,7 @@ import (
 	"github.com/go-chi/chi/v5"
 
 	"github.com/odysseythink/hermind/agent"
+	"github.com/odysseythink/hermind/agent/idle"
 	"github.com/odysseythink/hermind/config"
 	"github.com/odysseythink/hermind/gateway"
 	"github.com/odysseythink/hermind/message"
@@ -95,6 +96,8 @@ type Server struct {
 	// runMu serializes conversation turns — at most one in flight at a time.
 	runMu    sync.Mutex
 	runCancel context.CancelFunc
+
+	idle *idle.IdleConsolidator
 }
 
 // NewServer wires routes and middleware.
@@ -117,6 +120,13 @@ func (s *Server) Router() chi.Router { return s.router }
 // Streams exposes the StreamHub.
 func (s *Server) Streams() StreamHub { return s.streams }
 
+// SetIdleConsolidator registers the idle consolidator; server middleware
+// will NoteActivity on every request so the consolidator knows the
+// instance is busy.
+func (s *Server) SetIdleConsolidator(c *idle.IdleConsolidator) {
+	s.idle = c
+}
+
 // ListenAndServe binds to addr and serves until the server is shut down.
 func (s *Server) ListenAndServe(addr string) error {
 	httpSrv := &http.Server{
@@ -129,6 +139,15 @@ func (s *Server) ListenAndServe(addr string) error {
 
 func (s *Server) buildRouter() chi.Router {
 	r := chi.NewRouter()
+
+	r.Use(func(next http.Handler) http.Handler {
+		return http.HandlerFunc(func(w http.ResponseWriter, req *http.Request) {
+			if s.idle != nil {
+				s.idle.NoteActivity()
+			}
+			next.ServeHTTP(w, req)
+		})
+	})
 
 	r.Route("/api", func(r chi.Router) {
 		r.Get("/status", s.handleStatus)
