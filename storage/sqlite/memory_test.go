@@ -153,3 +153,21 @@ func TestListMemoriesByType(t *testing.T) {
 	assert.Equal(t, "m3", mems[0].ID)
 	assert.Equal(t, "m0", mems[1].ID)
 }
+
+func TestSaveAndGetMemory_LastUsedAtZeroRoundtrip(t *testing.T) {
+	store := newTestStore(t)
+	ctx := context.Background()
+
+	now := time.Now().UTC()
+	require.NoError(t, store.SaveMemory(ctx, &storage.Memory{
+		ID:        "mem-zero",
+		Content:   "never used",
+		CreatedAt: now,
+		UpdatedAt: now,
+		// LastUsedAt left zero
+	}))
+
+	got, err := store.GetMemory(ctx, "mem-zero")
+	require.NoError(t, err)
+	assert.True(t, got.LastUsedAt.IsZero(), "LastUsedAt should round-trip as zero time")
+}
