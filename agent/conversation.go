@@ -66,7 +66,7 @@ func (e *Engine) RunConversation(ctx context.Context, opts *RunOptions) (*Conver
 
 	var activeSkills []ActiveSkill
 	if e.activeSkills != nil {
-		activeSkills = e.activeSkills()
+		activeSkills = e.activeSkills(opts.UserMessage)
 	}
 	systemPrompt := e.prompt.Build(&PromptOptions{Model: model, ActiveSkills: activeSkills})
 
@@ -154,6 +154,10 @@ func (e *Engine) RunConversation(ctx context.Context, opts *RunOptions) (*Conver
 				return nil, fmt.Errorf("engine: persist tool result: %w", err)
 			}
 		}
+	}
+
+	if e.skillsEvolver != nil {
+		_ = e.skillsEvolver.Extract(ctx, history)
 	}
 
 	return &ConversationResult{

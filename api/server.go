@@ -17,6 +17,7 @@ import (
 	"github.com/odysseythink/hermind/agent"
 	"github.com/odysseythink/hermind/config"
 	"github.com/odysseythink/hermind/gateway"
+	"github.com/odysseythink/hermind/message"
 	"github.com/odysseythink/hermind/provider"
 	"github.com/odysseythink/hermind/skills"
 	"github.com/odysseythink/hermind/storage"
@@ -37,6 +38,14 @@ type EngineDeps struct {
 	SkillsReg   *skills.Registry
 	AgentCfg    config.AgentConfig
 	Platform    string
+	// SkillsEvolver, if non-nil, extracts skills after each conversation.
+	SkillsEvolver interface {
+		Extract(ctx context.Context, turns []message.Message) error
+	}
+	// SkillsRetriever, if non-nil, retrieves relevant skills per turn.
+	SkillsRetriever interface {
+		Retrieve(ctx context.Context, query string, k int) ([]string, error)
+	}
 }
 
 // ServerOpts bundles server-wide state.
@@ -217,6 +226,22 @@ func (s *Server) RunTurn(ctx context.Context, userMessage string) (string, error
 	)
 	wireEngineToHub(eng, s.streams)
 
+	// Wire skills evolver and retriever
+	if s.opts.Deps.SkillsEvolver != nil {
+		eng.SetSkillsEvolver(s.opts.Deps.SkillsEvolver)
+	}
+	if s.opts.Deps.SkillsRetriever != nil {
+		injectCount := s.opts.Config.Skills.InjectCount
+		if injectCount <= 0 {
+			injectCount = 3
+		}
+		ret := s.opts.Deps.SkillsRetriever
+		eng.SetActiveSkillsProvider(func(userMsg string) []agent.ActiveSkill {
+			snippets, _ := ret.Retrieve(context.Background(), userMsg, injectCount)
+			return snippetsToActiveSkills(snippets)
+		})
+	}
+
 	result, err := eng.RunConversation(runCtx, &agent.RunOptions{
 		UserMessage: userMessage,
 	})
@@ -245,4 +270,13 @@ func (s *Server) StartGateway(ctx context.Context) {
 	}
 	go pump.Start(ctx)
 	slog.Info("gateway: pump started")
+}
+
+// snippetsToActiveSkills converts a list of skill snippets to ActiveSkill structs.
+func snippetsToActiveSkills(snippets []string) []agent.ActiveSkill {
+	out := make([]agent.ActiveSkill, 0, len(snippets))
+	for _, s := range snippets {
+		out = append(out, agent.ActiveSkill{Body: s})
+	}
+	return out
 }

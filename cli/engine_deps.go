@@ -5,6 +5,7 @@ import (
 	"errors"
 	"fmt"
 	"os"
+	"path/filepath"
 	"time"
 
 	"github.com/google/uuid"
@@ -13,9 +14,11 @@ import (
 	"github.com/odysseythink/hermind/config"
 	"github.com/odysseythink/hermind/provider"
 	"github.com/odysseythink/hermind/provider/factory"
+	"github.com/odysseythink/hermind/skills"
 	"github.com/odysseythink/hermind/tool"
 	"github.com/odysseythink/hermind/tool/browser"
 	"github.com/odysseythink/hermind/tool/delegate"
+	"github.com/odysseythink/hermind/tool/embedding"
 	"github.com/odysseythink/hermind/tool/file"
 	"github.com/odysseythink/hermind/tool/mcp"
 	"github.com/odysseythink/hermind/tool/memory"
@@ -147,7 +150,27 @@ func BuildEngineDeps(ctx context.Context, app *App) (api.EngineDeps, func(), err
 	// from web requests. Each sub-conversation gets its own UUID suffix.
 	sessionPrefix := uuid.NewString()
 
-	extMem, err := memprovider.New(app.Config.Memory, memprovider.WithStorage(app.Storage))
+	// Set up embedder for skills retriever and memory provider
+	var emb embedding.Embedder
+	if p != nil {
+		emb = embedding.NewProviderEmbedder(p, "text-embedding-3-small")
+	}
+
+	// Set up skills evolver if auto-extract is enabled
+	skillsDir := filepath.Join(app.InstanceRoot, "skills")
+	var evolver *skills.Evolver
+	if app.Config.Skills.AutoExtract {
+		evolver = skills.NewEvolver(p, skillsDir)
+	}
+
+	// Set up skills retriever
+	retriever := skills.NewRetriever(skillsDir, emb)
+
+	extMem, err := memprovider.New(app.Config.Memory,
+		memprovider.WithStorage(app.Storage),
+		memprovider.WithLLM(p),
+		memprovider.WithEmbedder(emb),
+	)
 	if err != nil {
 		fmt.Fprintf(os.Stderr, "hermind: memory provider: %v\n", err)
 	}
@@ -213,12 +236,14 @@ func BuildEngineDeps(ctx context.Context, app *App) (api.EngineDeps, func(), err
 	skillsReg, _ := loadSkills(app)
 
 	return api.EngineDeps{
-		Provider:    p,
-		AuxProvider: auxProvider,
-		Storage:     app.Storage,
-		ToolReg:     toolRegistry,
-		SkillsReg:   skillsReg,
-		AgentCfg:    app.Config.Agent,
-		Platform:    "web",
+		Provider:        p,
+		AuxProvider:     auxProvider,
+		Storage:         app.Storage,
+		ToolReg:         toolRegistry,
+		SkillsReg:       skillsReg,
+		AgentCfg:        app.Config.Agent,
+		Platform:        "web",
+		SkillsEvolver:   evolver,
+		SkillsRetriever: retriever,
 	}, cleanup, nil
 }

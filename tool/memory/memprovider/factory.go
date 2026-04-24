@@ -5,7 +5,9 @@ import (
 	"strings"
 
 	"github.com/odysseythink/hermind/config"
+	"github.com/odysseythink/hermind/provider"
 	"github.com/odysseythink/hermind/storage"
+	"github.com/odysseythink/hermind/tool/embedding"
 )
 
 // FactoryOption customizes how memprovider.New builds a Provider.
@@ -14,7 +16,9 @@ import (
 type FactoryOption func(*factoryOptions)
 
 type factoryOptions struct {
-	storage storage.Storage
+	storage  storage.Storage
+	llm      provider.Provider
+	embedder embedding.Embedder
 }
 
 // WithStorage injects a shared storage.Storage into the factory so
@@ -22,6 +26,16 @@ type factoryOptions struct {
 // as the built-in memory tool.
 func WithStorage(s storage.Storage) FactoryOption {
 	return func(o *factoryOptions) { o.storage = s }
+}
+
+// WithLLM injects an LLM provider into the factory for MetaClaw.
+func WithLLM(p provider.Provider) FactoryOption {
+	return func(o *factoryOptions) { o.llm = p }
+}
+
+// WithEmbedder injects an embedder into the factory for MetaClaw.
+func WithEmbedder(e embedding.Embedder) FactoryOption {
+	return func(o *factoryOptions) { o.embedder = e }
 }
 
 // New builds the active external memory provider from configuration.
@@ -77,7 +91,7 @@ func New(cfg config.MemoryConfig, opts ...FactoryOption) (Provider, error) {
 		if fo.storage == nil {
 			return nil, fmt.Errorf("memprovider: metaclaw requires storage (pass WithStorage)")
 		}
-		return NewMetaClaw(fo.storage, nil, nil), nil
+		return NewMetaClaw(fo.storage, fo.llm, fo.embedder), nil
 	default:
 		return nil, fmt.Errorf("memprovider: unknown provider %q", name)
 	}

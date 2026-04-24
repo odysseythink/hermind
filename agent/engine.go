@@ -2,6 +2,8 @@
 package agent
 
 import (
+	"context"
+
 	"github.com/odysseythink/hermind/config"
 	"github.com/odysseythink/hermind/message"
 	"github.com/odysseythink/hermind/provider"
@@ -31,7 +33,13 @@ type Engine struct {
 
 	// activeSkills returns the skills whose bodies should be prepended to
 	// the system prompt. Called once per turn.
-	activeSkills func() []ActiveSkill
+	activeSkills func(userMsg string) []ActiveSkill
+
+	// skillsEvolver extracts skills after each conversation.
+	// If nil, skill extraction is disabled.
+	skillsEvolver interface {
+		Extract(ctx context.Context, turns []message.Message) error
+	}
 }
 
 // NewEngine constructs an Engine without tools.
@@ -115,9 +123,17 @@ func (e *Engine) SetToolResultCallback(fn func(call message.ContentBlock, result
 }
 
 // SetActiveSkillsProvider registers a callback that returns the currently
-// active skills.
-func (e *Engine) SetActiveSkillsProvider(fn func() []ActiveSkill) {
+// active skills. The callback receives the user message for context.
+func (e *Engine) SetActiveSkillsProvider(fn func(userMsg string) []ActiveSkill) {
 	e.activeSkills = fn
+}
+
+// SetSkillsEvolver wires a skill evolver that runs after each conversation.
+// Pass nil to disable.
+func (e *Engine) SetSkillsEvolver(ev interface {
+	Extract(ctx context.Context, turns []message.Message) error
+}) {
+	e.skillsEvolver = ev
 }
 
 // RunOptions parameterizes a conversation run.
