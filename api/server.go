@@ -170,6 +170,11 @@ func (s *Server) buildRouter() chi.Router {
 		r.Post("/fallback_providers/{index}/models", s.handleFallbackProvidersModels)
 
 		r.Get("/memory/stats", s.handleMemoryStats)
+		r.Get("/memory/health", s.handleMemoryHealth)
+		r.Get("/memory/report", s.handleMemoryReport)
+		r.Get("/memory/{id}", s.handleMemoryGet)
+
+		r.Get("/skills/stats", s.handleSkillsStats)
 	})
 
 	r.Get("/", s.handleIndex)
