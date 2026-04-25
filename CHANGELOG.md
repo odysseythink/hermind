@@ -3,6 +3,25 @@
 ## Unreleased
 
 ### Added
+- **Memory replay buffer**: a `hermind bench replay` subcommand tree that
+  re-runs real historical user turns from `state.db` against the current
+  configuration in an isolated tmp sqlite, then compares the new replies
+  to the historical baselines. Three judge modes — `none` (eyeball only,
+  zero aux cost), `pairwise` (current-vs-baseline with position-swap
+  consensus), and `rubric+pairwise` (adds a 4-dimension rubric pass).
+  Two extraction modes — `cold` (target message replayed in isolation,
+  cheaper) and `contextual` (replayed with full preceding history).
+  Replay shares the synthetic benchmark's runner via a new `Item`
+  interface and pluggable `LoaderFn`. Replay never writes to the
+  operator's `state.db`; runs always use a fresh tmp sqlite.
+
+  ```
+  hermind bench replay generate --mode contextual
+  hermind bench replay run
+  hermind bench replay judge --mode pairwise
+  hermind bench replay report --full
+  ```
+
 - **Anthropic-compatible `/v1/messages` proxy endpoint**: opt-in via
   `proxy.enabled: true` in config. Hermind exposes itself as a drop-in
   for `ANTHROPIC_BASE_URL` so Claude Code, Cursor, NanoClaw, and the
