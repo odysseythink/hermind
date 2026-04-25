@@ -237,10 +237,11 @@ func (mc *MetaClaw) Recall(ctx context.Context, query string, limit int) ([]Inje
 		currentSeq = gen.Seq
 	}
 
-	// Determine the half-life to apply. Default to 5 if config is nil or zero;
-	// explicitly set 0 disables decay (per storage layer contract).
+	// Determine the half-life to apply. Default to 5 if config is nil;
+	// explicitly set 0 (or any value) in config overrides the default
+	// (per storage layer contract: if GenerationHalfLife > 0, decay is applied).
 	halfLife := 5
-	if mc.skillsCfg != nil && mc.skillsCfg.GenerationHalfLife > 0 {
+	if mc.skillsCfg != nil {
 		halfLife = mc.skillsCfg.GenerationHalfLife
 	}
 
