@@ -88,6 +88,9 @@ type Memory struct {
 	NeglectCount int `json:"neglect_count,omitempty"`
 	// LastUsedAt is the UTC time of the most recent reinforcement. Zero when never used.
 	LastUsedAt time.Time `json:"last_used_at,omitempty"`
+	// ReinforcedAtSeq is the skills_generation seq at the time this memory was
+	// last reinforced. Used to decay reinforcement signals from stale skill generations.
+	ReinforcedAtSeq int64 `json:"reinforced_at_seq,omitempty"`
 }
 
 // MemorySearchOptions controls MemorySearch behavior.

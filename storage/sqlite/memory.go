@@ -32,8 +32,8 @@ func (s *Store) SaveMemory(ctx context.Context, m *storage.Memory) error {
 		status = storage.MemoryStatusActive
 	}
 	_, err := s.db.ExecContext(ctx, `
-        INSERT INTO memories (id, user_id, content, category, tags, metadata, created_at, updated_at, mem_type, vector, status, superseded_by, reinforcement_count, neglect_count, last_used_at)
-        VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+        INSERT INTO memories (id, user_id, content, category, tags, metadata, created_at, updated_at, mem_type, vector, status, superseded_by, reinforcement_count, neglect_count, last_used_at, reinforced_at_seq)
+        VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
         ON CONFLICT(id) DO UPDATE SET
             content = excluded.content,
             category = excluded.category,
@@ -46,11 +46,12 @@ func (s *Store) SaveMemory(ctx context.Context, m *storage.Memory) error {
             superseded_by = excluded.superseded_by,
             reinforcement_count = excluded.reinforcement_count,
             neglect_count = excluded.neglect_count,
-            last_used_at = excluded.last_used_at
+            last_used_at = excluded.last_used_at,
+            reinforced_at_seq = excluded.reinforced_at_seq
     `,
 		m.ID, m.UserID, m.Content, m.Category, string(tagsJSON), metaStr,
 		toEpoch(m.CreatedAt), toEpoch(m.UpdatedAt), m.MemType, m.Vector,
-		status, m.SupersededBy, m.ReinforcementCount, m.NeglectCount, toEpoch(m.LastUsedAt),
+		status, m.SupersededBy, m.ReinforcementCount, m.NeglectCount, toEpoch(m.LastUsedAt), m.ReinforcedAtSeq,
 	)
 	if err != nil {
 		return fmt.Errorf("sqlite: save memory %s: %w", m.ID, err)
@@ -84,8 +85,12 @@ func (s *Store) BumpMemoryUsage(ctx context.Context, id string, used bool) error
 	)
 	if used {
 		res, err = s.db.ExecContext(ctx,
-			`UPDATE memories SET reinforcement_count = reinforcement_count + 1,
-                last_used_at = ? WHERE id = ?`,
+			`UPDATE memories
+			    SET reinforcement_count = reinforcement_count + 1,
+			        last_used_at        = ?,
+			        reinforced_at_seq   = COALESCE(
+			            (SELECT seq FROM skills_generation WHERE id = 1), 0)
+			  WHERE id = ?`,
 			toEpoch(time.Now().UTC()), id)
 	} else {
 		res, err = s.db.ExecContext(ctx,
@@ -113,9 +118,9 @@ func (s *Store) GetMemory(ctx context.Context, id string) (*storage.Memory, erro
 		lastUsed float64
 	)
 	err := s.db.QueryRowContext(ctx, `
-        SELECT id, user_id, content, category, tags, metadata, created_at, updated_at, mem_type, vector, status, superseded_by, reinforcement_count, neglect_count, last_used_at
+        SELECT id, user_id, content, category, tags, metadata, created_at, updated_at, mem_type, vector, status, superseded_by, reinforcement_count, neglect_count, last_used_at, reinforced_at_seq
         FROM memories WHERE id = ?`, id,
-	).Scan(&m.ID, &m.UserID, &m.Content, &m.Category, &tagsJSON, &metaStr, &created, &updated, &m.MemType, &vecBytes, &m.Status, &m.SupersededBy, &m.ReinforcementCount, &m.NeglectCount, &lastUsed)
+	).Scan(&m.ID, &m.UserID, &m.Content, &m.Category, &tagsJSON, &metaStr, &created, &updated, &m.MemType, &vecBytes, &m.Status, &m.SupersededBy, &m.ReinforcementCount, &m.NeglectCount, &lastUsed, &m.ReinforcedAtSeq)
 	if errors.Is(err, sql.ErrNoRows) {
 		return nil, storage.ErrNotFound
 	}
@@ -242,7 +247,7 @@ func (s *Store) fetchMemoryCandidates(ctx context.Context, query string, opts *s
 		}
 		args = append(args, fetchLimit)
 		rows, err = s.db.QueryContext(ctx,
-			`SELECT id, user_id, content, category, tags, metadata, created_at, updated_at, mem_type, vector, status, superseded_by, reinforcement_count, neglect_count, last_used_at, 0 as rank
+			`SELECT id, user_id, content, category, tags, metadata, created_at, updated_at, mem_type, vector, status, superseded_by, reinforcement_count, neglect_count, last_used_at, reinforced_at_seq, 0 as rank
              FROM memories`+whereSQL+` ORDER BY created_at DESC LIMIT ?`, args...)
 	} else {
 		wheres := []string{"memories_fts MATCH ?"}
@@ -257,7 +262,7 @@ func (s *Store) fetchMemoryCandidates(ctx context.Context, query string, opts *s
 		}
 		args = append(args, fetchLimit)
 		rows, err = s.db.QueryContext(ctx,
-			`SELECT m.id, m.user_id, m.content, m.category, m.tags, m.metadata, m.created_at, m.updated_at, m.mem_type, m.vector, m.status, m.superseded_by, m.reinforcement_count, m.neglect_count, m.last_used_at, bm25(memories_fts) as rank
+			`SELECT m.id, m.user_id, m.content, m.category, m.tags, m.metadata, m.created_at, m.updated_at, m.mem_type, m.vector, m.status, m.superseded_by, m.reinforcement_count, m.neglect_count, m.last_used_at, m.reinforced_at_seq, bm25(memories_fts) as rank
              FROM memories_fts
              JOIN memories m ON m.rowid = memories_fts.rowid
              WHERE `+strings.Join(wheres, " AND ")+` ORDER BY rank LIMIT ?`, args...)
@@ -279,7 +284,7 @@ func (s *Store) fetchMemoryCandidates(ctx context.Context, query string, opts *s
 			lastUsed float64
 			rank     float64
 		)
-		if err := rows.Scan(&m.ID, &m.UserID, &m.Content, &m.Category, &tagsJSON, &metaStr, &created, &updated, &m.MemType, &vecBytes, &m.Status, &m.SupersededBy, &m.ReinforcementCount, &m.NeglectCount, &lastUsed, &rank); err != nil {
+		if err := rows.Scan(&m.ID, &m.UserID, &m.Content, &m.Category, &tagsJSON, &metaStr, &created, &updated, &m.MemType, &vecBytes, &m.Status, &m.SupersededBy, &m.ReinforcementCount, &m.NeglectCount, &lastUsed, &m.ReinforcedAtSeq, &rank); err != nil {
 			return nil, fmt.Errorf("sqlite: scan memory: %w", err)
 		}
 		_ = json.Unmarshal([]byte(tagsJSON), &m.Tags)
@@ -353,7 +358,7 @@ func (s *Store) ListMemoriesByType(ctx context.Context, memType string, limit in
 		limit = 20
 	}
 	rows, err := s.db.QueryContext(ctx, `
-        SELECT id, user_id, content, category, tags, metadata, created_at, updated_at, mem_type, vector, status, superseded_by, reinforcement_count, neglect_count, last_used_at
+        SELECT id, user_id, content, category, tags, metadata, created_at, updated_at, mem_type, vector, status, superseded_by, reinforcement_count, neglect_count, last_used_at, reinforced_at_seq
         FROM memories WHERE mem_type = ? AND status = ? ORDER BY created_at DESC LIMIT ?`,
 		memType, storage.MemoryStatusActive, limit)
 	if err != nil {
@@ -372,7 +377,7 @@ func (s *Store) ListMemoriesByType(ctx context.Context, memType string, limit in
 			lastUsed float64
 		)
 		if err := rows.Scan(&m.ID, &m.UserID, &m.Content, &m.Category,
-			&tagsJSON, &metaStr, &created, &updated, &m.MemType, &vecBytes, &m.Status, &m.SupersededBy, &m.ReinforcementCount, &m.NeglectCount, &lastUsed); err != nil {
+			&tagsJSON, &metaStr, &created, &updated, &m.MemType, &vecBytes, &m.Status, &m.SupersededBy, &m.ReinforcementCount, &m.NeglectCount, &lastUsed, &m.ReinforcedAtSeq); err != nil {
 			return nil, fmt.Errorf("sqlite: scan memory: %w", err)
 		}
 		_ = json.Unmarshal([]byte(tagsJSON), &m.Tags)

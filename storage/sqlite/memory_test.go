@@ -245,3 +245,34 @@ func TestSearchMemories_ReinforcementBoostsRanking(t *testing.T) {
 	require.GreaterOrEqual(t, len(got), 2)
 	assert.Equal(t, "boosted", got[0].ID, "reinforced memory should rank first")
 }
+
+func TestBumpMemoryUsageRecordsReinforcedAtSeq(t *testing.T) {
+	store := newTestStore(t)
+	defer store.Close()
+	ctx := context.Background()
+	require.NoError(t, store.SaveMemory(ctx, &storage.Memory{ID: "m1", Content: "x"}))
+
+	// Bump skills_generation to seq=2.
+	_, _, _, err := store.SetSkillsGeneration(ctx, "hash-a")
+	require.NoError(t, err)
+	_, _, _, err = store.SetSkillsGeneration(ctx, "hash-b")
+	require.NoError(t, err)
+
+	require.NoError(t, store.BumpMemoryUsage(ctx, "m1", true))
+	got, err := store.GetMemory(ctx, "m1")
+	require.NoError(t, err)
+	require.Equal(t, int64(2), got.ReinforcedAtSeq)
+}
+
+func TestBumpMemoryUsageNeglectDoesNotTouchSeq(t *testing.T) {
+	store := newTestStore(t)
+	defer store.Close()
+	ctx := context.Background()
+	require.NoError(t, store.SaveMemory(ctx, &storage.Memory{
+		ID: "m1", Content: "x", ReinforcedAtSeq: 5,
+	}))
+	_, _, _, _ = store.SetSkillsGeneration(ctx, "hash-a") // seq=1
+	require.NoError(t, store.BumpMemoryUsage(ctx, "m1", false))
+	got, _ := store.GetMemory(ctx, "m1")
+	require.Equal(t, int64(5), got.ReinforcedAtSeq) // unchanged
+}
