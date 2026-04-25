@@ -102,6 +102,13 @@ type MemorySearchOptions struct {
 	// IncludeAll disables the default active-only filter so callers can
 	// see superseded/archived memories (e.g., for maintenance tooling).
 	IncludeAll bool
+	// CurrentSkillsSeq is the current skills_generation seq. When non-zero
+	// (and GenerationHalfLife > 0), the hybrid ranker decays reinforcement
+	// signals on each candidate by 0.5^((CurrentSkillsSeq - reinforced_at_seq) / GenerationHalfLife).
+	CurrentSkillsSeq int64
+	// GenerationHalfLife is the per-generation half-life used in the decay
+	// above. 0 disables the decay.
+	GenerationHalfLife int
 }
 
 // MemoryEvent is a structured log row surfaced by /api/memory/report.

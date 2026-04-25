@@ -276,3 +276,80 @@ func TestBumpMemoryUsageNeglectDoesNotTouchSeq(t *testing.T) {
 	got, _ := store.GetMemory(ctx, "m1")
 	require.Equal(t, int64(5), got.ReinforcedAtSeq) // unchanged
 }
+
+func TestSearchMemoriesAppliesGenerationDecay(t *testing.T) {
+	store := newTestStore(t)
+	defer store.Close()
+	ctx := context.Background()
+	queryVec := []float32{1, 0}
+
+	// Two memories with identical raw signals except reinforced_at_seq.
+	// Recently reinforced (seq=10): should rank above stale (seq=0).
+	require.NoError(t, store.SaveMemory(ctx, &storage.Memory{
+		ID:                 "fresh",
+		Content:            "alpha",
+		Vector:             func() []byte { v, _ := embedding.EncodeVector(queryVec); return v }(),
+		ReinforcementCount: 5,
+		NeglectCount:       0,
+		ReinforcedAtSeq:    10,
+		CreatedAt:          time.Now().UTC(),
+		UpdatedAt:          time.Now().UTC(),
+	}))
+	require.NoError(t, store.SaveMemory(ctx, &storage.Memory{
+		ID:                 "stale",
+		Content:            "alpha",
+		Vector:             func() []byte { v, _ := embedding.EncodeVector(queryVec); return v }(),
+		ReinforcementCount: 5,
+		NeglectCount:       0,
+		ReinforcedAtSeq:    0,
+		CreatedAt:          time.Now().UTC(),
+		UpdatedAt:          time.Now().UTC(),
+	}))
+
+	opts := &storage.MemorySearchOptions{
+		Limit:              10,
+		QueryVector:        queryVec,
+		CurrentSkillsSeq:   10,
+		GenerationHalfLife: 5,
+	}
+	got, err := store.SearchMemories(ctx, "alpha", opts)
+	require.NoError(t, err)
+	require.GreaterOrEqual(t, len(got), 2)
+	require.Equal(t, "fresh", got[0].ID, "fresh memory ranked above stale")
+}
+
+func TestSearchMemoriesHalfLifeZeroDisablesDecay(t *testing.T) {
+	store := newTestStore(t)
+	defer store.Close()
+	ctx := context.Background()
+	queryVec := []float32{1, 0}
+	require.NoError(t, store.SaveMemory(ctx, &storage.Memory{
+		ID:                 "a",
+		Content:            "topic",
+		Vector:             func() []byte { v, _ := embedding.EncodeVector(queryVec); return v }(),
+		ReinforcementCount: 5,
+		ReinforcedAtSeq:    10,
+		CreatedAt:          time.Now().UTC(),
+		UpdatedAt:          time.Now().UTC(),
+	}))
+	require.NoError(t, store.SaveMemory(ctx, &storage.Memory{
+		ID:                 "b",
+		Content:            "topic",
+		Vector:             func() []byte { v, _ := embedding.EncodeVector(queryVec); return v }(),
+		ReinforcementCount: 5,
+		ReinforcedAtSeq:    0,
+		CreatedAt:          time.Now().UTC(),
+		UpdatedAt:          time.Now().UTC(),
+	}))
+	opts := &storage.MemorySearchOptions{
+		Limit:              10,
+		QueryVector:        queryVec,
+		CurrentSkillsSeq:   10,
+		GenerationHalfLife: 0, // decay disabled
+	}
+	got, err := store.SearchMemories(ctx, "topic", opts)
+	require.NoError(t, err)
+	require.Len(t, got, 2)
+	// With decay off, raw reinforcement is identical → ordering depends on
+	// other signals (FTS / cosine / recency); just assert both are present.
+}

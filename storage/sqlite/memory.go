@@ -197,6 +197,26 @@ func (s *Store) SearchMemories(ctx context.Context, query string, opts *storage.
 		c.cosine = float64(embedding.CosineSimilarity(v, queryVec))
 	}
 
+	// Apply generation-decay weighting to the per-candidate reinforcement
+	// signal before normalization. Half-life <= 0 means "no decay" and
+	// behavior matches A-spec (weight = 1.0).
+	halfLife := 0
+	var currentSeq int64
+	if opts != nil {
+		halfLife = opts.GenerationHalfLife
+		currentSeq = opts.CurrentSkillsSeq
+	}
+	if halfLife > 0 {
+		for _, c := range candidates {
+			gap := currentSeq - c.mem.ReinforcedAtSeq
+			if gap < 0 {
+				gap = 0 // defensive: corrupt/future seq is treated as current-gen
+			}
+			weight := math.Pow(0.5, float64(gap)/float64(halfLife))
+			c.reinforcement *= weight
+		}
+	}
+
 	minF, maxF := scoreRange(candidates, func(c *scoredMemory) float64 { return c.fts })
 	minC, maxC := scoreRange(candidates, func(c *scoredMemory) float64 { return c.cosine })
 	minR, maxR := scoreRange(candidates, func(c *scoredMemory) float64 { return c.recency })
