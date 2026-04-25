@@ -9,6 +9,7 @@ import (
 	"io"
 	"log/slog"
 	"net/http"
+	"strings"
 	"time"
 
 	"github.com/odysseythink/hermind/provider"
@@ -125,12 +126,24 @@ type errProviderNoStreaming struct{}
 func (errProviderNoStreaming) Error() string { return "provider does not support streaming" }
 
 // writeProviderError handles upstream provider failures.
-// Task 9 will refine this with status-code classification.
 func (s *Server) writeProviderError(w http.ResponseWriter, err error) {
 	slog.Warn("v1.messages.provider_error", "err", err)
+	msg := err.Error()
+
 	if errors.Is(err, errProviderNoStreaming{}) {
 		writeAnthropicError(w, http.StatusBadRequest, "invalid_request_error", "provider does not support streaming")
 		return
 	}
-	writeAnthropicError(w, http.StatusBadGateway, "api_error", err.Error())
+
+	// Best-effort classification by substring. Provider implementations
+	// don't carry typed status codes today; this is a defensive sniff.
+	lower := strings.ToLower(msg)
+	switch {
+	case strings.Contains(lower, "429") || strings.Contains(lower, "rate limit"):
+		writeAnthropicError(w, http.StatusTooManyRequests, "rate_limit_error", msg)
+	case strings.Contains(lower, "401") || strings.Contains(lower, "unauthorized"):
+		writeAnthropicError(w, http.StatusUnauthorized, "authentication_error", msg)
+	default:
+		writeAnthropicError(w, http.StatusBadGateway, "api_error", msg)
+	}
 }

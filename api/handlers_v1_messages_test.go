@@ -206,3 +206,48 @@ func TestV1Messages_MountedBeforeUIWildcard(t *testing.T) {
 	require.Equal(t, http.StatusOK, rr.Code, "/v1/messages must reach handler, not be shadowed")
 	require.Equal(t, "application/json", rr.Header().Get("Content-Type"))
 }
+
+// errProviderRateLimit is a sentinel test-only error.
+var errProviderRateLimit = errors.New("provider: rate limited (429)")
+
+// stubProviderErr returns a fixed error from Complete.
+type stubProviderErr struct{ err error }
+
+func (p *stubProviderErr) Name() string { return "stub-err" }
+func (p *stubProviderErr) Complete(ctx context.Context, req *provider.Request) (*provider.Response, error) {
+	return nil, p.err
+}
+func (p *stubProviderErr) Stream(ctx context.Context, req *provider.Request) (provider.Stream, error) {
+	return nil, p.err
+}
+func (p *stubProviderErr) ModelInfo(model string) *provider.ModelInfo { return nil }
+func (p *stubProviderErr) EstimateTokens(model, text string) (int, error) { return 0, nil }
+func (p *stubProviderErr) Available() bool                                { return true }
+
+func TestV1Messages_ProviderRateLimitMapsTo429(t *testing.T) {
+	prov := &stubProviderErr{err: errProviderRateLimit}
+	srv := newProxyTestServer(t, prov)
+	body := []byte(`{
+		"model": "x", "max_tokens": 8,
+		"messages": [{"role": "user", "content": [{"type": "text", "text": "hi"}]}]
+	}`)
+	rr := httptest.NewRecorder()
+	req := httptest.NewRequest(http.MethodPost, "/v1/messages", bytes.NewReader(body))
+	srv.Router().ServeHTTP(rr, req)
+	require.True(t, rr.Code == http.StatusBadGateway || rr.Code == http.StatusTooManyRequests,
+		"got %d, expected 502 or 429", rr.Code)
+	require.Contains(t, rr.Body.String(), "rate limited")
+}
+
+func TestV1Messages_ProviderGenericErrorMapsTo502(t *testing.T) {
+	prov := &stubProviderErr{err: errors.New("upstream timeout")}
+	srv := newProxyTestServer(t, prov)
+	body := []byte(`{
+		"model": "x", "max_tokens": 8,
+		"messages": [{"role": "user", "content": [{"type": "text", "text": "hi"}]}]
+	}`)
+	rr := httptest.NewRecorder()
+	req := httptest.NewRequest(http.MethodPost, "/v1/messages", bytes.NewReader(body))
+	srv.Router().ServeHTTP(rr, req)
+	require.Equal(t, http.StatusBadGateway, rr.Code)
+}
