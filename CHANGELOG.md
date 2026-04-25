@@ -1,5 +1,29 @@
 # Changelog
 
+## Unreleased
+
+### Added
+- **Anthropic-compatible `/v1/messages` proxy endpoint**: opt-in via
+  `proxy.enabled: true` in config. Hermind exposes itself as a drop-in
+  for `ANTHROPIC_BASE_URL` so Claude Code, Cursor, NanoClaw, and the
+  official Anthropic SDK can reach hermind without modification — the
+  request is translated into hermind's internal `provider.Request`,
+  handed to whichever LLM provider hermind is configured for, and the
+  response is translated back to the Anthropic Messages wire format
+  (including SSE streaming and tool-use blocks). The endpoint is pure
+  transport-layer proxy: agent loop, memory, skills, and conversation
+  judge are not invoked. Default disabled.
+
+  ```yaml
+  proxy:
+    enabled: true
+    keep_alive_seconds: 15  # default; SSE ping interval
+  ```
+  Then point any Anthropic SDK client at `http://127.0.0.1:<port>`.
+  The `model` field in the request is echoed in the response for SDK
+  compatibility; the actual provider/model used is exposed via the
+  `x-hermind-actual-model` response header.
+
 ## 0.3.1 — 2026-04-24
 
 ### Added
