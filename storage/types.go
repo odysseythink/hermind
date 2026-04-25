@@ -151,6 +151,14 @@ type MemoryHealth struct {
 	OrphanMemories          int    `json:"orphan_memories"`
 	ConsolidatorLastRunUnix *int64 `json:"consolidator_last_run_unix,omitempty"`
 	ConsolidatorLastReport  *ConsolidateReportView `json:"consolidator_last_report,omitempty"`
+	CurrentSkillsGeneration *CurrentSkillsGen `json:"current_skills_generation,omitempty"`
+}
+
+// CurrentSkillsGen is the JSON shape for the current skills generation in MemoryHealth.
+type CurrentSkillsGen struct {
+	Hash      string `json:"hash"`
+	Seq       int64  `json:"seq"`
+	UpdatedAt int64  `json:"updated_at"`
 }
 
 // ConsolidateReportView is the JSON shape surfaced via MemoryHealth.
