@@ -16,9 +16,10 @@ import (
 type FactoryOption func(*factoryOptions)
 
 type factoryOptions struct {
-	storage  storage.Storage
-	llm      provider.Provider
-	embedder embedding.Embedder
+	storage   storage.Storage
+	llm       provider.Provider
+	embedder  embedding.Embedder
+	skillsCfg *config.SkillsConfig
 }
 
 // WithStorage injects a shared storage.Storage into the factory so
@@ -36,6 +37,11 @@ func WithLLM(p provider.Provider) FactoryOption {
 // WithEmbedder injects an embedder into the factory for MetaClaw.
 func WithEmbedder(e embedding.Embedder) FactoryOption {
 	return func(o *factoryOptions) { o.embedder = e }
+}
+
+// WithSkillsConfig injects a SkillsConfig into the factory for MetaClaw.
+func WithSkillsConfig(cfg *config.SkillsConfig) FactoryOption {
+	return func(o *factoryOptions) { o.skillsCfg = cfg }
 }
 
 // New builds the active external memory provider from configuration.
@@ -91,7 +97,7 @@ func New(cfg config.MemoryConfig, opts ...FactoryOption) (Provider, error) {
 		if fo.storage == nil {
 			return nil, fmt.Errorf("memprovider: metaclaw requires storage (pass WithStorage)")
 		}
-		return NewMetaClaw(fo.storage, fo.llm, fo.embedder), nil
+		return NewMetaClaw(fo.storage, fo.llm, fo.embedder, fo.skillsCfg), nil
 	default:
 		return nil, fmt.Errorf("memprovider: unknown provider %q", name)
 	}

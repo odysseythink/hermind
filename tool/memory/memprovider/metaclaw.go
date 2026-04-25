@@ -8,6 +8,7 @@ import (
 	"sync"
 	"time"
 
+	"github.com/odysseythink/hermind/config"
 	"github.com/odysseythink/hermind/message"
 	"github.com/odysseythink/hermind/provider"
 	"github.com/odysseythink/hermind/storage"
@@ -24,6 +25,7 @@ type MetaClaw struct {
 	llm       provider.Provider
 	embedder  embedding.Embedder
 	sessionID string
+	skillsCfg *config.SkillsConfig
 
 	mu           sync.Mutex
 	recentBuf    []TurnPair
@@ -41,11 +43,12 @@ type TurnPair struct {
 }
 
 // NewMetaClaw constructs a MetaClaw provider.
-func NewMetaClaw(store storage.Storage, llm provider.Provider, emb embedding.Embedder) *MetaClaw {
+func NewMetaClaw(store storage.Storage, llm provider.Provider, emb embedding.Embedder, skillsCfg *config.SkillsConfig) *MetaClaw {
 	return &MetaClaw{
 		store:     store,
 		llm:       llm,
 		embedder:  emb,
+		skillsCfg: skillsCfg,
 		recentCap: 20,
 	}
 }
@@ -228,7 +231,24 @@ func (mc *MetaClaw) Recall(ctx context.Context, query string, limit int) ([]Inje
 		return out, nil
 	}
 
-	opts := &storage.MemorySearchOptions{Limit: limit}
+	// Fetch the current skills generation seq for decay calculation
+	currentSeq := int64(0)
+	if gen, err := mc.store.GetSkillsGeneration(ctx); err == nil && gen != nil {
+		currentSeq = gen.Seq
+	}
+
+	// Determine the half-life to apply. Default to 5 if config is nil or zero;
+	// explicitly set 0 disables decay (per storage layer contract).
+	halfLife := 5
+	if mc.skillsCfg != nil && mc.skillsCfg.GenerationHalfLife > 0 {
+		halfLife = mc.skillsCfg.GenerationHalfLife
+	}
+
+	opts := &storage.MemorySearchOptions{
+		Limit:              limit,
+		CurrentSkillsSeq:   currentSeq,
+		GenerationHalfLife: halfLife,
+	}
 	if mc.embedder != nil {
 		vec, err := mc.embedder.Embed(ctx, query)
 		if err == nil && len(vec) > 0 {

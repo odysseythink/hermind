@@ -180,6 +180,7 @@ func BuildEngineDeps(ctx context.Context, app *App) (api.EngineDeps, func(), err
 		memprovider.WithStorage(app.Storage),
 		memprovider.WithLLM(p),
 		memprovider.WithEmbedder(emb),
+		memprovider.WithSkillsConfig(&app.Config.Skills),
 	)
 	if err != nil {
 		fmt.Fprintf(os.Stderr, "hermind: memory provider: %v\n", err)
