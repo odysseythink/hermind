@@ -16,6 +16,40 @@ type InputItem struct {
 	Message  string `json:"message"`
 }
 
+// Item is the minimal contract the benchmark Run loop requires of each
+// dataset row. The synthetic InputItem and replay's ReplayItem both
+// satisfy it, so a single Run loop drives both flows.
+type Item interface {
+	GetID() string
+	GetMessage() string
+	// GetCategory returns the optional category tag; empty for items
+	// that don't have one.
+	GetCategory() string
+	// GetBaseline returns the historical assistant reply this row
+	// should be compared against, or "" for synthetic items that have
+	// no baseline.
+	GetBaseline() string
+	// GetHistory returns the conversation history that should be
+	// preloaded before sending the target message, or nil for items
+	// with no preceding context.
+	GetHistory() []message.Message
+}
+
+// GetID implements Item.
+func (i InputItem) GetID() string { return i.ID }
+
+// GetMessage implements Item.
+func (i InputItem) GetMessage() string { return i.Message }
+
+// GetCategory implements Item.
+func (i InputItem) GetCategory() string { return i.Category }
+
+// GetBaseline implements Item. Synthetic items have no baseline.
+func (i InputItem) GetBaseline() string { return "" }
+
+// GetHistory implements Item. Synthetic items have no preceding history.
+func (i InputItem) GetHistory() []message.Message { return nil }
+
 // DatasetMeta is the first-line metadata record in dataset.jsonl.
 type DatasetMeta struct {
 	Seed        int64     `json:"seed"`

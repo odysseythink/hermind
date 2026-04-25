@@ -29,8 +29,8 @@ func TestRunWritesRecords(t *testing.T) {
 		DatasetPath: ds,
 		OutDir:      dir,
 		Presets: map[string]PresetRunner{
-			"a": func(_ context.Context, msg string) (*RunRecord, error) {
-				return &RunRecord{Reply: "reply-a-" + msg}, nil
+			"a": func(_ context.Context, item Item) (*RunRecord, error) {
+				return &RunRecord{Reply: "reply-a-" + item.GetMessage()}, nil
 			},
 		},
 	}
@@ -71,12 +71,41 @@ func TestRunSkipsDoneInputs(t *testing.T) {
 		DatasetPath: ds,
 		OutDir:      dir,
 		Presets: map[string]PresetRunner{
-			"a": func(_ context.Context, msg string) (*RunRecord, error) {
+			"a": func(_ context.Context, item Item) (*RunRecord, error) {
 				calls++
-				return &RunRecord{Reply: "new-" + msg}, nil
+				return &RunRecord{Reply: "new-" + item.GetMessage()}, nil
 			},
 		},
 	}
 	require.NoError(t, Run(context.Background(), cfg))
 	assert.Equal(t, 1, calls, "only gen_2 should be freshly run")
+}
+
+func TestRun_CustomLoaderFn(t *testing.T) {
+	tmp := t.TempDir()
+	out := filepath.Join(tmp, "out")
+	require.NoError(t, os.MkdirAll(out, 0o755))
+
+	// Custom loader returns a fixed slice — does NOT read DatasetPath.
+	loader := func(_ string) ([]Item, error) {
+		return []Item{
+			InputItem{ID: "x", Message: "hello"},
+			InputItem{ID: "y", Message: "world"},
+		}, nil
+	}
+
+	calls := 0
+	runner := func(ctx context.Context, item Item) (*RunRecord, error) {
+		calls++
+		return &RunRecord{Reply: "ok-" + item.GetID()}, nil
+	}
+
+	cfg := RunConfig{
+		DatasetPath: "/does/not/exist", // ignored when LoaderFn is set
+		OutDir:      out,
+		Presets:     map[string]PresetRunner{"a": runner},
+		LoaderFn:    loader,
+	}
+	require.NoError(t, Run(context.Background(), cfg))
+	require.Equal(t, 2, calls)
 }

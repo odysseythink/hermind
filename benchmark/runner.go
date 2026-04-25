@@ -11,21 +11,30 @@ import (
 
 // PresetRunner executes one input against one preset and returns the record.
 // Callers build this closure; typically it wires a fresh agent.Engine per
-// call against a temp sqlite file.
-type PresetRunner func(ctx context.Context, userMessage string) (*RunRecord, error)
+// call against a temp sqlite file. The Item argument carries optional
+// history (replay) or just the user message (synthetic benchmark).
+type PresetRunner func(ctx context.Context, item Item) (*RunRecord, error)
 
 // RunConfig parameterizes Run.
 type RunConfig struct {
 	DatasetPath string
 	OutDir      string
 	Presets     map[string]PresetRunner
+	// LoaderFn is the dataset parser. Nil means "use built-in
+	// LoadDataset" (synthetic InputItem JSONL); replay supplies its
+	// own loader to read ReplayItem rows.
+	LoaderFn func(path string) ([]Item, error)
 }
 
 // Run executes every (preset × input) combination, writing
 // <OutDir>/<preset>/records.jsonl. Already-written (preset, input_id)
 // pairs are skipped to support resume.
 func Run(ctx context.Context, cfg RunConfig) error {
-	items, err := loadDataset(cfg.DatasetPath)
+	loader := cfg.LoaderFn
+	if loader == nil {
+		loader = LoadDataset
+	}
+	items, err := loader(cfg.DatasetPath)
 	if err != nil {
 		return err
 	}
@@ -45,15 +54,15 @@ func Run(ctx context.Context, cfg RunConfig) error {
 		}
 		enc := json.NewEncoder(f)
 		for _, item := range items {
-			if _, ok := done[item.ID]; ok {
+			if _, ok := done[item.GetID()]; ok {
 				continue
 			}
-			rec, err := runner(ctx, item.Message)
+			rec, err := runner(ctx, item)
 			if err != nil {
 				rec = &RunRecord{Error: err.Error()}
 			}
 			rec.PresetName = presetName
-			rec.InputID = item.ID
+			rec.InputID = item.GetID()
 			if err := enc.Encode(rec); err != nil {
 				f.Close()
 				return fmt.Errorf("benchmark: encode: %w", err)
@@ -62,39 +71,6 @@ func Run(ctx context.Context, cfg RunConfig) error {
 		f.Close()
 	}
 	return nil
-}
-
-func loadDataset(path string) ([]InputItem, error) {
-	f, err := os.Open(path)
-	if err != nil {
-		return nil, fmt.Errorf("benchmark: open dataset: %w", err)
-	}
-	defer f.Close()
-	s := bufio.NewScanner(f)
-	s.Buffer(make([]byte, 1<<20), 1<<20)
-	var items []InputItem
-	for s.Scan() {
-		// The first line (or any line) may be a meta object. Parse each
-		// line as a generic object first; skip when it looks like meta
-		// (has a top-level "__meta" key) and only parse as InputItem
-		// when it does not.
-		var probe map[string]json.RawMessage
-		if err := json.Unmarshal(s.Bytes(), &probe); err != nil {
-			continue
-		}
-		if _, isMeta := probe["__meta"]; isMeta {
-			continue
-		}
-		var it InputItem
-		if err := json.Unmarshal(s.Bytes(), &it); err != nil {
-			continue
-		}
-		if it.ID == "" {
-			continue
-		}
-		items = append(items, it)
-	}
-	return items, s.Err()
 }
 
 func readDoneIDs(path string) (map[string]struct{}, error) {

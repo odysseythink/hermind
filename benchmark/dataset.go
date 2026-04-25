@@ -1,6 +1,7 @@
 package benchmark
 
 import (
+	"bufio"
 	"context"
 	"encoding/json"
 	"fmt"
@@ -78,4 +79,36 @@ func Generate(ctx context.Context, cfg GenerateConfig) error {
 		}
 	}
 	return nil
+}
+
+// LoadDataset parses a synthetic-benchmark dataset JSONL into Items.
+// First-line meta records (objects with a "__meta" key) are skipped.
+// Returns []Item so it can satisfy the LoaderFn signature directly.
+func LoadDataset(path string) ([]Item, error) {
+	f, err := os.Open(path)
+	if err != nil {
+		return nil, fmt.Errorf("benchmark: open dataset: %w", err)
+	}
+	defer f.Close()
+	s := bufio.NewScanner(f)
+	s.Buffer(make([]byte, 1<<20), 1<<20)
+	var items []Item
+	for s.Scan() {
+		var probe map[string]json.RawMessage
+		if err := json.Unmarshal(s.Bytes(), &probe); err != nil {
+			continue
+		}
+		if _, isMeta := probe["__meta"]; isMeta {
+			continue
+		}
+		var it InputItem
+		if err := json.Unmarshal(s.Bytes(), &it); err != nil {
+			continue
+		}
+		if it.ID == "" {
+			continue
+		}
+		items = append(items, it)
+	}
+	return items, s.Err()
 }

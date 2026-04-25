@@ -58,7 +58,10 @@ func newBenchRunCmd(app *App) *cobra.Command {
 			return benchmark.Run(context.Background(), benchmark.RunConfig{
 				DatasetPath: datasetPath,
 				OutDir:      outDir,
-				Presets:     map[string]benchmark.PresetRunner{},
+				Presets: map[string]benchmark.PresetRunner{
+					// Placeholder: callers wire actual preset runners here.
+					// Each runner: func(ctx context.Context, item benchmark.Item) (*benchmark.RunRecord, error)
+				},
 			})
 		},
 	}
