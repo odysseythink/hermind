@@ -2,9 +2,11 @@ package cli
 
 import (
 	"context"
+	"os"
 	"path/filepath"
 	"testing"
 
+	"github.com/stretchr/testify/require"
 	"github.com/odysseythink/hermind/config"
 	"github.com/odysseythink/hermind/storage/sqlite"
 )
@@ -55,4 +57,28 @@ func TestBuildEngineDeps_Smoke(t *testing.T) {
 	if deps.ToolReg == nil {
 		t.Error("ToolReg nil")
 	}
+}
+
+func TestAttachSkillsTrackerBumpsOnFirstRefresh(t *testing.T) {
+	tmp := t.TempDir()
+	skillDir := filepath.Join(tmp, "skills")
+	require.NoError(t, os.MkdirAll(skillDir, 0o755))
+	require.NoError(t, os.WriteFile(filepath.Join(skillDir, "a.md"), []byte("hi"), 0o644))
+
+	store, err := sqlite.Open(filepath.Join(tmp, "state.db"))
+	require.NoError(t, err)
+	defer store.Close()
+	require.NoError(t, store.Migrate())
+
+	tracker := attachSkillsTracker(context.Background(), store, skillDir)
+	require.NotNil(t, tracker)
+
+	gen, err := store.GetSkillsGeneration(context.Background())
+	require.NoError(t, err)
+	require.Equal(t, int64(1), gen.Seq, "attachSkillsTracker must Refresh once at construction")
+}
+
+func TestAttachSkillsTrackerNilStoreReturnsNil(t *testing.T) {
+	tracker := attachSkillsTracker(context.Background(), nil, "")
+	require.Nil(t, tracker)
 }

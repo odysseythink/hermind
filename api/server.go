@@ -51,6 +51,10 @@ type EngineDeps struct {
 	// MemProvider, if non-nil, is added to the engine's MemoryManager so
 	// SyncTurn is called after each conversation turn.
 	MemProvider memprovider.Provider
+	// SkillsTracker maintains the skills-library content hash and
+	// generation seq used by the memory ranker to decay stale signals.
+	// Constructed at startup; nil if skills are not available.
+	SkillsTracker *skills.Tracker
 }
 
 // ServerOpts bundles server-wide state.

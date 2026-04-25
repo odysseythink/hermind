@@ -4,6 +4,7 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"log/slog"
 	"os"
 	"path/filepath"
 	"time"
@@ -15,6 +16,7 @@ import (
 	"github.com/odysseythink/hermind/provider"
 	"github.com/odysseythink/hermind/provider/factory"
 	"github.com/odysseythink/hermind/skills"
+	"github.com/odysseythink/hermind/storage"
 	"github.com/odysseythink/hermind/tool"
 	"github.com/odysseythink/hermind/tool/browser"
 	"github.com/odysseythink/hermind/tool/delegate"
@@ -27,6 +29,22 @@ import (
 	"github.com/odysseythink/hermind/tool/vision"
 	"github.com/odysseythink/hermind/tool/web"
 )
+
+// attachSkillsTracker constructs a Tracker and runs one initial
+// Refresh so the persisted seq matches the current library content
+// before any consumer reads it. Refresh failure is logged and
+// ignored — the tracker is still returned, callers degrade to the
+// last-persisted seq. Returns nil only if `store` is nil.
+func attachSkillsTracker(ctx context.Context, store storage.Storage, skillDir string) *skills.Tracker {
+	if store == nil {
+		return nil
+	}
+	tr := skills.NewTracker(store, skillDir)
+	if _, err := tr.Refresh(ctx); err != nil {
+		slog.Warn("skills.tracker startup refresh failed", "err", err)
+	}
+	return tr
+}
 
 // BuildEngineDeps constructs the shared provider + aux + tool registry +
 // skills bundle used by both the TUI (cli/repl.go) and the web server
@@ -249,6 +267,8 @@ func BuildEngineDeps(ctx context.Context, app *App) (api.EngineDeps, func(), err
 
 	skillsReg, _ := loadSkills(app)
 
+	skillsTracker := attachSkillsTracker(ctx, app.Storage, skillsDir)
+
 	return api.EngineDeps{
 		Provider:        p,
 		AuxProvider:     auxProvider,
@@ -260,5 +280,6 @@ func BuildEngineDeps(ctx context.Context, app *App) (api.EngineDeps, func(), err
 		SkillsEvolver:   evolver,
 		SkillsRetriever: retriever,
 		MemProvider:     extMem,
+		SkillsTracker:   skillsTracker,
 	}, cleanup, nil
 }
