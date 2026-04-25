@@ -253,9 +253,9 @@ func TestBumpMemoryUsageRecordsReinforcedAtSeq(t *testing.T) {
 	require.NoError(t, store.SaveMemory(ctx, &storage.Memory{ID: "m1", Content: "x"}))
 
 	// Bump skills_generation to seq=2.
-	_, _, _, err := store.SetSkillsGeneration(ctx, "hash-a")
+	_, _, _, _, err := store.SetSkillsGeneration(ctx, "hash-a")
 	require.NoError(t, err)
-	_, _, _, err = store.SetSkillsGeneration(ctx, "hash-b")
+	_, _, _, _, err = store.SetSkillsGeneration(ctx, "hash-b")
 	require.NoError(t, err)
 
 	require.NoError(t, store.BumpMemoryUsage(ctx, "m1", true))
@@ -271,7 +271,7 @@ func TestBumpMemoryUsageNeglectDoesNotTouchSeq(t *testing.T) {
 	require.NoError(t, store.SaveMemory(ctx, &storage.Memory{
 		ID: "m1", Content: "x", ReinforcedAtSeq: 5,
 	}))
-	_, _, _, _ = store.SetSkillsGeneration(ctx, "hash-a") // seq=1
+	_, _, _, _, _ = store.SetSkillsGeneration(ctx, "hash-a") // seq=1
 	require.NoError(t, store.BumpMemoryUsage(ctx, "m1", false))
 	got, _ := store.GetMemory(ctx, "m1")
 	require.Equal(t, int64(5), got.ReinforcedAtSeq) // unchanged

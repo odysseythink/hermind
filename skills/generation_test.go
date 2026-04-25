@@ -110,3 +110,29 @@ func TestTrackerRefreshAfterEditBumps(t *testing.T) {
 	cur, _ := tr.Current(context.Background())
 	require.Equal(t, int64(2), cur.Seq)
 }
+
+func TestTrackerRefreshEmitsAuditOnBump(t *testing.T) {
+	skillDir := t.TempDir()
+	require.NoError(t, os.WriteFile(filepath.Join(skillDir, "a.md"), []byte("hi"), 0o644))
+	store := newSkillsTestStore(t)
+	tr := NewTracker(store, skillDir)
+	bumped, err := tr.Refresh(context.Background())
+	require.NoError(t, err)
+	require.True(t, bumped)
+	events, err := store.ListMemoryEvents(context.Background(), 10, 0, []string{"skills.generation_bumped"})
+	require.NoError(t, err)
+	require.Len(t, events, 1)
+	require.Equal(t, "skills.generation_bumped", events[0].Kind)
+	require.Contains(t, string(events[0].Data), `"new_seq":1`)
+}
+
+func TestTrackerRefreshNoAuditOnNoBump(t *testing.T) {
+	skillDir := t.TempDir()
+	require.NoError(t, os.WriteFile(filepath.Join(skillDir, "a.md"), []byte("hi"), 0o644))
+	store := newSkillsTestStore(t)
+	tr := NewTracker(store, skillDir)
+	_, _ = tr.Refresh(context.Background())
+	_, _ = tr.Refresh(context.Background()) // no-bump
+	events, _ := store.ListMemoryEvents(context.Background(), 10, 0, []string{"skills.generation_bumped"})
+	require.Len(t, events, 1, "no-bump must not append a second event")
+}

@@ -33,10 +33,10 @@ func (s *Store) GetSkillsGeneration(ctx context.Context) (*storage.SkillsGenerat
 func (s *Store) SetSkillsGeneration(
 	ctx context.Context,
 	newHash string,
-) (oldSeq, newSeq int64, bumped bool, err error) {
+) (oldHash string, oldSeq, newSeq int64, bumped bool, err error) {
 	tx, err := s.db.BeginTx(ctx, nil)
 	if err != nil {
-		return 0, 0, false, fmt.Errorf("sqlite: set skills_generation begin: %w", err)
+		return "", 0, 0, false, fmt.Errorf("sqlite: set skills_generation begin: %w", err)
 	}
 	defer tx.Rollback()
 
@@ -44,12 +44,12 @@ func (s *Store) SetSkillsGeneration(
 	if err := tx.QueryRowContext(ctx,
 		`SELECT hash, seq FROM skills_generation WHERE id = 1`,
 	).Scan(&curHash, &oldSeq); err != nil {
-		return 0, 0, false, fmt.Errorf("sqlite: set skills_generation read: %w", err)
+		return "", 0, 0, false, fmt.Errorf("sqlite: set skills_generation read: %w", err)
 	}
 
 	if curHash == newHash {
 		newSeq = oldSeq
-		return oldSeq, newSeq, false, tx.Commit()
+		return curHash, oldSeq, newSeq, false, tx.Commit()
 	}
 
 	newSeq = oldSeq + 1
@@ -59,11 +59,11 @@ func (s *Store) SetSkillsGeneration(
 		  WHERE id = 1`,
 		newHash, newSeq, toEpoch(time.Now().UTC()),
 	); err != nil {
-		return 0, 0, false, fmt.Errorf("sqlite: set skills_generation update: %w", err)
+		return "", 0, 0, false, fmt.Errorf("sqlite: set skills_generation update: %w", err)
 	}
 
 	if err := tx.Commit(); err != nil {
-		return 0, 0, false, fmt.Errorf("sqlite: set skills_generation commit: %w", err)
+		return "", 0, 0, false, fmt.Errorf("sqlite: set skills_generation commit: %w", err)
 	}
-	return oldSeq, newSeq, true, nil
+	return curHash, oldSeq, newSeq, true, nil
 }

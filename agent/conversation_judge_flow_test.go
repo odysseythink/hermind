@@ -70,8 +70,8 @@ func (r *recStore) SkillsStats(_ context.Context, _ string) (*storage.SkillsStat
 func (r *recStore) GetSkillsGeneration(_ context.Context) (*storage.SkillsGeneration, error) {
 	return &storage.SkillsGeneration{Hash: "", Seq: 0, UpdatedAt: time.Time{}}, nil
 }
-func (r *recStore) SetSkillsGeneration(_ context.Context, _ string) (int64, int64, bool, error) {
-	return 0, 0, false, nil
+func (r *recStore) SetSkillsGeneration(_ context.Context, _ string) (string, int64, int64, bool, error) {
+	return "", 0, 0, false, nil
 }
 
 type nopTx struct{}

@@ -7,11 +7,14 @@ import (
 	"context"
 	"crypto/sha256"
 	"encoding/hex"
+	"encoding/json"
 	"fmt"
+	"log/slog"
 	"os"
 	"path/filepath"
 	"sort"
 	"strings"
+	"time"
 
 	"github.com/odysseythink/hermind/storage"
 )
@@ -63,6 +66,13 @@ func emptyHash() string {
 	return hex.EncodeToString(sum[:])
 }
 
+func shortHash(h string) string {
+	if len(h) <= 12 {
+		return h
+	}
+	return h[:12]
+}
+
 // Tracker watches the skills directory and maintains a (hash, seq)
 // state row in storage so the memory ranker can decay stale
 // reinforcement signals across library evolution.
@@ -86,11 +96,29 @@ func (t *Tracker) Refresh(ctx context.Context) (bool, error) {
 	if err != nil {
 		return false, err
 	}
-	_, _, bumped, err := t.store.SetSkillsGeneration(ctx, h)
+	oldHash, oldSeq, newSeq, bumped, err := t.store.SetSkillsGeneration(ctx, h)
 	if err != nil {
 		return false, err
 	}
-	return bumped, nil
+	if !bumped {
+		return false, nil
+	}
+
+	data, _ := json.Marshal(map[string]any{
+		"old_seq":  oldSeq,
+		"new_seq":  newSeq,
+		"old_hash": oldHash,
+		"new_hash": h,
+	})
+	_ = t.store.AppendMemoryEvent(ctx, time.Now().UTC(), "skills.generation_bumped", data)
+
+	slog.Info("skills.generation_bumped",
+		"old_seq", oldSeq,
+		"new_seq", newSeq,
+		"old_hash", shortHash(oldHash),
+		"new_hash", shortHash(h),
+	)
+	return true, nil
 }
 
 // Current returns the persisted (hash, seq, updated_at).
