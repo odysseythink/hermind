@@ -21,6 +21,8 @@ type Config struct {
 	Skills            SkillsConfig              `yaml:"skills,omitempty"`
 	Web               WebConfig                 `yaml:"web,omitempty"`
 	Benchmark         BenchmarkConfig           `yaml:"benchmark,omitempty"`
+	// Proxy controls the Anthropic-compatible /v1/messages endpoint.
+	Proxy ProxyConfig `yaml:"proxy,omitempty"`
 }
 
 // WebConfig holds configuration for the `web_*` tool family.
@@ -372,6 +374,16 @@ type StorageConfig struct {
 	Driver      string `yaml:"driver"`
 	SQLitePath  string `yaml:"sqlite_path,omitempty"`
 	PostgresURL string `yaml:"postgres_url,omitempty"`
+}
+
+// ProxyConfig controls the Anthropic-compatible /v1/messages proxy
+// endpoint. The endpoint is opt-in: it is only mounted when Enabled is true.
+type ProxyConfig struct {
+	// Enabled exposes /v1/messages at the root path. Default false.
+	Enabled bool `yaml:"enabled,omitempty"`
+	// KeepAliveSeconds is the SSE keep-alive ping interval in seconds.
+	// Default 15. Values <= 0 are clamped to 15 by the server.
+	KeepAliveSeconds int `yaml:"keep_alive_seconds,omitempty"`
 }
 
 // Default returns a Config populated with sensible defaults.
