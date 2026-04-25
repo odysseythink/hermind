@@ -248,3 +248,20 @@ func TestRandMsgID(t *testing.T) {
 	require.NotEqual(t, a, b)
 	require.True(t, len(a) > 6 && a[:4] == "msg_", "ID must start with msg_")
 }
+
+func TestInbound_ImageBlockEmitsPlaceholder(t *testing.T) {
+	body := []byte(`{
+		"model": "x", "max_tokens": 64,
+		"messages": [{"role": "user", "content": [
+			{"type": "image", "source": {"type": "base64", "media_type": "image/png", "data": "iVBOR..."}},
+			{"type": "text", "text": "describe this"}
+		]}]
+	}`)
+	req, _, _, err := Inbound(body)
+	require.NoError(t, err)
+	require.Len(t, req.Messages, 1)
+	require.Equal(t, message.RoleUser, req.Messages[0].Role)
+	// The image block produces a marker so the provider sees non-empty
+	// content; the marker is concatenated with the trailing text via "\n".
+	require.Equal(t, "[image omitted in v1 proxy]\ndescribe this", req.Messages[0].Content.Text())
+}
