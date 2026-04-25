@@ -77,6 +77,12 @@ type SkillsConfig struct {
 	// injected into the system prompt per turn. 0 means inject nothing.
 	// Default 3.
 	InjectCount int `yaml:"inject_count,omitempty"`
+	// GenerationHalfLife controls staleness decay applied to memory
+	// reinforcement signals as the skills library evolves. Each "skill
+	// generation" gap halves the signal weight every `GenerationHalfLife`
+	// generations. Default 5 (set by reader fallback). 0 disables the
+	// decay (signals weighted as 1.0).
+	GenerationHalfLife int `yaml:"generation_half_life,omitempty"`
 }
 
 // CronConfig holds cron scheduler configuration.
