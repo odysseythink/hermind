@@ -11,6 +11,7 @@ import (
 
 	"github.com/google/uuid"
 	"github.com/odysseythink/hermind/agent"
+	"github.com/odysseythink/hermind/agent/presence"
 	"github.com/odysseythink/hermind/api"
 	"github.com/odysseythink/hermind/config"
 	"github.com/odysseythink/hermind/provider"
@@ -272,6 +273,29 @@ func BuildEngineDeps(ctx context.Context, app *App) (api.EngineDeps, func(), err
 
 	skillsReg, _ := loadSkills(app)
 
+	// Resolve HTTP idle threshold with deprecation alias.
+	absentAfter := app.Config.Presence.HTTPIdleAbsentAfterSeconds
+	if absentAfter == 0 && app.Config.Memory.ConsolidateIdleAfterSeconds > 0 {
+		slog.Warn("config.deprecated_field",
+			"field", "memory.consolidate_idle_after_seconds",
+			"replacement", "presence.http_idle_absent_after_seconds")
+		absentAfter = app.Config.Memory.ConsolidateIdleAfterSeconds
+	}
+	if absentAfter == 0 {
+		absentAfter = 300 // default 5 minutes
+	}
+	httpIdle := presence.NewHTTPIdle(time.Duration(absentAfter) * time.Second)
+
+	sources := []presence.Source{httpIdle}
+	if app.Config.Presence.SleepWindow.Enabled {
+		sw, err := presence.NewSleepWindow(app.Config.Presence.SleepWindow)
+		if err != nil {
+			return api.EngineDeps{}, cleanup, fmt.Errorf("presence: sleep window: %w", err)
+		}
+		sources = append(sources, sw)
+	}
+	composite := presence.NewComposite(sources...)
+
 	return api.EngineDeps{
 		Provider:        p,
 		AuxProvider:     auxProvider,
@@ -284,5 +308,7 @@ func BuildEngineDeps(ctx context.Context, app *App) (api.EngineDeps, func(), err
 		SkillsRetriever: retriever,
 		MemProvider:     extMem,
 		SkillsTracker:   skillsTracker,
+		HTTPIdle:        httpIdle,
+		Presence:        composite,
 	}, cleanup, nil
 }

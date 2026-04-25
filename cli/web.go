@@ -89,10 +89,9 @@ func runWeb(ctx context.Context, app *App, opts webRunOptions) error {
 		time.AfterFunc(opts.ExitAfter, cancel)
 	}
 
-	if app.Storage != nil {
+	if app.Storage != nil && deps.Presence != nil {
 		interval := time.Duration(app.Config.Memory.ConsolidateIntervalSeconds) * time.Second
-		idleAfter := time.Duration(app.Config.Memory.ConsolidateIdleAfterSeconds) * time.Second
-		ic := idle.New(app.Storage, interval, idleAfter, nil)
+		ic := idle.New(app.Storage, interval, deps.Presence, nil)
 		srv.SetIdleConsolidator(ic)
 		go ic.Start(runCtx)
 	}

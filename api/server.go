@@ -16,6 +16,7 @@ import (
 
 	"github.com/odysseythink/hermind/agent"
 	"github.com/odysseythink/hermind/agent/idle"
+	"github.com/odysseythink/hermind/agent/presence"
 	"github.com/odysseythink/hermind/config"
 	"github.com/odysseythink/hermind/gateway"
 	"github.com/odysseythink/hermind/message"
@@ -55,6 +56,14 @@ type EngineDeps struct {
 	// generation seq used by the memory ranker to decay stale signals.
 	// Constructed at startup; nil if skills are not available.
 	SkillsTracker *skills.Tracker
+	// HTTPIdle is the presence source that records HTTP activity. The
+	// /api/* middleware notes activity on every request so the idle
+	// consolidator (and future presence consumers) can detect quiet
+	// windows.
+	HTTPIdle *presence.HTTPIdle
+	// Presence is the composed user-presence Provider used by the idle
+	// consolidator and exposed via /api/memory/health for diagnostics.
+	Presence presence.Provider
 }
 
 // ServerOpts bundles server-wide state.
@@ -146,8 +155,8 @@ func (s *Server) buildRouter() chi.Router {
 
 	r.Use(func(next http.Handler) http.Handler {
 		return http.HandlerFunc(func(w http.ResponseWriter, req *http.Request) {
-			if s.idle != nil {
-				s.idle.NoteActivity()
+			if h := s.opts.Deps.HTTPIdle; h != nil {
+				h.NoteActivity()
 			}
 			next.ServeHTTP(w, req)
 		})
