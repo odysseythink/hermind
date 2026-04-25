@@ -273,3 +273,18 @@ func randMsgID() string {
 	_, _ = rand.Read(b[:])
 	return "msg_" + hex.EncodeToString(b[:])
 }
+
+// NewMsgID returns a fresh "msg_..." identifier suitable for outbound responses.
+// Exported wrapper around randMsgID for callers in other packages.
+func NewMsgID() string { return randMsgID() }
+
+// InvalidErrorCode returns the Anthropic error type embedded in err if err
+// originated from the inbound translator. Returns "" if err is from
+// elsewhere.
+func InvalidErrorCode(err error) string {
+	var e *errInvalid
+	if errors.As(err, &e) {
+		return e.code
+	}
+	return ""
+}

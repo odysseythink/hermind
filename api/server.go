@@ -181,6 +181,10 @@ func (s *Server) buildRouter() chi.Router {
 		r.Get("/skills/stats", s.handleSkillsStats)
 	})
 
+	if s.opts.Config.Proxy.Enabled {
+		r.Post("/v1/messages", s.handleV1Messages)
+	}
+
 	r.Get("/", s.handleIndex)
 	r.Get("/ui/*", s.handleStatic)
 
