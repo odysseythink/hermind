@@ -191,6 +191,11 @@ func BuildEngineDeps(ctx context.Context, app *App) (api.EngineDeps, func(), err
 		}
 	}
 
+	skillsTracker := attachSkillsTracker(ctx, app.Storage, skillsDir)
+	if evolver != nil {
+		evolver.WithTracker(skillsTracker)
+	}
+
 	// Set up skills retriever
 	retriever := skills.NewRetriever(skillsDir, emb)
 
@@ -266,8 +271,6 @@ func BuildEngineDeps(ctx context.Context, app *App) (api.EngineDeps, func(), err
 	}
 
 	skillsReg, _ := loadSkills(app)
-
-	skillsTracker := attachSkillsTracker(ctx, app.Storage, skillsDir)
 
 	return api.EngineDeps{
 		Provider:        p,

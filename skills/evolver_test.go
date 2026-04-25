@@ -2,13 +2,17 @@ package skills_test
 
 import (
 	"context"
+	"errors"
 	"os"
 	"path/filepath"
 	"testing"
 
 	"github.com/odysseythink/hermind/agent"
 	"github.com/odysseythink/hermind/message"
+	"github.com/odysseythink/hermind/provider"
 	"github.com/odysseythink/hermind/skills"
+	"github.com/odysseythink/hermind/storage"
+	sqlitestore "github.com/odysseythink/hermind/storage/sqlite"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 )
@@ -67,4 +71,94 @@ func TestEvolverSkillDirCreated(t *testing.T) {
 	if _, err := os.Stat(dir); os.IsNotExist(err) {
 		t.Error("skills dir not created")
 	}
+}
+
+func TestEvolverExtractRefreshesTracker(t *testing.T) {
+	skillDir := t.TempDir()
+	store := newSkillsTestStore(t)
+	tracker := skills.NewTracker(store, skillDir)
+
+	// Mock LLM that returns a non-empty skill markdown
+	mockLLM := &mockProvider{
+		name: "test",
+		resp: &provider.Response{
+			Message: message.Message{
+				Role:    message.RoleAssistant,
+				Content: message.TextContent("## Test Skill\n\n**When to use:** test\n\nDo this."),
+			},
+		},
+	}
+
+	ev := skills.NewEvolver(mockLLM, skillDir).WithTracker(tracker)
+
+	// Pass a non-empty conversation to trigger the LLM path
+	turns := []message.Message{
+		{Role: message.RoleUser, Content: message.TextContent("hello")},
+	}
+	require.NoError(t, ev.Extract(context.Background(), turns, nil))
+
+	gen, err := store.GetSkillsGeneration(context.Background())
+	require.NoError(t, err)
+	require.Equal(t, int64(1), gen.Seq, "Evolver.Extract must trigger Tracker.Refresh on write")
+}
+
+func TestEvolverExtractNoWriteNoBump(t *testing.T) {
+	skillDir := t.TempDir()
+	store := newSkillsTestStore(t)
+	tracker := skills.NewTracker(store, skillDir)
+
+	// Mock LLM that returns empty string — no skill to write
+	mockLLM := &mockProvider{
+		name: "test",
+		resp: &provider.Response{
+			Message: message.Message{
+				Role:    message.RoleAssistant,
+				Content: message.TextContent(""),
+			},
+		},
+	}
+
+	ev := skills.NewEvolver(mockLLM, skillDir).WithTracker(tracker)
+	turns := []message.Message{
+		{Role: message.RoleUser, Content: message.TextContent("hello")},
+	}
+	require.NoError(t, ev.Extract(context.Background(), turns, nil))
+
+	gen, err := store.GetSkillsGeneration(context.Background())
+	require.NoError(t, err)
+	require.Equal(t, int64(0), gen.Seq, "Evolver.Extract must not trigger Tracker.Refresh on no-write")
+}
+
+// mockProvider is a test helper implementing provider.Provider
+type mockProvider struct {
+	name      string
+	err       error
+	resp      *provider.Response
+	callCount int
+}
+
+func (m *mockProvider) Name() string { return m.name }
+func (m *mockProvider) Complete(ctx context.Context, req *provider.Request) (*provider.Response, error) {
+	m.callCount++
+	if m.err != nil {
+		return nil, m.err
+	}
+	return m.resp, nil
+}
+func (m *mockProvider) Stream(ctx context.Context, req *provider.Request) (provider.Stream, error) {
+	return nil, errors.New("not implemented")
+}
+func (m *mockProvider) ModelInfo(string) *provider.ModelInfo                { return nil }
+func (m *mockProvider) EstimateTokens(string, string) (int, error) { return 0, nil }
+func (m *mockProvider) Available() bool                            { return true }
+
+// newSkillsTestStore creates a test-scoped storage store.
+func newSkillsTestStore(t *testing.T) storage.Storage {
+	t.Helper()
+	dir := t.TempDir()
+	st, err := sqlitestore.Open(filepath.Join(dir, "state.db"))
+	require.NoError(t, err)
+	require.NoError(t, st.Migrate())
+	t.Cleanup(func() { _ = st.Close() })
+	return st
 }

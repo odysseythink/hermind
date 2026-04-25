@@ -5,6 +5,7 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
+	"log/slog"
 	"os"
 	"path/filepath"
 	"regexp"
@@ -23,6 +24,7 @@ type Evolver struct {
 	llm      provider.Provider
 	skillDir string
 	storage  storage.Storage
+	tracker  *Tracker
 }
 
 // NewEvolver constructs an Evolver.
@@ -38,6 +40,13 @@ func (ev *Evolver) SetStorage(s storage.Storage) {
 	ev.storage = s
 }
 
+// WithTracker attaches a Tracker that will be Refreshed after a
+// successful skill write. Returns the Evolver for fluent chaining.
+func (ev *Evolver) WithTracker(t *Tracker) *Evolver {
+	ev.tracker = t
+	return ev
+}
+
 // Extract analyses the conversation history and persists skills.
 // When verdict is non-nil, directly persists SkillsToExtract from the judge.
 // When verdict is nil, falls back to the legacy LLM-extraction path.
@@ -48,6 +57,7 @@ func (ev *Evolver) Extract(ctx context.Context, turns []message.Message, verdict
 	}
 
 	if verdict != nil {
+		anyWritten := false
 		for _, d := range verdict.SkillsToExtract {
 			body := strings.TrimSpace(d.Body)
 			if body == "" {
@@ -62,12 +72,18 @@ func (ev *Evolver) Extract(ctx context.Context, turns []message.Message, verdict
 			if err := os.WriteFile(path, []byte(body), 0o644); err != nil {
 				return fmt.Errorf("evolver: write %s: %w", path, err)
 			}
+			anyWritten = true
 			if ev.storage != nil {
 				data, _ := json.Marshal(map[string]any{
 					"filename": filepath.Base(path),
 					"reason":   "judge verdict",
 				})
 				_ = ev.storage.AppendMemoryEvent(context.Background(), time.Now().UTC(), "skill.extracted", data)
+			}
+		}
+		if anyWritten && ev.tracker != nil {
+			if _, err := ev.tracker.Refresh(ctx); err != nil {
+				slog.Warn("skills.tracker refresh after Extract failed", "err", err)
 			}
 		}
 		return nil
@@ -113,12 +129,19 @@ Conversation:
 	filename := fmt.Sprintf("%s-%s.md", time.Now().UTC().Format("20060102-150405"), slug)
 	path := filepath.Join(ev.skillDir, filename)
 	err = os.WriteFile(path, []byte(raw), 0o644)
-	if err == nil && ev.storage != nil {
-		data, _ := json.Marshal(map[string]any{
-			"filename": filepath.Base(path),
-			"reason":   "legacy",
-		})
-		_ = ev.storage.AppendMemoryEvent(context.Background(), time.Now().UTC(), "skill.extracted", data)
+	if err == nil {
+		if ev.storage != nil {
+			data, _ := json.Marshal(map[string]any{
+				"filename": filepath.Base(path),
+				"reason":   "legacy",
+			})
+			_ = ev.storage.AppendMemoryEvent(context.Background(), time.Now().UTC(), "skill.extracted", data)
+		}
+		if ev.tracker != nil {
+			if _, err := ev.tracker.Refresh(ctx); err != nil {
+				slog.Warn("skills.tracker refresh after Extract failed", "err", err)
+			}
+		}
 	}
 	return err
 }
