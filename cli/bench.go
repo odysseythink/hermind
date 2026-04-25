@@ -22,6 +22,7 @@ func newBenchCmd(app *App) *cobra.Command {
 	cmd.AddCommand(newBenchGenerateCmd(app))
 	cmd.AddCommand(newBenchRunCmd(app))
 	cmd.AddCommand(newBenchJudgeCmd(app))
+	cmd.AddCommand(newBenchReplayCmd(app))
 	return cmd
 }
 
