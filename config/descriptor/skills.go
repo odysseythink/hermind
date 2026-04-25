@@ -24,6 +24,27 @@ func init() {
 				Help:  "Skills listed here never activate. Check a skill to disable it globally. Install skills into $HERMIND_HOME/skills to make them appear.",
 				Kind:  FieldMultiSelect,
 			},
+			{
+				Name:    "auto_extract",
+				Label:   "Auto-extract skills",
+				Help:    "After each conversation, ask the LLM to extract reusable skill snippets and save them to the instance's skills/ directory. Default off.",
+				Kind:    FieldBool,
+				Default: false,
+			},
+			{
+				Name:    "inject_count",
+				Label:   "Skills injected per turn",
+				Help:    "Maximum dynamically retrieved skills injected into the system prompt each turn. 0 disables retrieval. Default 3.",
+				Kind:    FieldInt,
+				Default: 3,
+			},
+			{
+				Name:    "generation_half_life",
+				Label:   "Generation half-life",
+				Help:    "Memory reinforcement signals decay by half every N skill generations. Default 5. Set to 0 to disable decay (signals always weighted as 1.0).",
+				Kind:    FieldInt,
+				Default: 5,
+			},
 		},
 	})
 }

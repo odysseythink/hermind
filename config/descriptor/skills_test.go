@@ -18,28 +18,40 @@ func TestSkillsSectionRegistered(t *testing.T) {
 	}
 }
 
-func TestSkillsSectionHasDisabledMultiSelectField(t *testing.T) {
+func TestSkillsSectionFields(t *testing.T) {
 	s, _ := Get("skills")
-	if len(s.Fields) != 1 {
-		t.Fatalf("expected exactly 1 field, got %d: %+v", len(s.Fields), s.Fields)
+	want := []struct {
+		name    string
+		kind    FieldKind
+		def     any
+		hasHelp bool
+	}{
+		{"disabled", FieldMultiSelect, nil, true},
+		{"auto_extract", FieldBool, false, true},
+		{"inject_count", FieldInt, 3, true},
+		{"generation_half_life", FieldInt, 5, true},
 	}
-	f := s.Fields[0]
-	if f.Name != "disabled" {
-		t.Errorf("field name = %q, want %q", f.Name, "disabled")
+	if len(s.Fields) != len(want) {
+		t.Fatalf("field count = %d, want %d: %+v", len(s.Fields), len(want), s.Fields)
 	}
-	if f.Kind != FieldMultiSelect {
-		t.Errorf("field kind = %s, want multiselect", f.Kind)
+	for i, w := range want {
+		f := s.Fields[i]
+		if f.Name != w.name {
+			t.Errorf("field[%d].Name = %q, want %q", i, f.Name, w.name)
+		}
+		if f.Kind != w.kind {
+			t.Errorf("field[%d=%s].Kind = %s, want %s", i, f.Name, f.Kind, w.kind)
+		}
+		if w.def != nil && f.Default != w.def {
+			t.Errorf("field[%d=%s].Default = %v, want %v", i, f.Name, f.Default, w.def)
+		}
+		if w.hasHelp && f.Help == "" {
+			t.Errorf("field[%d=%s].Help is empty", i, f.Name)
+		}
 	}
-	if f.Required {
-		t.Errorf("field.Required = true, want false (empty disabled list means all enabled)")
-	}
-	if f.Help == "" {
-		t.Errorf("field.Help is empty; users need a hint about what this does")
-	}
-	// Enum is left empty at descriptor registration time; handler enriches
-	// it from the skills loader before emitting the schema DTO.
-	if len(f.Enum) != 0 {
-		t.Errorf("field.Enum should be empty at registration time (got %v); "+
-			"runtime enrichment via handlers_config_schema.go supplies choices", f.Enum)
+	// `disabled` Enum must remain empty at registration time — handler
+	// enriches it from the skills loader.
+	if len(s.Fields[0].Enum) != 0 {
+		t.Errorf("disabled.Enum at registration should be empty, got %v", s.Fields[0].Enum)
 	}
 }
