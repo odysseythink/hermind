@@ -184,3 +184,25 @@ func TestV1Messages_StreamingHappyPath(t *testing.T) {
 	require.Contains(t, body2, "stream-hi")
 	require.Contains(t, body2, "event: message_stop")
 }
+
+func TestV1Messages_MountedBeforeUIWildcard(t *testing.T) {
+	// With both proxy enabled and UI static handler present, the
+	// /v1/messages route must take precedence over /ui/*. We verify by
+	// hitting /v1/messages and asserting we don't get the static handler's
+	// response (which would typically be a 404 for an unknown UI path).
+	stub := &stubProvider{resp: &provider.Response{
+		Message: message.Message{Role: message.RoleAssistant, Content: message.TextContent("ok")},
+		FinishReason: "stop",
+	}}
+	srv := newProxyTestServer(t, stub)
+
+	body := []byte(`{
+		"model": "x", "max_tokens": 8,
+		"messages": [{"role": "user", "content": [{"type": "text", "text": "ping"}]}]
+	}`)
+	rr := httptest.NewRecorder()
+	req := httptest.NewRequest(http.MethodPost, "/v1/messages", bytes.NewReader(body))
+	srv.Router().ServeHTTP(rr, req)
+	require.Equal(t, http.StatusOK, rr.Code, "/v1/messages must reach handler, not be shadowed")
+	require.Equal(t, "application/json", rr.Header().Get("Content-Type"))
+}
