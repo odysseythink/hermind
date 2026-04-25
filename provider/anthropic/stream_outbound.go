@@ -192,15 +192,12 @@ func (s *sseWriter) writeToolUse(id, name, argsJSON string) {
 		"name":  name,
 		"input": map[string]any{},
 	})
-	// Parse the JSON arguments string into an object so it won't be double-escaped
-	var argsObj any
-	json.Unmarshal([]byte(argsJSON), &argsObj)
 	s.writeEvent("content_block_delta", map[string]any{
 		"type":  "content_block_delta",
 		"index": s.curBlockIdx,
 		"delta": map[string]any{
 			"type":         "input_json_delta",
-			"partial_json": argsObj,
+			"partial_json": argsJSON,
 		},
 	})
 	s.stopBlock()

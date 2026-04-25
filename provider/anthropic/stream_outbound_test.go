@@ -95,7 +95,10 @@ func TestStreamOutbound_TextThenToolUse(t *testing.T) {
 	// The tool_use input is emitted via a single input_json_delta that
 	// contains the entire JSON arguments string.
 	require.True(t, strings.Contains(body, `"input_json_delta"`))
-	require.True(t, strings.Contains(body, `"city":"SF"`))
+	// partial_json is a JSON-encoded STRING per Anthropic spec; the
+	// embedded JSON's quotes appear escaped in the wire bytes.
+	require.True(t, strings.Contains(body, `"partial_json":"{\"city\":\"SF\"}"`),
+		"partial_json must be sent as a JSON-encoded string, not an object; got: %s", body)
 	require.True(t, strings.Contains(body, `"stop_reason":"tool_use"`))
 }
 
