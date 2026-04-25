@@ -1,11 +1,14 @@
 package skills
 
 import (
+	"context"
 	"os"
 	"path/filepath"
 	"testing"
 	"time"
 
+	"github.com/odysseythink/hermind/storage"
+	sqlitestore "github.com/odysseythink/hermind/storage/sqlite"
 	"github.com/stretchr/testify/require"
 )
 
@@ -56,4 +59,54 @@ func TestComputeLibraryHashOnlyMd(t *testing.T) {
 	require.NoError(t, os.WriteFile(filepath.Join(dir, "ignore.txt"), []byte("y"), 0o644))
 	h2, _ := computeLibraryHash(dir)
 	require.Equal(t, h1, h2, "non-.md files must be ignored")
+}
+
+func newSkillsTestStore(t *testing.T) storage.Storage {
+	t.Helper()
+	dir := t.TempDir()
+	st, err := sqlitestore.Open(filepath.Join(dir, "state.db"))
+	require.NoError(t, err)
+	require.NoError(t, st.Migrate())
+	t.Cleanup(func() { _ = st.Close() })
+	return st
+}
+
+func TestTrackerRefreshFirstCallBumps(t *testing.T) {
+	skillDir := t.TempDir()
+	require.NoError(t, os.WriteFile(filepath.Join(skillDir, "a.md"), []byte("hi"), 0o644))
+	store := newSkillsTestStore(t)
+	tr := NewTracker(store, skillDir)
+	bumped, err := tr.Refresh(context.Background())
+	require.NoError(t, err)
+	require.True(t, bumped)
+	cur, err := tr.Current(context.Background())
+	require.NoError(t, err)
+	require.Equal(t, int64(1), cur.Seq)
+}
+
+func TestTrackerRefreshSecondCallNoBump(t *testing.T) {
+	skillDir := t.TempDir()
+	require.NoError(t, os.WriteFile(filepath.Join(skillDir, "a.md"), []byte("hi"), 0o644))
+	store := newSkillsTestStore(t)
+	tr := NewTracker(store, skillDir)
+	_, _ = tr.Refresh(context.Background())
+	bumped, err := tr.Refresh(context.Background())
+	require.NoError(t, err)
+	require.False(t, bumped)
+	cur, _ := tr.Current(context.Background())
+	require.Equal(t, int64(1), cur.Seq)
+}
+
+func TestTrackerRefreshAfterEditBumps(t *testing.T) {
+	skillDir := t.TempDir()
+	p := filepath.Join(skillDir, "a.md")
+	require.NoError(t, os.WriteFile(p, []byte("hi"), 0o644))
+	store := newSkillsTestStore(t)
+	tr := NewTracker(store, skillDir)
+	_, _ = tr.Refresh(context.Background())
+	require.NoError(t, os.WriteFile(p, []byte("hello"), 0o644))
+	bumped, _ := tr.Refresh(context.Background())
+	require.True(t, bumped)
+	cur, _ := tr.Current(context.Background())
+	require.Equal(t, int64(2), cur.Seq)
 }

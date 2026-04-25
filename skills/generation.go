@@ -12,6 +12,8 @@ import (
 	"path/filepath"
 	"sort"
 	"strings"
+
+	"github.com/odysseythink/hermind/storage"
 )
 
 // computeLibraryHash returns the SHA-256 of the sorted (filename,
@@ -61,4 +63,37 @@ func emptyHash() string {
 	return hex.EncodeToString(sum[:])
 }
 
-var _ = context.Context(nil) // placeholder removed in Task 7 once Tracker uses ctx
+// Tracker watches the skills directory and maintains a (hash, seq)
+// state row in storage so the memory ranker can decay stale
+// reinforcement signals across library evolution.
+type Tracker struct {
+	store    storage.Storage
+	skillDir string
+}
+
+// NewTracker constructs a Tracker. The store must already be migrated;
+// the skillDir need not exist (computeLibraryHash treats missing dir
+// as empty).
+func NewTracker(store storage.Storage, skillDir string) *Tracker {
+	return &Tracker{store: store, skillDir: skillDir}
+}
+
+// Refresh recomputes the library hash and persists it. Returns true if
+// a real bump happened (hash changed). On any error the state is left
+// untouched and bumped=false.
+func (t *Tracker) Refresh(ctx context.Context) (bool, error) {
+	h, err := computeLibraryHash(t.skillDir)
+	if err != nil {
+		return false, err
+	}
+	_, _, bumped, err := t.store.SetSkillsGeneration(ctx, h)
+	if err != nil {
+		return false, err
+	}
+	return bumped, nil
+}
+
+// Current returns the persisted (hash, seq, updated_at).
+func (t *Tracker) Current(ctx context.Context) (*storage.SkillsGeneration, error) {
+	return t.store.GetSkillsGeneration(ctx)
+}
