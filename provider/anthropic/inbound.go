@@ -8,8 +8,11 @@
 package anthropic
 
 import (
+	"crypto/rand"
+	"encoding/hex"
 	"encoding/json"
 	"errors"
+	"fmt"
 	"strings"
 
 	"github.com/odysseythink/hermind/message"
@@ -208,4 +211,65 @@ func invalidErrorCode(err error) string {
 		return e.code
 	}
 	return "invalid_request_error"
+}
+
+// Outbound serializes a non-streaming provider.Response into Anthropic
+// Messages API JSON. The requestModel is echoed unchanged in the
+// response's "model" field for SDK-compatibility (some clients validate
+// the model name they sent matches what came back). The msgID is the
+// server-generated message id (typically randMsgID()).
+func Outbound(resp *provider.Response, requestModel, msgID string) ([]byte, error) {
+	if resp == nil {
+		return nil, fmt.Errorf("anthropic: outbound nil response")
+	}
+	content := make([]apiContentItem, 0, 1+len(resp.Message.ToolCalls))
+	if txt := resp.Message.Content.Text(); txt != "" {
+		content = append(content, apiContentItem{Type: "text", Text: txt})
+	}
+	for _, tc := range resp.Message.ToolCalls {
+		content = append(content, apiContentItem{
+			Type:  "tool_use",
+			ID:    tc.ID,
+			Name:  tc.Function.Name,
+			Input: json.RawMessage(tc.Function.Arguments),
+		})
+	}
+	out := messagesResponse{
+		ID:         msgID,
+		Type:       "message",
+		Role:       "assistant",
+		Model:      requestModel,
+		Content:    content,
+		StopReason: mapFinishReason(resp.FinishReason),
+		Usage: apiUsage{
+			InputTokens:  resp.Usage.InputTokens,
+			OutputTokens: resp.Usage.OutputTokens,
+			// CacheRead/CacheCreation intentionally not populated — caching not in v1.
+		},
+	}
+	return json.Marshal(out)
+}
+
+// mapFinishReason converts hermind's internal finish reason vocabulary to
+// Anthropic's stop_reason vocabulary. Unknown values default to end_turn.
+func mapFinishReason(in string) string {
+	switch in {
+	case "stop":
+		return "end_turn"
+	case "length":
+		return "max_tokens"
+	case "tool_calls":
+		return "tool_use"
+	case "stop_sequence":
+		return "stop_sequence"
+	default:
+		return "end_turn"
+	}
+}
+
+// randMsgID returns a fresh "msg_..." identifier for outbound responses.
+func randMsgID() string {
+	var b [12]byte
+	_, _ = rand.Read(b[:])
+	return "msg_" + hex.EncodeToString(b[:])
 }

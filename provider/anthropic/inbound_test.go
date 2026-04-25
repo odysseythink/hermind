@@ -7,6 +7,7 @@ import (
 	"github.com/stretchr/testify/require"
 
 	"github.com/odysseythink/hermind/message"
+	"github.com/odysseythink/hermind/provider"
 )
 
 func TestInbound_TextOnly(t *testing.T) {
@@ -165,3 +166,85 @@ func TestInbound_BadJSON(t *testing.T) {
 
 // rawJSON helper for assertions
 var _ = json.RawMessage(nil)
+
+func TestOutbound_TextOnly(t *testing.T) {
+	resp := &provider.Response{
+		Message: message.Message{
+			Role:    message.RoleAssistant,
+			Content: message.TextContent("hello there"),
+		},
+		FinishReason: "stop",
+		Usage:        message.Usage{InputTokens: 10, OutputTokens: 3},
+		Model:        "actual-model",
+	}
+	out, err := Outbound(resp, "claude-sonnet-4-6", "msg_abc123")
+	require.NoError(t, err)
+
+	var got messagesResponse
+	require.NoError(t, json.Unmarshal(out, &got))
+	require.Equal(t, "msg_abc123", got.ID)
+	require.Equal(t, "message", got.Type)
+	require.Equal(t, "assistant", got.Role)
+	require.Equal(t, "claude-sonnet-4-6", got.Model, "model echoed from request, not actual")
+	require.Equal(t, "end_turn", got.StopReason)
+	require.Equal(t, 10, got.Usage.InputTokens)
+	require.Equal(t, 3, got.Usage.OutputTokens)
+	require.Len(t, got.Content, 1)
+	require.Equal(t, "text", got.Content[0].Type)
+	require.Equal(t, "hello there", got.Content[0].Text)
+}
+
+func TestOutbound_FinishReasonMapping(t *testing.T) {
+	cases := []struct{ in, out string }{
+		{"stop", "end_turn"},
+		{"length", "max_tokens"},
+		{"tool_calls", "tool_use"},
+		{"stop_sequence", "stop_sequence"},
+		{"content_filter", "end_turn"},
+		{"unknown_value", "end_turn"},
+		{"", "end_turn"},
+	}
+	for _, c := range cases {
+		t.Run(c.in, func(t *testing.T) {
+			require.Equal(t, c.out, mapFinishReason(c.in))
+		})
+	}
+}
+
+func TestOutbound_AssistantWithToolUse(t *testing.T) {
+	resp := &provider.Response{
+		Message: message.Message{
+			Role:    message.RoleAssistant,
+			Content: message.TextContent("calling..."),
+			ToolCalls: []message.ToolCall{{
+				ID:   "toolu_1",
+				Type: "function",
+				Function: message.ToolCallFunction{
+					Name:      "get_weather",
+					Arguments: `{"city":"SF"}`,
+				},
+			}},
+		},
+		FinishReason: "tool_calls",
+	}
+	out, err := Outbound(resp, "x", "msg_x")
+	require.NoError(t, err)
+
+	var got messagesResponse
+	require.NoError(t, json.Unmarshal(out, &got))
+	require.Equal(t, "tool_use", got.StopReason)
+	require.Len(t, got.Content, 2)
+	require.Equal(t, "text", got.Content[0].Type)
+	require.Equal(t, "calling...", got.Content[0].Text)
+	require.Equal(t, "tool_use", got.Content[1].Type)
+	require.Equal(t, "toolu_1", got.Content[1].ID)
+	require.Equal(t, "get_weather", got.Content[1].Name)
+	require.JSONEq(t, `{"city":"SF"}`, string(got.Content[1].Input))
+}
+
+func TestRandMsgID(t *testing.T) {
+	a := randMsgID()
+	b := randMsgID()
+	require.NotEqual(t, a, b)
+	require.True(t, len(a) > 6 && a[:4] == "msg_", "ID must start with msg_")
+}
