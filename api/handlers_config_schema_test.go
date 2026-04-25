@@ -555,8 +555,8 @@ func TestConfigSchema_SkillsDisabledEnumFromLoader(t *testing.T) {
 	if skills.GroupID != "skills" {
 		t.Errorf("skills.group_id = %q, want \"skills\"", skills.GroupID)
 	}
-	if len(skills.Fields) != 1 {
-		t.Fatalf("skills.fields count = %d, want 1", len(skills.Fields))
+	if len(skills.Fields) != 4 {
+		t.Fatalf("skills.fields count = %d, want 4 (disabled, auto_extract, inject_count, generation_half_life)", len(skills.Fields))
 	}
 	disabled := skills.Fields[0]
 	if disabled.Name != "disabled" {
