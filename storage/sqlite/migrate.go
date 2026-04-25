@@ -97,8 +97,9 @@ INSERT OR IGNORE INTO schema_meta (key, value) VALUES ('version', '3');
 
 // currentSchemaVersion: v4 added MemType+Vector; v5 added supersession
 // lifecycle columns (status, superseded_by); v6 adds reinforcement tracking;
-// v7 adds memory_events table for event-driven memory consolidation.
-const currentSchemaVersion = 7
+// v7 adds memory_events table for event-driven memory consolidation;
+// v8 adds skills_generation table + memories.reinforced_at_seq column.
+const currentSchemaVersion = 8
 
 // Migrate applies the base schema. Idempotent. Legacy v1/v2 DBs are
 // never reached here — they are backed up before Migrate() runs.
@@ -210,6 +211,26 @@ func (s *Store) applyVersion(v int) error {
 		}
 		if _, err := tx.Exec(`CREATE INDEX IF NOT EXISTS idx_memory_events_kind ON memory_events(kind)`); err != nil {
 			return fmt.Errorf("v7 memory_events kind index: %w", err)
+		}
+	case 8:
+		if _, err := tx.Exec(`
+	        CREATE TABLE IF NOT EXISTS skills_generation (
+	            id         INTEGER PRIMARY KEY CHECK (id = 1),
+	            hash       TEXT    NOT NULL DEFAULT '',
+	            seq        INTEGER NOT NULL DEFAULT 0,
+	            updated_at REAL    NOT NULL DEFAULT 0
+	        )`); err != nil {
+			return fmt.Errorf("v8 create skills_generation: %w", err)
+		}
+		if _, err := tx.Exec(`
+	        INSERT OR IGNORE INTO skills_generation (id, hash, seq, updated_at)
+	        VALUES (1, '', 0, 0)`); err != nil {
+			return fmt.Errorf("v8 seed skills_generation row: %w", err)
+		}
+		if _, err := tx.Exec(`ALTER TABLE memories ADD COLUMN reinforced_at_seq INTEGER NOT NULL DEFAULT 0`); err != nil {
+			if !strings.Contains(err.Error(), "duplicate column name") {
+				return fmt.Errorf("v8 add reinforced_at_seq: %w", err)
+			}
 		}
 	default:
 		return fmt.Errorf("no migration step for v%d", v)
