@@ -28,12 +28,17 @@ type IdleConsolidator struct {
 // New constructs a consolidator. interval <= 0 disables it (Start returns
 // immediately when called).
 func New(store storage.Storage, interval, idleAfter time.Duration, opts *memprovider.ConsolidateOptions) *IdleConsolidator {
-	return &IdleConsolidator{
+	c := &IdleConsolidator{
 		store:     store,
 		interval:  interval,
 		idleAfter: idleAfter,
 		opts:      opts,
 	}
+	// Initialize lastRequest to now so the first tick after startup
+	// doesn't see "elapsed since 1970" and trigger immediately before
+	// any HTTP activity has been observed.
+	c.lastRequest.Store(time.Now().UnixNano())
+	return c
 }
 
 // NoteActivity records that an HTTP request just happened. Safe for

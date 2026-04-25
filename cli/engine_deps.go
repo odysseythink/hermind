@@ -156,7 +156,14 @@ func BuildEngineDeps(ctx context.Context, app *App) (api.EngineDeps, func(), err
 		emb = embedding.NewProviderEmbedder(p, "text-embedding-3-small")
 	}
 
-	// Set up skills evolver if auto-extract is enabled
+	// Set up skills evolver if auto-extract is enabled.
+	//
+	// Note: when AutoExtract is false, no Evolver is created. This means
+	// the A-spec ConversationJudge path will call Extract on a nil
+	// evolver (which the engine guards against), and no skill.extracted
+	// events will be emitted. To enable judge-driven extraction without
+	// AutoExtract's legacy LLM-extraction path, AutoExtract must be on
+	// (the verdict path in evolver.go takes precedence when present).
 	skillsDir := filepath.Join(app.InstanceRoot, "skills")
 	var evolver *skills.Evolver
 	if app.Config.Skills.AutoExtract {

@@ -9,6 +9,15 @@ import (
 	"github.com/stretchr/testify/assert"
 )
 
+// TestNewInitializesLastRequest verifies New() seeds lastRequest to now
+// so the first tick doesn't immediately trigger consolidation before
+// any HTTP request has been observed.
+func TestNewInitializesLastRequest(t *testing.T) {
+	c := New(nil, time.Second, 5*time.Minute, nil)
+	elapsed := time.Since(time.Unix(0, c.lastRequest.Load()))
+	assert.Less(t, elapsed, time.Second, "lastRequest should be initialized to ~now")
+}
+
 func TestIdleConsolidator_RespectsDisabled(t *testing.T) {
 	c := &IdleConsolidator{}
 	ctx, cancel := context.WithCancel(context.Background())
