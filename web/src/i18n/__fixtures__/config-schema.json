@@ -73,6 +73,86 @@
     ]
   },
   {
+    "key": "benchmark",
+    "label": "Benchmark",
+    "summary": "Defaults for `hermind bench` (skills) and `hermind bench replay` (memory replay).",
+    "group_id": "advanced",
+    "fields": [
+      {
+        "name": "dataset_size",
+        "label": "Dataset size",
+        "help": "Number of synthetic items per benchmark run. Default 50.",
+        "kind": "int",
+        "default": 50
+      },
+      {
+        "name": "seed",
+        "label": "Random seed",
+        "help": "Deterministic seed for dataset generation. Default 42.",
+        "kind": "int",
+        "default": 42
+      },
+      {
+        "name": "judge_model",
+        "label": "Judge model (default)",
+        "help": "Default judge model. Empty falls back to the auxiliary model, then the primary model. Used by every bench subtree unless overridden.",
+        "kind": "string",
+        "default": ""
+      },
+      {
+        "name": "out_dir",
+        "label": "Output directory",
+        "help": "Where bench artifacts are written. Default .hermind/benchmark.",
+        "kind": "string",
+        "default": ".hermind/benchmark"
+      },
+      {
+        "name": "replay.default_mode",
+        "label": "Replay default mode",
+        "help": "Replay invocation mode. cold = run-without-history; contextual = run-with-history.",
+        "kind": "enum",
+        "default": "cold",
+        "enum": [
+          "cold",
+          "contextual"
+        ]
+      },
+      {
+        "name": "replay.default_history_cap",
+        "label": "Replay history cap",
+        "help": "Max prior turns injected into a contextual replay. 0 means \"use the built-in default of 20 when mode is contextual\".",
+        "kind": "int",
+        "default": 20
+      },
+      {
+        "name": "replay.default_judge",
+        "label": "Replay default judge mode",
+        "help": "Judge mode for replay outputs. none = skip judging; pairwise = compare current vs baseline; rubric+pairwise = pairwise plus a rubric score pass.",
+        "kind": "enum",
+        "default": "none",
+        "enum": [
+          "none",
+          "pairwise",
+          "rubric+pairwise"
+        ]
+      },
+      {
+        "name": "replay.out_dir",
+        "label": "Replay output directory",
+        "help": "Where replay datasets and run records land. Default .hermind/replay.",
+        "kind": "string",
+        "default": ".hermind/replay"
+      },
+      {
+        "name": "replay.judge_model",
+        "label": "Replay judge model (override)",
+        "help": "Override judge model for replay only. Empty falls back to the parent benchmark.judge_model.",
+        "kind": "string",
+        "default": ""
+      }
+    ]
+  },
+  {
     "key": "browser",
     "label": "Browser",
     "summary": "Browser automation provider. Leave blank for no browser integration.",
@@ -754,6 +834,61 @@
     ]
   },
   {
+    "key": "presence",
+    "label": "User presence",
+    "summary": "Three-state presence framework that gates background workers (idle consolidator, future schedulers).",
+    "group_id": "memory",
+    "fields": [
+      {
+        "name": "http_idle_absent_after_seconds",
+        "label": "HTTP-idle quiet window (seconds)",
+        "help": "Time without inbound HTTP requests before the user is voted Absent. Default 300 (5 min). 0 disables the signal.",
+        "kind": "int",
+        "default": 300
+      },
+      {
+        "name": "sleep_window.enabled",
+        "label": "Sleep window enabled",
+        "help": "When on, votes Absent during the configured local-clock hours. Never votes Present (insomnia/night-shift case).",
+        "kind": "bool",
+        "default": false
+      },
+      {
+        "name": "sleep_window.start",
+        "label": "Sleep window start (HH:MM)",
+        "help": "Local-clock start time, 24-hour format. Cross-midnight windows are supported (e.g., 22:00 → 06:00).",
+        "kind": "string",
+        "default": "22:00",
+        "visible_when": {
+          "field": "sleep_window.enabled",
+          "equals": true
+        }
+      },
+      {
+        "name": "sleep_window.end",
+        "label": "Sleep window end (HH:MM)",
+        "help": "Local-clock end time, 24-hour format.",
+        "kind": "string",
+        "default": "06:00",
+        "visible_when": {
+          "field": "sleep_window.enabled",
+          "equals": true
+        }
+      },
+      {
+        "name": "sleep_window.timezone",
+        "label": "Timezone (IANA name)",
+        "help": "IANA timezone name, e.g. America/Los_Angeles. Empty = process local timezone.",
+        "kind": "string",
+        "default": "",
+        "visible_when": {
+          "field": "sleep_window.enabled",
+          "equals": true
+        }
+      }
+    ]
+  },
+  {
     "key": "providers",
     "label": "Providers",
     "summary": "LLM providers available to Default Model, Auxiliary, and fallback.",
@@ -799,6 +934,32 @@
     ]
   },
   {
+    "key": "proxy",
+    "label": "Anthropic /v1/messages proxy",
+    "summary": "Expose an Anthropic-compatible Messages API endpoint at /v1/messages. Off by default.",
+    "group_id": "advanced",
+    "fields": [
+      {
+        "name": "enabled",
+        "label": "Enable proxy",
+        "help": "Mount the /v1/messages route at the API server root. Restart hermind after toggling.",
+        "kind": "bool",
+        "default": false
+      },
+      {
+        "name": "keep_alive_seconds",
+        "label": "SSE keep-alive interval (seconds)",
+        "help": "Heartbeat ping interval on the streaming response. Default 15. Values \u003c= 0 are clamped to 15.",
+        "kind": "int",
+        "default": 15,
+        "visible_when": {
+          "field": "enabled",
+          "equals": true
+        }
+      }
+    ]
+  },
+  {
     "key": "skills",
     "label": "Skills",
     "summary": "Enable or disable skills across every platform. Unchecked = enabled.",
@@ -809,6 +970,27 @@
         "label": "Disabled skills",
         "help": "Skills listed here never activate. Check a skill to disable it globally. Install skills into $HERMIND_HOME/skills to make them appear.",
         "kind": "multiselect"
+      },
+      {
+        "name": "auto_extract",
+        "label": "Auto-extract skills",
+        "help": "After each conversation, ask the LLM to extract reusable skill snippets and save them to the instance's skills/ directory. Default off.",
+        "kind": "bool",
+        "default": false
+      },
+      {
+        "name": "inject_count",
+        "label": "Skills injected per turn",
+        "help": "Maximum dynamically retrieved skills injected into the system prompt each turn. 0 disables retrieval. Default 3.",
+        "kind": "int",
+        "default": 3
+      },
+      {
+        "name": "generation_half_life",
+        "label": "Generation half-life",
+        "help": "Memory reinforcement signals decay by half every N skill generations. Default 5. Set to 0 to disable decay (signals always weighted as 1.0).",
+        "kind": "int",
+        "default": 5
       }
     ]
   },
