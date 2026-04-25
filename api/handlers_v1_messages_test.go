@@ -124,3 +124,63 @@ func TestV1Messages_BadRequestBody(t *testing.T) {
 	errObj, _ := got["error"].(map[string]any)
 	require.Equal(t, "invalid_request_error", errObj["type"])
 }
+
+// streamingStubProvider returns a real Stream from Stream().
+type streamingStubProvider struct {
+	stub *stubProvider
+}
+
+func (p *streamingStubProvider) Name() string { return "streaming-stub" }
+func (p *streamingStubProvider) Complete(ctx context.Context, req *provider.Request) (*provider.Response, error) {
+	return p.stub.Complete(ctx, req)
+}
+func (p *streamingStubProvider) Stream(ctx context.Context, req *provider.Request) (provider.Stream, error) {
+	return &fakeProviderStream{events: []provider.StreamEvent{
+		{Type: provider.EventDelta, Delta: &provider.StreamDelta{Content: "stream-hi"}},
+		{Type: provider.EventDone, Response: &provider.Response{
+			FinishReason: "stop",
+			Usage:        message.Usage{InputTokens: 5, OutputTokens: 1},
+			Model:        "actual-model",
+		}},
+	}}, nil
+}
+func (p *streamingStubProvider) ModelInfo(model string) *provider.ModelInfo  { return nil }
+func (p *streamingStubProvider) EstimateTokens(model, text string) (int, error) { return 0, nil }
+func (p *streamingStubProvider) Available() bool                                { return true }
+
+type fakeProviderStream struct {
+	events []provider.StreamEvent
+	idx    int
+}
+
+func (f *fakeProviderStream) Recv() (*provider.StreamEvent, error) {
+	if f.idx >= len(f.events) {
+		return nil, errors.New("exhausted")
+	}
+	ev := f.events[f.idx]
+	f.idx++
+	return &ev, nil
+}
+func (f *fakeProviderStream) Close() error { return nil }
+
+func TestV1Messages_StreamingHappyPath(t *testing.T) {
+	prov := &streamingStubProvider{stub: &stubProvider{}}
+	srv := newProxyTestServer(t, prov)
+	body := []byte(`{
+		"model": "claude-sonnet-4-6",
+		"max_tokens": 64,
+		"stream": true,
+		"messages": [{"role": "user", "content": [{"type": "text", "text": "hi"}]}]
+	}`)
+	rr := httptest.NewRecorder()
+	req := httptest.NewRequest(http.MethodPost, "/v1/messages", bytes.NewReader(body))
+	srv.Router().ServeHTTP(rr, req)
+	require.Equal(t, http.StatusOK, rr.Code)
+	require.Equal(t, "text/event-stream", rr.Header().Get("Content-Type"))
+
+	body2 := rr.Body.String()
+	require.True(t, len(body2) > 0)
+	require.Contains(t, body2, "event: message_start")
+	require.Contains(t, body2, "stream-hi")
+	require.Contains(t, body2, "event: message_stop")
+}

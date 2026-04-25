@@ -80,8 +80,28 @@ func (s *Server) serveV1MessagesStream(
 	w http.ResponseWriter, r *http.Request,
 	p provider.Provider, req *provider.Request, requestModel string, start time.Time,
 ) {
-	// Filled in by Task 7.
-	writeAnthropicError(w, http.StatusInternalServerError, "api_error", "streaming not yet implemented")
+	stream, err := p.Stream(r.Context(), req)
+	if err != nil {
+		s.writeProviderError(w, err)
+		return
+	}
+
+	keepAlive := time.Duration(s.opts.Config.Proxy.KeepAliveSeconds) * time.Second
+	if keepAlive <= 0 {
+		keepAlive = 15 * time.Second
+	}
+
+	msgID := anthropic.NewMsgID()
+	w.Header().Set("x-hermind-actual-model", req.Model)
+	if err := anthropic.StreamOutbound(r.Context(), w, stream, requestModel, msgID, keepAlive); err != nil {
+		// At this point headers are already written; just log.
+		slog.Warn("v1.messages.stream_error", "err", err)
+	}
+	slog.Info("v1.messages.request",
+		"request_model", requestModel,
+		"stream", true,
+		"duration_ms", time.Since(start).Milliseconds(),
+		"status", http.StatusOK)
 }
 
 // writeAnthropicError writes an Anthropic-format error envelope.
