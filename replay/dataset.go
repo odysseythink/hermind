@@ -137,12 +137,19 @@ func Generate(ctx context.Context, store storage.Storage, cfg GenerateConfig) er
 // preload are copied; tool_calls etc. are passed through as JSON.
 func storedToMessage(s *storage.StoredMessage) message.Message {
 	role := message.Role(s.Role)
-	return message.Message{
+	msg := message.Message{
 		Role:       role,
 		Content:    message.TextContent(s.Content),
 		ToolCallID: s.ToolCallID,
 		ToolName:   s.ToolName,
 	}
+	if len(s.ToolCalls) > 0 {
+		var toolCalls []message.ToolCall
+		if err := json.Unmarshal(s.ToolCalls, &toolCalls); err == nil {
+			msg.ToolCalls = toolCalls
+		}
+	}
+	return msg
 }
 
 // LoadDataset reads a replay JSONL and returns benchmark.Items. It

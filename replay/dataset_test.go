@@ -164,3 +164,61 @@ func mustReadFile(t *testing.T, path string) []byte {
 	require.NoError(t, err)
 	return data
 }
+
+func TestGenerate_PreservesToolCallsInHistory(t *testing.T) {
+	st := newReplayTestStore(t)
+	ctx := context.Background()
+	ts := time.Now()
+
+	// First user message + tool-using assistant reply.
+	require.NoError(t, st.AppendMessage(ctx, &storage.StoredMessage{
+		Role: "user", Content: "what's the weather in SF?", Timestamp: ts,
+	}))
+	toolCallsJSON := []byte(`[{"id":"toolu_1","type":"function","function":{"name":"get_weather","arguments":"{\"city\":\"SF\"}"}}]`)
+	require.NoError(t, st.AppendMessage(ctx, &storage.StoredMessage{
+		Role: "assistant", Content: "checking", ToolCalls: toolCallsJSON,
+		Timestamp: ts.Add(time.Second),
+	}))
+	// Tool-result + final user/assistant pair.
+	require.NoError(t, st.AppendMessage(ctx, &storage.StoredMessage{
+		Role: "tool", Content: "Sunny, 70F", ToolCallID: "toolu_1",
+		Timestamp: ts.Add(2 * time.Second),
+	}))
+	require.NoError(t, st.AppendMessage(ctx, &storage.StoredMessage{
+		Role: "assistant", Content: "It's sunny in SF, 70F.",
+		Timestamp: ts.Add(3 * time.Second),
+	}))
+	require.NoError(t, st.AppendMessage(ctx, &storage.StoredMessage{
+		Role: "user", Content: "thanks!", Timestamp: ts.Add(4 * time.Second),
+	}))
+	require.NoError(t, st.AppendMessage(ctx, &storage.StoredMessage{
+		Role: "assistant", Content: "you're welcome", Timestamp: ts.Add(5 * time.Second),
+	}))
+
+	out := filepath.Join(t.TempDir(), "dataset.jsonl")
+	cfg := GenerateConfig{Mode: "contextual", HistoryCap: 20, OutPath: out}
+	require.NoError(t, Generate(ctx, st, cfg))
+
+	lines := splitJSONLines(mustReadFile(t, out))
+	// 1 meta + 2 items (first user has no preceding history; "thanks!" should have history)
+	require.GreaterOrEqual(t, len(lines), 3)
+
+	// The "thanks!" item is the second one. Its history must include the
+	// tool-using assistant message with its ToolCalls preserved.
+	var thanksItem ReplayItem
+	require.NoError(t, json.Unmarshal(lines[2], &thanksItem))
+	require.Equal(t, "thanks!", thanksItem.Message)
+	require.NotEmpty(t, thanksItem.History, "contextual mode must include preceding history")
+
+	// Find the assistant message with the tool_use in History.
+	foundToolCall := false
+	for _, m := range thanksItem.History {
+		if m.Role == "assistant" && len(m.ToolCalls) > 0 {
+			foundToolCall = true
+			require.Equal(t, "toolu_1", m.ToolCalls[0].ID, "ToolCall ID must round-trip")
+			require.Equal(t, "get_weather", m.ToolCalls[0].Function.Name, "ToolCall function name must round-trip")
+			break
+		}
+	}
+	require.True(t, foundToolCall, "assistant message with tool_calls must be preserved in history; got: %+v", thanksItem.History)
+}
