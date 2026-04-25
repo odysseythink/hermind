@@ -47,6 +47,10 @@ type Storage interface {
 
 	// GetSkillsGeneration returns the current (hash, seq, updated_at).
 	GetSkillsGeneration(ctx context.Context) (*SkillsGeneration, error)
+	// SetSkillsGeneration atomically records `newHash`. If newHash differs
+	// from the current hash, seq is incremented and bumped=true; otherwise
+	// the row is untouched and bumped=false. Returns (oldSeq, newSeq, bumped).
+	SetSkillsGeneration(ctx context.Context, newHash string) (oldSeq, newSeq int64, bumped bool, err error)
 
 	// MemoryStats aggregates counts by type/status + reinforcement histogram.
 	MemoryStats(ctx context.Context) (*MemoryStats, error)

@@ -52,3 +52,43 @@ func TestGetSkillsGenerationFreshDB(t *testing.T) {
 	require.Equal(t, int64(0), gen.Seq)
 	require.True(t, gen.UpdatedAt.IsZero() || gen.UpdatedAt.Unix() <= time.Now().Unix())
 }
+
+func TestSetSkillsGenerationFirstBump(t *testing.T) {
+	store := newTestStore(t)
+	defer store.Close()
+	ctx := context.Background()
+	oldSeq, newSeq, bumped, err := store.SetSkillsGeneration(ctx, "hash-a")
+	require.NoError(t, err)
+	require.True(t, bumped)
+	require.Equal(t, int64(0), oldSeq)
+	require.Equal(t, int64(1), newSeq)
+	gen, _ := store.GetSkillsGeneration(ctx)
+	require.Equal(t, "hash-a", gen.Hash)
+	require.Equal(t, int64(1), gen.Seq)
+}
+
+func TestSetSkillsGenerationSameHashNoBump(t *testing.T) {
+	store := newTestStore(t)
+	defer store.Close()
+	ctx := context.Background()
+	_, _, _, err := store.SetSkillsGeneration(ctx, "hash-a")
+	require.NoError(t, err)
+	oldSeq, newSeq, bumped, err := store.SetSkillsGeneration(ctx, "hash-a")
+	require.NoError(t, err)
+	require.False(t, bumped)
+	require.Equal(t, int64(1), oldSeq)
+	require.Equal(t, int64(1), newSeq)
+}
+
+func TestSetSkillsGenerationDifferentHashBumps(t *testing.T) {
+	store := newTestStore(t)
+	defer store.Close()
+	ctx := context.Background()
+	_, _, _, err := store.SetSkillsGeneration(ctx, "hash-a")
+	require.NoError(t, err)
+	oldSeq, newSeq, bumped, err := store.SetSkillsGeneration(ctx, "hash-b")
+	require.NoError(t, err)
+	require.True(t, bumped)
+	require.Equal(t, int64(1), oldSeq)
+	require.Equal(t, int64(2), newSeq)
+}

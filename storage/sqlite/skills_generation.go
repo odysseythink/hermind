@@ -4,6 +4,7 @@ package sqlite
 import (
 	"context"
 	"fmt"
+	"time"
 
 	"github.com/odysseythink/hermind/storage"
 )
@@ -26,4 +27,43 @@ func (s *Store) GetSkillsGeneration(ctx context.Context) (*storage.SkillsGenerat
 		Seq:       seq,
 		UpdatedAt: fromEpoch(updated),
 	}, nil
+}
+
+// SetSkillsGeneration implements storage.Storage.
+func (s *Store) SetSkillsGeneration(
+	ctx context.Context,
+	newHash string,
+) (oldSeq, newSeq int64, bumped bool, err error) {
+	tx, err := s.db.BeginTx(ctx, nil)
+	if err != nil {
+		return 0, 0, false, fmt.Errorf("sqlite: set skills_generation begin: %w", err)
+	}
+	defer tx.Rollback()
+
+	var curHash string
+	if err := tx.QueryRowContext(ctx,
+		`SELECT hash, seq FROM skills_generation WHERE id = 1`,
+	).Scan(&curHash, &oldSeq); err != nil {
+		return 0, 0, false, fmt.Errorf("sqlite: set skills_generation read: %w", err)
+	}
+
+	if curHash == newHash {
+		newSeq = oldSeq
+		return oldSeq, newSeq, false, tx.Commit()
+	}
+
+	newSeq = oldSeq + 1
+	if _, err := tx.ExecContext(ctx,
+		`UPDATE skills_generation
+		    SET hash = ?, seq = ?, updated_at = ?
+		  WHERE id = 1`,
+		newHash, newSeq, toEpoch(time.Now().UTC()),
+	); err != nil {
+		return 0, 0, false, fmt.Errorf("sqlite: set skills_generation update: %w", err)
+	}
+
+	if err := tx.Commit(); err != nil {
+		return 0, 0, false, fmt.Errorf("sqlite: set skills_generation commit: %w", err)
+	}
+	return oldSeq, newSeq, true, nil
 }
