@@ -14,6 +14,7 @@ web/.env.local
 .DS_Store
 .superpowers/
 .gstack/
+.worktrees/
 
 # AI tooling / local docs — not tracked by git
 docs/
