@@ -1,6 +1,9 @@
 package config
 
-// Config holds all user-configurable settings for hermes-agent.
+import (
+	"github.com/odysseythink/hermind/agent/presence"
+)
+
 // YAML tags mirror the existing Python hermes config.yaml format.
 type Config struct {
 	Model             string                    `yaml:"model"`
@@ -23,6 +26,10 @@ type Config struct {
 	Benchmark         BenchmarkConfig           `yaml:"benchmark,omitempty"`
 	// Proxy controls the Anthropic-compatible /v1/messages endpoint.
 	Proxy ProxyConfig `yaml:"proxy,omitempty"`
+	// Presence controls the user-presence framework gating background
+	// workers (idle consolidator today; future RL hot-swap, embedding
+	// rebuilds).
+	Presence PresenceConfig `yaml:"presence,omitempty"`
 }
 
 // WebConfig holds configuration for the `web_*` tool family.
@@ -386,8 +393,24 @@ type ProxyConfig struct {
 	KeepAliveSeconds int `yaml:"keep_alive_seconds,omitempty"`
 }
 
-// Default returns a Config populated with sensible defaults.
-// These match the Python hermes defaults.
+// PresenceConfig configures the user-presence framework that gates
+// background workers like the idle consolidator. v1 ships HTTP-idle
+// and sleep-window sources; future sub-projects add keyboard-idle and
+// calendar busy.
+type PresenceConfig struct {
+	// HTTPIdleAbsentAfterSeconds is the quiet window before the HTTP-idle
+	// source votes Absent. Default 300 (5 min); 0 disables the signal.
+	//
+	// Migration: when this is 0 (unset), the legacy
+	// MemoryConfig.ConsolidateIdleAfterSeconds is consulted instead and
+	// a one-time deprecation log is emitted by the consumer.
+	HTTPIdleAbsentAfterSeconds int `yaml:"http_idle_absent_after_seconds,omitempty"`
+
+	// SleepWindow gates background work to the configured local-clock
+	// window when Enabled. Default disabled.
+	SleepWindow presence.SleepWindowConfig `yaml:"sleep_window,omitempty"`
+}
+
 func Default() *Config {
 	return &Config{
 		Model:     "anthropic/claude-opus-4-6",
