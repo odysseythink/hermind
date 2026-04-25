@@ -8,6 +8,7 @@ import (
 	"testing"
 	"time"
 
+	"github.com/odysseythink/hermind/agent/presence"
 	"github.com/odysseythink/hermind/config"
 	"github.com/odysseythink/hermind/storage"
 	"github.com/stretchr/testify/assert"
@@ -82,4 +83,52 @@ func TestMemoryHealthIncludesCurrentSkillsGeneration(t *testing.T) {
 
 func toTime(unix int64) time.Time {
 	return time.Unix(unix, 0).UTC()
+}
+
+// presenceStub is a test-only Source used by the api package.
+type presenceStub struct {
+	name string
+	vote presence.Vote
+}
+
+func (s presenceStub) Name() string                     { return s.name }
+func (s presenceStub) Vote(_ time.Time) presence.Vote   { return s.vote }
+
+func TestMemoryHealthIncludesPresenceBlock(t *testing.T) {
+	fake := &healthFake{
+		health: &storage.MemoryHealth{
+			SchemaVersion: 7, FTSIntegrity: "ok",
+		},
+	}
+	srv, err := NewServer(&ServerOpts{Config: &config.Config{}, Storage: fake})
+	require.NoError(t, err)
+
+	// Inject a Composite with two stub sources: one Absent, one Unknown.
+	srv.opts.Deps.Presence = presence.NewComposite(
+		presenceStub{name: "http_idle", vote: presence.Absent},
+		presenceStub{name: "sleep_window", vote: presence.Unknown},
+	)
+
+	rr := httptest.NewRecorder()
+	req := httptest.NewRequest(http.MethodGet, "/api/memory/health", nil)
+	srv.Router().ServeHTTP(rr, req)
+	require.Equal(t, http.StatusOK, rr.Code)
+
+	var body struct {
+		Presence *struct {
+			Available bool `json:"available"`
+			Sources   []struct {
+				Name string `json:"name"`
+				Vote string `json:"vote"`
+			} `json:"sources"`
+		} `json:"presence"`
+	}
+	require.NoError(t, json.Unmarshal(rr.Body.Bytes(), &body))
+	require.NotNil(t, body.Presence)
+	require.True(t, body.Presence.Available, "absent + unknown ⇒ available")
+	require.Len(t, body.Presence.Sources, 2)
+	require.Equal(t, "http_idle", body.Presence.Sources[0].Name)
+	require.Equal(t, "Absent", body.Presence.Sources[0].Vote)
+	require.Equal(t, "sleep_window", body.Presence.Sources[1].Name)
+	require.Equal(t, "Unknown", body.Presence.Sources[1].Vote)
 }

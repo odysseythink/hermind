@@ -152,6 +152,7 @@ type MemoryHealth struct {
 	ConsolidatorLastRunUnix *int64 `json:"consolidator_last_run_unix,omitempty"`
 	ConsolidatorLastReport  *ConsolidateReportView `json:"consolidator_last_report,omitempty"`
 	CurrentSkillsGeneration *CurrentSkillsGen `json:"current_skills_generation,omitempty"`
+	Presence                *PresenceView `json:"presence,omitempty"`
 }
 
 // CurrentSkillsGen is the JSON shape for the current skills generation in MemoryHealth.
@@ -159,6 +160,18 @@ type CurrentSkillsGen struct {
 	Hash      string `json:"hash"`
 	Seq       int64  `json:"seq"`
 	UpdatedAt int64  `json:"updated_at"`
+}
+
+// PresenceView is the JSON shape surfaced via MemoryHealth.
+type PresenceView struct {
+	Available bool                 `json:"available"`
+	Sources   []PresenceSourceView `json:"sources"`
+}
+
+// PresenceSourceView is one row inside MemoryHealth.Presence.Sources.
+type PresenceSourceView struct {
+	Name string `json:"name"`
+	Vote string `json:"vote"` // "Unknown" | "Absent" | "Present"
 }
 
 // ConsolidateReportView is the JSON shape surfaced via MemoryHealth.

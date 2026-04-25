@@ -2,6 +2,7 @@ package api
 
 import (
 	"net/http"
+	"time"
 
 	"github.com/odysseythink/hermind/storage"
 )
@@ -25,6 +26,23 @@ func (s *Server) handleMemoryHealth(w http.ResponseWriter, r *http.Request) {
 			Seq:       gen.Seq,
 			UpdatedAt: gen.UpdatedAt.Unix(),
 		}
+	}
+
+	// Populate presence (best-effort, errors are silent).
+	if p := s.opts.Deps.Presence; p != nil {
+		now := time.Now()
+		srcs := p.Sources(now)
+		view := &storage.PresenceView{
+			Available: p.Available(now),
+			Sources:   make([]storage.PresenceSourceView, 0, len(srcs)),
+		}
+		for _, sv := range srcs {
+			view.Sources = append(view.Sources, storage.PresenceSourceView{
+				Name: sv.Name,
+				Vote: sv.Vote.String(),
+			})
+		}
+		h.Presence = view
 	}
 
 	writeJSON(w, h)
