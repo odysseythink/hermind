@@ -8,6 +8,7 @@ import (
 	"net/http"
 	"net/http/httptest"
 	"testing"
+	"time"
 
 	"github.com/stretchr/testify/require"
 
@@ -250,4 +251,59 @@ func TestV1Messages_ProviderGenericErrorMapsTo502(t *testing.T) {
 	req := httptest.NewRequest(http.MethodPost, "/v1/messages", bytes.NewReader(body))
 	srv.Router().ServeHTTP(rr, req)
 	require.Equal(t, http.StatusBadGateway, rr.Code)
+}
+
+// blockingStream blocks Recv() until ctx is cancelled, then returns the
+// context error. Verifies that StreamOutbound + handleV1Messages clean
+// up properly when the client disconnects.
+type blockingStream struct {
+	ctx    context.Context
+	closed bool
+}
+
+func (b *blockingStream) Recv() (*provider.StreamEvent, error) {
+	<-b.ctx.Done()
+	return nil, b.ctx.Err()
+}
+func (b *blockingStream) Close() error { b.closed = true; return nil }
+
+type blockingProvider struct{}
+
+func (b *blockingProvider) Name() string { return "blocking" }
+func (b *blockingProvider) Complete(ctx context.Context, req *provider.Request) (*provider.Response, error) {
+	return nil, errors.New("not used")
+}
+func (b *blockingProvider) Stream(ctx context.Context, req *provider.Request) (provider.Stream, error) {
+	return &blockingStream{ctx: ctx}, nil
+}
+func (b *blockingProvider) ModelInfo(model string) *provider.ModelInfo { return nil }
+func (b *blockingProvider) EstimateTokens(model, text string) (int, error) { return 0, nil }
+func (b *blockingProvider) Available() bool                                { return true }
+
+func TestV1Messages_StreamCancellationCleanup(t *testing.T) {
+	srv := newProxyTestServer(t, &blockingProvider{})
+	ctx, cancel := context.WithCancel(context.Background())
+	defer cancel()
+
+	body := []byte(`{
+		"model": "x", "max_tokens": 8, "stream": true,
+		"messages": [{"role": "user", "content": [{"type": "text", "text": "hi"}]}]
+	}`)
+	rr := httptest.NewRecorder()
+	req := httptest.NewRequest(http.MethodPost, "/v1/messages", bytes.NewReader(body)).WithContext(ctx)
+
+	done := make(chan struct{})
+	go func() {
+		srv.Router().ServeHTTP(rr, req)
+		close(done)
+	}()
+
+	// Cancel the request after 50ms — handler should return cleanly.
+	time.AfterFunc(50*time.Millisecond, cancel)
+	select {
+	case <-done:
+		// good
+	case <-time.After(2 * time.Second):
+		t.Fatal("handler did not return within 2s after cancellation")
+	}
 }
