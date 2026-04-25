@@ -73,7 +73,18 @@ describe('SECTIONS registry', () => {
     expect(models.map(s => s.key)).toEqual(['model', 'providers', 'fallback_providers']);
   });
 
+  it('memory group exposes presence in declaration order', () => {
+    const memory = sectionsInGroup('memory');
+    expect(memory.map(s => s.key)).toEqual(['presence']);
+  });
+
+  it('advanced group exposes proxy, benchmark in declaration order', () => {
+    const advanced = sectionsInGroup('advanced');
+    expect(advanced.map(s => s.key)).toEqual(['proxy', 'benchmark']);
+  });
+
   it('sectionsInGroup returns [] for a group with no registered sections', () => {
-    expect(sectionsInGroup('memory')).toEqual([]);
+    expect(sectionsInGroup('skills')).toEqual([]);
+    expect(sectionsInGroup('gateway')).toEqual([]);
   });
 });

@@ -24,6 +24,11 @@ export const SECTIONS: readonly SectionDef[] = [
   { key: 'model', groupId: 'models', plannedStage: 'done' },
   { key: 'providers', groupId: 'models', plannedStage: 'done' },
   { key: 'fallback_providers', groupId: 'models', plannedStage: 'done' },
+  // memory
+  { key: 'presence', groupId: 'memory', plannedStage: 'done' },
+  // advanced
+  { key: 'proxy', groupId: 'advanced', plannedStage: 'done' },
+  { key: 'benchmark', groupId: 'advanced', plannedStage: 'done' },
 ] as const;
 
 export function sectionsInGroup(id: GroupId): readonly SectionDef[] {
