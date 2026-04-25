@@ -4,6 +4,7 @@ import (
 	"context"
 	"path/filepath"
 	"testing"
+	"time"
 
 	"github.com/stretchr/testify/require"
 )
@@ -40,4 +41,14 @@ func TestMigrateV8Idempotent(t *testing.T) {
 	require.NoError(t, store.Migrate())
 	require.NoError(t, store.Migrate()) // second run must not fail
 	_ = context.Background()
+}
+
+func TestGetSkillsGenerationFreshDB(t *testing.T) {
+	store := newTestStore(t)
+	defer store.Close()
+	gen, err := store.GetSkillsGeneration(context.Background())
+	require.NoError(t, err)
+	require.Equal(t, "", gen.Hash)
+	require.Equal(t, int64(0), gen.Seq)
+	require.True(t, gen.UpdatedAt.IsZero() || gen.UpdatedAt.Unix() <= time.Now().Unix())
 }

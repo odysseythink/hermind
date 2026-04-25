@@ -160,6 +160,10 @@ func (f *fakeStorage) SkillsStats(_ context.Context, _ string) (*storage.SkillsS
 	return &storage.SkillsStats{ByCategory: map[string]int{}}, nil
 }
 
+func (f *fakeStorage) GetSkillsGeneration(_ context.Context) (*storage.SkillsGeneration, error) {
+	return &storage.SkillsGeneration{Hash: "", Seq: 0, UpdatedAt: time.Time{}}, nil
+}
+
 // fakeTx implements the Tx interface for testing.
 type fakeTx struct{}
 

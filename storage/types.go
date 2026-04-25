@@ -109,6 +109,15 @@ type MemoryEvent struct {
 	Data []byte    `json:"data"` // raw JSON bytes
 }
 
+// SkillsGeneration is the singleton tracker of the skills-library content
+// hash plus a monotonic sequence that bumps each time the hash changes.
+// Used by the memory ranker to decay stale reinforcement signals.
+type SkillsGeneration struct {
+	Hash      string
+	Seq       int64
+	UpdatedAt time.Time
+}
+
 // MemoryStats summarizes the memories table for /api/memory/stats.
 type MemoryStats struct {
 	Total          int            `json:"total"`

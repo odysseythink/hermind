@@ -67,6 +67,9 @@ func (r *recStore) MemoryHealth(_ context.Context) (*storage.MemoryHealth, error
 func (r *recStore) SkillsStats(_ context.Context, _ string) (*storage.SkillsStats, error) {
 	return &storage.SkillsStats{ByCategory: map[string]int{}}, nil
 }
+func (r *recStore) GetSkillsGeneration(_ context.Context) (*storage.SkillsGeneration, error) {
+	return &storage.SkillsGeneration{Hash: "", Seq: 0, UpdatedAt: time.Time{}}, nil
+}
 
 type nopTx struct{}
 

@@ -45,6 +45,9 @@ type Storage interface {
 	// ListMemoryEvents returns events newest-first, optionally filtered by kinds.
 	ListMemoryEvents(ctx context.Context, limit, offset int, kinds []string) ([]*MemoryEvent, error)
 
+	// GetSkillsGeneration returns the current (hash, seq, updated_at).
+	GetSkillsGeneration(ctx context.Context) (*SkillsGeneration, error)
+
 	// MemoryStats aggregates counts by type/status + reinforcement histogram.
 	MemoryStats(ctx context.Context) (*MemoryStats, error)
 	// MemoryHealth reports schema version and FTS integrity.
