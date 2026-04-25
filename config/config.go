@@ -41,10 +41,20 @@ type WebConfig struct {
 
 // BenchmarkConfig parameterizes `hermind bench` subcommands.
 type BenchmarkConfig struct {
-	DatasetSize int    `yaml:"dataset_size,omitempty"` // default 50
-	Seed        int64  `yaml:"seed,omitempty"`         // default 42
-	JudgeModel  string `yaml:"judge_model,omitempty"`  // "" = aux, then primary
-	OutDir      string `yaml:"out_dir,omitempty"`      // default ".hermind/benchmark"
+	DatasetSize int           `yaml:"dataset_size,omitempty"` // default 50
+	Seed        int64         `yaml:"seed,omitempty"`         // default 42
+	JudgeModel  string        `yaml:"judge_model,omitempty"`  // "" = aux, then primary
+	OutDir      string        `yaml:"out_dir,omitempty"`      // default ".hermind/benchmark"
+	Replay      ReplayConfig  `yaml:"replay,omitempty"`
+}
+
+// ReplayConfig configures the bench replay subtree's defaults.
+type ReplayConfig struct {
+	DefaultMode       string `yaml:"default_mode,omitempty"`
+	DefaultHistoryCap int    `yaml:"default_history_cap,omitempty"`
+	DefaultJudge      string `yaml:"default_judge,omitempty"`
+	OutDir            string `yaml:"out_dir,omitempty"`
+	JudgeModel        string `yaml:"judge_model,omitempty"`
 }
 
 // SearchConfig configures the web_search tool's provider abstraction.
