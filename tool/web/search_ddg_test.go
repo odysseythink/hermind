@@ -9,6 +9,7 @@ import (
 	"strings"
 	"testing"
 
+	"github.com/odysseythink/hermind/config"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 )
@@ -48,7 +49,7 @@ func TestDDGProvider_HappyPath(t *testing.T) {
 	}))
 	defer srv.Close()
 
-	p := newDDGProvider(srv.URL)
+	p := newDDGProvider(nil, srv.URL)
 	results, err := p.Search(context.Background(), "golang", 10)
 	require.NoError(t, err)
 	require.Len(t, results, 3)
@@ -71,7 +72,7 @@ func TestDDGProvider_CAPTCHAReturnsError(t *testing.T) {
 	}))
 	defer srv.Close()
 
-	p := newDDGProvider(srv.URL)
+	p := newDDGProvider(nil, srv.URL)
 	_, err := p.Search(context.Background(), "q", 10)
 	require.Error(t, err)
 	assert.Contains(t, strings.ToLower(err.Error()), "rate limited")
@@ -83,18 +84,18 @@ func TestDDGProvider_Non200IsError(t *testing.T) {
 	}))
 	defer srv.Close()
 
-	p := newDDGProvider(srv.URL)
+	p := newDDGProvider(nil, srv.URL)
 	_, err := p.Search(context.Background(), "q", 10)
 	require.Error(t, err)
 	assert.Contains(t, err.Error(), "http 502")
 }
 
 func TestDDGProvider_AlwaysConfigured(t *testing.T) {
-	assert.True(t, newDDGProvider("").Configured())
+	assert.True(t, newDDGProvider(nil, "").Configured())
 }
 
 func TestDDGProvider_ID(t *testing.T) {
-	assert.Equal(t, "ddg", newDDGProvider("").ID())
+	assert.Equal(t, "DuckDuckGo", newDDGProvider(nil, "").ID())
 }
 
 func TestDDGProvider_RespectsNResults(t *testing.T) {
@@ -113,8 +114,83 @@ func TestDDGProvider_RespectsNResults(t *testing.T) {
 	}))
 	defer srv.Close()
 
-	p := newDDGProvider(srv.URL)
+	p := newDDGProvider(nil, srv.URL)
 	results, err := p.Search(context.Background(), "q", 3)
 	require.NoError(t, err)
 	assert.Len(t, results, 3, "should clip to n=3")
+}
+
+func TestDDGProviderWithHTTPProxy(t *testing.T) {
+	proxyConfig := &config.DDGProxyConfig{
+		URL: "http://proxy.corp.com:8080",
+	}
+	provider := newDDGProvider(proxyConfig, ddgDefaultURL)
+	if provider.client == nil {
+		t.Fatal("client is nil")
+	}
+	if provider.client.Transport == nil {
+		t.Fatal("Transport is nil, proxy not configured")
+	}
+	transport, ok := provider.client.Transport.(*http.Transport)
+	if !ok {
+		t.Fatal("Transport is not *http.Transport")
+	}
+	if transport.Proxy == nil {
+		t.Fatal("Proxy function is nil")
+	}
+}
+
+func TestDDGProviderWithProxyAuth(t *testing.T) {
+	proxyConfig := &config.DDGProxyConfig{
+		URL:      "http://proxy.corp.com:8080",
+		Username: "user",
+		Password: "pass",
+	}
+	provider := newDDGProvider(proxyConfig, ddgDefaultURL)
+	if provider.client.Transport == nil {
+		t.Fatal("Transport is nil")
+	}
+	transport, ok := provider.client.Transport.(*http.Transport)
+	if !ok {
+		t.Fatal("Transport is not *http.Transport")
+	}
+	if transport.Proxy == nil {
+		t.Fatal("Proxy function is nil")
+	}
+}
+
+func TestDDGProviderWithInvalidProxyURL(t *testing.T) {
+	proxyConfig := &config.DDGProxyConfig{
+		URL: "ht!tp://[invalid:url",
+	}
+	provider := newDDGProvider(proxyConfig, ddgDefaultURL)
+	if provider.client == nil {
+		t.Fatal("client is nil")
+	}
+	if provider.client.Transport != nil {
+		t.Fatal("Transport should be nil when proxy URL is invalid")
+	}
+}
+
+func TestDDGProviderWithNilProxyConfig(t *testing.T) {
+	provider := newDDGProvider(nil, ddgDefaultURL)
+	if provider.client == nil {
+		t.Fatal("client is nil")
+	}
+	if provider.client.Transport != nil {
+		t.Fatal("Transport should be nil when proxyConfig is nil")
+	}
+}
+
+func TestDDGProviderWithEmptyProxyURL(t *testing.T) {
+	proxyConfig := &config.DDGProxyConfig{
+		URL: "",
+	}
+	provider := newDDGProvider(proxyConfig, ddgDefaultURL)
+	if provider.client == nil {
+		t.Fatal("client is nil")
+	}
+	if provider.client.Transport != nil {
+		t.Fatal("Transport should be nil when URL is empty")
+	}
 }
