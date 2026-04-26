@@ -26,10 +26,18 @@ export const SECTIONS: readonly SectionDef[] = [
   { key: 'fallback_providers', groupId: 'models', plannedStage: 'done' },
   // memory
   { key: 'presence', groupId: 'memory', plannedStage: 'done' },
+  { key: 'memory', groupId: 'memory', plannedStage: 'done' },
+  // skills
+  { key: 'skills', groupId: 'skills', plannedStage: 'done' },
+  // gateway
+  { key: 'gateway', groupId: 'gateway', plannedStage: 'done' },
   // advanced
   { key: 'proxy', groupId: 'advanced', plannedStage: 'done' },
   { key: 'web', groupId: 'advanced', plannedStage: 'done' },
+  { key: 'browser', groupId: 'advanced', plannedStage: 'done' },
   { key: 'benchmark', groupId: 'advanced', plannedStage: 'done' },
+  { key: 'mcp', groupId: 'advanced', plannedStage: 'done' },
+  { key: 'cron', groupId: 'advanced', plannedStage: 'done' },
 ] as const;
 
 export function sectionsInGroup(id: GroupId): readonly SectionDef[] {

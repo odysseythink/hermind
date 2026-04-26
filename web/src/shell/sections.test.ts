@@ -73,18 +73,30 @@ describe('SECTIONS registry', () => {
     expect(models.map(s => s.key)).toEqual(['model', 'providers', 'fallback_providers']);
   });
 
-  it('memory group exposes presence in declaration order', () => {
+  it('memory group exposes presence, memory in declaration order', () => {
     const memory = sectionsInGroup('memory');
-    expect(memory.map(s => s.key)).toEqual(['presence']);
+    expect(memory.map(s => s.key)).toEqual(['presence', 'memory']);
   });
 
-  it('advanced group exposes proxy, web, benchmark in declaration order', () => {
+  it('skills group exposes skills', () => {
+    const skills = sectionsInGroup('skills');
+    expect(skills.map(s => s.key)).toEqual(['skills']);
+  });
+
+  it('gateway group exposes gateway', () => {
+    const gateway = sectionsInGroup('gateway');
+    expect(gateway.map(s => s.key)).toEqual(['gateway']);
+  });
+
+  it('advanced group exposes proxy, web, browser, benchmark, mcp, cron in declaration order', () => {
     const advanced = sectionsInGroup('advanced');
-    expect(advanced.map(s => s.key)).toEqual(['proxy', 'web', 'benchmark']);
-  });
-
-  it('sectionsInGroup returns [] for a group with no registered sections', () => {
-    expect(sectionsInGroup('skills')).toEqual([]);
-    expect(sectionsInGroup('gateway')).toEqual([]);
+    expect(advanced.map(s => s.key)).toEqual([
+      'proxy',
+      'web',
+      'browser',
+      'benchmark',
+      'mcp',
+      'cron',
+    ]);
   });
 });
