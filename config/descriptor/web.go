@@ -9,6 +9,13 @@ package descriptor
 // infrastructure in ConfigSection.tsx, state.ts (edit/config-field
 // reducer), and api/handlers_config.go (walkPath helper).
 func init() {
+	// Gate api_key fields on the selected provider. The "" (auto-select)
+	// case also reveals all three so users can pre-populate keys before
+	// committing to one — auto-select picks the first provider with a
+	// configured key by priority (Tavily > Brave > Exa > DuckDuckGo).
+	gate := func(provider string) *Predicate {
+		return &Predicate{Field: "search.provider", In: []any{"", provider}}
+	}
 	Register(Section{
 		Key:     "web",
 		Label:   "Web tools",
@@ -24,22 +31,25 @@ func init() {
 				Enum:  []string{"", "tavily", "brave", "exa", "ddg"},
 			},
 			{
-				Name:  "search.providers.tavily.api_key",
-				Label: "Tavily API key",
-				Kind:  FieldSecret,
-				Help:  "Env var TAVILY_API_KEY overrides this value at runtime.",
+				Name:        "search.providers.tavily.api_key",
+				Label:       "Tavily API key",
+				Kind:        FieldSecret,
+				Help:        "Env var TAVILY_API_KEY overrides this value at runtime.",
+				VisibleWhen: gate("tavily"),
 			},
 			{
-				Name:  "search.providers.brave.api_key",
-				Label: "Brave Search API key",
-				Kind:  FieldSecret,
-				Help:  "Env var BRAVE_API_KEY overrides this value at runtime.",
+				Name:        "search.providers.brave.api_key",
+				Label:       "Brave Search API key",
+				Kind:        FieldSecret,
+				Help:        "Env var BRAVE_API_KEY overrides this value at runtime.",
+				VisibleWhen: gate("brave"),
 			},
 			{
-				Name:  "search.providers.exa.api_key",
-				Label: "Exa API key",
-				Kind:  FieldSecret,
-				Help:  "Env var EXA_API_KEY overrides this value at runtime.",
+				Name:        "search.providers.exa.api_key",
+				Label:       "Exa API key",
+				Kind:        FieldSecret,
+				Help:        "Env var EXA_API_KEY overrides this value at runtime.",
+				VisibleWhen: gate("exa"),
 			},
 		},
 	})

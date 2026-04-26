@@ -1203,19 +1203,40 @@
         "name": "search.providers.tavily.api_key",
         "label": "Tavily API key",
         "help": "Env var TAVILY_API_KEY overrides this value at runtime.",
-        "kind": "secret"
+        "kind": "secret",
+        "visible_when": {
+          "field": "search.provider",
+          "in": [
+            "",
+            "tavily"
+          ]
+        }
       },
       {
         "name": "search.providers.brave.api_key",
         "label": "Brave Search API key",
         "help": "Env var BRAVE_API_KEY overrides this value at runtime.",
-        "kind": "secret"
+        "kind": "secret",
+        "visible_when": {
+          "field": "search.provider",
+          "in": [
+            "",
+            "brave"
+          ]
+        }
       },
       {
         "name": "search.providers.exa.api_key",
         "label": "Exa API key",
         "help": "Env var EXA_API_KEY overrides this value at runtime.",
-        "kind": "secret"
+        "kind": "secret",
+        "visible_when": {
+          "field": "search.provider",
+          "in": [
+            "",
+            "exa"
+          ]
+        }
       }
     ]
   }
