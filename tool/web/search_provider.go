@@ -3,6 +3,8 @@ package web
 import (
 	"context"
 	"time"
+
+	"github.com/odysseythink/hermind/config"
 )
 
 // httpTimeout is the per-request timeout every provider applies to its
@@ -32,4 +34,5 @@ type Options struct {
 	BraveAPIKey     string
 	ExaAPIKey       string
 	FirecrawlAPIKey string
+	DDGProxyConfig  *config.DDGProxyConfig
 }

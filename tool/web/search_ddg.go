@@ -4,10 +4,12 @@ import (
 	"bytes"
 	"context"
 	"fmt"
+	"log"
 	"net/http"
 	"net/url"
 	"strings"
 
+	"github.com/odysseythink/hermind/config"
 	"github.com/PuerkitoBio/goquery"
 )
 
@@ -18,14 +20,34 @@ type ddgProvider struct {
 	client   *http.Client
 }
 
-func newDDGProvider(endpoint string) *ddgProvider {
+func newDDGProvider(proxyConfig *config.DDGProxyConfig, endpoint string) *ddgProvider {
+	client := &http.Client{Timeout: httpTimeout}
+
+	// Configure proxy if URL is provided
+	if proxyConfig != nil && proxyConfig.URL != "" {
+		proxyURL, err := url.Parse(proxyConfig.URL)
+		if err != nil {
+			// Log error and continue without proxy
+			log.Printf("invalid DDG proxy URL: %v", err)
+		} else {
+			// Attach proxy auth if provided
+			if proxyConfig.Username != "" && proxyConfig.Password != "" {
+				proxyURL.User = url.UserPassword(proxyConfig.Username, proxyConfig.Password)
+			}
+
+			client.Transport = &http.Transport{
+				Proxy: http.ProxyURL(proxyURL),
+			}
+		}
+	}
+
 	return &ddgProvider{
 		endpoint: endpoint,
-		client:   &http.Client{Timeout: httpTimeout},
+		client:   client,
 	}
 }
 
-func (p *ddgProvider) ID() string { return "ddg" }
+func (p *ddgProvider) ID() string { return "DuckDuckGo" }
 
 // Configured returns true unconditionally: DuckDuckGo's HTML endpoint
 // does not require an API key.
@@ -60,7 +82,7 @@ func (p *ddgProvider) Search(ctx context.Context, q string, n int) ([]SearchResu
 		return nil, fmt.Errorf("parse: %w", err)
 	}
 
-	// Rate-limit detection: DDG renders an .anomaly-modal element
+	// Rate-limit detection: DuckDuckGo renders an .anomaly-modal element
 	// (and/or copy mentioning "anomaly") when throttling.
 	if doc.Find(".anomaly-modal").Length() > 0 || strings.Contains(strings.ToLower(doc.Text()), "anomaly") {
 		return nil, fmt.Errorf("rate limited")
@@ -89,7 +111,7 @@ func (p *ddgProvider) Search(ctx context.Context, q string, n int) ([]SearchResu
 	return results, nil
 }
 
-// decodeDDGLink extracts the real destination from DDG's /l/?uddg=...
+// decodeDDGLink extracts the real destination from DuckDuckGo's /l/?uddg=...
 // wrapper. If raw is already an absolute URL, it is returned as-is.
 func decodeDDGLink(raw string) string {
 	if raw == "" {
