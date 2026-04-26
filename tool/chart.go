@@ -21,18 +21,26 @@ const (
 	ChartTypeFunnel     ChartType = "funnel"
 )
 
-var validChartTypes = map[ChartType]bool{
-	ChartTypeArea:      true,
-	ChartTypeBar:       true,
-	ChartTypeLine:      true,
-	ChartTypeComposed:  true,
-	ChartTypeScatter:   true,
-	ChartTypePie:       true,
-	ChartTypeRadar:     true,
-	ChartTypeRadialBar: true,
-	ChartTypeTreemap:   true,
-	ChartTypeFunnel:    true,
+var chartTypeValues = []ChartType{
+	ChartTypeArea,
+	ChartTypeBar,
+	ChartTypeLine,
+	ChartTypeComposed,
+	ChartTypeScatter,
+	ChartTypePie,
+	ChartTypeRadar,
+	ChartTypeRadialBar,
+	ChartTypeTreemap,
+	ChartTypeFunnel,
 }
+
+var validChartTypes = func() map[ChartType]bool {
+	m := make(map[ChartType]bool)
+	for _, t := range chartTypeValues {
+		m[t] = true
+	}
+	return m
+}()
 
 // ChartInput is the request payload for the chart tool.
 type ChartInput struct {
@@ -58,13 +66,16 @@ func ValidChartType(t string) bool {
 
 // AllChartTypes returns a comma-separated list of valid chart types.
 func AllChartTypes() string {
-	types := []string{"area", "bar", "line", "composed", "scatter", "pie", "radar", "radialBar", "treemap", "funnel"}
-	return strings.Join(types, ", ")
+	strs := make([]string, len(chartTypeValues))
+	for i, t := range chartTypeValues {
+		strs[i] = string(t)
+	}
+	return strings.Join(strs, ", ")
 }
 
 // ValidateChartInput checks all chart parameters and returns an error if invalid.
+// TODO: Implement full validation in Task 5 (integrate all validation checks)
 func ValidateChartInput(input *ChartInput) error {
-	// To be implemented in later tasks
 	return nil
 }
 
@@ -85,13 +96,13 @@ func ValidateChartTypeInput(t string) error {
 }
 
 // ValidateDataset checks that dataset is valid JSON array with required structure.
+// TODO: Implement in Task 4 (dataset JSON parsing and validation)
 func ValidateDataset(datasetStr string) error {
-	// To be implemented in later tasks
 	return nil
 }
 
 // DatasetSize returns the number of records in the dataset.
+// TODO: Implement in Task 4 (dataset JSON parsing and validation)
 func DatasetSize(datasetStr string) (int, error) {
-	// To be implemented in later tasks
 	return 0, nil
 }
