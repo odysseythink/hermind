@@ -8,8 +8,9 @@ import (
 )
 
 // httpTimeout is the per-request timeout every provider applies to its
-// outbound HTTP call.
-const httpTimeout = 30 * time.Second
+// outbound HTTP call. Increased to 60s to account for proxy latency. Most
+// providers complete in <10s direct, but proxy adds overhead.
+const httpTimeout = 60 * time.Second
 
 // SearchProvider is the contract every web_search backend implements.
 type SearchProvider interface {

@@ -8,6 +8,7 @@ import (
 	"net/http"
 	"net/url"
 	"strings"
+	"time"
 
 	"github.com/odysseythink/hermind/config"
 	"github.com/PuerkitoBio/goquery"
@@ -25,20 +26,32 @@ func newDDGProvider(proxyConfig *config.DDGProxyConfig, endpoint string) *ddgPro
 
 	// Configure proxy if URL is provided
 	if proxyConfig != nil && proxyConfig.URL != "" {
+		log.Printf("[DDG] Proxy config provided: URL=%s has_auth=%v", proxyConfig.URL, proxyConfig.Username != "")
 		proxyURL, err := url.Parse(proxyConfig.URL)
 		if err != nil {
 			// Log error and continue without proxy
-			log.Printf("invalid DDG proxy URL: %v", err)
+			log.Printf("[DDG] Invalid proxy URL: %v", err)
 		} else {
 			// Attach proxy auth if provided
 			if proxyConfig.Username != "" && proxyConfig.Password != "" {
+				log.Printf("[DDG] Applying proxy auth: username=%s", proxyConfig.Username)
 				proxyURL.User = url.UserPassword(proxyConfig.Username, proxyConfig.Password)
 			}
 
-			client.Transport = &http.Transport{
-				Proxy: http.ProxyURL(proxyURL),
+			// Create transport with proxy while preserving defaults
+			transport := &http.Transport{
+				Proxy:                 http.ProxyURL(proxyURL),
+				MaxIdleConns:          100,
+				MaxIdleConnsPerHost:   10,
+				IdleConnTimeout:       90 * time.Second,
+				TLSHandshakeTimeout:   10 * time.Second,
+				ExpectContinueTimeout: 1 * time.Second,
 			}
+			client.Transport = transport
+			log.Printf("[DDG] Proxy configured: %s", proxyConfig.URL)
 		}
+	} else {
+		log.Printf("[DDG] No proxy config provided")
 	}
 
 	return &ddgProvider{
@@ -58,18 +71,24 @@ func (p *ddgProvider) Search(ctx context.Context, q string, n int) ([]SearchResu
 	if endpoint == "" {
 		endpoint = ddgDefaultURL
 	}
+	log.Printf("[DDG] Search: query=%q num_results=%d endpoint=%s timeout=%v transport_type=%T",
+		q, n, endpoint, p.client.Timeout, p.client.Transport)
+
 	form := url.Values{}
 	form.Set("q", q)
 
 	req, err := http.NewRequestWithContext(ctx, "POST", endpoint, bytes.NewReader([]byte(form.Encode())))
 	if err != nil {
+		log.Printf("[DDG] Failed to create request: %v", err)
 		return nil, fmt.Errorf("new request: %w", err)
 	}
 	req.Header.Set("Content-Type", "application/x-www-form-urlencoded")
 	req.Header.Set("User-Agent", "hermind/1.0")
 
+	log.Printf("[DDG] Sending POST request to %s", endpoint)
 	resp, err := p.client.Do(req)
 	if err != nil {
+		log.Printf("[DDG] Request failed: %v", err)
 		return nil, err
 	}
 	defer resp.Body.Close()

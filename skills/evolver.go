@@ -52,6 +52,16 @@ func (ev *Evolver) WithTracker(t *Tracker) *Evolver {
 // When verdict is nil, falls back to the legacy LLM-extraction path.
 // Always ensures skillDir exists.
 func (ev *Evolver) Extract(ctx context.Context, turns []message.Message, verdict *agent.Verdict) error {
+	// Defensive nil check: Extract should not be called on nil Evolver
+	if ev == nil {
+		skillCount := 0
+		if verdict != nil {
+			skillCount = len(verdict.SkillsToExtract)
+		}
+		slog.Warn("evolver.Extract called on nil receiver", "verdict_skills", skillCount)
+		return nil
+	}
+
 	if err := os.MkdirAll(ev.skillDir, 0o755); err != nil {
 		return fmt.Errorf("evolver: mkdir %s: %w", ev.skillDir, err)
 	}
