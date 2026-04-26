@@ -30,7 +30,7 @@ func TestWebSearchProviderEnum(t *testing.T) {
 	if p.Kind != FieldEnum {
 		t.Errorf("search.provider.Kind = %s, want enum", p.Kind)
 	}
-	want := map[string]bool{"": true, "tavily": true, "brave": true, "exa": true, "ddg": true}
+	want := map[string]bool{"": true, "tavily": true, "brave": true, "exa": true, "DuckDuckGo": true}
 	got := map[string]bool{}
 	for _, v := range p.Enum {
 		got[v] = true
@@ -91,7 +91,7 @@ func TestWebProviderAPIKeysAreGatedByProvider(t *testing.T) {
 			t.Errorf("%s: not visible when search.provider=\"\" (auto-select); user can never pre-populate", c.field)
 		}
 		// Other providers must NOT reveal this key.
-		for _, other := range []string{"tavily", "brave", "exa", "ddg"} {
+		for _, other := range []string{"tavily", "brave", "exa", "DuckDuckGo"} {
 			if other == c.provider {
 				continue
 			}
@@ -120,6 +120,62 @@ func TestWebProviderAPIKeysAreSecrets(t *testing.T) {
 		}
 		if f.Kind != FieldSecret {
 			t.Errorf("%s.Kind = %s, want secret", name, f.Kind)
+		}
+	}
+}
+
+func TestWebDDGProxyFieldsAreGatedByProvider(t *testing.T) {
+	s, _ := Get("web")
+	byName := map[string]*FieldSpec{}
+	for i := range s.Fields {
+		byName[s.Fields[i].Name] = &s.Fields[i]
+	}
+	cases := []struct {
+		field string
+	}{
+		{"search.providers.duckduckgo.url"},
+		{"search.providers.duckduckgo.username"},
+		{"search.providers.duckduckgo.password"},
+	}
+	for _, c := range cases {
+		f, ok := byName[c.field]
+		if !ok {
+			t.Errorf("field %q missing", c.field)
+			continue
+		}
+		if f.VisibleWhen == nil {
+			t.Errorf("%s: VisibleWhen is nil, want predicate gating on search.provider", c.field)
+			continue
+		}
+		if f.VisibleWhen.Field != "search.provider" {
+			t.Errorf("%s: VisibleWhen.Field = %q, want %q", c.field, f.VisibleWhen.Field, "search.provider")
+		}
+		// DDG proxy fields must be visible when provider is "DuckDuckGo" or ""
+		matches := func(value string) bool {
+			if f.VisibleWhen.In != nil {
+				for _, v := range f.VisibleWhen.In {
+					if vs, ok := v.(string); ok && vs == value {
+						return true
+					}
+				}
+				return false
+			}
+			if vs, ok := f.VisibleWhen.Equals.(string); ok {
+				return vs == value
+			}
+			return false
+		}
+		if !matches("DuckDuckGo") {
+			t.Errorf("%s: not visible when search.provider=DuckDuckGo", c.field)
+		}
+		if !matches("") {
+			t.Errorf("%s: not visible when search.provider=\"\" (auto-select)", c.field)
+		}
+		// Other providers should NOT show DDG proxy fields
+		for _, other := range []string{"tavily", "brave", "exa"} {
+			if matches(other) {
+				t.Errorf("%s: leaks visible when search.provider=%q", c.field, other)
+			}
 		}
 	}
 }
