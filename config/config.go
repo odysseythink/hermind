@@ -41,11 +41,11 @@ type WebConfig struct {
 
 // BenchmarkConfig parameterizes `hermind bench` subcommands.
 type BenchmarkConfig struct {
-	DatasetSize int           `yaml:"dataset_size,omitempty"` // default 50
-	Seed        int64         `yaml:"seed,omitempty"`         // default 42
-	JudgeModel  string        `yaml:"judge_model,omitempty"`  // "" = aux, then primary
-	OutDir      string        `yaml:"out_dir,omitempty"`      // default ".hermind/benchmark"
-	Replay      ReplayConfig  `yaml:"replay,omitempty"`
+	DatasetSize int          `yaml:"dataset_size,omitempty"` // default 50
+	Seed        int64        `yaml:"seed,omitempty"`         // default 42
+	JudgeModel  string       `yaml:"judge_model,omitempty"`  // "" = aux, then primary
+	OutDir      string       `yaml:"out_dir,omitempty"`      // default ".hermind/benchmark"
+	Replay      ReplayConfig `yaml:"replay,omitempty"`
 }
 
 // ReplayConfig configures the bench replay subtree's defaults.
@@ -59,18 +59,27 @@ type ReplayConfig struct {
 
 // SearchConfig configures the web_search tool's provider abstraction.
 // Provider selects the active backend; empty string enables auto-selection
-// by priority (tavily > brave > exa > ddg).
+// by priority (tavily > brave > exa > DuckDuckGo).
 type SearchConfig struct {
 	Provider  string                `yaml:"provider,omitempty"`
 	Providers SearchProvidersConfig `yaml:"providers,omitempty"`
 }
 
-// SearchProvidersConfig holds per-provider credentials. DDG does not
+// DDGProxyConfig holds proxy settings for DuckDuckGo web search requests.
+// URL is required to enable proxy; Username and Password are optional for auth.
+type DDGProxyConfig struct {
+	URL      string `yaml:"url,omitempty"`      // e.g. "http://proxy.corp.com:8080" or "socks5://proxy:1080"
+	Username string `yaml:"username,omitempty"` // optional proxy authentication
+	Password string `yaml:"password,omitempty"` // optional proxy authentication
+}
+
+// SearchProvidersConfig holds per-provider credentials. DuckDuckGo does not
 // require credentials and therefore has no sub-node.
 type SearchProvidersConfig struct {
-	Tavily ProviderKeyConfig `yaml:"tavily,omitempty"`
-	Brave  ProviderKeyConfig `yaml:"brave,omitempty"`
-	Exa    ProviderKeyConfig `yaml:"exa,omitempty"`
+	Tavily     ProviderKeyConfig `yaml:"tavily,omitempty"`
+	Brave      ProviderKeyConfig `yaml:"brave,omitempty"`
+	Exa        ProviderKeyConfig `yaml:"exa,omitempty"`
+	DuckDuckGo *DDGProxyConfig   `yaml:"duckduckgo,omitempty"`
 }
 
 // ProviderKeyConfig is the shared shape for an API-key-only provider.
@@ -174,16 +183,16 @@ type CamofoxConfig struct {
 // MemoryConfig holds the optional external memory provider configuration.
 // At most one provider is active at a time (see tool/memory/memprovider).
 type MemoryConfig struct {
-	Provider     string             `yaml:"provider,omitempty"` // honcho|mem0|supermemory|hindsight|retaindb|openviking|byterover|holographic|metaclaw
-	Honcho       HonchoConfig       `yaml:"honcho,omitempty"`
-	Mem0         Mem0Config         `yaml:"mem0,omitempty"`
-	Supermemory  SupermemoryConfig  `yaml:"supermemory,omitempty"`
-	Hindsight    HindsightConfig    `yaml:"hindsight,omitempty"`
-	RetainDB     RetainDBConfig     `yaml:"retaindb,omitempty"`
-	OpenViking   OpenVikingConfig   `yaml:"openviking,omitempty"`
-	Byterover    ByteroverConfig    `yaml:"byterover,omitempty"`
-	Holographic  HolographicConfig  `yaml:"holographic,omitempty"`
-	MetaClaw     MetaClawConfig     `yaml:"metaclaw,omitempty"`
+	Provider    string            `yaml:"provider,omitempty"` // honcho|mem0|supermemory|hindsight|retaindb|openviking|byterover|holographic|metaclaw
+	Honcho      HonchoConfig      `yaml:"honcho,omitempty"`
+	Mem0        Mem0Config        `yaml:"mem0,omitempty"`
+	Supermemory SupermemoryConfig `yaml:"supermemory,omitempty"`
+	Hindsight   HindsightConfig   `yaml:"hindsight,omitempty"`
+	RetainDB    RetainDBConfig    `yaml:"retaindb,omitempty"`
+	OpenViking  OpenVikingConfig  `yaml:"openviking,omitempty"`
+	Byterover   ByteroverConfig   `yaml:"byterover,omitempty"`
+	Holographic HolographicConfig `yaml:"holographic,omitempty"`
+	MetaClaw    MetaClawConfig    `yaml:"metaclaw,omitempty"`
 	// ConsolidateIntervalSeconds drives the idle consolidation ticker.
 	// Default 900 (15 min). 0 disables the idle path entirely.
 	ConsolidateIntervalSeconds int `yaml:"consolidate_interval_seconds,omitempty"`
