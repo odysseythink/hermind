@@ -149,6 +149,7 @@ func BuildEngineDeps(ctx context.Context, app *App) (api.EngineDeps, func(), err
 		TavilyAPIKey:    app.Config.Web.Search.Providers.Tavily.APIKey,
 		BraveAPIKey:     app.Config.Web.Search.Providers.Brave.APIKey,
 		ExaAPIKey:       app.Config.Web.Search.Providers.Exa.APIKey,
+		DDGProxyConfig:  app.Config.Web.Search.Providers.DuckDuckGo,
 		FirecrawlAPIKey: os.Getenv("FIRECRAWL_API_KEY"),
 	})
 
