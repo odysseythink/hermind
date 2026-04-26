@@ -374,3 +374,38 @@ func TestChartToolIntegration(t *testing.T) {
 		t.Errorf("Expected valid JSON response, got: %s", result)
 	}
 }
+
+func TestChartLargeDataset(t *testing.T) {
+	// Create dataset with exactly 1000 items
+	var items []map[string]interface{}
+	for i := 0; i < 1000; i++ {
+		items = append(items, map[string]interface{}{
+			"name":  fmt.Sprintf("item%d", i),
+			"value": float64(i * 100),
+		})
+	}
+	datasetJSON, _ := json.Marshal(items)
+
+	input := ChartInput{
+		Type:    "line",
+		Title:   "Large Dataset Chart",
+		Dataset: string(datasetJSON),
+	}
+
+	// Validate should succeed
+	if err := ValidateChartInput(&input); err != nil {
+		t.Fatalf("Failed to validate 1000-item dataset: %v", err)
+	}
+
+	// Over the limit should fail
+	items = append(items, map[string]interface{}{
+		"name":  "item1000",
+		"value": 100000.0,
+	})
+	datasetJSON, _ = json.Marshal(items)
+	input.Dataset = string(datasetJSON)
+
+	if err := ValidateChartInput(&input); err == nil {
+		t.Errorf("Expected error for 1001-item dataset, got nil")
+	}
+}

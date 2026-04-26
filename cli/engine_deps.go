@@ -120,6 +120,7 @@ func BuildEngineDeps(ctx context.Context, app *App) (api.EngineDeps, func(), err
 
 	toolRegistry := tool.NewRegistry()
 	file.RegisterAll(toolRegistry)
+	tool.RegisterChart(toolRegistry)
 
 	termCfg := terminal.Config{
 		Cwd:              app.Config.Terminal.Cwd,
