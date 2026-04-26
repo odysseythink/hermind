@@ -1196,7 +1196,7 @@
           "tavily",
           "brave",
           "exa",
-          "ddg"
+          "DuckDuckGo"
         ]
       },
       {
@@ -1235,6 +1235,45 @@
           "in": [
             "",
             "exa"
+          ]
+        }
+      },
+      {
+        "name": "search.providers.duckduckgo.url",
+        "label": "Proxy URL",
+        "help": "Proxy endpoint URL (e.g., http://proxy.corp.com:8080 or socks5://proxy:1080). Leave blank to disable.",
+        "kind": "string",
+        "visible_when": {
+          "field": "search.provider",
+          "in": [
+            "",
+            "DuckDuckGo"
+          ]
+        }
+      },
+      {
+        "name": "search.providers.duckduckgo.username",
+        "label": "Proxy username",
+        "help": "Optional proxy authentication username.",
+        "kind": "string",
+        "visible_when": {
+          "field": "search.provider",
+          "in": [
+            "",
+            "DuckDuckGo"
+          ]
+        }
+      },
+      {
+        "name": "search.providers.duckduckgo.password",
+        "label": "Proxy password",
+        "help": "Optional proxy authentication password.",
+        "kind": "secret",
+        "visible_when": {
+          "field": "search.provider",
+          "in": [
+            "",
+            "DuckDuckGo"
           ]
         }
       }
