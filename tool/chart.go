@@ -1,6 +1,7 @@
 package tool
 
 import (
+	"context"
 	"encoding/json"
 	"errors"
 	"fmt"
@@ -180,4 +181,72 @@ func ValidateChartInput(input *ChartInput) error {
 	}
 
 	return nil
+}
+
+// HandleChart is the handler function for the chart tool.
+func HandleChart(ctx context.Context, raw json.RawMessage) (string, error) {
+	var input ChartInput
+	if err := json.Unmarshal(raw, &input); err != nil {
+		return ToolError("invalid arguments: " + err.Error()), nil
+	}
+
+	// Validate all inputs
+	if err := ValidateChartInput(&input); err != nil {
+		return ToolError(err.Error()), nil
+	}
+
+	// Build successful response
+	output := ChartOutput{
+		Success: true,
+		Type:    input.Type,
+		Title:   input.Title,
+		Dataset: input.Dataset,
+		Message: "Chart generated successfully",
+	}
+
+	result, _ := json.Marshal(output)
+	return string(result), nil
+}
+
+// RegisterChart registers the chart tool in the registry.
+func RegisterChart(reg *Registry) {
+	reg.Register(&Entry{
+		Name:        "chart",
+		Toolset:     "visualization",
+		Description: "Create a chart, graph, or data visualization. Generate bar charts, line graphs, pie charts, area charts, scatter plots, and more to visualize data, statistics, trends, or results.",
+		Emoji:       "📊",
+		Schema: ToolDefinition{
+			Type: "function",
+			Function: FunctionDef{
+				Name:        "chart",
+				Description: "Create an interactive chart or graph to visualize data",
+				Parameters: json.RawMessage(`{
+  "type": "object",
+  "properties": {
+    "type": {
+      "type": "string",
+      "enum": ["area", "bar", "line", "composed", "scatter", "pie", "radar", "radialBar", "treemap", "funnel"],
+      "description": "The type of chart to be generated."
+    },
+    "title": {
+      "type": "string",
+      "description": "Title of the chart. There MUST always be a title. Do not leave it blank."
+    },
+    "dataset": {
+      "type": "string",
+      "description": "Valid JSON array where each element is an object with 'name' field and numeric fields for values. Format: [{\"name\":\"label\",\"metric\":value},...]. Provide JSON data only as a string."
+    },
+    "caption": {
+      "type": "string",
+      "description": "Optional notes or caption to display below the chart."
+    }
+  },
+  "required": ["type", "title", "dataset"],
+  "additionalProperties": false
+}`),
+			},
+		},
+		Handler:        HandleChart,
+		MaxResultChars: 10000,
+	})
 }

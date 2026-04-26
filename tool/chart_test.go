@@ -1,6 +1,7 @@
 package tool
 
 import (
+	"context"
 	"encoding/json"
 	"fmt"
 	"strings"
@@ -269,5 +270,107 @@ func TestDatasetSizeLimit(t *testing.T) {
 				t.Errorf("%s: expected size > %d, got %d", test.name, maxSize, size)
 			}
 		}
+	}
+}
+
+func TestHandleChart(t *testing.T) {
+	tests := []struct {
+		name        string
+		input       interface{}
+		expectError bool
+		expectType  string
+	}{
+		{
+			name: "valid bar chart",
+			input: ChartInput{
+				Type:    "bar",
+				Title:   "Q1 Sales",
+				Dataset: `[{"name":"East","sales":1200}]`,
+			},
+			expectError: false,
+			expectType:  "bar",
+		},
+		{
+			name:        "invalid JSON input",
+			input:       "not json",
+			expectError: true,
+		},
+		{
+			name: "invalid chart type",
+			input: ChartInput{
+				Type:    "invalid",
+				Title:   "Sales",
+				Dataset: `[{"name":"Q1","val":1200}]`,
+			},
+			expectError: true,
+		},
+	}
+
+	for _, test := range tests {
+		inputJSON, _ := json.Marshal(test.input)
+		result, _ := HandleChart(context.Background(), inputJSON)
+
+		if test.expectError {
+			if !strings.Contains(result, "error") {
+				t.Errorf("%s: expected error in result, got %s", test.name, result)
+			}
+		} else {
+			var output ChartOutput
+			if err := json.Unmarshal([]byte(result), &output); err != nil {
+				t.Errorf("%s: failed to unmarshal result: %v", test.name, err)
+			}
+			if output.Type != test.expectType {
+				t.Errorf("%s: expected type %s, got %s", test.name, test.expectType, output.Type)
+			}
+		}
+	}
+}
+
+func TestRegisterChart(t *testing.T) {
+	reg := NewRegistry()
+	RegisterChart(reg)
+
+	// Verify the tool is registered
+	if _, ok := reg.entries["chart"]; !ok {
+		t.Error("chart tool not registered")
+	}
+}
+
+func TestChartToolIntegration(t *testing.T) {
+	reg := NewRegistry()
+	RegisterChart(reg)
+
+	// Test successful bar chart
+	input := ChartInput{
+		Type:    "bar",
+		Title:   "Sales by Quarter",
+		Dataset: `[{"name":"Q1","sales":1200},{"name":"Q2","sales":1800}]`,
+	}
+	inputJSON, _ := json.Marshal(input)
+
+	result, err := reg.Dispatch(context.Background(), "chart", inputJSON)
+	if err != nil {
+		t.Fatalf("Dispatch error: %v", err)
+	}
+
+	var output ChartOutput
+	if err := json.Unmarshal([]byte(result), &output); err != nil {
+		t.Fatalf("Failed to unmarshal result: %v", err)
+	}
+
+	if !output.Success {
+		t.Errorf("Expected success=true, got %v", output.Success)
+	}
+	if output.Type != "bar" {
+		t.Errorf("Expected type=bar, got %s", output.Type)
+	}
+
+	// Test invalid chart type
+	input.Type = "invalid"
+	inputJSON, _ = json.Marshal(input)
+	result, _ = reg.Dispatch(context.Background(), "chart", inputJSON)
+
+	if !json.Valid([]byte(result)) {
+		t.Errorf("Expected valid JSON response, got: %s", result)
 	}
 }
