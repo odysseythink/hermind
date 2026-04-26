@@ -16,6 +16,10 @@ func init() {
 	gate := func(provider string) *Predicate {
 		return &Predicate{Field: "search.provider", In: []any{"", provider}}
 	}
+	// Gate DDG proxy fields on search.provider selection (visible on "" or "DuckDuckGo")
+	ddgGate := func(provider string) *Predicate {
+		return &Predicate{Field: "search.provider", In: []any{"", provider}}
+	}
 	Register(Section{
 		Key:     "web",
 		Label:   "Web tools",
@@ -28,7 +32,7 @@ func init() {
 				Label: "Search provider",
 				Help:  "Leave blank to auto-select by priority (Tavily > Brave > Exa > DuckDuckGo).",
 				Kind:  FieldEnum,
-				Enum:  []string{"", "tavily", "brave", "exa", "ddg"},
+				Enum:  []string{"tavily", "brave", "exa", "DuckDuckGo"},
 			},
 			{
 				Name:        "search.providers.tavily.api_key",
@@ -50,6 +54,27 @@ func init() {
 				Kind:        FieldSecret,
 				Help:        "Env var EXA_API_KEY overrides this value at runtime.",
 				VisibleWhen: gate("exa"),
+			},
+			{
+				Name:        "search.providers.duckduckgo.url",
+				Label:       "Proxy URL",
+				Help:        "Proxy endpoint URL (e.g., http://proxy.corp.com:8080 or socks5://proxy:1080). Leave blank to disable.",
+				Kind:        FieldString,
+				VisibleWhen: ddgGate("DuckDuckGo"),
+			},
+			{
+				Name:        "search.providers.duckduckgo.username",
+				Label:       "Proxy username",
+				Help:        "Optional proxy authentication username.",
+				Kind:        FieldString,
+				VisibleWhen: ddgGate("DuckDuckGo"),
+			},
+			{
+				Name:        "search.providers.duckduckgo.password",
+				Label:       "Proxy password",
+				Help:        "Optional proxy authentication password.",
+				Kind:        FieldSecret,
+				VisibleWhen: ddgGate("DuckDuckGo"),
 			},
 		},
 	})
