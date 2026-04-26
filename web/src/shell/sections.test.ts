@@ -78,9 +78,9 @@ describe('SECTIONS registry', () => {
     expect(memory.map(s => s.key)).toEqual(['presence']);
   });
 
-  it('advanced group exposes proxy, benchmark in declaration order', () => {
+  it('advanced group exposes proxy, web, benchmark in declaration order', () => {
     const advanced = sectionsInGroup('advanced');
-    expect(advanced.map(s => s.key)).toEqual(['proxy', 'benchmark']);
+    expect(advanced.map(s => s.key)).toEqual(['proxy', 'web', 'benchmark']);
   });
 
   it('sectionsInGroup returns [] for a group with no registered sections', () => {

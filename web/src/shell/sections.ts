@@ -28,6 +28,7 @@ export const SECTIONS: readonly SectionDef[] = [
   { key: 'presence', groupId: 'memory', plannedStage: 'done' },
   // advanced
   { key: 'proxy', groupId: 'advanced', plannedStage: 'done' },
+  { key: 'web', groupId: 'advanced', plannedStage: 'done' },
   { key: 'benchmark', groupId: 'advanced', plannedStage: 'done' },
 ] as const;
 
