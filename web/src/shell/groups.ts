@@ -71,9 +71,9 @@ export const GROUPS: readonly GroupDef[] = [
     id: 'advanced',
     label: 'Advanced',
     plannedStage: 'done',
-    configKeys: ['mcp', 'browser', 'cron'],
-    description: 'MCP servers, browser automation, and scheduled jobs.',
-    bullets: ['MCP server list', 'Browser (Browserbase / Camofox) config', 'Cron jobs'],
+    configKeys: ['mcp', 'browser', 'cron', 'web'],
+    description: 'MCP servers, browser automation, scheduled jobs, and web search config.',
+    bullets: ['MCP server list', 'Browser (Browserbase / Camofox) config', 'Cron jobs', 'Web search provider config'],
   },
   {
     id: 'gateway',
