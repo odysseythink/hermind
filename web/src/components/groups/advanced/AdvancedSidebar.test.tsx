@@ -25,23 +25,39 @@ function baseProps(
 }
 
 describe('AdvancedSidebar', () => {
-  it('renders "Browser" row', () => {
+  // Button labels come from descriptors.json via useDescriptorT; the ui.json
+  // fallbacks are only used if the descriptor key is absent.
+  const SCALAR_ROWS: Array<[string, RegExp]> = [
+    ['proxy', /anthropic.*messages proxy/i],
+    ['web', /^web tools$/i],
+    ['browser', /^browser$/i],
+    ['benchmark', /^benchmark$/i],
+  ];
+
+  it('renders all scalar rows: proxy, web, browser, benchmark', () => {
     render(<AdvancedSidebar {...baseProps()} />);
-    expect(screen.getByRole('button', { name: /^browser$/i })).toBeInTheDocument();
+    for (const [, name] of SCALAR_ROWS) {
+      expect(screen.getByRole('button', { name })).toBeInTheDocument();
+    }
   });
 
-  it('clicking Browser calls onSelectScalar("browser")', async () => {
-    const onSelectScalar = vi.fn();
-    render(<AdvancedSidebar {...baseProps({ onSelectScalar })} />);
-    await userEvent.click(screen.getByRole('button', { name: /^browser$/i }));
-    expect(onSelectScalar).toHaveBeenCalledWith('browser');
-  });
+  it.each(SCALAR_ROWS)(
+    'clicking %s row calls onSelectScalar with the section key',
+    async (key, name) => {
+      const onSelectScalar = vi.fn();
+      render(<AdvancedSidebar {...baseProps({ onSelectScalar })} />);
+      await userEvent.click(screen.getByRole('button', { name }));
+      expect(onSelectScalar).toHaveBeenCalledWith(key);
+    },
+  );
 
-  it('Browser row is active when activeSubKey is "browser"', () => {
-    render(<AdvancedSidebar {...baseProps({ activeSubKey: 'browser' })} />);
-    const btn = screen.getByRole('button', { name: /^browser$/i });
-    expect(btn.className).toMatch(/active/);
-  });
+  it.each(SCALAR_ROWS)(
+    '%s row is active when activeSubKey matches',
+    (key, name) => {
+      render(<AdvancedSidebar {...baseProps({ activeSubKey: key })} />);
+      expect(screen.getByRole('button', { name }).className).toMatch(/active/);
+    },
+  );
 
   it('shows empty state when cronJobs is empty', () => {
     render(<AdvancedSidebar {...baseProps({ cronJobs: [] })} />);

@@ -33,15 +33,24 @@ export default function AdvancedSidebar({
 }: AdvancedSidebarProps) {
   const { t } = useTranslation('ui');
   const dt = useDescriptorT();
+  const scalarRows: Array<{ key: string; fallback: string }> = [
+    { key: 'proxy', fallback: t('sidebar.proxy') },
+    { key: 'web', fallback: t('sidebar.web') },
+    { key: 'browser', fallback: t('sidebar.browser') },
+    { key: 'benchmark', fallback: t('sidebar.benchmark') },
+  ];
   return (
     <div className={styles.sidebar}>
-      <button
-        type="button"
-        className={`${styles.scalarRow} ${activeSubKey === 'browser' ? styles.active : ''}`}
-        onClick={() => onSelectScalar('browser')}
-      >
-        {dt.sectionLabel('browser', t('sidebar.browser'))}
-      </button>
+      {scalarRows.map(({ key, fallback }) => (
+        <button
+          key={key}
+          type="button"
+          className={`${styles.scalarRow} ${activeSubKey === key ? styles.active : ''}`}
+          onClick={() => onSelectScalar(key)}
+        >
+          {dt.sectionLabel(key, fallback)}
+        </button>
+      ))}
 
       <div className={styles.groupHeader}>{t('sidebar.mcpServers')}</div>
       {mcpInstances.length === 0 && (
