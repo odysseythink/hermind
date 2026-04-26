@@ -1,7 +1,9 @@
 package tool
 
 import (
+	"encoding/json"
 	"errors"
+	"fmt"
 	"strings"
 )
 
@@ -42,6 +44,8 @@ var validChartTypes = func() map[ChartType]bool {
 	return m
 }()
 
+const MaxDatasetSize = 1000
+
 // ChartInput is the request payload for the chart tool.
 type ChartInput struct {
 	Type    string `json:"type"`
@@ -73,12 +77,6 @@ func AllChartTypes() string {
 	return strings.Join(strs, ", ")
 }
 
-// ValidateChartInput checks all chart parameters and returns an error if invalid.
-// TODO: Implement full validation in Task 5 (integrate all validation checks)
-func ValidateChartInput(input *ChartInput) error {
-	return nil
-}
-
 // ValidateTitle checks that title is non-empty and non-whitespace.
 func ValidateTitle(title string) error {
 	if strings.TrimSpace(title) == "" {
@@ -96,13 +94,90 @@ func ValidateChartTypeInput(t string) error {
 }
 
 // ValidateDataset checks that dataset is valid JSON array with required structure.
-// TODO: Implement in Task 4 (dataset JSON parsing and validation)
 func ValidateDataset(datasetStr string) error {
+	var data []interface{}
+	if err := json.Unmarshal([]byte(datasetStr), &data); err != nil {
+		// Check if the error is due to non-array input
+		if err.Error() == "json: cannot unmarshal object into Go value of type []interface {}" {
+			return errors.New("dataset must be a JSON array, not an object")
+		}
+		return fmt.Errorf("invalid dataset JSON: %w", err)
+	}
+
+	if len(data) == 0 {
+		return errors.New("dataset cannot be empty")
+	}
+
+	// Check that all items are objects with "name" field and at least one numeric field
+	for i, item := range data {
+		obj, ok := item.(map[string]interface{})
+		if !ok {
+			return fmt.Errorf("dataset item %d: must be an object", i)
+		}
+
+		// Check for "name" field
+		if _, hasName := obj["name"]; !hasName {
+			return fmt.Errorf("dataset item %d: missing required 'name' field", i)
+		}
+
+		// Check for at least one numeric field (other than "name")
+		hasNumericField := false
+		for k, v := range obj {
+			if k == "name" {
+				continue
+			}
+			switch v.(type) {
+			case float64:
+				hasNumericField = true
+				break
+			}
+		}
+
+		if !hasNumericField {
+			return fmt.Errorf("dataset item %d: must have at least one numeric field", i)
+		}
+	}
+
 	return nil
 }
 
 // DatasetSize returns the number of records in the dataset.
-// TODO: Implement in Task 4 (dataset JSON parsing and validation)
 func DatasetSize(datasetStr string) (int, error) {
-	return 0, nil
+	var data []interface{}
+	if err := json.Unmarshal([]byte(datasetStr), &data); err != nil {
+		return 0, err
+	}
+	if len(data) == 0 {
+		return 0, errors.New("dataset is empty")
+	}
+	return len(data), nil
+}
+
+// ValidateChartInput checks all chart parameters and returns an error if invalid.
+func ValidateChartInput(input *ChartInput) error {
+	// Validate type
+	if err := ValidateChartTypeInput(input.Type); err != nil {
+		return err
+	}
+
+	// Validate title
+	if err := ValidateTitle(input.Title); err != nil {
+		return err
+	}
+
+	// Validate dataset structure
+	if err := ValidateDataset(input.Dataset); err != nil {
+		return err
+	}
+
+	// Validate dataset size
+	size, err := DatasetSize(input.Dataset)
+	if err != nil {
+		return err
+	}
+	if size > MaxDatasetSize {
+		return fmt.Errorf("dataset exceeds maximum size. Limit to %d records (found %d)", MaxDatasetSize, size)
+	}
+
+	return nil
 }

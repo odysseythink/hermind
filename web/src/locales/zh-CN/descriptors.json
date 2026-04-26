@@ -285,7 +285,7 @@
   "web.fields.search.provider.enum.tavily": "Tavily",
   "web.fields.search.provider.enum.brave": "Brave Search",
   "web.fields.search.provider.enum.exa": "Exa",
-  "web.fields.search.provider.enum.ddg": "DuckDuckGo(无需密钥)",
+  "web.fields.search.provider.enum.DuckDuckGo": "DuckDuckGo(无需密钥)",
   "web.fields.search.providers.tavily.api_key.label": "Tavily API 密钥",
   "web.fields.search.providers.tavily.api_key.help": "运行时环境变量 TAVILY_API_KEY 优先级高于此值。",
   "web.fields.search.providers.brave.api_key.label": "Brave Search API 密钥",

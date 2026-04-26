@@ -103,10 +103,10 @@ func TestDispatcher_ExplicitProviderWins(t *testing.T) {
 	t.Setenv("BRAVE_API_KEY", "")
 	t.Setenv("EXA_API_KEY", "")
 	providers := map[string]SearchProvider{
-		"tavily": &fakeProvider{id: "tavily", configured: true},
-		"brave":  &fakeProvider{id: "brave", configured: true},
-		"exa":    &fakeProvider{id: "exa", configured: true},
-		"ddg":    &fakeProvider{id: "ddg", configured: true},
+		"tavily":     &fakeProvider{id: "tavily", configured: true},
+		"brave":      &fakeProvider{id: "brave", configured: true},
+		"exa":        &fakeProvider{id: "exa", configured: true},
+		"DuckDuckGo": &fakeProvider{id: "DuckDuckGo", configured: true},
 	}
 	d := dispatcherWith(providers, "brave")
 	p, err := d.resolveProvider()
@@ -116,7 +116,7 @@ func TestDispatcher_ExplicitProviderWins(t *testing.T) {
 
 func TestDispatcher_ExplicitUnknownErrors(t *testing.T) {
 	providers := map[string]SearchProvider{
-		"ddg": &fakeProvider{id: "ddg", configured: true},
+		"DuckDuckGo": &fakeProvider{id: "DuckDuckGo", configured: true},
 	}
 	d := dispatcherWith(providers, "bogus")
 	_, err := d.resolveProvider()
@@ -126,8 +126,8 @@ func TestDispatcher_ExplicitUnknownErrors(t *testing.T) {
 
 func TestDispatcher_ExplicitUnconfiguredErrors(t *testing.T) {
 	providers := map[string]SearchProvider{
-		"tavily": &fakeProvider{id: "tavily", configured: false},
-		"ddg":    &fakeProvider{id: "ddg", configured: true},
+		"tavily":     &fakeProvider{id: "tavily", configured: false},
+		"DuckDuckGo": &fakeProvider{id: "DuckDuckGo", configured: true},
 	}
 	d := dispatcherWith(providers, "tavily")
 	_, err := d.resolveProvider()
@@ -137,10 +137,10 @@ func TestDispatcher_ExplicitUnconfiguredErrors(t *testing.T) {
 
 func TestDispatcher_AutoPriority(t *testing.T) {
 	providers := map[string]SearchProvider{
-		"tavily": &fakeProvider{id: "tavily", configured: false},
-		"brave":  &fakeProvider{id: "brave", configured: true},
-		"exa":    &fakeProvider{id: "exa", configured: true},
-		"ddg":    &fakeProvider{id: "ddg", configured: true},
+		"tavily":     &fakeProvider{id: "tavily", configured: false},
+		"brave":      &fakeProvider{id: "brave", configured: true},
+		"exa":        &fakeProvider{id: "exa", configured: true},
+		"DuckDuckGo": &fakeProvider{id: "DuckDuckGo", configured: true},
 	}
 	d := dispatcherWith(providers, "")
 	p, err := d.resolveProvider()
@@ -150,25 +150,25 @@ func TestDispatcher_AutoPriority(t *testing.T) {
 
 func TestDispatcher_AutoFallsBackToDDG(t *testing.T) {
 	providers := map[string]SearchProvider{
-		"tavily": &fakeProvider{id: "tavily", configured: false},
-		"brave":  &fakeProvider{id: "brave", configured: false},
-		"exa":    &fakeProvider{id: "exa", configured: false},
-		"ddg":    &fakeProvider{id: "ddg", configured: true},
+		"tavily":     &fakeProvider{id: "tavily", configured: false},
+		"brave":      &fakeProvider{id: "brave", configured: false},
+		"exa":        &fakeProvider{id: "exa", configured: false},
+		"DuckDuckGo": &fakeProvider{id: "DuckDuckGo", configured: true},
 	}
 	d := dispatcherWith(providers, "")
 	p, err := d.resolveProvider()
 	require.NoError(t, err)
-	assert.Equal(t, "ddg", p.ID())
+	assert.Equal(t, "DuckDuckGo", p.ID())
 }
 
 func TestDispatcher_HandlerCachesRepeatedQueries(t *testing.T) {
 	fake := &fakeProvider{
-		id:         "ddg",
+		id:         "DuckDuckGo",
 		configured: true,
 		results:    []SearchResult{{Title: "T", URL: "https://x", Snippet: "S"}},
 	}
-	providers := map[string]SearchProvider{"ddg": fake}
-	d := dispatcherWith(providers, "ddg")
+	providers := map[string]SearchProvider{"DuckDuckGo": fake}
+	d := dispatcherWith(providers, "DuckDuckGo")
 	h := d.Handler()
 
 	out1, err := h(context.Background(), json.RawMessage(`{"query":"golang"}`))
@@ -181,9 +181,9 @@ func TestDispatcher_HandlerCachesRepeatedQueries(t *testing.T) {
 }
 
 func TestDispatcher_HandlerDifferentQueriesBypassCache(t *testing.T) {
-	fake := &fakeProvider{id: "ddg", configured: true, results: []SearchResult{{Title: "T"}}}
-	providers := map[string]SearchProvider{"ddg": fake}
-	d := dispatcherWith(providers, "ddg")
+	fake := &fakeProvider{id: "DuckDuckGo", configured: true, results: []SearchResult{{Title: "T"}}}
+	providers := map[string]SearchProvider{"DuckDuckGo": fake}
+	d := dispatcherWith(providers, "DuckDuckGo")
 	h := d.Handler()
 
 	_, _ = h(context.Background(), json.RawMessage(`{"query":"a"}`))
@@ -224,7 +224,7 @@ func TestDispatcher_HandlerSerializesResult(t *testing.T) {
 }
 
 func TestDispatcher_HandlerRejectsEmptyQuery(t *testing.T) {
-	d := dispatcherWith(map[string]SearchProvider{"ddg": &fakeProvider{id: "ddg", configured: true}}, "ddg")
+	d := dispatcherWith(map[string]SearchProvider{"DuckDuckGo": &fakeProvider{id: "DuckDuckGo", configured: true}}, "DuckDuckGo")
 	out, err := d.Handler()(context.Background(), json.RawMessage(`{}`))
 	require.NoError(t, err)
 	assert.Contains(t, out, `"error"`)
@@ -232,18 +232,18 @@ func TestDispatcher_HandlerRejectsEmptyQuery(t *testing.T) {
 }
 
 func TestDispatcher_HandlerWrapsProviderError(t *testing.T) {
-	fake := &fakeProvider{id: "ddg", configured: true, err: errors.New("http 500")}
-	d := dispatcherWith(map[string]SearchProvider{"ddg": fake}, "ddg")
+	fake := &fakeProvider{id: "DuckDuckGo", configured: true, err: errors.New("http 500")}
+	d := dispatcherWith(map[string]SearchProvider{"DuckDuckGo": fake}, "DuckDuckGo")
 	out, err := d.Handler()(context.Background(), json.RawMessage(`{"query":"q"}`))
 	require.NoError(t, err)
 	assert.Contains(t, out, `"error"`)
-	assert.Contains(t, out, "ddg")
+	assert.Contains(t, out, "DuckDuckGo")
 	assert.Contains(t, out, "http 500")
 }
 
 func TestDispatcher_HandlerClampsNumResults(t *testing.T) {
-	fake := &fakeProvider{id: "ddg", configured: true, results: []SearchResult{{Title: "T"}}}
-	d := dispatcherWith(map[string]SearchProvider{"ddg": fake}, "ddg")
+	fake := &fakeProvider{id: "DuckDuckGo", configured: true, results: []SearchResult{{Title: "T"}}}
+	d := dispatcherWith(map[string]SearchProvider{"DuckDuckGo": fake}, "DuckDuckGo")
 
 	_, _ = d.Handler()(context.Background(), json.RawMessage(`{"query":"q"}`))
 	_, _ = d.Handler()(context.Background(), json.RawMessage(`{"query":"q2","num_results":30}`))

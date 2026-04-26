@@ -285,7 +285,7 @@
   "web.fields.search.provider.enum.tavily": "Tavily",
   "web.fields.search.provider.enum.brave": "Brave Search",
   "web.fields.search.provider.enum.exa": "Exa",
-  "web.fields.search.provider.enum.ddg": "DuckDuckGo (keyless)",
+  "web.fields.search.provider.enum.DuckDuckGo": "DuckDuckGo (keyless)",
   "web.fields.search.providers.tavily.api_key.label": "Tavily API key",
   "web.fields.search.providers.tavily.api_key.help": "Env var TAVILY_API_KEY overrides this value at runtime.",
   "web.fields.search.providers.brave.api_key.label": "Brave Search API key",

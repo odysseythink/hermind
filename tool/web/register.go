@@ -11,7 +11,7 @@ import (
 //
 //   - web_fetch is always registered (uses stdlib http, no credentials).
 //   - web_search is always registered; the dispatcher chooses a provider
-//     based on opts.SearchProvider or built-in priority. DDG is the
+//     based on opts.SearchProvider or built-in priority. DuckDuckGo is the
 //     keyless fallback so this tool is never unavailable.
 //   - web_extract is registered only when opts.FirecrawlAPIKey is
 //     non-empty.
