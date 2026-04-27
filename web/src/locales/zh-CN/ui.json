@@ -38,6 +38,16 @@
   "dialog.newPlatform.key":         "实例标识",
   "dialog.newPlatform.keyPlaceholder": "例如 telegram_1",
 
+  "skills.globals":     "全局设置",
+  "skills.list":        "技能",
+  "skills.listMeta":    "已安装 {{count}} · 已禁用 {{disabledCount}}",
+  "skills.empty":       "尚未安装技能。把 SKILL.md 放到 <instance>/skills/<category>/<name>/ 后刷新即可。",
+  "skills.loading":     "加载技能中…",
+  "skills.error":       "加载技能失败：{{msg}}",
+  "skills.errorRetry":  "重试",
+  "skills.rowMissing":  "（缺失）",
+  "skills.toggleAria":  "启用 {{name}}",
+
   "error.keyRequired":           "实例标识不能为空。",
   "error.keyFormat":             "请使用小写字母、数字、下划线,并以字母开头。",
   "error.keyDuplicate":          "已存在名为 \"{{key}}\" 的实例。",

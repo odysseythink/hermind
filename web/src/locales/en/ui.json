@@ -39,6 +39,16 @@
   "dialog.newPlatform.key":         "Instance key",
   "dialog.newPlatform.keyPlaceholder": "e.g. telegram_1",
 
+  "skills.globals":     "Global settings",
+  "skills.list":        "Skills",
+  "skills.listMeta":    "{{count}} installed · {{disabledCount}} disabled",
+  "skills.empty":       "No skills installed. Drop a SKILL.md into <instance>/skills/<category>/<name>/ and reload.",
+  "skills.loading":     "Loading skills…",
+  "skills.error":       "Failed to load skills: {{msg}}",
+  "skills.errorRetry":  "Retry",
+  "skills.rowMissing":  "(missing)",
+  "skills.toggleAria":  "Enable {{name}}",
+
   "error.keyRequired":           "Instance key is required.",
   "error.keyFormat":             "Use lowercase letters, digits, underscore. Must start with a letter.",
   "error.keyDuplicate":          "An instance named \"{{key}}\" already exists.",
