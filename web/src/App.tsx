@@ -205,7 +205,8 @@ export default function App() {
     const out = new Set<number>();
     const len = Math.max(cur.length, orig.length);
     for (let i = 0; i < len; i++) {
-      if (!shallowEqualRecord(cur[i], orig[i])) out.add(i);
+      // Use reference equality only (avoid expensive deepEqual)
+      if (cur[i] !== orig[i]) out.add(i);
     }
     return out;
   }, [deferredConfig, deferredOriginalConfig]);
@@ -270,7 +271,8 @@ export default function App() {
     const out = new Set<string>();
     const keys = new Set<string>([...Object.keys(cur), ...Object.keys(orig)]);
     for (const k of keys) {
-      if (!shallowEqualRecord(cur[k], orig[k])) out.add(k);
+      // Use reference equality only (avoid expensive deepEqual)
+      if (cur[k] !== orig[k]) out.add(k);
     }
     return out;
   }, [deferredConfig, deferredOriginalConfig]);
@@ -592,45 +594,3 @@ export default function App() {
   );
 }
 
-function shallowEqualRecord(
-  a: Record<string, unknown> | undefined,
-  b: Record<string, unknown> | undefined,
-): boolean {
-  if (a === b) return true;
-  if (!a || !b) return false;
-  const ak = Object.keys(a);
-  const bk = Object.keys(b);
-  if (ak.length !== bk.length) return false;
-  for (const k of ak) {
-    if (!deepEqual(a[k], b[k])) return false;
-  }
-  return true;
-}
-
-function deepEqual(a: unknown, b: unknown): boolean {
-  if (a === b) return true;
-  if (a === null || b === null) return false;
-  if (typeof a !== typeof b) return false;
-  if (typeof a !== 'object') return false;
-  // Fast path: use JSON serialization for large objects instead of recursion
-  try {
-    return JSON.stringify(a) === JSON.stringify(b);
-  } catch {
-    // Fallback to recursive comparison if JSON.stringify fails
-    if (Array.isArray(a) || Array.isArray(b)) {
-      if (!Array.isArray(a) || !Array.isArray(b)) return false;
-      if (a.length !== b.length) return false;
-      for (let i = 0; i < a.length; i++) {
-        if (!deepEqual(a[i], b[i])) return false;
-      }
-      return true;
-    }
-    const ao = a as Record<string, unknown>;
-    const bo = b as Record<string, unknown>;
-    const keys = new Set<string>([...Object.keys(ao), ...Object.keys(bo)]);
-    for (const k of keys) {
-      if (!deepEqual(ao[k], bo[k])) return false;
-    }
-    return true;
-  }
-}
