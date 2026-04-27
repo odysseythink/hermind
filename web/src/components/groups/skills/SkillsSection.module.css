@@ -1,0 +1,125 @@
+.section {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-5);
+}
+
+.header h2 {
+  font-family: var(--font-mono);
+  font-weight: 600;
+  font-size: var(--fs-lg);
+  letter-spacing: 0.02em;
+  margin: 0 0 var(--space-1);
+}
+.header p {
+  color: var(--muted);
+  font-size: var(--fs-sm);
+  margin: 0;
+}
+
+.panel {
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: var(--r-md);
+  padding: var(--space-3) var(--space-4);
+}
+
+.panelTitle {
+  font-family: var(--font-mono);
+  font-weight: 600;
+  font-size: var(--fs-sm);
+  letter-spacing: 0.05em;
+  text-transform: uppercase;
+  color: var(--text);
+  margin: 0 0 var(--space-3);
+}
+.panelTitleMeta {
+  color: var(--muted);
+  font-weight: 400;
+  text-transform: none;
+  letter-spacing: 0;
+  margin-left: var(--space-2);
+}
+
+.globalsRow {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--space-3);
+  padding: var(--space-2) 0;
+  border-bottom: 1px solid var(--border);
+}
+.globalsRow:last-child { border-bottom: none; }
+.globalsRow .label {
+  font-family: var(--font-mono);
+  font-size: var(--fs-sm);
+  color: var(--text);
+}
+.globalsRow .help {
+  font-size: var(--fs-sm);
+  color: var(--muted);
+  margin-top: 2px;
+}
+.globalsRow input.numberInput {
+  background: var(--bg);
+  border: 1px solid var(--border);
+  border-radius: var(--r-sm);
+  color: var(--text);
+  font-family: var(--font-mono);
+  font-variant-numeric: tabular-nums;
+  font-size: var(--fs-sm);
+  padding: var(--space-1) var(--space-2);
+  width: 60px;
+  text-align: right;
+}
+
+.skillRow {
+  display: grid;
+  grid-template-columns: 1fr auto;
+  gap: var(--space-3);
+  align-items: center;
+  padding: var(--space-2) 0;
+  border-bottom: 1px solid var(--border);
+}
+.skillRow:last-child { border-bottom: none; }
+.skillName {
+  font-family: var(--font-mono);
+  font-size: var(--fs-sm);
+  color: var(--text);
+}
+.skillNameMissing {
+  color: var(--muted);
+  font-weight: 400;
+  margin-left: var(--space-1);
+}
+.skillDescription {
+  color: var(--muted);
+  font-size: var(--fs-sm);
+  margin-top: 2px;
+  line-height: 1.45;
+}
+
+.statusRow {
+  color: var(--muted);
+  font-size: var(--fs-sm);
+  padding: var(--space-2) 0;
+}
+.errorRow {
+  color: var(--error);
+  font-size: var(--fs-sm);
+  padding: var(--space-2) 0;
+  display: flex;
+  align-items: center;
+  gap: var(--space-3);
+}
+.retryButton {
+  background: transparent;
+  border: 1px solid var(--border);
+  color: var(--text);
+  font-family: var(--font-mono);
+  font-size: var(--fs-sm);
+  padding: var(--space-1) var(--space-3);
+  border-radius: var(--r-sm);
+  cursor: pointer;
+}
+.retryButton:hover { background: var(--accent-bg); }
