@@ -166,7 +166,7 @@ describe('SkillsSection', () => {
     expect(onField).toHaveBeenCalledWith('auto_extract', true);
   });
 
-  it('inject_count input dispatches onField with the raw string', async () => {
+  it('inject_count input dispatches onField with a parsed number', async () => {
     mockSkillsApi([]);
     const onField = vi.fn();
     render(
@@ -180,6 +180,23 @@ describe('SkillsSection', () => {
     );
     const input = document.querySelector('#skills-inject-count') as HTMLInputElement;
     fireEvent.change(input, { target: { value: '7' } });
-    expect(onField).toHaveBeenCalledWith('inject_count', '7');
+    expect(onField).toHaveBeenCalledWith('inject_count', 7);
+  });
+
+  it('clearing inject_count dispatches 0, not empty string', async () => {
+    mockSkillsApi([]);
+    const onField = vi.fn();
+    render(
+      <SkillsSection
+        section={skillsSection}
+        value={{ inject_count: 3 }}
+        originalValue={{ inject_count: 3 }}
+        onField={onField}
+        config={{}}
+      />,
+    );
+    const input = document.querySelector('#skills-inject-count') as HTMLInputElement;
+    fireEvent.change(input, { target: { value: '' } });
+    expect(onField).toHaveBeenCalledWith('inject_count', 0);
   });
 });

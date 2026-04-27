@@ -37,6 +37,15 @@ function asString(v: unknown): string {
   return typeof v === 'string' ? v : String(v);
 }
 
+// parseIntField coerces an <input type="number"> string back to a number
+// for dispatch, since the backend YAML loader rejects string-encoded ints.
+// Empty / non-finite input falls back to 0.
+function parseIntField(raw: string): number {
+  if (raw === '') return 0;
+  const n = Number(raw);
+  return Number.isFinite(n) ? n : 0;
+}
+
 export default function SkillsSection(props: SkillsSectionProps) {
   const { t } = useTranslation('ui');
   const dt = useDescriptorT();
@@ -145,7 +154,7 @@ export default function SkillsSection(props: SkillsSectionProps) {
             type="number"
             className={styles.numberInput}
             value={asString(props.value.inject_count)}
-            onChange={(e) => props.onField('inject_count', e.currentTarget.value)}
+            onChange={(e) => props.onField('inject_count', parseIntField(e.currentTarget.value))}
           />
         </div>
 
@@ -163,7 +172,7 @@ export default function SkillsSection(props: SkillsSectionProps) {
             type="number"
             className={styles.numberInput}
             value={asString(props.value.generation_half_life)}
-            onChange={(e) => props.onField('generation_half_life', e.currentTarget.value)}
+            onChange={(e) => props.onField('generation_half_life', parseIntField(e.currentTarget.value))}
           />
         </div>
       </div>
