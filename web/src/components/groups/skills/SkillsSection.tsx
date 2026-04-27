@@ -19,6 +19,13 @@ type FetchState =
   | { status: 'ok'; skills: { name: string; description: string; enabled: boolean }[] }
   | { status: 'error'; message: string };
 
+type SkillRow = {
+  name: string;
+  description: string;
+  missing: boolean;
+  enabled: boolean;
+};
+
 function asBool(v: unknown): boolean {
   if (typeof v === 'boolean') return v;
   if (typeof v === 'string') return v === 'true';
@@ -62,13 +69,13 @@ export default function SkillsSection(props: SkillsSectionProps) {
   const disabled = (props.value.disabled as string[] | undefined) ?? [];
   const disabledSet = new Set(disabled);
 
-  const rows: Array<{ name: string; description: string; missing: boolean; enabled: boolean }> = [];
+  const rows: SkillRow[] = [];
   if (fetchState.status === 'ok') {
     const seen = new Set<string>();
     for (const s of fetchState.skills) {
       rows.push({
         name: s.name,
-        description: s.description || '',
+        description: s.description,
         missing: false,
         enabled: !disabledSet.has(s.name),
       });
