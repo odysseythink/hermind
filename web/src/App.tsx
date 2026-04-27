@@ -230,7 +230,8 @@ export default function App() {
     const out = new Set<string>();
     const keys = new Set<string>([...Object.keys(cur), ...Object.keys(orig)]);
     for (const k of keys) {
-      if (!shallowEqualRecord(cur[k], orig[k])) out.add(k);
+      // Shallow comparison only — avoid deep equality checks for performance
+      if (cur[k] !== orig[k]) out.add(k);
     }
     return out;
   }, [state.config, state.originalConfig]);
@@ -604,19 +605,25 @@ function deepEqual(a: unknown, b: unknown): boolean {
   if (a === null || b === null) return false;
   if (typeof a !== typeof b) return false;
   if (typeof a !== 'object') return false;
-  if (Array.isArray(a) || Array.isArray(b)) {
-    if (!Array.isArray(a) || !Array.isArray(b)) return false;
-    if (a.length !== b.length) return false;
-    for (let i = 0; i < a.length; i++) {
-      if (!deepEqual(a[i], b[i])) return false;
+  // Fast path: use JSON serialization for large objects instead of recursion
+  try {
+    return JSON.stringify(a) === JSON.stringify(b);
+  } catch {
+    // Fallback to recursive comparison if JSON.stringify fails
+    if (Array.isArray(a) || Array.isArray(b)) {
+      if (!Array.isArray(a) || !Array.isArray(b)) return false;
+      if (a.length !== b.length) return false;
+      for (let i = 0; i < a.length; i++) {
+        if (!deepEqual(a[i], b[i])) return false;
+      }
+      return true;
+    }
+    const ao = a as Record<string, unknown>;
+    const bo = b as Record<string, unknown>;
+    const keys = new Set<string>([...Object.keys(ao), ...Object.keys(bo)]);
+    for (const k of keys) {
+      if (!deepEqual(ao[k], bo[k])) return false;
     }
     return true;
   }
-  const ao = a as Record<string, unknown>;
-  const bo = b as Record<string, unknown>;
-  const keys = new Set<string>([...Object.keys(ao), ...Object.keys(bo)]);
-  for (const k of keys) {
-    if (!deepEqual(ao[k], bo[k])) return false;
-  }
-  return true;
 }
