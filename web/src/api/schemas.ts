@@ -100,3 +100,16 @@ export const StreamEventSchema = z.object({
   data: z.unknown().optional(),
 });
 export type StreamEvent = z.infer<typeof StreamEventSchema>;
+
+// /api/skills response — see api/dto.go::SkillDTO + SkillsResponse.
+export const SkillSchema = z.object({
+  name: z.string(),
+  description: z.string().optional().default(''),
+  enabled: z.boolean(),
+});
+export type Skill = z.infer<typeof SkillSchema>;
+
+export const SkillsResponseSchema = z.object({
+  skills: z.array(SkillSchema),
+});
+export type SkillsResponse = z.infer<typeof SkillsResponseSchema>;
