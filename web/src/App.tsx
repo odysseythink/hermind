@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useMemo, useReducer, useState } from 'react';
+import { useCallback, useEffect, useMemo, useReducer, useState, useTransition } from 'react';
 import { useTranslation } from 'react-i18next';
 import { apiFetch } from './api/client';
 import {
@@ -32,14 +32,19 @@ export default function App() {
   const [state, dispatch] = useReducer(reducer, initialState);
   const [instanceRoot, setInstanceRoot] = useState<string>('');
   const [currentModel, setCurrentModel] = useState<string>('');
+  const [, startTransition] = useTransition();
 
   // Hash-driven top-level mode router.
   const [hashState, setHashState] = useState(() => parseHash(window.location.hash));
   useEffect(() => {
-    const onChange = () => setHashState(parseHash(window.location.hash));
+    const onChange = () => {
+      startTransition(() => {
+        setHashState(parseHash(window.location.hash));
+      });
+    };
     window.addEventListener('hashchange', onChange);
     return () => window.removeEventListener('hashchange', onChange);
-  }, []);
+  }, [startTransition]);
 
   // Boot: fetch schema + config + instance meta
   useEffect(() => {
