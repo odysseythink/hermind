@@ -19,19 +19,20 @@ function setTitleFromInstance(instanceRoot: string) {
   document.title = `hermind — ${label}`;
 }
 
+// Mount React immediately without waiting for i18n, then initialize i18n
+// in the background. This unblocks SSE connections and reduces FCP.
+createRoot(rootElem).render(
+  <React.StrictMode>
+    <App />
+  </React.StrictMode>,
+);
+
+// Initialize i18n in background (non-blocking)
+initI18n().catch((err) => console.error('i18n init failed:', err));
+
 // Fetch /api/status early so the tab title reflects the instance even
 // before React mounts. Failures are silent — the tab keeps the default.
 fetch('/api/status')
   .then((r) => r.json())
   .then((s: { instance_root?: string }) => setTitleFromInstance(s.instance_root ?? ''))
   .catch(() => { /* ignore */ });
-
-initI18n()
-  .catch((err) => console.error('i18n init failed:', err))
-  .finally(() => {
-    createRoot(rootElem).render(
-      <React.StrictMode>
-        <App />
-      </React.StrictMode>,
-    );
-  });
