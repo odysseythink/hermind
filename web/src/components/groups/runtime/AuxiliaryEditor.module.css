@@ -1,0 +1,63 @@
+.editor {
+  padding: var(--space-5) var(--space-8);
+  max-width: 820px;
+}
+
+.body { margin-bottom: var(--space-5); }
+
+.footer {
+  display: flex;
+  align-items: center;
+  gap: var(--space-3);
+  padding-top: var(--space-4);
+  border-top: 1px solid var(--border);
+  flex-wrap: wrap;
+}
+
+.fetchBtn, .testBtn {
+  padding: var(--space-1) var(--space-3);
+  height: 30px;
+  border-radius: var(--r-sm);
+  font-family: var(--font-sans);
+  font-size: var(--fs-sm);
+  font-weight: 600;
+  cursor: pointer;
+  transition: background var(--t-fast) ease-out, border-color var(--t-fast) ease-out;
+}
+
+.fetchBtn {
+  background: var(--accent);
+  border: 1px solid var(--accent);
+  color: var(--accent-fg);
+}
+
+.fetchBtn:hover:not(:disabled) {
+  background: var(--accent-2);
+  border-color: var(--accent-2);
+}
+
+.testBtn {
+  background: transparent;
+  border: 1px solid var(--border);
+  color: var(--text);
+}
+
+.testBtn:hover:not(:disabled) {
+  background: var(--hover-tint);
+  border-color: var(--text);
+}
+
+.fetchBtn:disabled, .testBtn:disabled { opacity: 0.4; cursor: not-allowed; }
+
+.chipOk, .chipErr {
+  padding: 2px var(--space-2);
+  font-family: var(--font-mono);
+  font-size: var(--fs-xs);
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  border: 1px solid var(--border);
+  border-radius: var(--r-sm);
+}
+
+.chipOk  { color: var(--success); border-color: var(--success); }
+.chipErr { color: var(--error); border-color: var(--error); }

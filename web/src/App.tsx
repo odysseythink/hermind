@@ -6,6 +6,7 @@ import {
   ConfigSchemaResponseSchema,
   MetaResponseSchema,
   ProviderModelsResponseSchema,
+  ProviderTestResponseSchema,
 } from './api/schemas';
 import {
   dirtyGroups as selectDirtyGroups,
@@ -306,6 +307,30 @@ export default function App() {
     return res;
   }, []);
 
+  const onFetchAuxiliaryModels = useCallback(async () => {
+    const res = await apiFetch(`/api/auxiliary/models`, {
+      method: 'POST',
+      schema: ProviderModelsResponseSchema,
+    });
+    return res;
+  }, []);
+
+  const onTestAuxiliary = useCallback(async () => {
+    const res = await apiFetch(`/api/auxiliary/test`, {
+      method: 'POST',
+      schema: ProviderTestResponseSchema,
+    });
+    return res;
+  }, []);
+
+  const onTestProvider = useCallback(async (instanceKey: string) => {
+    const res = await apiFetch(`/api/providers/${encodeURIComponent(instanceKey)}/test`, {
+      method: 'POST',
+      schema: ProviderTestResponseSchema,
+    });
+    return res;
+  }, []);
+
   const dirtyGroupIds = useMemo(() => selectDirtyGroups(state), [state]);
   const dirty = totalDirtyCount(state);
 
@@ -484,7 +509,10 @@ export default function App() {
             dispatch({ type: 'shell/selectSub', key: null });
           }}
           onFetchModels={onFetchProviderModels}
+          onTestProvider={onTestProvider}
           onFetchFallbackModels={onFetchFallbackModels}
+          onFetchAuxiliaryModels={onFetchAuxiliaryModels}
+          onTestAuxiliary={onTestAuxiliary}
           onConfigListField={(sectionKey, index, field, value) => {
             dispatch({ type: 'edit/list-instance-field', sectionKey, subkey: sectionSubkey(sectionKey), index, field, value });
           }}

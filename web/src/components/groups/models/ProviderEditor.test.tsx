@@ -38,6 +38,7 @@ describe('ProviderEditor', () => {
       onField: () => {},
       onDelete: () => {},
       fetchModels: async () => ({ models: [] }),
+      testConnection: async () => ({ ok: true, latency_ms: 42 }),
       ...overrides,
     };
   }
@@ -108,6 +109,28 @@ describe('ProviderEditor', () => {
     await user.click(screen.getByRole('button', { name: /fetch models/i }));
     await waitFor(() => {
       expect(screen.getByText(/401 unauthorized/i)).toBeInTheDocument();
+    });
+  });
+
+  it('shows latency chip after a successful Test click', async () => {
+    const user = userEvent.setup();
+    const testConnection = vi.fn().mockResolvedValue({ ok: true, latency_ms: 137 });
+    render(<ProviderEditor {...baseProps({ testConnection })} />);
+    await user.click(screen.getByRole('button', { name: /^test$/i }));
+    await waitFor(() => {
+      expect(screen.getByText(/test passed/i)).toBeInTheDocument();
+    });
+    expect(testConnection).toHaveBeenCalledOnce();
+    expect(screen.getByText(/137ms/)).toBeInTheDocument();
+  });
+
+  it('shows error chip when Test rejects', async () => {
+    const user = userEvent.setup();
+    const testConnection = vi.fn().mockRejectedValue(new Error('model not available'));
+    render(<ProviderEditor {...baseProps({ testConnection })} />);
+    await user.click(screen.getByRole('button', { name: /^test$/i }));
+    await waitFor(() => {
+      expect(screen.getByText(/model not available/i)).toBeInTheDocument();
     });
   });
 

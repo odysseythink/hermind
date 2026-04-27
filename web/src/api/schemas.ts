@@ -61,6 +61,12 @@ export const ProviderModelsResponseSchema = z.object({
 });
 export type ProviderModelsResponse = z.infer<typeof ProviderModelsResponseSchema>;
 
+export const ProviderTestResponseSchema = z.object({
+  ok: z.boolean(),
+  latency_ms: z.number(),
+});
+export type ProviderTestResponse = z.infer<typeof ProviderTestResponseSchema>;
+
 // ---- Chat (single-conversation) ----
 
 export const StoredMessageSchema = z.object({

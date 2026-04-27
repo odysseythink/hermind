@@ -1,21 +1,16 @@
-import { useEffect, useId, useRef, useState } from 'react';
-import styles from './ProviderEditor.module.css';
+import { useMemo, useState } from 'react';
+import styles from './AuxiliaryEditor.module.css';
 import ConfigSection from '../../ConfigSection';
-import type { ConfigSection as ConfigSectionT } from '../../../api/schemas';
+import type { ConfigField, ConfigSection as ConfigSectionT } from '../../../api/schemas';
 
-export interface ProviderEditorProps {
-  sectionKey: string;
-  instanceKey: string;
+export interface AuxiliaryEditorProps {
   section: ConfigSectionT;
   value: Record<string, unknown>;
   originalValue: Record<string, unknown>;
   dirty: boolean;
-  onField: (instanceKey: string, field: string, value: unknown) => void;
-  onDelete: () => void;
+  onField: (field: string, value: unknown) => void;
   fetchModels: () => Promise<{ models: string[] }>;
   testConnection: () => Promise<{ ok: boolean; latency_ms: number }>;
-  /** Full config snapshot — forwarded to ConfigSection so cross-section
-   *  datalist_source hints on provider fields can resolve. Optional. */
   config?: Record<string, unknown>;
 }
 
@@ -31,34 +26,32 @@ type TestState =
   | { status: 'ok'; latencyMs: number }
   | { status: 'err'; error: string };
 
-export default function ProviderEditor(props: ProviderEditorProps) {
+function asString(v: unknown): string {
+  if (v === undefined || v === null) return '';
+  return typeof v === 'string' ? v : String(v);
+}
+
+export default function AuxiliaryEditor(props: AuxiliaryEditorProps) {
   const [models, setModels] = useState<string[]>([]);
   const [fetchState, setFetchState] = useState<FetchState>({ status: 'idle' });
   const [testState, setTestState] = useState<TestState>({ status: 'idle' });
-  const datalistId = useId();
-  const bodyRef = useRef<HTMLDivElement>(null);
 
-  // Wire the Model field's <input> to the sibling <datalist> so the browser's
-  // native autocomplete uses the fetched model list. ConfigSection renders
-  // TextInput without a `list` attribute; rather than invading ConfigSection's
-  // prop shape for this one case we set it from the outside after every render.
-  //
-  // TextInput wraps its <input> inside a <label> element whose label text is
-  // a <span>. It does not set `aria-label` on the input, so we locate the
-  // input by walking labels and matching the visible label text.
-  useEffect(() => {
-    const modelField = props.section.fields.find(f => f.name === 'model');
-    if (!modelField || !bodyRef.current) return;
-    const labels = bodyRef.current.querySelectorAll('label');
-    for (const label of Array.from(labels)) {
-      const span = label.querySelector('span');
-      if (span && span.textContent?.trim().startsWith(modelField.label)) {
-        const input = label.querySelector<HTMLInputElement>('input');
-        if (input) input.setAttribute('list', datalistId);
-        return;
-      }
-    }
-  });
+  // Synthesize a section where the `model` text field is rebuilt as an enum,
+  // so ConfigSection renders it via EnumSelect (a real <select>). Options are
+  // the union of fetched models and the currently saved value, so the user
+  // sees their existing model id even before clicking Fetch.
+  const synthSection = useMemo<ConfigSectionT>(() => {
+    const currentModel = asString(props.value.model);
+    const merged = new Set<string>(models);
+    if (currentModel) merged.add(currentModel);
+    const enumValues = Array.from(merged).sort();
+
+    const fields: ConfigField[] = props.section.fields.map(f => {
+      if (f.name !== 'model') return f;
+      return { ...f, kind: 'enum' as const, enum: enumValues };
+    });
+    return { ...props.section, fields };
+  }, [props.section, props.value.model, models]);
 
   async function onFetchClick() {
     setFetchState({ status: 'loading' });
@@ -81,35 +74,16 @@ export default function ProviderEditor(props: ProviderEditorProps) {
     }
   }
 
-  function onDeleteClick() {
-    if (window.confirm(`Delete provider "${props.instanceKey}"? This cannot be undone.`)) {
-      props.onDelete();
-    }
-  }
-
   return (
     <section className={styles.editor}>
-      <header className={styles.header}>
-        <div className={styles.breadcrumb}>
-          Models / Providers / <strong>{props.instanceKey}</strong>
-        </div>
-        <button type="button" className={styles.deleteBtn} onClick={onDeleteClick}>
-          Delete
-        </button>
-      </header>
-      <div ref={bodyRef} className={styles.body}>
+      <div className={styles.body}>
         <ConfigSection
-          section={props.section}
+          section={synthSection}
           value={props.value}
           originalValue={props.originalValue}
-          onFieldChange={(field, v) => props.onField(props.instanceKey, field, v)}
+          onFieldChange={(field, v) => props.onField(field, v)}
           config={props.config}
         />
-        <datalist id={datalistId} data-testid="provider-model-datalist">
-          {models.map(m => (
-            <option key={m} value={m} />
-          ))}
-        </datalist>
       </div>
       <footer className={styles.footer}>
         <button

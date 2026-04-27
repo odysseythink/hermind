@@ -5,6 +5,7 @@ import EmptyState from './EmptyState';
 import ConfigSection from '../ConfigSection';
 import ProviderEditor from '../groups/models/ProviderEditor';
 import FallbackProviderEditor from '../groups/models/FallbackProviderEditor';
+import AuxiliaryEditor from '../groups/runtime/AuxiliaryEditor';
 import SkillsSection from '../groups/skills/SkillsSection';
 import ListElementInlineEditor from './ListElementInlineEditor';
 import KeyedInstanceInlineEditor from './KeyedInstanceInlineEditor';
@@ -21,10 +22,13 @@ export interface ContentPanelProps {
   onConfigKeyedField: (sectionKey: string, instanceKey: string, field: string, value: unknown) => void;
   onConfigKeyedDelete: (sectionKey: string, instanceKey: string) => void;
   onFetchModels: (instanceKey: string) => Promise<{ models: string[] }>;
+  onTestProvider: (instanceKey: string) => Promise<{ ok: boolean; latency_ms: number }>;
   onConfigListField: (sectionKey: string, index: number, field: string, value: unknown) => void;
   onConfigListDelete: (sectionKey: string, index: number) => void;
   onConfigListMove: (sectionKey: string, index: number, direction: 'up' | 'down') => void;
   onFetchFallbackModels: (index: number) => Promise<{ models: string[] }>;
+  onFetchAuxiliaryModels: () => Promise<{ models: string[] }>;
+  onTestAuxiliary: () => Promise<{ ok: boolean; latency_ms: number }>;
 }
 
 function shallowEqualInstance(
@@ -80,6 +84,21 @@ export default function SettingsPanel(props: ContentPanelProps) {
             value={value ?? {}}
             originalValue={original ?? {}}
             onField={(field, v) => props.onConfigField(section.key, field, v)}
+            config={props.config as unknown as Record<string, unknown>}
+          />
+        );
+      }
+      if (section.key === 'auxiliary') {
+        const dirty = !shallowEqualInstance(value, original);
+        return (
+          <AuxiliaryEditor
+            section={section}
+            value={value ?? {}}
+            originalValue={original ?? {}}
+            dirty={dirty}
+            onField={(field, v) => props.onConfigField(section.key, field, v)}
+            fetchModels={props.onFetchAuxiliaryModels}
+            testConnection={props.onTestAuxiliary}
             config={props.config as unknown as Record<string, unknown>}
           />
         );
@@ -252,6 +271,7 @@ export default function SettingsPanel(props: ContentPanelProps) {
             }
             onDelete={() => props.onConfigKeyedDelete('providers', props.activeSubKey!)}
             fetchModels={() => props.onFetchModels(props.activeSubKey!)}
+            testConnection={() => props.onTestProvider(props.activeSubKey!)}
             config={props.config as unknown as Record<string, unknown>}
           />
         );

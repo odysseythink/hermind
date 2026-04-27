@@ -38,29 +38,29 @@ export default function ChatWorkspace({
     setRuntimeModel((prev) => (prev === '' && currentModel ? currentModel : prev));
   }, [currentModel]);
 
-  // Load conversation history in background to avoid blocking initial render
+  // Load conversation history in background to avoid blocking initial render.
+  // The dispatch must itself be in startTransition — wrapping the fetch call
+  // alone is useless because .then() resumes outside the sync transition scope.
   useEffect(() => {
     const ctrl = new AbortController();
-    startTransition(() => {
-      apiFetch('/api/conversation', {
-        schema: ConversationHistoryResponseSchema,
-        signal: ctrl.signal,
-      })
-        .then((r) =>
-          dispatch({
-            type: 'chat/history/loaded',
-            messages: r.messages.map((m) => ({
-              id: String(m.id),
-              role: m.role,
-              content: m.content,
-              timestamp: m.timestamp,
-            })),
-          }),
-        )
-        .catch(() => {
-          /* empty history is fine */
+    apiFetch('/api/conversation', {
+      schema: ConversationHistoryResponseSchema,
+      signal: ctrl.signal,
+    })
+      .then((r) => {
+        const messages = r.messages.map((m) => ({
+          id: String(m.id),
+          role: m.role,
+          content: m.content,
+          timestamp: m.timestamp,
+        }));
+        startTransition(() => {
+          dispatch({ type: 'chat/history/loaded', messages });
         });
-    });
+      })
+      .catch(() => {
+        /* empty history is fine */
+      });
     return () => ctrl.abort();
   }, [startTransition]);
 

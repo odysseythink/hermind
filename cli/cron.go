@@ -30,8 +30,6 @@ func newCronCmd(app *App) *cobra.Command {
 }
 
 func runCron(ctx context.Context, app *App) error {
-	logging.Setup(app.Config.Logging.Level)
-
 	if err := ensureStorage(app); err != nil {
 		return err
 	}

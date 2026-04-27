@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"runtime"
 
+	"github.com/odysseythink/hermind/logging"
 	"github.com/spf13/cobra"
 )
 
@@ -19,6 +20,8 @@ var (
 
 // NewRootCmd builds the cobra command tree.
 func NewRootCmd(app *App) *cobra.Command {
+	logging.Setup(app.Config.Logging.Level)
+
 	root := &cobra.Command{
 		Use:           "hermind",
 		Short:         "Hermind — Go port of the hermes AI agent framework",

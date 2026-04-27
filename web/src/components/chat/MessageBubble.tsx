@@ -1,3 +1,4 @@
+import { memo } from 'react';
 import StreamingCursor from './StreamingCursor';
 import MessageContent from './MessageContent';
 import type { ChatMessage } from '../../state/chat';
@@ -5,7 +6,7 @@ import styles from './MessageBubble.module.css';
 
 type Props = { message: ChatMessage; streaming?: boolean };
 
-export default function MessageBubble({ message, streaming }: Props) {
+function MessageBubbleImpl({ message, streaming }: Props) {
   const isUser = message.role === 'user';
   return (
     <div
@@ -31,3 +32,5 @@ export default function MessageBubble({ message, streaming }: Props) {
     </div>
   );
 }
+
+export default memo(MessageBubbleImpl);

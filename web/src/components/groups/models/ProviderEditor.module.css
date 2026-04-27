@@ -72,6 +72,27 @@
 
 .fetchBtn:disabled { opacity: 0.4; cursor: not-allowed; }
 
+.testBtn {
+  padding: var(--space-1) var(--space-3);
+  height: 30px;
+  background: transparent;
+  border: 1px solid var(--border);
+  border-radius: var(--r-sm);
+  color: var(--text);
+  font-family: var(--font-sans);
+  font-size: var(--fs-sm);
+  font-weight: 600;
+  cursor: pointer;
+  transition: background var(--t-fast) ease-out, border-color var(--t-fast) ease-out;
+}
+
+.testBtn:hover:not(:disabled) {
+  background: var(--hover-tint);
+  border-color: var(--text);
+}
+
+.testBtn:disabled { opacity: 0.4; cursor: not-allowed; }
+
 .chipOk, .chipErr {
   padding: 2px var(--space-2);
   font-family: var(--font-mono);
