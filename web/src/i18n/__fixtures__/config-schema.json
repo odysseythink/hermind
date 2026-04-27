@@ -962,13 +962,13 @@
   {
     "key": "skills",
     "label": "Skills",
-    "summary": "Enable or disable skills across every platform. Unchecked = enabled.",
+    "summary": "Enable or disable installed skills. The list reflects what's in \u003cinstance\u003e/skills/.",
     "group_id": "skills",
     "fields": [
       {
         "name": "disabled",
         "label": "Disabled skills",
-        "help": "Skills listed here never activate. Check a skill to disable it globally. Install skills into $HERMIND_HOME/skills to make them appear.",
+        "help": "Skills listed here never activate. Names mirror entries under $HERMIND_HOME/skills.",
         "kind": "multiselect"
       },
       {

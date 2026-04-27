@@ -14,14 +14,14 @@ func init() {
 	Register(Section{
 		Key:     "skills",
 		Label:   "Skills",
-		Summary: "Enable or disable skills across every platform. Unchecked = enabled.",
+		Summary: "Enable or disable installed skills. The list reflects what's in <instance>/skills/.",
 		GroupID: "skills",
 		Shape:   ShapeMap,
 		Fields: []FieldSpec{
 			{
 				Name:  "disabled",
 				Label: "Disabled skills",
-				Help:  "Skills listed here never activate. Check a skill to disable it globally. Install skills into $HERMIND_HOME/skills to make them appear.",
+				Help:  "Skills listed here never activate. Names mirror entries under $HERMIND_HOME/skills.",
 				Kind:  FieldMultiSelect,
 			},
 			{
