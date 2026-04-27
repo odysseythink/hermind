@@ -82,3 +82,41 @@ func TestAttachSkillsTrackerNilStoreReturnsNil(t *testing.T) {
 	tracker := attachSkillsTracker(context.Background(), nil, "")
 	require.Nil(t, tracker)
 }
+
+// TestBuildEngineDeps_AuxFallsBackToMainProvider verifies that when no
+// auxiliary provider is configured, AuxProvider is populated with the main
+// provider. The descriptor advertises this contract; without it the agent
+// engine's compressor never instantiates and history compression silently
+// no-ops, so long Telegram/web sessions blow past the model context.
+func TestBuildEngineDeps_AuxFallsBackToMainProvider(t *testing.T) {
+	tmp := t.TempDir()
+	store, err := sqlite.Open(filepath.Join(tmp, "h.db"))
+	require.NoError(t, err)
+	defer store.Close()
+	require.NoError(t, store.Migrate())
+
+	t.Setenv("HOME", tmp)
+	t.Setenv("ANTHROPIC_API_KEY", "")
+
+	app := &App{
+		Config: &config.Config{
+			Model: "anthropic/claude-opus-4-7",
+			Providers: map[string]config.ProviderConfig{
+				"anthropic": {Provider: "anthropic", APIKey: "sk-test", Model: "claude-opus-4-7"},
+			},
+			// Auxiliary intentionally left blank.
+			Terminal: config.TerminalConfig{Backend: "local"},
+			Storage:  config.StorageConfig{Driver: "sqlite"},
+		},
+		Storage: store,
+	}
+
+	deps, cleanup, err := BuildEngineDeps(context.Background(), app)
+	if cleanup != nil {
+		defer cleanup()
+	}
+	require.NoError(t, err)
+	require.NotNil(t, deps.Provider, "main provider must be set")
+	require.NotNil(t, deps.AuxProvider, "AuxProvider must fall back to main provider when auxiliary config is blank")
+	require.Same(t, deps.Provider, deps.AuxProvider, "blank-auxiliary fallback should reuse the main provider instance")
+}

@@ -117,6 +117,12 @@ func BuildEngineDeps(ctx context.Context, app *App) (api.EngineDeps, func(), err
 			auxProvider = auxP
 		}
 	}
+	// Blank auxiliary reuses the main provider so compression, the LLM judge,
+	// and memory-side aux calls still work without a separate API key. The
+	// descriptor (config/descriptor/auxiliary.go) advertises this contract.
+	if auxProvider == nil {
+		auxProvider = p
+	}
 
 	toolRegistry := tool.NewRegistry()
 	file.RegisterAll(toolRegistry)
