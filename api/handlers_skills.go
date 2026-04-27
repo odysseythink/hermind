@@ -1,21 +1,60 @@
 package api
 
-import "net/http"
+import (
+	"context"
+	"log/slog"
+	"net/http"
+	"path/filepath"
+	"sort"
 
-// handleSkillsList responds to GET /api/skills. It derives the enabled
-// state from the on-disk config (which is authoritative) and reports
-// disabled skills explicitly. The set of *available* skills is loaded
-// at REPL start time elsewhere; surfacing the discovered list here
-// would require moving the loader out of the agent package, deferred
-// to a later plan.
-func (s *Server) handleSkillsList(w http.ResponseWriter, _ *http.Request) {
+	"github.com/odysseythink/hermind/skills"
+)
+
+// handleSkillsList responds to GET /api/skills. Walks <InstanceRoot>/skills/
+// to discover installed skills, enriches each with the description parsed
+// from SKILL.md front-matter, and marks Enabled by checking the skill name
+// against config.skills.disabled. Names in the disabled list that are not
+// present on disk are emitted as "ghost" rows so users can still un-disable
+// orphaned entries from the UI.
+func (s *Server) handleSkillsList(w http.ResponseWriter, r *http.Request) {
+	skillsHome := filepath.Join(s.opts.InstanceRoot, "skills")
+	loaded := loadSkillsForList(r.Context(), skillsHome)
+
 	disabled := map[string]struct{}{}
 	for _, name := range s.opts.Config.Skills.Disabled {
 		disabled[name] = struct{}{}
 	}
-	out := make([]SkillDTO, 0, len(disabled))
+
+	out := make([]SkillDTO, 0, len(loaded)+len(disabled))
+	seen := map[string]struct{}{}
+	for _, sk := range loaded {
+		_, isDisabled := disabled[sk.Name]
+		out = append(out, SkillDTO{
+			Name:        sk.Name,
+			Description: sk.Description,
+			Enabled:     !isDisabled,
+		})
+		seen[sk.Name] = struct{}{}
+	}
 	for name := range disabled {
+		if _, found := seen[name]; found {
+			continue
+		}
 		out = append(out, SkillDTO{Name: name, Enabled: false})
 	}
+
+	sort.Slice(out, func(i, j int) bool { return out[i].Name < out[j].Name })
 	writeJSON(w, SkillsResponse{Skills: out})
+}
+
+// loadSkillsForList wraps skills.NewLoader and downgrades parse errors to
+// warnings — same forgiveness as discoveredSkillNames in
+// handlers_config_schema.go. A bad SKILL.md never fails the whole request.
+func loadSkillsForList(ctx context.Context, home string) []*skills.Skill {
+	l := skills.NewLoader(home)
+	loaded, errs := l.Load()
+	for _, e := range errs {
+		slog.WarnContext(ctx, "skills: failed to parse skill file", "path", e.Path, "err", e.Err)
+	}
+	return loaded
 }
