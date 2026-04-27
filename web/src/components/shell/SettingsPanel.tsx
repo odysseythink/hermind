@@ -5,6 +5,7 @@ import EmptyState from './EmptyState';
 import ConfigSection from '../ConfigSection';
 import ProviderEditor from '../groups/models/ProviderEditor';
 import FallbackProviderEditor from '../groups/models/FallbackProviderEditor';
+import SkillsSection from '../groups/skills/SkillsSection';
 import ListElementInlineEditor from './ListElementInlineEditor';
 import KeyedInstanceInlineEditor from './KeyedInstanceInlineEditor';
 
@@ -72,6 +73,17 @@ export default function SettingsPanel(props: ContentPanelProps) {
       const original = (props.originalConfig as Record<string, unknown>)[section.key] as
         | Record<string, unknown>
         | undefined;
+      if (section.key === 'skills') {
+        return (
+          <SkillsSection
+            section={section}
+            value={value ?? {}}
+            originalValue={original ?? {}}
+            onField={(field, v) => props.onConfigField(section.key, field, v)}
+            config={props.config as unknown as Record<string, unknown>}
+          />
+        );
+      }
       return (
         <ConfigSection
           section={section}
