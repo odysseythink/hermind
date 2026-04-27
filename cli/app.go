@@ -10,6 +10,7 @@ import (
 	"gopkg.in/yaml.v3"
 
 	"github.com/odysseythink/hermind/config"
+	"github.com/odysseythink/hermind/skills"
 	"github.com/odysseythink/hermind/storage"
 )
 
@@ -36,6 +37,10 @@ func NewApp() (*App, error) {
 
 	if err := os.MkdirAll(root, 0o755); err != nil {
 		return nil, fmt.Errorf("hermind: create instance root %s: %w", root, err)
+	}
+
+	if err := skills.EnsureDefaults(filepath.Join(root, "skills")); err != nil {
+		fmt.Fprintf(os.Stderr, "hermind: restore default skills: %v\n", err)
 	}
 
 	if _, statErr := os.Stat(cfgPath); errors.Is(statErr, os.ErrNotExist) {
