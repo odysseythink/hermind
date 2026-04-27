@@ -112,7 +112,7 @@ func (e *Engine) RunConversation(ctx context.Context, opts *RunOptions) (*Conver
 		}
 		iterations++
 
-		if !opts.Ephemeral && e.compressor != nil && shouldCompress(history, e.config.Compression) {
+		if !opts.Ephemeral && e.compressor != nil && shouldCompress(history, e.config.Compression, e.provider, model) {
 			if newHistory, err := e.compressor.Compress(ctx, history); err == nil {
 				history = newHistory
 			}
@@ -338,14 +338,80 @@ func (e *Engine) persistMessageTx(ctx context.Context, tx storage.Tx, m *message
 	return tx.AppendMessage(ctx, stored)
 }
 
-func shouldCompress(history []message.Message, cfg config.CompressionConfig) bool {
+// shouldCompress decides whether to invoke the Compressor for this turn.
+// Two triggers, OR-ed together:
+//
+//  1. Message-count trigger (legacy): len(history) > 3*ProtectLast.
+//     Cheap, doesn't need a tokenizer — kept as a safety net.
+//  2. Token-budget trigger: estimated history tokens >= Threshold *
+//     ContextLength of the active model. Catches the "few messages, but
+//     one of them is a 700KB paste" case that the count trigger misses.
+//
+// The token trigger is best-effort: it silently no-ops when the provider
+// or model info is unavailable, leaving the count trigger as the floor.
+func shouldCompress(history []message.Message, cfg config.CompressionConfig, p provider.Provider, model string) bool {
 	if !cfg.Enabled {
 		return false
 	}
 	if cfg.ProtectLast <= 0 {
 		return false
 	}
-	return len(history) > 3*cfg.ProtectLast
+	if len(history) > 3*cfg.ProtectLast {
+		return true
+	}
+	if p == nil || cfg.Threshold <= 0 {
+		return false
+	}
+	info := p.ModelInfo(model)
+	if info == nil || info.ContextLength <= 0 {
+		return false
+	}
+	budget := int(float64(info.ContextLength) * cfg.Threshold)
+	if budget <= 0 {
+		return false
+	}
+	return estimateHistoryTokens(p, model, history) >= budget
+}
+
+// estimateHistoryTokens sums the provider's per-block token estimate for
+// every message. Returns 0 when the provider can't estimate.
+func estimateHistoryTokens(p provider.Provider, model string, history []message.Message) int {
+	if p == nil {
+		return 0
+	}
+	total := 0
+	for _, m := range history {
+		total += estimateMessageTokens(p, model, m)
+	}
+	return total
+}
+
+// estimateMessageTokens counts the rendered text of every block. tool_use
+// inputs and tool_result payloads are included because they ride the wire
+// alongside chat text.
+func estimateMessageTokens(p provider.Provider, model string, m message.Message) int {
+	if p == nil {
+		return 0
+	}
+	if m.Content.IsText() {
+		n, _ := p.EstimateTokens(model, m.Content.Text())
+		return n
+	}
+	total := 0
+	for _, b := range m.Content.Blocks() {
+		switch b.Type {
+		case "text":
+			n, _ := p.EstimateTokens(model, b.Text)
+			total += n
+		case "tool_use":
+			n, _ := p.EstimateTokens(model, b.ToolUseName+string(b.ToolUseInput))
+			total += n
+		case "tool_result":
+			n, _ := p.EstimateTokens(model, b.ToolResult)
+			total += n
+		}
+	}
+	return total
 }
 
 func storedFromMessage(m *message.Message) (*storage.StoredMessage, error) {
