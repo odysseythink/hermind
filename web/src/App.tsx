@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useMemo, useReducer, useState, useTransition } from 'react';
+import { useCallback, useEffect, useMemo, useReducer, useState, useTransition, useDeferredValue } from 'react';
 import { useTranslation } from 'react-i18next';
 import { apiFetch } from './api/client';
 import {
@@ -33,6 +33,11 @@ export default function App() {
   const [instanceRoot, setInstanceRoot] = useState<string>('');
   const [currentModel, setCurrentModel] = useState<string>('');
   const [, startTransition] = useTransition();
+
+  // Defer expensive computed values to avoid blocking the main thread
+  const deferredState = useDeferredValue(state);
+  const deferredConfig = useDeferredValue(state.config);
+  const deferredOriginalConfig = useDeferredValue(state.originalConfig);
 
   // Hash-driven top-level mode router.
   const [hashState, setHashState] = useState(() => parseHash(window.location.hash));
@@ -141,19 +146,19 @@ export default function App() {
   }, [state.config]);
 
   const dirtyProviderKeys = useMemo(() => {
-    const cur = ((state.config as Record<string, unknown>).providers as
+    const cur = ((deferredConfig as Record<string, unknown>).providers as
       | Record<string, unknown>
       | undefined) ?? {};
-    const orig = ((state.originalConfig as Record<string, unknown>).providers as
+    const orig = ((deferredOriginalConfig as Record<string, unknown>).providers as
       | Record<string, unknown>
       | undefined) ?? {};
     const keys = new Set<string>([...Object.keys(cur), ...Object.keys(orig)]);
     const out = new Set<string>();
     for (const k of keys) {
-      if (keyedInstanceDirty(state, 'providers', k)) out.add(k);
+      if (keyedInstanceDirty(deferredState, 'providers', k)) out.add(k);
     }
     return out;
-  }, [state]);
+  }, [deferredConfig, deferredOriginalConfig, deferredState]);
 
   const fallbackProviders = useMemo(() => {
     const list = ((state.config as Record<string, unknown>).fallback_providers as
@@ -163,22 +168,22 @@ export default function App() {
   }, [state.config]);
 
   const dirtyFallbackIndices = useMemo(() => {
-    const cur = ((state.config as Record<string, unknown>).fallback_providers as
+    const cur = ((deferredConfig as Record<string, unknown>).fallback_providers as
       | Array<unknown>
       | undefined) ?? [];
-    const orig = ((state.originalConfig as Record<string, unknown>).fallback_providers as
+    const orig = ((deferredOriginalConfig as Record<string, unknown>).fallback_providers as
       | Array<unknown>
       | undefined) ?? [];
     const len = Math.max(cur.length, orig.length);
     const out = new Set<number>();
     for (let i = 0; i < len; i++) {
-      if (listInstanceDirty(state, 'fallback_providers', i)) out.add(i);
+      if (listInstanceDirty(deferredState, 'fallback_providers', i)) out.add(i);
     }
     return out;
-  }, [state]);
+  }, [deferredConfig, deferredOriginalConfig, deferredState]);
 
   const cronJobs = useMemo(() => {
-    const sec = (state.config as Record<string, unknown>).cron as
+    const sec = (deferredConfig as Record<string, unknown>).cron as
       | { jobs?: Array<Record<string, unknown>> }
       | undefined;
     const list = sec?.jobs ?? [];
@@ -186,13 +191,13 @@ export default function App() {
       name: typeof j.name === 'string' ? j.name : '',
       schedule: typeof j.schedule === 'string' ? j.schedule : '',
     }));
-  }, [state.config]);
+  }, [deferredConfig]);
 
   const dirtyCronIndices = useMemo(() => {
-    const cur = ((state.config as Record<string, unknown>).cron as
+    const cur = ((deferredConfig as Record<string, unknown>).cron as
       | { jobs?: Array<Record<string, unknown>> }
       | undefined)?.jobs ?? [];
-    const orig = ((state.originalConfig as Record<string, unknown>).cron as
+    const orig = ((deferredOriginalConfig as Record<string, unknown>).cron as
       | { jobs?: Array<Record<string, unknown>> }
       | undefined)?.jobs ?? [];
     const out = new Set<number>();
@@ -201,10 +206,10 @@ export default function App() {
       if (!shallowEqualRecord(cur[i], orig[i])) out.add(i);
     }
     return out;
-  }, [state.config, state.originalConfig]);
+  }, [deferredConfig, deferredOriginalConfig]);
 
   const mcpInstances = useMemo(() => {
-    const sec = (state.config as Record<string, unknown>).mcp as
+    const sec = (deferredConfig as Record<string, unknown>).mcp as
       | { servers?: Record<string, Record<string, unknown>> }
       | undefined;
     const servers = sec?.servers ?? {};
@@ -218,13 +223,13 @@ export default function App() {
           enabled: inst?.enabled !== false,
         };
       });
-  }, [state.config]);
+  }, [deferredConfig]);
 
   const dirtyMcpKeys = useMemo(() => {
-    const cur = ((state.config as Record<string, unknown>).mcp as
+    const cur = ((deferredConfig as Record<string, unknown>).mcp as
       | { servers?: Record<string, Record<string, unknown>> }
       | undefined)?.servers ?? {};
-    const orig = ((state.originalConfig as Record<string, unknown>).mcp as
+    const orig = ((deferredOriginalConfig as Record<string, unknown>).mcp as
       | { servers?: Record<string, Record<string, unknown>> }
       | undefined)?.servers ?? {};
     const out = new Set<string>();
@@ -234,10 +239,10 @@ export default function App() {
       if (cur[k] !== orig[k]) out.add(k);
     }
     return out;
-  }, [state.config, state.originalConfig]);
+  }, [deferredConfig, deferredOriginalConfig]);
 
   const gatewayInstances = useMemo(() => {
-    const sec = (state.config as Record<string, unknown>).gateway as
+    const sec = (deferredConfig as Record<string, unknown>).gateway as
       | { platforms?: Record<string, Record<string, unknown>> }
       | undefined;
     const platforms = sec?.platforms ?? {};
@@ -251,13 +256,13 @@ export default function App() {
           enabled: inst?.enabled !== false,
         };
       });
-  }, [state.config]);
+  }, [deferredConfig]);
 
   const dirtyGatewayKeys = useMemo(() => {
-    const cur = ((state.config as Record<string, unknown>).gateway as
+    const cur = ((deferredConfig as Record<string, unknown>).gateway as
       | { platforms?: Record<string, Record<string, unknown>> }
       | undefined)?.platforms ?? {};
-    const orig = ((state.originalConfig as Record<string, unknown>).gateway as
+    const orig = ((deferredOriginalConfig as Record<string, unknown>).gateway as
       | { platforms?: Record<string, Record<string, unknown>> }
       | undefined)?.platforms ?? {};
     const out = new Set<string>();
@@ -266,7 +271,7 @@ export default function App() {
       if (!shallowEqualRecord(cur[k], orig[k])) out.add(k);
     }
     return out;
-  }, [state.config, state.originalConfig]);
+  }, [deferredConfig, deferredOriginalConfig]);
 
   const sectionSubkey = useMemo(() => {
     const m = new Map<string, string | undefined>();
