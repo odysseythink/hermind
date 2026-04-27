@@ -1,4 +1,4 @@
-import { useEffect, useReducer, useState } from 'react';
+import { useEffect, useReducer, useState, useTransition } from 'react';
 import { useTranslation } from 'react-i18next';
 import ConversationHeader from './ConversationHeader';
 import MessageList from './MessageList';
@@ -23,10 +23,13 @@ export default function ChatWorkspace({
   modelOptions,
   currentModel,
 }: Props) {
+  console.time('ChatWorkspace render');
   const { t } = useTranslation('ui');
   const [state, dispatch] = useReducer(chatReducer, initialChatState);
   const [toast, setToast] = useState<string | null>(null);
   const [runtimeModel, setRuntimeModel] = useState<string>(currentModel);
+  const [, startTransition] = useTransition();
+  console.timeEnd('ChatWorkspace render');
 
   useChatStream(dispatch);
 
@@ -35,28 +38,31 @@ export default function ChatWorkspace({
     setRuntimeModel((prev) => (prev === '' && currentModel ? currentModel : prev));
   }, [currentModel]);
 
+  // Load conversation history in background to avoid blocking initial render
   useEffect(() => {
     const ctrl = new AbortController();
-    apiFetch('/api/conversation', {
-      schema: ConversationHistoryResponseSchema,
-      signal: ctrl.signal,
-    })
-      .then((r) =>
-        dispatch({
-          type: 'chat/history/loaded',
-          messages: r.messages.map((m) => ({
-            id: String(m.id),
-            role: m.role,
-            content: m.content,
-            timestamp: m.timestamp,
-          })),
-        }),
-      )
-      .catch(() => {
-        /* empty history is fine */
-      });
+    startTransition(() => {
+      apiFetch('/api/conversation', {
+        schema: ConversationHistoryResponseSchema,
+        signal: ctrl.signal,
+      })
+        .then((r) =>
+          dispatch({
+            type: 'chat/history/loaded',
+            messages: r.messages.map((m) => ({
+              id: String(m.id),
+              role: m.role,
+              content: m.content,
+              timestamp: m.timestamp,
+            })),
+          }),
+        )
+        .catch(() => {
+          /* empty history is fine */
+        });
+    });
     return () => ctrl.abort();
-  }, []);
+  }, [startTransition]);
 
   async function handleSend() {
     const text = state.composer.text.trim();

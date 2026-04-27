@@ -28,6 +28,7 @@ import NewPlatformDialog from './components/groups/gateway/NewPlatformDialog';
 import ChatWorkspace from './components/chat/ChatWorkspace';
 
 export default function App() {
+  console.time('App render');
   const { t } = useTranslation('ui');
   const [state, dispatch] = useReducer(reducer, initialState);
   const [instanceRoot, setInstanceRoot] = useState<string>('');
@@ -38,6 +39,7 @@ export default function App() {
   const deferredState = useDeferredValue(state);
   const deferredConfig = useDeferredValue(state.config);
   const deferredOriginalConfig = useDeferredValue(state.originalConfig);
+  console.timeEnd('App render');
 
   // Hash-driven top-level mode router.
   const [hashState, setHashState] = useState(() => parseHash(window.location.hash));
