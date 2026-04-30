@@ -196,6 +196,10 @@ func (s *Server) buildRouter() chi.Router {
 		r.Get("/skills/stats", s.handleSkillsStats)
 
 		r.Post("/upload", s.handleUpload)
+
+		r.Post("/feedback", s.handleFeedback)
+		r.Get("/suggestions", s.handleSuggestions)
+		r.Post("/tts", s.handleTTS)
 	})
 
 	if s.opts.Config.Proxy.Enabled {

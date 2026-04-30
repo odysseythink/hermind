@@ -8,9 +8,10 @@ interface Props {
   onEdit?: () => void;
   onDelete?: () => void;
   onRegenerate?: () => void;
+  onFeedback?: (score: number) => void;
 }
 
-export default function MessageActions({ messageId: _messageId, role, visible = true, onCopy, onEdit, onDelete, onRegenerate }: Props) {
+export default function MessageActions({ messageId: _messageId, role, visible = true, onCopy, onEdit, onDelete, onRegenerate, onFeedback }: Props) {
   return (
     <div className={styles.actions} style={{ opacity: visible ? 1 : undefined }}>
       {onCopy && (
@@ -44,6 +45,20 @@ export default function MessageActions({ messageId: _messageId, role, visible = 
             <path d="M3.51 15a9 9 0 102.13-9.36L1 10" />
           </svg>
         </button>
+      )}
+      {role === 'assistant' && onFeedback && (
+        <>
+          <button className={styles.actionBtn} onClick={() => onFeedback(1)} aria-label="Thumbs up">
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+              <path d="M14 9V5a3 3 0 00-3-3l-4 9v11h11.28a2 2 0 002-1.7l1.38-9a2 2 0 00-2-2.3zM7 22H4a2 2 0 01-2-2v-7a2 2 0 012-2h3" />
+            </svg>
+          </button>
+          <button className={styles.actionBtn} onClick={() => onFeedback(-1)} aria-label="Thumbs down">
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+              <path d="M10 15v4a3 3 0 003 3l4-9V2H5.72a2 2 0 00-2 1.7l-1.38 9a2 2 0 002 2.3zM17 2h3a2 2 0 012 2v7a2 2 0 01-2 2h-3" />
+            </svg>
+          </button>
+        </>
       )}
     </div>
   );
