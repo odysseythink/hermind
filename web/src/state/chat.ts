@@ -101,7 +101,7 @@ export function chatReducer(state: ChatState, action: ChatAction): ChatState {
           {
             id: `user-${Date.now()}`,
             role: 'user',
-            content: JSON.stringify({ text: action.userText }),
+            content: action.userText,
             timestamp: Date.now(),
           },
         ],

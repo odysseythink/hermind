@@ -8,7 +8,7 @@ import styles from './ChatWorkspace.module.css';
 import { useChatStream } from '../../hooks/useChatStream';
 import { chatReducer, initialChatState } from '../../state/chat';
 import { apiFetch, apiPut, apiDelete, ApiError } from '../../api/client';
-import { ConversationHistoryResponseSchema } from '../../api/schemas';
+import { ConversationHistoryResponseSchema, SuggestionsResponseSchema } from '../../api/schemas';
 
 type Props = {
   instanceRoot: string;
@@ -59,6 +59,24 @@ export default function ChatWorkspace({
       })
       .catch(() => {
         /* empty history is fine */
+      });
+    return () => ctrl.abort();
+  }, [startTransition]);
+
+  // Load suggestion prompts for empty-state cards.
+  useEffect(() => {
+    const ctrl = new AbortController();
+    apiFetch('/api/suggestions', {
+      schema: SuggestionsResponseSchema,
+      signal: ctrl.signal,
+    })
+      .then((r) => {
+        startTransition(() => {
+          dispatch({ type: 'chat/suggestions/loaded', suggestions: r.suggestions });
+        });
+      })
+      .catch(() => {
+        /* missing suggestions is fine */
       });
     return () => ctrl.abort();
   }, [startTransition]);
