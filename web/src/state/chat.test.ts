@@ -64,3 +64,70 @@ describe('chatReducer', () => {
     expect(s.streaming.status).toBe('idle');
   });
 });
+
+describe('chatReducer — new actions', () => {
+  it('chat/message/edit updates content and sets pending false', () => {
+    const state = {
+      ...initialChatState,
+      messages: [
+        { id: '1', role: 'user', content: 'old', timestamp: 0, chatId: 100 },
+      ],
+    };
+    const next = chatReducer(state, {
+      type: 'chat/message/edit',
+      id: '1',
+      content: 'new',
+    } as any);
+    expect(next.messages[0].content).toBe('new');
+    expect(next.messages[0].pending).toBe(false);
+  });
+
+  it('chat/message/delete removes the message', () => {
+    const state = {
+      ...initialChatState,
+      messages: [
+        { id: '1', role: 'user', content: 'hi', timestamp: 0 },
+        { id: '2', role: 'assistant', content: 'hello', timestamp: 1 },
+      ],
+    };
+    const next = chatReducer(state, {
+      type: 'chat/message/delete',
+      id: '1',
+    } as any);
+    expect(next.messages).toHaveLength(1);
+    expect(next.messages[0].id).toBe('2');
+  });
+
+  it('chat/message/regenerate clears assistant reply and sets streaming', () => {
+    const state = {
+      ...initialChatState,
+      messages: [
+        { id: '1', role: 'user', content: 'q', timestamp: 0 },
+        { id: '2', role: 'assistant', content: 'a', timestamp: 1 },
+      ],
+    };
+    const next = chatReducer(state, {
+      type: 'chat/message/regenerate',
+      id: '2',
+    } as any);
+    expect(next.messages).toHaveLength(1);
+    expect(next.streaming.status).toBe('running');
+  });
+
+  it('chat/composer/setAttachments replaces attachment list', () => {
+    const next = chatReducer(initialChatState, {
+      type: 'chat/composer/setAttachments',
+      attachments: [{ id: 'a1', name: 'file.txt', type: 'text/plain', url: '/uploads/a1', size: 12 }],
+    } as any);
+    expect(next.composer.attachments).toHaveLength(1);
+    expect(next.composer.attachments[0].name).toBe('file.txt');
+  });
+
+  it('chat/suggestions/loaded replaces suggestions', () => {
+    const next = chatReducer(initialChatState, {
+      type: 'chat/suggestions/loaded',
+      suggestions: ['What can you do?', 'Explain this code'],
+    } as any);
+    expect(next.suggestions).toEqual(['What can you do?', 'Explain this code']);
+  });
+});
