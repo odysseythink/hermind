@@ -78,6 +78,12 @@ func (r *recStore) UpdateMessage(_ context.Context, _ int64, _ string) error { r
 func (r *recStore) DeleteMessage(_ context.Context, _ int64) error          { return nil }
 func (r *recStore) DeleteMessagesAfter(_ context.Context, _ int64) error    { return nil }
 func (r *recStore) SaveFeedback(_ context.Context, _ int64, _ int) error     { return nil }
+func (r *recStore) SaveAttachment(_ context.Context, _ int64, _ string, _ string, _ string, _ int64) error {
+	return nil
+}
+func (r *recStore) ListAttachments(_ context.Context, _ int64) ([]storage.Attachment, error) {
+	return nil, nil
+}
 
 type nopTx struct{}
 

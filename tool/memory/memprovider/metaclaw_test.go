@@ -185,6 +185,14 @@ func (f *fakeStorage) SaveFeedback(_ context.Context, _ int64, _ int) error {
 	return nil
 }
 
+func (f *fakeStorage) SaveAttachment(_ context.Context, _ int64, _ string, _ string, _ string, _ int64) error {
+	return nil
+}
+
+func (f *fakeStorage) ListAttachments(_ context.Context, _ int64) ([]storage.Attachment, error) {
+	return nil, nil
+}
+
 // fakeTx implements the Tx interface for testing.
 type fakeTx struct{}
 

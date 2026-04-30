@@ -194,6 +194,8 @@ func (s *Server) buildRouter() chi.Router {
 		r.Get("/memory/{id}", s.handleMemoryGet)
 
 		r.Get("/skills/stats", s.handleSkillsStats)
+
+		r.Post("/upload", s.handleUpload)
 	})
 
 	if s.opts.Config.Proxy.Enabled {

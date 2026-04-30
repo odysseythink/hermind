@@ -64,6 +64,8 @@ type Storage interface {
 	DeleteMessage(ctx context.Context, id int64) error
 	DeleteMessagesAfter(ctx context.Context, id int64) error
 	SaveFeedback(ctx context.Context, messageID int64, score int) error
+	SaveAttachment(ctx context.Context, msgID int64, name string, mimeType string, url string, size int64) error
+	ListAttachments(ctx context.Context, msgID int64) ([]Attachment, error)
 
 	// Transactions — group multiple operations atomically.
 	WithTx(ctx context.Context, fn func(tx Tx) error) error
