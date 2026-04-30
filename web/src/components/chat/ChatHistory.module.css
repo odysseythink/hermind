@@ -1,0 +1,15 @@
+.history {
+  flex: 1;
+  overflow-y: auto;
+  position: relative;
+  padding: var(--space-4);
+  scroll-behavior: smooth;
+}
+
+.messages {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-4);
+  max-width: 900px;
+  margin: 0 auto;
+}
