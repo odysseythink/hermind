@@ -96,7 +96,7 @@ describe('chatReducer — new actions', () => {
     };
     const next = chatReducer(state, {
       type: 'chat/message/edit',
-      payload: { id: '1', content: 'new' },
+      id: '1', content: 'new',
     });
     expect(next.messages[0].content).toBe('new');
     expect(next.messages[0].pending).toBe(false);
@@ -112,7 +112,7 @@ describe('chatReducer — new actions', () => {
     };
     const next = chatReducer(state, {
       type: 'chat/message/delete',
-      payload: { id: '1' },
+      id: '1',
     });
     expect(next.messages).toHaveLength(1);
     expect(next.messages[0].id).toBe('2');
@@ -128,16 +128,16 @@ describe('chatReducer — new actions', () => {
     };
     const next = chatReducer(state, {
       type: 'chat/message/regenerate',
-      payload: { id: '2' },
+      id: '2',
     });
     expect(next.messages).toHaveLength(1);
-    expect(next.streaming.status).toBe('streaming');
+    expect(next.streaming.status).toBe('running');
   });
 
   it('chat/composer/setAttachments replaces attachment list', () => {
     const next = chatReducer(initialChatState, {
       type: 'chat/composer/setAttachments',
-      payload: [{ id: 'a1', name: 'file.txt', type: 'text/plain', url: '/uploads/a1', size: 12 }],
+      attachments: [{ id: 'a1', name: 'file.txt', type: 'text/plain', url: '/uploads/a1', size: 12 }],
     });
     expect(next.composer.attachments).toHaveLength(1);
     expect(next.composer.attachments[0].name).toBe('file.txt');
@@ -146,7 +146,7 @@ describe('chatReducer — new actions', () => {
   it('chat/suggestions/loaded replaces suggestions', () => {
     const next = chatReducer(initialChatState, {
       type: 'chat/suggestions/loaded',
-      payload: ['What can you do?', 'Explain this code'],
+      suggestions: ['What can you do?', 'Explain this code'],
     });
     expect(next.suggestions).toEqual(['What can you do?', 'Explain this code']);
   });
@@ -205,15 +205,16 @@ export type ChatMessage = {
 export type ToolCall = {
   id: string;
   name: string;
-  arguments: string;
-  state: 'pending' | 'running' | 'done' | 'error';
+  input: unknown;
+  state: 'running' | 'done' | 'error';
   result?: string;
 };
 
 export type StreamingState = {
-  status: 'idle' | 'streaming' | 'error';
+  status: 'idle' | 'running' | 'error';
   assistantDraft: string;
   toolCalls: ToolCall[];
+  error?: string;
 };
 
 export type ChatState = {
@@ -234,37 +235,45 @@ export const initialChatState: ChatState = {
 };
 
 export type ChatAction =
-  | { type: 'chat/history/loaded'; payload: ChatMessage[] }
-  | { type: 'chat/composer/setText'; payload: string }
-  | { type: 'chat/composer/setAttachments'; payload: Attachment[] }
-  | { type: 'chat/stream/start'; payload: { userMessage: ChatMessage } }
-  | { type: 'chat/stream/token'; payload: string }
-  | { type: 'chat/stream/toolCall'; payload: ToolCall }
-  | { type: 'chat/stream/toolResult'; payload: { id: string; result: string; state: ToolCall['state'] } }
-  | { type: 'chat/stream/done'; payload?: { finishReason?: string } }
-  | { type: 'chat/stream/error'; payload: string }
+  | { type: 'chat/history/loaded'; messages: ChatMessage[] }
+  | { type: 'chat/composer/setText'; text: string }
+  | { type: 'chat/composer/setAttachments'; attachments: Attachment[] }
+  | { type: 'chat/stream/start'; userText: string }
+  | { type: 'chat/stream/token'; delta: string }
+  | { type: 'chat/stream/toolCall'; call: ToolCall }
+  | { type: 'chat/stream/toolResult'; id: string; result: string }
+  | { type: 'chat/stream/done'; assistantText: string }
+  | { type: 'chat/stream/error'; message: string }
   | { type: 'chat/stream/rollbackUserMessage' }
-  | { type: 'chat/message/edit'; payload: { id: string; content: string } }
-  | { type: 'chat/message/delete'; payload: { id: string } }
-  | { type: 'chat/message/regenerate'; payload: { id: string } }
-  | { type: 'chat/suggestions/loaded'; payload: string[] };
+  | { type: 'chat/message/edit'; id: string; content: string }
+  | { type: 'chat/message/delete'; id: string }
+  | { type: 'chat/message/regenerate'; id: string }
+  | { type: 'chat/suggestions/loaded'; suggestions: string[] };
 
 export function chatReducer(state: ChatState, action: ChatAction): ChatState {
   switch (action.type) {
     case 'chat/history/loaded':
-      return { ...state, messages: action.payload };
+      return { ...state, messages: action.messages };
 
     case 'chat/composer/setText':
-      return { ...state, composer: { ...state.composer, text: action.payload } };
+      return { ...state, composer: { ...state.composer, text: action.text } };
 
     case 'chat/composer/setAttachments':
-      return { ...state, composer: { ...state.composer, attachments: action.payload } };
+      return { ...state, composer: { ...state.composer, attachments: action.attachments } };
 
     case 'chat/stream/start':
       return {
         ...state,
-        messages: [...state.messages, action.payload.userMessage],
-        streaming: { status: 'streaming', assistantDraft: '', toolCalls: [] },
+        messages: [
+          ...state.messages,
+          {
+            id: `user-${Date.now()}`,
+            role: 'user',
+            content: JSON.stringify({ text: action.userText }),
+            timestamp: Date.now(),
+          },
+        ],
+        streaming: { status: 'running', assistantDraft: '', toolCalls: [] },
       };
 
     case 'chat/stream/token':
@@ -272,34 +281,34 @@ export function chatReducer(state: ChatState, action: ChatAction): ChatState {
         ...state,
         streaming: {
           ...state.streaming,
-          assistantDraft: state.streaming.assistantDraft + action.payload,
+          assistantDraft: state.streaming.assistantDraft + action.delta,
         },
       };
 
     case 'chat/stream/toolCall': {
-      const idx = state.streaming.toolCalls.findIndex((t) => t.id === action.payload.id);
+      const idx = state.streaming.toolCalls.findIndex((t) => t.id === action.call.id);
       const next = [...state.streaming.toolCalls];
       if (idx >= 0) {
-        next[idx] = action.payload;
+        next[idx] = action.call;
       } else {
-        next.push(action.payload);
+        next.push(action.call);
       }
       return { ...state, streaming: { ...state.streaming, toolCalls: next } };
     }
 
     case 'chat/stream/toolResult': {
-      const idx = state.streaming.toolCalls.findIndex((t) => t.id === action.payload.id);
+      const idx = state.streaming.toolCalls.findIndex((t) => t.id === action.id);
       if (idx < 0) return state;
       const next = [...state.streaming.toolCalls];
-      next[idx] = { ...next[idx], result: action.payload.result, state: action.payload.state };
+      next[idx] = { ...next[idx], result: action.result, state: 'done' as const };
       return { ...state, streaming: { ...state.streaming, toolCalls: next } };
     }
 
     case 'chat/stream/done': {
       const assistantMsg: ChatMessage = {
-        id: crypto.randomUUID(),
+        id: `asst-${Date.now()}`,
         role: 'assistant',
-        content: state.streaming.assistantDraft,
+        content: state.streaming.assistantDraft || action.assistantText,
         timestamp: Date.now(),
       };
       return {
@@ -312,7 +321,7 @@ export function chatReducer(state: ChatState, action: ChatAction): ChatState {
     case 'chat/stream/error':
       return {
         ...state,
-        streaming: { status: 'error', assistantDraft: '', toolCalls: [] },
+        streaming: { status: 'error', assistantDraft: '', toolCalls: [], error: action.message },
       };
 
     case 'chat/stream/rollbackUserMessage':
@@ -324,31 +333,29 @@ export function chatReducer(state: ChatState, action: ChatAction): ChatState {
 
     case 'chat/message/edit': {
       const msgs = state.messages.map((m) =>
-        m.id === action.payload.id
-          ? { ...m, content: action.payload.content, pending: false }
-          : m
+        m.id === action.id ? { ...m, content: action.content, pending: false } : m
       );
       return { ...state, messages: msgs };
     }
 
     case 'chat/message/delete': {
-      const targetIndex = state.messages.findIndex((m) => m.id === action.payload.id);
+      const targetIndex = state.messages.findIndex((m) => m.id === action.id);
       if (targetIndex < 0) return state;
       return { ...state, messages: state.messages.slice(0, targetIndex) };
     }
 
     case 'chat/message/regenerate': {
-      const targetIndex = state.messages.findIndex((m) => m.id === action.payload.id);
+      const targetIndex = state.messages.findIndex((m) => m.id === action.id);
       if (targetIndex < 0) return state;
       return {
         ...state,
         messages: state.messages.slice(0, targetIndex),
-        streaming: { status: 'streaming', assistantDraft: '', toolCalls: [] },
+        streaming: { status: 'running', assistantDraft: '', toolCalls: [] },
       };
     }
 
     case 'chat/suggestions/loaded':
-      return { ...state, suggestions: action.payload };
+      return { ...state, suggestions: action.suggestions };
 
     default:
       return state;
@@ -395,17 +402,16 @@ import {
 } from './schemas';
 
 describe('Extended schemas', () => {
-  it('StoredMessageSchema parses chat_id', () => {
+  it('StoredMessageSchema parses numeric id', () => {
     const result = StoredMessageSchema.safeParse({
-      id: '1',
+      id: 1,
       role: 'user',
       content: 'hi',
       timestamp: 1.0,
-      chat_id: 42,
     });
     expect(result.success).toBe(true);
     if (result.success) {
-      expect(result.data.chat_id).toBe(42);
+      expect(result.data.id).toBe(1);
     }
   });
 
@@ -441,7 +447,7 @@ In `web/src/api/schemas.ts`, extend `StoredMessageSchema` and add new schemas:
 ```typescript
 // Near StoredMessageSchema — add optional chat_id
 export const StoredMessageSchema = z.object({
-  id: z.string(),
+  id: z.number(),
   role: z.string(),
   content: z.string(),
   timestamp: z.number(),
@@ -449,7 +455,6 @@ export const StoredMessageSchema = z.object({
   tool_name: z.string().optional(),
   finish_reason: z.string().optional(),
   reasoning: z.string().optional(),
-  chat_id: z.number().optional(), // NEW
 });
 
 // New request/response schemas
@@ -659,7 +664,7 @@ case 9:
 	if _, err := tx.Exec(`
 		CREATE TABLE IF NOT EXISTS feedback (
 			id INTEGER PRIMARY KEY AUTOINCREMENT,
-			message_id INTEGER NOT NULL,
+			message_id INTEGER NOT NULL UNIQUE,
 			score INTEGER NOT NULL,
 			created_at TEXT DEFAULT (datetime('now')),
 			FOREIGN KEY (message_id) REFERENCES messages(id) ON DELETE CASCADE
@@ -739,7 +744,7 @@ type RegenerateResponse struct {
 }
 ```
 
-In `api/handlers_conversation.go`, append handlers:
+In `api/handlers_conversation.go`, add `"strings"` to the import block, then append handlers:
 
 ```go
 func (s *Server) handleConversationMessagePut(w http.ResponseWriter, r *http.Request) {
@@ -760,7 +765,7 @@ func (s *Server) handleConversationMessagePut(w http.ResponseWriter, r *http.Req
 		return
 	}
 
-	if err := s.storage.UpdateMessage(r.Context(), id, req.Content); err != nil {
+	if err := s.opts.Storage.UpdateMessage(r.Context(), id, req.Content); err != nil {
 		http.Error(w, err.Error(), http.StatusInternalServerError)
 		return
 	}
@@ -775,7 +780,7 @@ func (s *Server) handleConversationMessageDelete(w http.ResponseWriter, r *http.
 		return
 	}
 
-	if err := s.storage.DeleteMessage(r.Context(), id); err != nil {
+	if err := s.opts.Storage.DeleteMessage(r.Context(), id); err != nil {
 		http.Error(w, err.Error(), http.StatusInternalServerError)
 		return
 	}
@@ -790,8 +795,8 @@ func (s *Server) handleConversationMessageRegenerate(w http.ResponseWriter, r *h
 		return
 	}
 
-	// Delete everything after this message, then re-run conversation
-	if err := s.storage.DeleteMessagesAfter(r.Context(), id); err != nil {
+	// Delete this message and everything after it, then re-run conversation
+	if err := s.opts.Storage.DeleteMessage(r.Context(), id); err != nil {
 		http.Error(w, err.Error(), http.StatusInternalServerError)
 		return
 	}
@@ -1453,15 +1458,16 @@ import styles from './MessageActions.module.css';
 interface Props {
   messageId: string;
   role: string;
+  visible?: boolean;
   onCopy?: () => void;
   onEdit?: () => void;
   onDelete?: () => void;
   onRegenerate?: () => void;
 }
 
-export default function MessageActions({ messageId, role, onCopy, onEdit, onDelete, onRegenerate }: Props) {
+export default function MessageActions({ messageId, role, visible = true, onCopy, onEdit, onDelete, onRegenerate }: Props) {
   return (
-    <div className={styles.actions}>
+    <div className={styles.actions} style={{ opacity: visible ? 1 : undefined }}>
       {onCopy && (
         <button className={styles.actionBtn} onClick={onCopy} aria-label="Copy message">
           <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
@@ -1509,9 +1515,11 @@ Create `web/src/components/chat/MessageActions.module.css`:
   transition: opacity var(--t-fast);
 }
 
-/* Show actions on message hover */
-:global(.messageRow:hover) .actions {
-  opacity: 1;
+/* Actions are always visible on touch devices; hidden on desktop until hover */
+@media (hover: hover) {
+  .actions {
+    opacity: 0;
+  }
 }
 
 .actionBtn {
@@ -1552,6 +1560,7 @@ interface Props {
 const HistoricalMessage = memo(function HistoricalMessage({ message, onEdit, onDelete, onRegenerate }: Props) {
   const [isEditing, setIsEditing] = useState(false);
   const [editText, setEditText] = useState(message.content);
+  const [isHovered, setIsHovered] = useState(false);
   const isUser = message.role === 'user';
 
   const handleCopy = useCallback(() => {
@@ -1571,7 +1580,11 @@ const HistoricalMessage = memo(function HistoricalMessage({ message, onEdit, onD
   }, [message.content]);
 
   return (
-    <div className={`${styles.row} ${isUser ? styles.userRow : styles.assistantRow} messageRow`}>
+    <div
+      className={`${styles.row} ${isUser ? styles.userRow : styles.assistantRow}`}
+      onMouseEnter={() => setIsHovered(true)}
+      onMouseLeave={() => setIsHovered(false)}
+    >
       {!isUser && (
         <div className={styles.avatar} aria-label="Assistant avatar">
           <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
@@ -1612,6 +1625,7 @@ const HistoricalMessage = memo(function HistoricalMessage({ message, onEdit, onD
             <MessageActions
               messageId={message.id}
               role={message.role}
+              visible={isHovered}
               onCopy={handleCopy}
               onEdit={isUser ? () => setIsEditing(true) : undefined}
               onDelete={onDelete ? () => onDelete(message.id) : undefined}
@@ -1881,7 +1895,7 @@ import PromptInput from './PromptInput';
 
 describe('PromptInput', () => {
   it('renders textarea and send button', () => {
-    render(<PromptInput text="" onChange={vi.fn()} onSend={vi.fn()} streaming={false} />);
+    render(<PromptInput text="" attachments={[]} onChange={vi.fn()} onSend={vi.fn()} streaming={false} />);
     expect(screen.getByPlaceholderText('Type a message...')).toBeInTheDocument();
     expect(screen.getByLabelText('Send message')).toBeInTheDocument();
   });
@@ -1889,7 +1903,7 @@ describe('PromptInput', () => {
   it('calls onSend when Enter is pressed without Shift', async () => {
     const user = userEvent.setup();
     const onSend = vi.fn();
-    render(<PromptInput text="hello" onChange={vi.fn()} onSend={onSend} streaming={false} />);
+    render(<PromptInput text="hello" attachments={[]} onChange={vi.fn()} onSend={onSend} streaming={false} />);
     await user.type(screen.getByPlaceholderText('Type a message...'), '{Enter}');
     expect(onSend).toHaveBeenCalled();
   });
@@ -1897,7 +1911,7 @@ describe('PromptInput', () => {
   it('does not call onSend when Shift+Enter is pressed', async () => {
     const user = userEvent.setup();
     const onSend = vi.fn();
-    render(<PromptInput text="hello" onChange={vi.fn()} onSend={onSend} streaming={false} />);
+    render(<PromptInput text="hello" attachments={[]} onChange={vi.fn()} onSend={onSend} streaming={false} />);
     await user.type(screen.getByPlaceholderText('Type a message...'), '{Shift>}{Enter}{/Shift}');
     expect(onSend).not.toHaveBeenCalled();
   });
@@ -1925,6 +1939,7 @@ interface Props {
   text: string;
   attachments: Attachment[];
   streaming: boolean;
+  disabled?: boolean;
   onChange: (text: string) => void;
   onSend: () => void;
   onStop?: () => void;
@@ -1935,6 +1950,7 @@ export default function PromptInput({
   text,
   attachments,
   streaming,
+  disabled = false,
   onChange,
   onSend,
   onStop,
@@ -2001,7 +2017,7 @@ export default function PromptInput({
           onKeyDown={handleKeyDown}
           placeholder="Type a message..."
           rows={1}
-          disabled={streaming}
+          disabled={streaming || disabled}
         />
         {streaming ? (
           <button className={styles.stopBtn} onClick={onStop} aria-label="Stop generation">
@@ -2190,8 +2206,8 @@ import styles from './ChatWorkspace.module.css';
 import { chatReducer, initialChatState } from '../../state/chat';
 import { useChatStream } from '../../hooks/useChatStream';
 import { apiFetch, apiPut, apiDelete } from '../../api/client';
-import { StoredMessageSchema } from '../../api/schemas';
-import type { StoredMessage } from '../../api/schemas';
+import { StoredMessageSchema, ConversationHistoryResponseSchema } from '../../api/schemas';
+import type { ConversationHistoryResponse } from '../../api/schemas';
 import ConversationHeader from './ConversationHeader';
 import ChatHistory from './ChatHistory';
 import PromptInput from './PromptInput';
@@ -2199,29 +2215,34 @@ import Toast from './Toast';
 
 interface Props {
   instanceRoot: string;
-  providerConfigured: boolean;
-  modelOptions: { value: string; label: string }[];
+  providerConfigured?: boolean;
+  modelOptions: string[];
   currentModel: string;
 }
 
 export default function ChatWorkspace({ instanceRoot, providerConfigured, modelOptions, currentModel }: Props) {
   const [state, dispatch] = useReducer(chatReducer, initialChatState);
   const [error, setError] = useState<string | null>(null);
+  const [runtimeModel, setRuntimeModel] = useState<string>(currentModel);
   useChatStream(dispatch);
+
+  useEffect(() => {
+    setRuntimeModel((prev) => (prev === '' && currentModel ? currentModel : prev));
+  }, [currentModel]);
 
   // Load history on mount
   useEffect(() => {
-    apiFetch<StoredMessage[]>('/api/conversation')
-      .then((msgs) => {
-        const parsed = msgs.map((m) => StoredMessageSchema.parse(m));
+    apiFetch<ConversationHistoryResponse>('/api/conversation')
+      .then((resp) => {
+        const parsed = resp.messages.map((m) => StoredMessageSchema.parse(m));
         dispatch({
           type: 'chat/history/loaded',
-          payload: parsed.map((m) => ({
-            id: m.id,
+          messages: parsed.map((m) => ({
+            id: String(m.id),
             role: m.role,
             content: m.content,
             timestamp: Math.round(m.timestamp * 1000),
-            chatId: m.chat_id,
+            chatId: m.id,
           })),
         });
       })
@@ -2232,26 +2253,18 @@ export default function ChatWorkspace({ instanceRoot, providerConfigured, modelO
     const text = state.composer.text.trim();
     if (!text && state.composer.attachments.length === 0) return;
 
-    const userMessage = {
-      id: crypto.randomUUID(),
-      role: 'user',
-      content: text,
-      timestamp: Date.now(),
-    };
-
-    dispatch({ type: 'chat/stream/start', payload: { userMessage } });
-    dispatch({ type: 'chat/composer/setText', payload: '' });
-    dispatch({ type: 'chat/composer/setAttachments', payload: [] });
+    dispatch({ type: 'chat/stream/start', userText: text });
+    dispatch({ type: 'chat/composer/setText', text: '' });
+    dispatch({ type: 'chat/composer/setAttachments', attachments: [] });
 
     apiFetch('/api/conversation/messages', {
       method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ user_message: text, model: currentModel }),
+      body: { user_message: text, model: runtimeModel },
     }).catch(() => {
       dispatch({ type: 'chat/stream/rollbackUserMessage' });
       setError('Failed to send message');
     });
-  }, [state.composer, currentModel]);
+  }, [state.composer, runtimeModel]);
 
   const handleStop = useCallback(() => {
     apiFetch('/api/conversation/cancel', { method: 'POST' }).catch(() => {});
@@ -2263,13 +2276,13 @@ export default function ChatWorkspace({ instanceRoot, providerConfigured, modelO
       if (!msg?.chatId) return;
 
       // Optimistic update
-      dispatch({ type: 'chat/message/edit', payload: { id, content } });
+      dispatch({ type: 'chat/message/edit', id, content });
 
       try {
         await apiPut(`/api/conversation/messages/${msg.chatId}`, { content });
       } catch (e) {
         // Rollback
-        dispatch({ type: 'chat/message/edit', payload: { id, content: msg.content } });
+        dispatch({ type: 'chat/message/edit', id, content: msg.content });
         setError('Failed to edit message');
       }
     },
@@ -2282,7 +2295,7 @@ export default function ChatWorkspace({ instanceRoot, providerConfigured, modelO
       if (!msg?.chatId) return;
 
       // Optimistic update
-      dispatch({ type: 'chat/message/delete', payload: { id } });
+      dispatch({ type: 'chat/message/delete', id });
 
       try {
         await apiDelete(`/api/conversation/messages/${msg.chatId}`);
@@ -2297,18 +2310,29 @@ export default function ChatWorkspace({ instanceRoot, providerConfigured, modelO
 
   const handleRegenerate = useCallback(
     async (id: string) => {
-      const msg = state.messages.find((m) => m.id === id);
+      const msgIndex = state.messages.findIndex((m) => m.id === id);
+      if (msgIndex < 0) return;
+      const msg = state.messages[msgIndex];
       if (!msg?.chatId) return;
 
-      dispatch({ type: 'chat/message/regenerate', payload: { id } });
+      // Find the preceding user message to re-send after regenerate
+      const precedingUserMsg = state.messages.slice(0, msgIndex).reverse().find((m) => m.role === 'user');
+      if (!precedingUserMsg) return;
+
+      dispatch({ type: 'chat/message/regenerate', id });
 
       try {
         await apiFetch(`/api/conversation/messages/${msg.chatId}/regenerate`, { method: 'POST' });
+        // Re-send the user message to trigger a new response
+        await apiFetch('/api/conversation/messages', {
+          method: 'POST',
+          body: { user_message: precedingUserMsg.content, model: runtimeModel },
+        });
       } catch (e) {
         setError('Failed to regenerate');
       }
     },
-    [state.messages]
+    [state.messages, runtimeModel]
   );
 
   return (
@@ -2316,8 +2340,9 @@ export default function ChatWorkspace({ instanceRoot, providerConfigured, modelO
       <ConversationHeader
         instanceRoot={instanceRoot}
         modelOptions={modelOptions}
-        currentModel={currentModel}
-        streaming={state.streaming.status === 'streaming'}
+        selectedModel={runtimeModel}
+        onSelectModel={setRuntimeModel}
+        streaming={state.streaming.status === 'running'}
         onStop={handleStop}
       />
       <ChatHistory
@@ -2326,7 +2351,7 @@ export default function ChatWorkspace({ instanceRoot, providerConfigured, modelO
         streamingToolCalls={state.streaming.toolCalls}
         suggestions={state.suggestions}
         onSuggestionClick={(text) => {
-          dispatch({ type: 'chat/composer/setText', payload: text });
+          dispatch({ type: 'chat/composer/setText', text });
           handleSend();
         }}
         onEdit={handleEdit}
@@ -2336,8 +2361,9 @@ export default function ChatWorkspace({ instanceRoot, providerConfigured, modelO
       <PromptInput
         text={state.composer.text}
         attachments={state.composer.attachments}
-        streaming={state.streaming.status === 'streaming'}
-        onChange={(text) => dispatch({ type: 'chat/composer/setText', payload: text })}
+        streaming={state.streaming.status === 'running'}
+        disabled={!providerConfigured}
+        onChange={(text) => dispatch({ type: 'chat/composer/setText', text })}
         onSend={handleSend}
         onStop={handleStop}
       />
@@ -2488,12 +2514,13 @@ Create `api/handlers_upload.go`:
 package api
 
 import (
+	"encoding/json"
 	"fmt"
 	"io"
 	"net/http"
 	"os"
 	"path/filepath"
-	"strconv"
+	"time"
 )
 
 func (s *Server) handleUpload(w http.ResponseWriter, r *http.Request) {
@@ -2575,9 +2602,19 @@ import (
 )
 
 func TestUpload(t *testing.T) {
-	srv := newTestServer(t)
 	root := t.TempDir()
-	srv.instanceRoot = root
+	srv := newTestServerWithStore(t, nil)
+	// We need to set InstanceRoot; since opts is unexported, use reflection or recreate server.
+	// Simpler: create server directly with InstanceRoot set.
+	cfg := &config.Config{}
+	srv, err := NewServer(&ServerOpts{
+		Config:       cfg,
+		Storage:      nil,
+		InstanceRoot: root,
+		Version:      "test",
+		Streams:      NewMemoryStreamHub(),
+	})
+	require.NoError(t, err)
 
 	var buf bytes.Buffer
 	writer := multipart.NewWriter(&buf)
@@ -3053,7 +3090,7 @@ func (s *Server) handleFeedback(w http.ResponseWriter, r *http.Request) {
 		http.Error(w, "score must be -1, 0, or 1", http.StatusBadRequest)
 		return
 	}
-	if err := s.storage.SaveFeedback(r.Context(), req.MessageID, req.Score); err != nil {
+	if err := s.opts.Storage.SaveFeedback(r.Context(), req.MessageID, req.Score); err != nil {
 		http.Error(w, err.Error(), http.StatusInternalServerError)
 		return
 	}
@@ -3085,7 +3122,8 @@ import (
 )
 
 func TestFeedback(t *testing.T) {
-	srv := newTestServer(t)
+	store := newTempStore(t)
+	srv := newTestServerWithStore(t, store)
 	body := strings.NewReader(`{"message_id":1,"score":1}`)
 	req := httptest.NewRequest(http.MethodPost, "/api/feedback", body)
 	rec := httptest.NewRecorder()
@@ -3152,7 +3190,7 @@ In `ChatWorkspace.tsx`, add an effect that fetches suggestions on mount:
 ```typescript
 useEffect(() => {
   apiFetch<{ suggestions: string[] }>('/api/suggestions')
-    .then((data) => dispatch({ type: 'chat/suggestions/loaded', payload: data.suggestions }))
+    .then((data) => dispatch({ type: 'chat/suggestions/loaded', suggestions: data.suggestions }))
     .catch(() => {});
 }, []);
 ```
