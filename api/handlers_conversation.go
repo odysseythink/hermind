@@ -5,6 +5,9 @@ import (
 	"encoding/json"
 	"net/http"
 	"strconv"
+	"strings"
+
+	"github.com/go-chi/chi/v5"
 
 	"github.com/odysseythink/hermind/agent"
 	"github.com/odysseythink/hermind/message"
@@ -120,6 +123,64 @@ func (s *Server) handleConversationCancel(w http.ResponseWriter, _ *http.Request
 		s.runCancel = nil
 	}
 	w.WriteHeader(http.StatusNoContent)
+}
+
+func (s *Server) handleConversationMessagePut(w http.ResponseWriter, r *http.Request) {
+	idStr := chi.URLParam(r, "id")
+	id, err := strconv.ParseInt(idStr, 10, 64)
+	if err != nil {
+		http.Error(w, "invalid message id", http.StatusBadRequest)
+		return
+	}
+
+	var req EditMessageRequest
+	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
+		http.Error(w, err.Error(), http.StatusBadRequest)
+		return
+	}
+	if strings.TrimSpace(req.Content) == "" {
+		http.Error(w, "content is required", http.StatusBadRequest)
+		return
+	}
+
+	if err := s.opts.Storage.UpdateMessage(r.Context(), id, req.Content); err != nil {
+		http.Error(w, err.Error(), http.StatusInternalServerError)
+		return
+	}
+	w.WriteHeader(http.StatusNoContent)
+}
+
+func (s *Server) handleConversationMessageDelete(w http.ResponseWriter, r *http.Request) {
+	idStr := chi.URLParam(r, "id")
+	id, err := strconv.ParseInt(idStr, 10, 64)
+	if err != nil {
+		http.Error(w, "invalid message id", http.StatusBadRequest)
+		return
+	}
+
+	if err := s.opts.Storage.DeleteMessage(r.Context(), id); err != nil {
+		http.Error(w, err.Error(), http.StatusInternalServerError)
+		return
+	}
+	w.WriteHeader(http.StatusNoContent)
+}
+
+func (s *Server) handleConversationMessageRegenerate(w http.ResponseWriter, r *http.Request) {
+	idStr := chi.URLParam(r, "id")
+	id, err := strconv.ParseInt(idStr, 10, 64)
+	if err != nil {
+		http.Error(w, "invalid message id", http.StatusBadRequest)
+		return
+	}
+
+	// Delete this message and everything after it
+	if err := s.opts.Storage.DeleteMessage(r.Context(), id); err != nil {
+		http.Error(w, err.Error(), http.StatusInternalServerError)
+		return
+	}
+
+	w.Header().Set("Content-Type", "application/json")
+	json.NewEncoder(w).Encode(RegenerateResponse{Accepted: true})
 }
 
 // wireEngineToHub forwards engine callbacks to the stream hub so SSE

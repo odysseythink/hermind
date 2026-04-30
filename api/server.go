@@ -173,6 +173,9 @@ func (s *Server) buildRouter() chi.Router {
 		r.Get("/conversation", s.handleConversationGet)
 		r.Post("/conversation/messages", s.handleConversationPost)
 		r.Post("/conversation/cancel", s.handleConversationCancel)
+		r.Put("/conversation/messages/{id}", s.handleConversationMessagePut)
+		r.Delete("/conversation/messages/{id}", s.handleConversationMessageDelete)
+		r.Post("/conversation/messages/{id}/regenerate", s.handleConversationMessageRegenerate)
 
 		r.Get("/sse", s.handleSSE)
 

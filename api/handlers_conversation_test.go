@@ -6,6 +6,7 @@ import (
 	"net/http"
 	"net/http/httptest"
 	"path/filepath"
+	"strconv"
 	"strings"
 	"testing"
 
@@ -94,4 +95,58 @@ func TestConversationCancel_NoOpWhenNoneInFlight(t *testing.T) {
 	rec := httptest.NewRecorder()
 	srv.Router().ServeHTTP(rec, req)
 	assert.Equal(t, http.StatusNoContent, rec.Code)
+}
+
+func TestConversationMessagePut(t *testing.T) {
+	store := newTempStore(t)
+	srv, err := NewServer(&ServerOpts{
+		Config:  &config.Config{},
+		Version: "test",
+		Storage: store,
+	})
+	require.NoError(t, err)
+	ctx := context.Background()
+
+	msg := &storage.StoredMessage{Role: "user", Content: "hello"}
+	require.NoError(t, store.AppendMessage(ctx, msg))
+
+	body := strings.NewReader(`{"content":"updated"}`)
+	req := httptest.NewRequest(http.MethodPut, "/api/conversation/messages/"+strconv.FormatInt(msg.ID, 10), body)
+	rec := httptest.NewRecorder()
+	srv.Router().ServeHTTP(rec, req)
+
+	require.Equal(t, http.StatusNoContent, rec.Code)
+
+	history, err := store.GetHistory(ctx, 10, 0)
+	require.NoError(t, err)
+	require.Len(t, history, 1)
+	assert.Equal(t, "updated", history[0].Content)
+}
+
+func TestConversationMessageDelete(t *testing.T) {
+	store := newTempStore(t)
+	srv, err := NewServer(&ServerOpts{
+		Config:  &config.Config{},
+		Version: "test",
+		Storage: store,
+	})
+	require.NoError(t, err)
+	ctx := context.Background()
+
+	for _, content := range []string{"a", "b"} {
+		msg := &storage.StoredMessage{Role: "user", Content: content}
+		require.NoError(t, store.AppendMessage(ctx, msg))
+	}
+
+	history, _ := store.GetHistory(ctx, 10, 0)
+	require.Len(t, history, 2)
+
+	req := httptest.NewRequest(http.MethodDelete, "/api/conversation/messages/"+strconv.FormatInt(history[0].ID, 10), nil)
+	rec := httptest.NewRecorder()
+	srv.Router().ServeHTTP(rec, req)
+
+	require.Equal(t, http.StatusNoContent, rec.Code)
+
+	history, _ = store.GetHistory(ctx, 10, 0)
+	require.Len(t, history, 0)
 }

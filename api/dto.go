@@ -156,3 +156,13 @@ type ConfigSectionDTO struct {
 type ConfigSchemaResponse struct {
 	Sections []ConfigSectionDTO `json:"sections"`
 }
+
+// EditMessageRequest is the body of PUT /api/conversation/messages/{id}.
+type EditMessageRequest struct {
+	Content string `json:"content"`
+}
+
+// RegenerateResponse is returned on POST /api/conversation/messages/{id}/regenerate.
+type RegenerateResponse struct {
+	Accepted bool `json:"accepted"`
+}
