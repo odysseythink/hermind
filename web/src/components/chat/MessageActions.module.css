@@ -1,0 +1,24 @@
+.actions {
+  display: flex;
+  gap: var(--space-1);
+  opacity: 0;
+  transition: opacity var(--t-fast);
+}
+
+.actionBtn {
+  background: transparent;
+  border: none;
+  border-radius: var(--r-md);
+  padding: var(--space-1);
+  color: var(--text-muted);
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: color var(--t-fast), background var(--t-fast);
+}
+
+.actionBtn:hover {
+  color: var(--text);
+  background: var(--surface-2);
+}

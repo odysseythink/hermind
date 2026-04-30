@@ -1,0 +1,54 @@
+.message {
+  display: flex;
+  gap: var(--space-3);
+  align-items: flex-start;
+}
+
+.user {
+  flex-direction: row-reverse;
+}
+
+.assistant {
+  flex-direction: row;
+}
+
+.avatar {
+  width: 28px;
+  height: 28px;
+  border-radius: 50%;
+  background: var(--accent);
+  color: var(--accent-text);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+}
+
+.bubbleWrapper {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-1);
+  max-width: 80%;
+}
+
+.bubble {
+  padding: var(--space-3) var(--space-4);
+  border-radius: var(--r-xl);
+  background: var(--surface);
+  color: var(--text);
+  word-break: break-word;
+}
+
+.user .bubble {
+  background: var(--accent);
+  color: var(--accent-text);
+  border-bottom-right-radius: var(--r-sm);
+}
+
+.assistant .bubble {
+  border-bottom-left-radius: var(--r-sm);
+}
+
+.message:hover .actions {
+  opacity: 1;
+}
