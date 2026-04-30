@@ -1,14 +1,27 @@
 import { useRef, useCallback } from 'react';
 import styles from './PromptInput.module.css';
+import AttachmentUploader from './AttachmentUploader';
+import type { Attachment } from '../../state/chat';
 
 interface Props {
   text: string;
   onTextChange: (text: string) => void;
   onSubmit: () => void;
   disabled?: boolean;
+  attachments?: Attachment[];
+  onAttachmentsAdd?: (attachments: Attachment[]) => void;
+  onAttachmentRemove?: (id: string) => void;
 }
 
-export default function PromptInput({ text, onTextChange, onSubmit, disabled }: Props) {
+export default function PromptInput({
+  text,
+  onTextChange,
+  onSubmit,
+  disabled,
+  attachments,
+  onAttachmentsAdd,
+  onAttachmentRemove,
+}: Props) {
   const textareaRef = useRef<HTMLTextAreaElement>(null);
 
   const handleKeyDown = useCallback(
@@ -34,6 +47,59 @@ export default function PromptInput({ text, onTextChange, onSubmit, disabled }: 
 
   return (
     <div className={styles.inputBar}>
+      <AttachmentUploader onAttachmentsAdd={onAttachmentsAdd ?? (() => {})} />
+      {attachments && attachments.length > 0 && (
+        <div
+          style={{
+            display: 'flex',
+            flexDirection: 'column',
+            gap: '2px',
+            maxHeight: '80px',
+            overflowY: 'auto',
+          }}
+        >
+          {attachments.map((att) => (
+            <div
+              key={att.id}
+              style={{
+                display: 'flex',
+                alignItems: 'center',
+                gap: '4px',
+                fontSize: '12px',
+                color: 'var(--text-muted)',
+              }}
+            >
+              <span
+                style={{
+                  overflow: 'hidden',
+                  textOverflow: 'ellipsis',
+                  whiteSpace: 'nowrap',
+                  maxWidth: '150px',
+                }}
+              >
+                {att.name}
+              </span>
+              {onAttachmentRemove && (
+                <button
+                  onClick={() => onAttachmentRemove(att.id)}
+                  style={{
+                    background: 'none',
+                    border: 'none',
+                    cursor: 'pointer',
+                    color: 'var(--text-muted)',
+                    fontSize: '14px',
+                    lineHeight: 1,
+                    padding: 0,
+                  }}
+                  aria-label={`Remove ${att.name}`}
+                >
+                  ×
+                </button>
+              )}
+            </div>
+          ))}
+        </div>
+      )}
       <textarea
         ref={textareaRef}
         className={styles.textarea}

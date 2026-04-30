@@ -1,0 +1,30 @@
+.uploader {
+  display: flex;
+  align-items: center;
+}
+
+.dragging {
+  opacity: 0.7;
+}
+
+.attachBtn {
+  background: transparent;
+  border: none;
+  color: var(--text-muted);
+  cursor: pointer;
+  padding: var(--space-2);
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: color var(--t-fast), background var(--t-fast);
+}
+
+.attachBtn:hover {
+  color: var(--text);
+  background: var(--surface-2);
+}
+
+.fileInput {
+  display: none;
+}
