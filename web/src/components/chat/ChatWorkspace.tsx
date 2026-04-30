@@ -23,13 +23,11 @@ export default function ChatWorkspace({
   modelOptions,
   currentModel,
 }: Props) {
-  console.time('ChatWorkspace render');
   const { t } = useTranslation('ui');
   const [state, dispatch] = useReducer(chatReducer, initialChatState);
   const [toast, setToast] = useState<string | null>(null);
   const [runtimeModel, setRuntimeModel] = useState<string>(currentModel);
   const [, startTransition] = useTransition();
-  console.timeEnd('ChatWorkspace render');
 
   useChatStream(dispatch);
 
@@ -65,8 +63,8 @@ export default function ChatWorkspace({
     return () => ctrl.abort();
   }, [startTransition]);
 
-  async function handleSend() {
-    const text = state.composer.text.trim();
+  async function handleSend(overrideText?: string) {
+    const text = (overrideText ?? state.composer.text).trim();
     if (!text) return;
     dispatch({ type: 'chat/composer/setText', text: '' });
     dispatch({ type: 'chat/stream/start', userText: text });
@@ -158,7 +156,7 @@ export default function ChatWorkspace({
 
   const handleSuggestionClick = (text: string) => {
     dispatch({ type: 'chat/composer/setText', text });
-    setTimeout(() => handleSend(), 0);
+    handleSend(text);
   };
 
   return (

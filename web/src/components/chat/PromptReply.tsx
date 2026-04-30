@@ -1,4 +1,5 @@
 import styles from './PromptReply.module.css';
+import MessageContent from './MessageContent';
 import type { ToolCall } from '../../state/chat';
 
 interface Props {
@@ -20,7 +21,7 @@ export default function PromptReply({ draft, toolCalls }: Props) {
       <div className={styles.bubbleWrapper}>
         <div className={styles.bubble}>
           {draft ? (
-            <span>{draft}</span>
+            <MessageContent content={draft} />
           ) : hasRunningTool ? (
             <span className={styles.typing}>Running tool...</span>
           ) : (

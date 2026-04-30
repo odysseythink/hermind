@@ -29,7 +29,7 @@ func (s *Server) handleUpload(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	filename := fmt.Sprintf("%d_%s", time.Now().UnixNano(), header.Filename)
+	filename := fmt.Sprintf("%d_%s", time.Now().UnixNano(), filepath.Base(header.Filename))
 	destPath := filepath.Join(attDir, filename)
 
 	dest, err := os.Create(destPath)

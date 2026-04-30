@@ -174,7 +174,7 @@ func (s *Server) handleConversationMessageRegenerate(w http.ResponseWriter, r *h
 	}
 
 	// Delete this message and everything after it
-	if err := s.opts.Storage.DeleteMessage(r.Context(), id); err != nil {
+	if err := s.opts.Storage.DeleteMessageAndAfter(r.Context(), id); err != nil {
 		http.Error(w, err.Error(), http.StatusInternalServerError)
 		return
 	}

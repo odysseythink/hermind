@@ -77,6 +77,7 @@ func (r *recStore) SetSkillsGeneration(_ context.Context, _ string) (string, int
 func (r *recStore) UpdateMessage(_ context.Context, _ int64, _ string) error { return nil }
 func (r *recStore) DeleteMessage(_ context.Context, _ int64) error          { return nil }
 func (r *recStore) DeleteMessagesAfter(_ context.Context, _ int64) error    { return nil }
+func (r *recStore) DeleteMessageAndAfter(_ context.Context, _ int64) error  { return nil }
 func (r *recStore) SaveFeedback(_ context.Context, _ int64, _ int) error     { return nil }
 func (r *recStore) SaveAttachment(_ context.Context, _ int64, _ string, _ string, _ string, _ int64) error {
 	return nil

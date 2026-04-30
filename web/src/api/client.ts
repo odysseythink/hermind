@@ -47,11 +47,15 @@ export async function apiPut<T>(path: string, body: unknown): Promise<T> {
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify(body),
   });
+  if (!res.ok) {
+    const text = await res.text();
+    throw new ApiError(res.status, text);
+  }
+  if (res.status === 204) {
+    return undefined as T;
+  }
   const ctype = res.headers.get('content-type') ?? '';
   const parsed = ctype.includes('application/json') ? await res.json() : await res.text();
-  if (!res.ok) {
-    throw new ApiError(res.status, parsed);
-  }
   return parsed as T;
 }
 

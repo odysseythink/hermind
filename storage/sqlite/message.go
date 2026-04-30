@@ -127,6 +127,11 @@ func (s *Store) UpdateMessage(ctx context.Context, id int64, content string) err
 }
 
 func (s *Store) DeleteMessage(ctx context.Context, id int64) error {
+	_, err := s.db.ExecContext(ctx, `DELETE FROM messages WHERE id = ?`, id)
+	return err
+}
+
+func (s *Store) DeleteMessageAndAfter(ctx context.Context, id int64) error {
 	_, err := s.db.ExecContext(ctx, `DELETE FROM messages WHERE id >= ?`, id)
 	return err
 }

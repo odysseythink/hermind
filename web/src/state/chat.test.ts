@@ -77,7 +77,7 @@ describe('chatReducer — new actions', () => {
       type: 'chat/message/edit',
       id: '1',
       content: 'new',
-    } as any);
+    });
     expect(next.messages[0].content).toBe('new');
     expect(next.messages[0].pending).toBe(false);
   });
@@ -93,7 +93,7 @@ describe('chatReducer — new actions', () => {
     const next = chatReducer(state, {
       type: 'chat/message/delete',
       id: '1',
-    } as any);
+    });
     expect(next.messages).toHaveLength(1);
     expect(next.messages[0].id).toBe('2');
   });
@@ -109,7 +109,7 @@ describe('chatReducer — new actions', () => {
     const next = chatReducer(state, {
       type: 'chat/message/regenerate',
       id: '2',
-    } as any);
+    });
     expect(next.messages).toHaveLength(1);
     expect(next.streaming.status).toBe('running');
   });
@@ -118,7 +118,7 @@ describe('chatReducer — new actions', () => {
     const next = chatReducer(initialChatState, {
       type: 'chat/composer/setAttachments',
       attachments: [{ id: 'a1', name: 'file.txt', type: 'text/plain', url: '/uploads/a1', size: 12 }],
-    } as any);
+    });
     expect(next.composer.attachments).toHaveLength(1);
     expect(next.composer.attachments[0].name).toBe('file.txt');
   });
@@ -127,7 +127,7 @@ describe('chatReducer — new actions', () => {
     const next = chatReducer(initialChatState, {
       type: 'chat/suggestions/loaded',
       suggestions: ['What can you do?', 'Explain this code'],
-    } as any);
+    });
     expect(next.suggestions).toEqual(['What can you do?', 'Explain this code']);
   });
 });

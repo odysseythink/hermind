@@ -148,5 +148,6 @@ func TestConversationMessageDelete(t *testing.T) {
 	require.Equal(t, http.StatusNoContent, rec.Code)
 
 	history, _ = store.GetHistory(ctx, 10, 0)
-	require.Len(t, history, 0)
+	require.Len(t, history, 1)
+	assert.Equal(t, "b", history[0].Content)
 }

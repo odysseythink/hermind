@@ -181,6 +181,10 @@ func (f *fakeStorage) DeleteMessagesAfter(_ context.Context, _ int64) error {
 	return nil
 }
 
+func (f *fakeStorage) DeleteMessageAndAfter(_ context.Context, _ int64) error {
+	return nil
+}
+
 func (f *fakeStorage) SaveFeedback(_ context.Context, _ int64, _ int) error {
 	return nil
 }

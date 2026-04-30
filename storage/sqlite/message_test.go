@@ -42,8 +42,9 @@ func TestDeleteMessage(t *testing.T) {
 	require.NoError(t, err)
 
 	history, _ = store.GetHistory(ctx, 10, 0)
-	require.Len(t, history, 1)
+	require.Len(t, history, 2)
 	assert.Equal(t, "a", history[0].Content)
+	assert.Equal(t, "c", history[1].Content)
 }
 
 func TestDeleteMessagesAfter(t *testing.T) {

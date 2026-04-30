@@ -2,6 +2,7 @@ package api
 
 import (
 	"context"
+	"fmt"
 	"net/http"
 	"net/http/httptest"
 	"strings"
@@ -17,13 +18,14 @@ import (
 
 func TestFeedback(t *testing.T) {
 	store := newTempStore(t)
-	err := store.AppendMessage(context.Background(), &storage.StoredMessage{
-		ID:        1,
+	msg := &storage.StoredMessage{
 		Role:      "assistant",
 		Content:   "{}",
 		Timestamp: time.Now(),
-	})
+	}
+	err := store.AppendMessage(context.Background(), msg)
 	require.NoError(t, err)
+	require.NotZero(t, msg.ID)
 
 	srv, err := NewServer(&ServerOpts{
 		Config:  &config.Config{},
@@ -33,7 +35,7 @@ func TestFeedback(t *testing.T) {
 	})
 	require.NoError(t, err)
 
-	body := strings.NewReader(`{"message_id":1,"score":1}`)
+	body := strings.NewReader(fmt.Sprintf(`{"message_id":%d,"score":1}`, msg.ID))
 	req := httptest.NewRequest(http.MethodPost, "/api/feedback", body)
 	rec := httptest.NewRecorder()
 	srv.Router().ServeHTTP(rec, req)

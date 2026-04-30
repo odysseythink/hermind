@@ -1,5 +1,6 @@
 import styles from './HistoricalMessage.module.css';
 import MessageActions from './MessageActions';
+import MessageContent from './MessageContent';
 import type { ChatMessage } from '../../state/chat';
 
 interface Props {
@@ -24,7 +25,7 @@ export default function HistoricalMessage({ message, onEdit, onDelete, onRegener
       )}
       <div className={styles.bubbleWrapper}>
         <div className={styles.bubble}>
-          {message.content}
+          <MessageContent content={message.content} />
         </div>
         <MessageActions
           messageId={message.id}
