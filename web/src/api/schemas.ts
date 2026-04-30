@@ -119,3 +119,38 @@ export const SkillsResponseSchema = z.object({
   skills: z.array(SkillSchema),
 });
 export type SkillsResponse = z.infer<typeof SkillsResponseSchema>;
+
+export const EditMessageRequestSchema = z.object({
+  content: z.string().min(1),
+});
+export type EditMessageRequest = z.infer<typeof EditMessageRequestSchema>;
+
+export const FeedbackRequestSchema = z.object({
+  message_id: z.number(),
+  score: z.number().min(-1).max(1),
+});
+export type FeedbackRequest = z.infer<typeof FeedbackRequestSchema>;
+
+export const UploadResponseSchema = z.object({
+  id: z.string(),
+  name: z.string(),
+  url: z.string(),
+  type: z.string(),
+  size: z.number(),
+});
+export type UploadResponse = z.infer<typeof UploadResponseSchema>;
+
+export const SuggestionsResponseSchema = z.object({
+  suggestions: z.array(z.string()),
+});
+export type SuggestionsResponse = z.infer<typeof SuggestionsResponseSchema>;
+
+export const TTSRequestSchema = z.object({
+  text: z.string().min(1),
+});
+export type TTSRequest = z.infer<typeof TTSRequestSchema>;
+
+export const TTSResponseSchema = z.object({
+  audio_url: z.string(),
+});
+export type TTSResponse = z.infer<typeof TTSResponseSchema>;

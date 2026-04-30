@@ -159,3 +159,40 @@ describe('StoredMessageSchema + ConversationHistoryResponseSchema', () => {
     })).toThrow();
   });
 });
+
+import { describe, it, expect } from 'vitest';
+import {
+  StoredMessageSchema,
+  EditMessageRequestSchema,
+  SuggestionsResponseSchema,
+} from './schemas';
+
+describe('Extended schemas', () => {
+  it('StoredMessageSchema parses numeric id', () => {
+    const result = StoredMessageSchema.safeParse({
+      id: 1,
+      role: 'user',
+      content: 'hi',
+      timestamp: 1.0,
+    });
+    expect(result.success).toBe(true);
+    if (result.success) {
+      expect(result.data.id).toBe(1);
+    }
+  });
+
+  it('EditMessageRequestSchema requires content', () => {
+    const result = EditMessageRequestSchema.safeParse({ content: 'new text' });
+    expect(result.success).toBe(true);
+  });
+
+  it('SuggestionsResponseSchema parses string array', () => {
+    const result = SuggestionsResponseSchema.safeParse({
+      suggestions: ['a', 'b'],
+    });
+    expect(result.success).toBe(true);
+    if (result.success) {
+      expect(result.data.suggestions).toHaveLength(2);
+    }
+  });
+});

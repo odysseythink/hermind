@@ -40,3 +40,36 @@ export async function apiFetch<T>(
   }
   return parsed as T;
 }
+
+export async function apiPut<T>(path: string, body: unknown): Promise<T> {
+  const res = await fetch(path, {
+    method: 'PUT',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify(body),
+  });
+  const ctype = res.headers.get('content-type') ?? '';
+  const parsed = ctype.includes('application/json') ? await res.json() : await res.text();
+  if (!res.ok) {
+    throw new ApiError(res.status, parsed);
+  }
+  return parsed as T;
+}
+
+export async function apiDelete(path: string): Promise<void> {
+  const res = await fetch(path, { method: 'DELETE' });
+  if (!res.ok) {
+    const text = await res.text();
+    throw new ApiError(res.status, text);
+  }
+}
+
+export async function apiUpload(path: string, file: File): Promise<unknown> {
+  const formData = new FormData();
+  formData.append('file', file);
+  const res = await fetch(path, { method: 'POST', body: formData });
+  if (!res.ok) {
+    const text = await res.text();
+    throw new ApiError(res.status, text);
+  }
+  return res.json();
+}
