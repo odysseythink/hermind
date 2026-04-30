@@ -194,3 +194,14 @@ type SkillSummary struct {
 	Name      string `json:"name"`
 	CreatedAt int64  `json:"created_at"`
 }
+
+// Attachment is a persisted file attachment linked to a message.
+type Attachment struct {
+	ID        int64
+	MessageID int64
+	Name      string
+	Type      string
+	URL       string
+	Size      int64
+	CreatedAt time.Time
+}

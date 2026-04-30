@@ -59,6 +59,12 @@ type Storage interface {
 	// SkillsStats inspects skillsDir and returns aggregate counts.
 	SkillsStats(ctx context.Context, skillsDir string) (*SkillsStats, error)
 
+	// Message mutations.
+	UpdateMessage(ctx context.Context, id int64, content string) error
+	DeleteMessage(ctx context.Context, id int64) error
+	DeleteMessagesAfter(ctx context.Context, id int64) error
+	SaveFeedback(ctx context.Context, messageID int64, score int) error
+
 	// Transactions — group multiple operations atomically.
 	WithTx(ctx context.Context, fn func(tx Tx) error) error
 

@@ -19,7 +19,7 @@ func TestMigrate_FreshDBCreatesCurrentSchema(t *testing.T) {
 	var ver string
 	require.NoError(t, store.db.QueryRowContext(context.Background(),
 		`SELECT value FROM schema_meta WHERE key='version'`).Scan(&ver))
-	assert.Equal(t, "8", ver)
+	assert.Equal(t, "9", ver)
 }
 
 func TestMigrate_Idempotent(t *testing.T) {
@@ -33,7 +33,7 @@ func TestMigrate_Idempotent(t *testing.T) {
 	var ver string
 	require.NoError(t, store.db.QueryRowContext(context.Background(),
 		`SELECT value FROM schema_meta WHERE key='version'`).Scan(&ver))
-	assert.Equal(t, "8", ver)
+	assert.Equal(t, "9", ver)
 }
 
 func TestMigrate_FreshDBHasNoSessionsTable(t *testing.T) {

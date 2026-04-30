@@ -98,8 +98,9 @@ INSERT OR IGNORE INTO schema_meta (key, value) VALUES ('version', '3');
 // currentSchemaVersion: v4 added MemType+Vector; v5 added supersession
 // lifecycle columns (status, superseded_by); v6 adds reinforcement tracking;
 // v7 adds memory_events table for event-driven memory consolidation;
-// v8 adds skills_generation table + memories.reinforced_at_seq column.
-const currentSchemaVersion = 8
+// v8 adds skills_generation table + memories.reinforced_at_seq column;
+// v9 adds feedback and attachments tables.
+const currentSchemaVersion = 9
 
 // Migrate applies the base schema. Idempotent. Legacy v1/v2 DBs are
 // never reached here — they are backed up before Migrate() runs.
@@ -231,6 +232,28 @@ func (s *Store) applyVersion(v int) error {
 			if !strings.Contains(err.Error(), "duplicate column name") {
 				return fmt.Errorf("v8 add reinforced_at_seq: %w", err)
 			}
+		}
+	case 9:
+		if _, err := tx.Exec(`
+			CREATE TABLE IF NOT EXISTS feedback (
+				id INTEGER PRIMARY KEY AUTOINCREMENT,
+				message_id INTEGER NOT NULL UNIQUE,
+				score INTEGER NOT NULL,
+				created_at TEXT DEFAULT (datetime('now')),
+				FOREIGN KEY (message_id) REFERENCES messages(id) ON DELETE CASCADE
+			);
+			CREATE TABLE IF NOT EXISTS attachments (
+				id INTEGER PRIMARY KEY AUTOINCREMENT,
+				message_id INTEGER NOT NULL,
+				name TEXT NOT NULL,
+				type TEXT NOT NULL,
+				url TEXT NOT NULL,
+				size INTEGER NOT NULL DEFAULT 0,
+				created_at TEXT DEFAULT (datetime('now')),
+				FOREIGN KEY (message_id) REFERENCES messages(id) ON DELETE CASCADE
+			);
+		`); err != nil {
+			return err
 		}
 	default:
 		return fmt.Errorf("no migration step for v%d", v)

@@ -65,7 +65,7 @@ func TestMemoryHealth(t *testing.T) {
 	ctx := context.Background()
 	h, err := store.MemoryHealth(ctx)
 	require.NoError(t, err)
-	assert.Equal(t, 8, h.SchemaVersion)
+	assert.Equal(t, 9, h.SchemaVersion)
 	assert.False(t, h.MigrationsPending)
 	assert.Equal(t, "ok", h.FTSIntegrity)
 }

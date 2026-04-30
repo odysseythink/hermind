@@ -28,7 +28,7 @@ func insertMessageExec(ctx context.Context, ex execer, msg *storage.StoredMessag
 	if msg.Timestamp.IsZero() {
 		msg.Timestamp = time.Now().UTC()
 	}
-	_, err := ex.ExecContext(ctx, `
+	res, err := ex.ExecContext(ctx, `
 		INSERT INTO messages
 		  (role, content, tool_call_id, tool_calls, tool_name,
 		   timestamp, token_count, finish_reason, reasoning, reasoning_details)
@@ -41,6 +41,7 @@ func insertMessageExec(ctx context.Context, ex execer, msg *storage.StoredMessag
 	if err != nil {
 		return fmt.Errorf("sqlite: append message: %w", err)
 	}
+	msg.ID, _ = res.LastInsertId()
 	return nil
 }
 
@@ -118,4 +119,19 @@ func (s *Store) SearchMessages(
 		out = append(out, &storage.SearchResult{Message: sm, Snippet: snippet, Rank: rank})
 	}
 	return out, rows.Err()
+}
+
+func (s *Store) UpdateMessage(ctx context.Context, id int64, content string) error {
+	_, err := s.db.ExecContext(ctx, `UPDATE messages SET content = ? WHERE id = ?`, content, id)
+	return err
+}
+
+func (s *Store) DeleteMessage(ctx context.Context, id int64) error {
+	_, err := s.db.ExecContext(ctx, `DELETE FROM messages WHERE id >= ?`, id)
+	return err
+}
+
+func (s *Store) DeleteMessagesAfter(ctx context.Context, id int64) error {
+	_, err := s.db.ExecContext(ctx, `DELETE FROM messages WHERE id > ?`, id)
+	return err
 }
