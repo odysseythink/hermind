@@ -169,6 +169,22 @@ func (f *fakeStorage) SetSkillsGeneration(_ context.Context, _ string) (string, 
 	return "", 0, 0, false, nil
 }
 
+func (f *fakeStorage) UpdateMessage(_ context.Context, _ int64, _ string) error {
+	return nil
+}
+
+func (f *fakeStorage) DeleteMessage(_ context.Context, _ int64) error {
+	return nil
+}
+
+func (f *fakeStorage) DeleteMessagesAfter(_ context.Context, _ int64) error {
+	return nil
+}
+
+func (f *fakeStorage) SaveFeedback(_ context.Context, _ int64, _ int) error {
+	return nil
+}
+
 // fakeTx implements the Tx interface for testing.
 type fakeTx struct{}
 

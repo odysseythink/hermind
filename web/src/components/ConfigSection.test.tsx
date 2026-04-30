@@ -160,7 +160,7 @@ describe('ConfigSection isVisible — bool predicate round-trip', () => {
       />,
     );
     await user.click(screen.getByLabelText(/Enabled/));
-    expect(onFieldChange).toHaveBeenCalledWith('enabled', 'false');
+    expect(onFieldChange).toHaveBeenCalledWith('enabled', false);
   });
 });
 

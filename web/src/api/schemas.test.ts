@@ -5,9 +5,11 @@ import {
   ConfigSchemaResponseSchema,
   ConfigSectionSchema,
   ConversationHistoryResponseSchema,
+  EditMessageRequestSchema,
   MetaResponseSchema,
   ProviderModelsResponseSchema,
   StoredMessageSchema,
+  SuggestionsResponseSchema,
 } from './schemas';
 
 describe('ConfigResponseSchema', () => {
@@ -159,13 +161,6 @@ describe('StoredMessageSchema + ConversationHistoryResponseSchema', () => {
     })).toThrow();
   });
 });
-
-import { describe, it, expect } from 'vitest';
-import {
-  StoredMessageSchema,
-  EditMessageRequestSchema,
-  SuggestionsResponseSchema,
-} from './schemas';
 
 describe('Extended schemas', () => {
   it('StoredMessageSchema parses numeric id', () => {

@@ -1,4 +1,4 @@
-import React from "react";
+import React from 'react';
 import {
   BarChart,
   Bar,
@@ -25,13 +25,13 @@ import {
   Legend,
   ResponsiveContainer,
   Cell,
-} from "recharts";
-import { ChartData } from "../types/chart";
+} from 'recharts';
+import type { ChartData } from '../types/chart';
 
 interface ChartVisualizationProps {
   type: string;
   title: string;
-  dataset: ChartData["dataset"];
+  dataset: ChartData['dataset'];
   caption?: string;
 }
 
@@ -47,8 +47,8 @@ export const ChartVisualization: React.FC<ChartVisualizationProps> = ({
     const firstItem = dataset[0];
     for (const key in firstItem) {
       if (
-        key !== "name" &&
-        typeof firstItem[key] === "number"
+        key !== 'name' &&
+        typeof firstItem[key] === 'number'
       ) {
         metricKey = key;
         break;
@@ -60,12 +60,12 @@ export const ChartVisualization: React.FC<ChartVisualizationProps> = ({
     return (
       <div
         style={{
-          padding: "12px",
-          backgroundColor: "#fff5f5",
-          border: "1px solid #feb2b2",
-          borderRadius: "4px",
-          color: "#c53030",
-          fontSize: "13px",
+          padding: '12px',
+          backgroundColor: '#fff5f5',
+          border: '1px solid #feb2b2',
+          borderRadius: '4px',
+          color: '#c53030',
+          fontSize: '13px',
         }}
       >
         Failed to render chart: no numeric fields found in dataset
@@ -80,7 +80,7 @@ export const ChartVisualization: React.FC<ChartVisualizationProps> = ({
     };
 
     switch (type) {
-      case "bar":
+      case 'bar':
         return (
           <ResponsiveContainer width="100%" height={300}>
             <BarChart {...chartProps}>
@@ -89,9 +89,9 @@ export const ChartVisualization: React.FC<ChartVisualizationProps> = ({
               <YAxis stroke="#8a8680" />
               <Tooltip
                 contentStyle={{
-                  backgroundColor: "#1d2027",
-                  border: "1px solid #2a2e36",
-                  color: "#e8e6e3",
+                  backgroundColor: '#1d2027',
+                  border: '1px solid #2a2e36',
+                  color: '#e8e6e3',
                 }}
               />
               <Legend />
@@ -100,7 +100,7 @@ export const ChartVisualization: React.FC<ChartVisualizationProps> = ({
           </ResponsiveContainer>
         );
 
-      case "line":
+      case 'line':
         return (
           <ResponsiveContainer width="100%" height={300}>
             <LineChart {...chartProps}>
@@ -109,9 +109,9 @@ export const ChartVisualization: React.FC<ChartVisualizationProps> = ({
               <YAxis stroke="#8a8680" />
               <Tooltip
                 contentStyle={{
-                  backgroundColor: "#1d2027",
-                  border: "1px solid #2a2e36",
-                  color: "#e8e6e3",
+                  backgroundColor: '#1d2027',
+                  border: '1px solid #2a2e36',
+                  color: '#e8e6e3',
                 }}
               />
               <Legend />
@@ -120,7 +120,7 @@ export const ChartVisualization: React.FC<ChartVisualizationProps> = ({
           </ResponsiveContainer>
         );
 
-      case "area":
+      case 'area':
         return (
           <ResponsiveContainer width="100%" height={300}>
             <AreaChart {...chartProps}>
@@ -129,9 +129,9 @@ export const ChartVisualization: React.FC<ChartVisualizationProps> = ({
               <YAxis stroke="#8a8680" />
               <Tooltip
                 contentStyle={{
-                  backgroundColor: "#1d2027",
-                  border: "1px solid #2a2e36",
-                  color: "#e8e6e3",
+                  backgroundColor: '#1d2027',
+                  border: '1px solid #2a2e36',
+                  color: '#e8e6e3',
                 }}
               />
               <Legend />
@@ -145,7 +145,7 @@ export const ChartVisualization: React.FC<ChartVisualizationProps> = ({
           </ResponsiveContainer>
         );
 
-      case "composed":
+      case 'composed':
         return (
           <ResponsiveContainer width="100%" height={300}>
             <ComposedChart {...chartProps}>
@@ -154,9 +154,9 @@ export const ChartVisualization: React.FC<ChartVisualizationProps> = ({
               <YAxis stroke="#8a8680" />
               <Tooltip
                 contentStyle={{
-                  backgroundColor: "#1d2027",
-                  border: "1px solid #2a2e36",
-                  color: "#e8e6e3",
+                  backgroundColor: '#1d2027',
+                  border: '1px solid #2a2e36',
+                  color: '#e8e6e3',
                 }}
               />
               <Legend />
@@ -166,7 +166,7 @@ export const ChartVisualization: React.FC<ChartVisualizationProps> = ({
           </ResponsiveContainer>
         );
 
-      case "scatter":
+      case 'scatter':
         return (
           <ResponsiveContainer width="100%" height={300}>
             <ScatterChart {...chartProps}>
@@ -175,9 +175,9 @@ export const ChartVisualization: React.FC<ChartVisualizationProps> = ({
               <YAxis stroke="#8a8680" />
               <Tooltip
                 contentStyle={{
-                  backgroundColor: "#1d2027",
-                  border: "1px solid #2a2e36",
-                  color: "#e8e6e3",
+                  backgroundColor: '#1d2027',
+                  border: '1px solid #2a2e36',
+                  color: '#e8e6e3',
                 }}
               />
               <Legend />
@@ -186,7 +186,7 @@ export const ChartVisualization: React.FC<ChartVisualizationProps> = ({
           </ResponsiveContainer>
         );
 
-      case "pie":
+      case 'pie':
         return (
           <ResponsiveContainer width="100%" height={300}>
             <PieChart>
@@ -206,16 +206,16 @@ export const ChartVisualization: React.FC<ChartVisualizationProps> = ({
               </Pie>
               <Tooltip
                 contentStyle={{
-                  backgroundColor: "#1d2027",
-                  border: "1px solid #2a2e36",
-                  color: "#e8e6e3",
+                  backgroundColor: '#1d2027',
+                  border: '1px solid #2a2e36',
+                  color: '#e8e6e3',
                 }}
               />
             </PieChart>
           </ResponsiveContainer>
         );
 
-      case "radar":
+      case 'radar':
         return (
           <ResponsiveContainer width="100%" height={300}>
             <RadarChart {...chartProps}>
@@ -231,16 +231,16 @@ export const ChartVisualization: React.FC<ChartVisualizationProps> = ({
               <Legend />
               <Tooltip
                 contentStyle={{
-                  backgroundColor: "#1d2027",
-                  border: "1px solid #2a2e36",
-                  color: "#e8e6e3",
+                  backgroundColor: '#1d2027',
+                  border: '1px solid #2a2e36',
+                  color: '#e8e6e3',
                 }}
               />
             </RadarChart>
           </ResponsiveContainer>
         );
 
-      case "radialBar":
+      case 'radialBar':
         return (
           <ResponsiveContainer width="100%" height={300}>
             <RadialBarChart {...chartProps}>
@@ -254,16 +254,16 @@ export const ChartVisualization: React.FC<ChartVisualizationProps> = ({
               <Legend />
               <Tooltip
                 contentStyle={{
-                  backgroundColor: "#1d2027",
-                  border: "1px solid #2a2e36",
-                  color: "#e8e6e3",
+                  backgroundColor: '#1d2027',
+                  border: '1px solid #2a2e36',
+                  color: '#e8e6e3',
                 }}
               />
             </RadialBarChart>
           </ResponsiveContainer>
         );
 
-      case "treemap":
+      case 'treemap':
         return (
           <ResponsiveContainer width="100%" height={300}>
             <Treemap
@@ -276,7 +276,7 @@ export const ChartVisualization: React.FC<ChartVisualizationProps> = ({
           </ResponsiveContainer>
         );
 
-      case "funnel":
+      case 'funnel':
         return (
           <ResponsiveContainer width="100%" height={300}>
             <Funnel data={dataset} dataKey={metricKey} nameKey="name">
@@ -295,23 +295,23 @@ export const ChartVisualization: React.FC<ChartVisualizationProps> = ({
   return (
     <div
       style={{
-        padding: "12px",
-        border: "1px solid #2a2e36",
-        borderRadius: "4px",
-        backgroundColor: "#14161a",
+        padding: '12px',
+        border: '1px solid #2a2e36',
+        borderRadius: '4px',
+        backgroundColor: '#14161a',
       }}
     >
-      <div style={{ color: "#e8e6e3", fontSize: "14px", marginBottom: "8px" }}>
+      <div style={{ color: '#e8e6e3', fontSize: '14px', marginBottom: '8px' }}>
         {title}
       </div>
       {renderChart()}
       {caption && (
         <div
           style={{
-            marginTop: "8px",
-            color: "#8a8680",
-            fontSize: "12px",
-            fontStyle: "italic",
+            marginTop: '8px',
+            color: '#8a8680',
+            fontSize: '12px',
+            fontStyle: 'italic',
           }}
         >
           {caption}

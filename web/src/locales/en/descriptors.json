@@ -297,5 +297,13 @@
   "skills.fields.inject_count.label": "Skills injected per turn",
   "skills.fields.inject_count.help": "Maximum dynamically retrieved skills injected into the system prompt each turn. 0 disables retrieval. Default 3.",
   "skills.fields.generation_half_life.label": "Generation half-life",
-  "skills.fields.generation_half_life.help": "Memory reinforcement signals decay by half every N skill generations. Default 5. Set to 0 to disable decay (signals always weighted as 1.0)."
+  "skills.fields.generation_half_life.help": "Memory reinforcement signals decay by half every N skill generations. Default 5. Set to 0 to disable decay (signals always weighted as 1.0).",
+  "agent.fields.default_system_prompt.label": "Default system prompt",
+  "agent.fields.default_system_prompt.help": "System prompt used when no session-specific prompt is set.",
+  "web.fields.search.providers.duckduckgo.url.label": "DuckDuckGo URL",
+  "web.fields.search.providers.duckduckgo.url.help": "Optional custom DuckDuckGo endpoint.",
+  "web.fields.search.providers.duckduckgo.username.label": "DuckDuckGo username",
+  "web.fields.search.providers.duckduckgo.username.help": "Optional username for authenticated DuckDuckGo access.",
+  "web.fields.search.providers.duckduckgo.password.label": "DuckDuckGo password",
+  "web.fields.search.providers.duckduckgo.password.help": "Optional password for authenticated DuckDuckGo access."
 }

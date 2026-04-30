@@ -3,28 +3,28 @@
  */
 
 export type ChartType =
-  | "area"
-  | "bar"
-  | "line"
-  | "composed"
-  | "scatter"
-  | "pie"
-  | "radar"
-  | "radialBar"
-  | "treemap"
-  | "funnel";
+  | 'area'
+  | 'bar'
+  | 'line'
+  | 'composed'
+  | 'scatter'
+  | 'pie'
+  | 'radar'
+  | 'radialBar'
+  | 'treemap'
+  | 'funnel';
 
 export const VALID_CHART_TYPES: ChartType[] = [
-  "area",
-  "bar",
-  "line",
-  "composed",
-  "scatter",
-  "pie",
-  "radar",
-  "radialBar",
-  "treemap",
-  "funnel",
+  'area',
+  'bar',
+  'line',
+  'composed',
+  'scatter',
+  'pie',
+  'radar',
+  'radialBar',
+  'treemap',
+  'funnel',
 ];
 
 export interface DataPoint {

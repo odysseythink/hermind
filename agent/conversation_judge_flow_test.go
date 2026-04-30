@@ -74,6 +74,11 @@ func (r *recStore) SetSkillsGeneration(_ context.Context, _ string) (string, int
 	return "", 0, 0, false, nil
 }
 
+func (r *recStore) UpdateMessage(_ context.Context, _ int64, _ string) error { return nil }
+func (r *recStore) DeleteMessage(_ context.Context, _ int64) error          { return nil }
+func (r *recStore) DeleteMessagesAfter(_ context.Context, _ int64) error    { return nil }
+func (r *recStore) SaveFeedback(_ context.Context, _ int64, _ int) error     { return nil }
+
 type nopTx struct{}
 
 func (nopTx) AppendMessage(_ context.Context, _ *storage.StoredMessage) error { return nil }

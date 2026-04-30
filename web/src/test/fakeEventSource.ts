@@ -43,7 +43,7 @@ export class FakeEventSource {
   }
 
   static install() {
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+     
     (globalThis as any).EventSource = FakeEventSource;
   }
 
