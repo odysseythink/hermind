@@ -508,6 +508,7 @@ export default function App() {
             dispatch({ type: 'keyed-instance/delete', sectionKey, subkey: sectionSubkey(sectionKey), instanceKey });
             dispatch({ type: 'shell/selectSub', key: null });
           }}
+          providerModels={state.providerModels}
           onFetchModels={onFetchProviderModels}
           onTestProvider={onTestProvider}
           onFetchFallbackModels={onFetchFallbackModels}

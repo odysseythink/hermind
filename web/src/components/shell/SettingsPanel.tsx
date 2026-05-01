@@ -5,6 +5,7 @@ import EmptyState from './EmptyState';
 import ConfigSection from '../ConfigSection';
 import ProviderEditor from '../groups/models/ProviderEditor';
 import FallbackProviderEditor from '../groups/models/FallbackProviderEditor';
+import DefaultModelEditor from '../groups/models/DefaultModelEditor';
 import AuxiliaryEditor from '../groups/runtime/AuxiliaryEditor';
 import SkillsSection from '../groups/skills/SkillsSection';
 import ListElementInlineEditor from './ListElementInlineEditor';
@@ -21,6 +22,7 @@ export interface ContentPanelProps {
   onConfigScalar: (sectionKey: string, value: unknown) => void;
   onConfigKeyedField: (sectionKey: string, instanceKey: string, field: string, value: unknown) => void;
   onConfigKeyedDelete: (sectionKey: string, instanceKey: string) => void;
+  providerModels: Record<string, string[]>;
   onFetchModels: (instanceKey: string) => Promise<{ models: string[] }>;
   onTestProvider: (instanceKey: string) => Promise<{ ok: boolean; latency_ms: number }>;
   onConfigListField: (sectionKey: string, index: number, field: string, value: unknown) => void;
@@ -56,6 +58,22 @@ export default function SettingsPanel(props: ContentPanelProps) {
       if (section.shape === 'scalar') {
         const scalar = (props.config as Record<string, unknown>)[section.key];
         const originalScalar = (props.originalConfig as Record<string, unknown>)[section.key];
+        if (section.key === 'model') {
+          const providers = ((props.config as Record<string, unknown>).providers ?? {}) as Record<
+            string,
+            Record<string, unknown>
+          >;
+          return (
+            <DefaultModelEditor
+              value={String(scalar ?? '')}
+              originalValue={String(originalScalar ?? '')}
+              providers={providers}
+              providerModels={props.providerModels}
+              onFetchModels={props.onFetchModels}
+              onChange={(v) => props.onConfigScalar(section.key, v)}
+            />
+          );
+        }
         const field = section.fields[0];
         return (
           <ConfigSection
