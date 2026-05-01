@@ -1,7 +1,8 @@
-import { useEffect, useId, useRef, useState } from 'react';
+import { useRef, useState } from 'react';
 import styles from './ProviderEditor.module.css';
+import fieldStyles from '../../fields/fields.module.css';
 import ConfigSection from '../../ConfigSection';
-import type { ConfigSection as ConfigSectionT } from '../../../api/schemas';
+import type { ConfigSection as ConfigSectionT, ConfigField } from '../../../api/schemas';
 
 export interface ProviderEditorProps {
   sectionKey: string;
@@ -31,34 +32,69 @@ type TestState =
   | { status: 'ok'; latencyMs: number }
   | { status: 'err'; error: string };
 
+function ModelSelect({
+  field,
+  value,
+  models,
+  onChange,
+}: {
+  field: ConfigField | undefined;
+  value: string;
+  models: string[];
+  onChange: (v: string) => void;
+}) {
+  if (!field) return null;
+  if (models.length === 0) {
+    // Fall back to plain text input until models are fetched.
+    return (
+      <label className={fieldStyles.row}>
+        <span className={fieldStyles.label}>
+          {field.label}
+          {field.required && <span className={fieldStyles.required}>*</span>}
+        </span>
+        <input
+          type="text"
+          className={fieldStyles.input}
+          value={value}
+          placeholder={field.default !== undefined ? String(field.default) : undefined}
+          onChange={(e) => onChange(e.currentTarget.value)}
+        />
+        {field.help && <span className={fieldStyles.help}>{field.help}</span>}
+      </label>
+    );
+  }
+  return (
+    <label className={fieldStyles.row}>
+      <span className={fieldStyles.label}>
+        {field.label}
+        {field.required && <span className={fieldStyles.required}>*</span>}
+      </span>
+      <select className={fieldStyles.select} value={value} onChange={(e) => onChange(e.currentTarget.value)}>
+        {!field.required && <option value="">—</option>}
+        {models.map((m) => (
+          <option key={m} value={m}>
+            {m}
+          </option>
+        ))}
+      </select>
+      {field.help && <span className={fieldStyles.help}>{field.help}</span>}
+    </label>
+  );
+}
+
 export default function ProviderEditor(props: ProviderEditorProps) {
   const [models, setModels] = useState<string[]>([]);
   const [fetchState, setFetchState] = useState<FetchState>({ status: 'idle' });
   const [testState, setTestState] = useState<TestState>({ status: 'idle' });
-  const datalistId = useId();
   const bodyRef = useRef<HTMLDivElement>(null);
 
-  // Wire the Model field's <input> to the sibling <datalist> so the browser's
-  // native autocomplete uses the fetched model list. ConfigSection renders
-  // TextInput without a `list` attribute; rather than invading ConfigSection's
-  // prop shape for this one case we set it from the outside after every render.
-  //
-  // TextInput wraps its <input> inside a <label> element whose label text is
-  // a <span>. It does not set `aria-label` on the input, so we locate the
-  // input by walking labels and matching the visible label text.
-  useEffect(() => {
-    const modelField = props.section.fields.find(f => f.name === 'model');
-    if (!modelField || !bodyRef.current) return;
-    const labels = bodyRef.current.querySelectorAll('label');
-    for (const label of Array.from(labels)) {
-      const span = label.querySelector('span');
-      if (span && span.textContent?.trim().startsWith(modelField.label)) {
-        const input = label.querySelector<HTMLInputElement>('input');
-        if (input) input.setAttribute('list', datalistId);
-        return;
-      }
-    }
-  });
+  const modelField = props.section.fields.find((f) => f.name === 'model');
+  const sectionWithoutModel: ConfigSectionT = {
+    ...props.section,
+    fields: props.section.fields.filter((f) => f.name !== 'model'),
+  };
+
+  // No DOM-patching needed — model is rendered as a native <select> below.
 
   async function onFetchClick() {
     setFetchState({ status: 'loading' });
@@ -99,17 +135,18 @@ export default function ProviderEditor(props: ProviderEditorProps) {
       </header>
       <div ref={bodyRef} className={styles.body}>
         <ConfigSection
-          section={props.section}
+          section={sectionWithoutModel}
           value={props.value}
           originalValue={props.originalValue}
           onFieldChange={(field, v) => props.onField(props.instanceKey, field, v)}
           config={props.config}
         />
-        <datalist id={datalistId} data-testid="provider-model-datalist">
-          {models.map(m => (
-            <option key={m} value={m} />
-          ))}
-        </datalist>
+        <ModelSelect
+          field={modelField}
+          value={String(props.value['model'] ?? '')}
+          models={models}
+          onChange={(v) => props.onField(props.instanceKey, 'model', v)}
+        />
       </div>
       <footer className={styles.footer}>
         <button

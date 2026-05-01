@@ -48,6 +48,7 @@ describe('ProviderEditor', () => {
     expect(screen.getByLabelText(/provider type/i)).toBeInTheDocument();
     expect(screen.getByLabelText(/base url/i)).toBeInTheDocument();
     expect(screen.getByLabelText(/api key/i)).toBeInTheDocument();
+    // Before fetching models the model field falls back to a text input.
     expect(screen.getByLabelText(/default model for this provider/i)).toBeInTheDocument();
   });
 
@@ -89,7 +90,7 @@ describe('ProviderEditor', () => {
     expect(btn).toBeDisabled();
   });
 
-  it('populates the datalist from a successful fetch', async () => {
+  it('populates the model dropdown after a successful fetch', async () => {
     const user = userEvent.setup();
     const fetchModels = vi.fn().mockResolvedValue({ models: ['claude-opus-4-7', 'claude-sonnet-4-6'] });
     render(<ProviderEditor {...baseProps({ fetchModels })} />);
@@ -97,9 +98,10 @@ describe('ProviderEditor', () => {
     await waitFor(() => {
       expect(screen.getByText(/connected/i)).toBeInTheDocument();
     });
-    const datalist = screen.getByTestId('provider-model-datalist');
-    const options = Array.from(datalist.querySelectorAll('option')).map(o => o.getAttribute('value'));
-    expect(options).toEqual(['claude-opus-4-7', 'claude-sonnet-4-6']);
+    const select = screen.getByLabelText(/default model for this provider/i) as HTMLSelectElement;
+    expect(select.tagName.toLowerCase()).toBe('select');
+    const options = Array.from(select.querySelectorAll('option')).map((o) => o.value);
+    expect(options).toEqual(['', 'claude-opus-4-7', 'claude-sonnet-4-6']);
   });
 
   it('shows an error chip when fetchModels rejects', async () => {
