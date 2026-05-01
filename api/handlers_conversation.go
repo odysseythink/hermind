@@ -24,6 +24,15 @@ func atoiDefault(s string, d int) int {
 	return d
 }
 
+// stripProviderPrefix parses "provider/model" into just "model".
+// If there is no slash the string is returned unchanged.
+func stripProviderPrefix(s string) string {
+	if idx := strings.Index(s, "/"); idx >= 0 {
+		return s[idx+1:]
+	}
+	return s
+}
+
 // handleConversationGet responds to GET /api/conversation with the
 // entire instance-scoped history.
 func (s *Server) handleConversationGet(w http.ResponseWriter, r *http.Request) {
@@ -99,7 +108,7 @@ func (s *Server) handleConversationPost(w http.ResponseWriter, r *http.Request) 
 		}()
 		_, err := eng.RunConversation(runCtx, &agent.RunOptions{
 			UserMessage: body.UserMessage,
-			Model:       body.Model,
+			Model:       stripProviderPrefix(body.Model),
 		})
 		if err != nil {
 			s.streams.Publish(StreamEvent{
