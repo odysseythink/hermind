@@ -12,6 +12,7 @@ import (
 	"github.com/odysseythink/hermind/agent"
 	"github.com/odysseythink/hermind/message"
 	"github.com/odysseythink/hermind/provider"
+	"github.com/odysseythink/hermind/tool/obsidian"
 )
 
 func atoiDefault(s string, d int) int {
@@ -106,10 +107,20 @@ func (s *Server) handleConversationPost(w http.ResponseWriter, r *http.Request) 
 			s.runMu.Unlock()
 			cancel()
 		}()
-		_, err := eng.RunConversation(runCtx, &agent.RunOptions{
+		opts := &agent.RunOptions{
 			UserMessage: body.UserMessage,
 			Model:       stripProviderPrefix(body.Model),
-		})
+		}
+		if body.ObsidianCtx != nil {
+			opts.ObsidianCtx = &agent.ObsidianContext{
+				VaultPath:    body.ObsidianCtx.VaultPath,
+				CurrentNote:  body.ObsidianCtx.CurrentNote,
+				SelectedText: body.ObsidianCtx.SelectedText,
+				CursorLine:   body.ObsidianCtx.CursorLine,
+			}
+			runCtx = context.WithValue(runCtx, obsidian.VaultPathKey, body.ObsidianCtx.VaultPath)
+		}
+		_, err := eng.RunConversation(runCtx, opts)
 		if err != nil {
 			s.streams.Publish(StreamEvent{
 				Type: EventTypeError,
