@@ -193,6 +193,15 @@ func (e *Engine) SetConversationJudge(j ConversationJudge) {
 	e.conversationJudge = j
 }
 
+// ObsidianContext mirrors api.ObsidianContext so the agent package can
+// receive vault context without importing api (avoiding circular deps).
+type ObsidianContext struct {
+	VaultPath    string
+	CurrentNote  string
+	SelectedText string
+	CursorLine   int
+}
+
 // RunOptions parameterizes a conversation run.
 type RunOptions struct {
 	UserMessage string
@@ -205,6 +214,9 @@ type RunOptions struct {
 	// History is consulted only when Ephemeral=true. Non-ephemeral runs
 	// load history from storage.
 	History []message.Message
+	// ObsidianCtx carries vault/note context when the request originates
+	// from the Obsidian plugin. Injected into the system prompt.
+	ObsidianCtx *ObsidianContext
 }
 
 // ConversationResult is returned by RunConversation.
