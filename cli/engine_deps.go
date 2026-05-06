@@ -24,6 +24,7 @@ import (
 	"github.com/odysseythink/hermind/tool/embedding"
 	"github.com/odysseythink/hermind/tool/file"
 	"github.com/odysseythink/hermind/tool/mcp"
+	"github.com/odysseythink/hermind/tool/obsidian"
 	"github.com/odysseythink/hermind/tool/memory"
 	"github.com/odysseythink/hermind/tool/memory/memprovider"
 	"github.com/odysseythink/hermind/tool/terminal"
@@ -126,6 +127,7 @@ func BuildEngineDeps(ctx context.Context, app *App) (api.EngineDeps, func(), err
 
 	toolRegistry := tool.NewRegistry()
 	file.RegisterAll(toolRegistry)
+	obsidian.RegisterAll(toolRegistry)
 	tool.RegisterChart(toolRegistry)
 
 	termCfg := terminal.Config{
