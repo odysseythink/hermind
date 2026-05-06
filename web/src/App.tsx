@@ -33,7 +33,6 @@ export default function App() {
   const { t } = useTranslation('ui');
   const [state, dispatch] = useReducer(reducer, initialState);
   const [instanceRoot, setInstanceRoot] = useState<string>('');
-  const [currentModel, setCurrentModel] = useState<string>('');
   const [, startTransition] = useTransition();
 
   // Defer expensive computed values to avoid blocking the main thread
@@ -83,7 +82,6 @@ export default function App() {
     apiFetch('/api/status', { schema: MetaResponseSchema, signal: ctrl.signal })
       .then((s) => {
         setInstanceRoot(s.instance_root);
-        setCurrentModel(s.current_model);
       })
       .catch(() => {
         /* header hides the label when empty */
@@ -334,15 +332,6 @@ export default function App() {
   const dirtyGroupIds = useMemo(() => selectDirtyGroups(state), [state]);
   const dirty = totalDirtyCount(state);
 
-  const allModels = useMemo(() => {
-    const seen = new Set<string>();
-    for (const models of Object.values(state.providerModels)) {
-      for (const m of models) seen.add(m);
-    }
-    if (currentModel) seen.add(currentModel);
-    return Array.from(seen).sort();
-  }, [state.providerModels, currentModel]);
-
   const handleSelectGroup = useCallback(
     (id: GroupId) => {
       dispatch({ type: 'shell/selectGroup', group: id });
@@ -397,8 +386,6 @@ export default function App() {
         <ChatWorkspace
           instanceRoot={instanceRoot}
           providerConfigured={providerConfigured}
-          modelOptions={allModels}
-          currentModel={currentModel}
         />
       </div>
     );

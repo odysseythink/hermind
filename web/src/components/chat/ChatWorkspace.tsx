@@ -13,28 +13,18 @@ import { ConversationHistoryResponseSchema, SuggestionsResponseSchema } from '..
 type Props = {
   instanceRoot: string;
   providerConfigured?: boolean;
-  modelOptions: string[];
-  currentModel: string;
 };
 
 export default function ChatWorkspace({
   instanceRoot,
   providerConfigured = true,
-  modelOptions,
-  currentModel,
 }: Props) {
   const { t } = useTranslation('ui');
   const [state, dispatch] = useReducer(chatReducer, initialChatState);
   const [toast, setToast] = useState<string | null>(null);
-  const [runtimeModel, setRuntimeModel] = useState<string>(currentModel);
   const [, startTransition] = useTransition();
 
   useChatStream(dispatch);
-
-  // Track currentModel changes (e.g. settings save reloads meta).
-  useEffect(() => {
-    setRuntimeModel((prev) => (prev === '' && currentModel ? currentModel : prev));
-  }, [currentModel]);
 
   // Load conversation history in background to avoid blocking initial render.
   // The dispatch must itself be in startTransition — wrapping the fetch call
@@ -89,7 +79,7 @@ export default function ChatWorkspace({
     try {
       await apiFetch('/api/conversation/messages', {
         method: 'POST',
-        body: { user_message: text, model: runtimeModel },
+        body: { user_message: text },
       });
     } catch (err) {
       dispatch({ type: 'chat/stream/rollbackUserMessage' });
@@ -158,7 +148,7 @@ export default function ChatWorkspace({
     try {
       await apiFetch('/api/conversation/messages', {
         method: 'POST',
-        body: { user_message: precedingUserContent, model: runtimeModel },
+        body: { user_message: precedingUserContent },
       });
     } catch (err) {
       dispatch({ type: 'chat/stream/rollbackUserMessage' });
@@ -181,9 +171,6 @@ export default function ChatWorkspace({
     <div className={styles.workspace}>
       <ConversationHeader
         instanceRoot={instanceRoot}
-        modelOptions={modelOptions}
-        selectedModel={runtimeModel}
-        onSelectModel={setRuntimeModel}
         onStop={handleStop}
         streaming={state.streaming.status === 'running'}
       />

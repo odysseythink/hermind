@@ -3,18 +3,12 @@ import styles from './ConversationHeader.module.css';
 
 type Props = {
   instanceRoot: string;
-  modelOptions: string[];
-  selectedModel: string;
-  onSelectModel: (model: string) => void;
   onStop: () => void;
   streaming: boolean;
 };
 
 export default function ConversationHeader({
   instanceRoot,
-  modelOptions,
-  selectedModel,
-  onSelectModel,
   onStop,
   streaming,
 }: Props) {
@@ -32,19 +26,6 @@ export default function ConversationHeader({
         </span>
       )}
       <div className={styles.spacer} />
-      <select
-        className={styles.modelSelect}
-        value={selectedModel}
-        onChange={(e) => onSelectModel(e.target.value)}
-        aria-label={t('chat.modelDropdown', { defaultValue: 'Model' })}
-      >
-        {modelOptions.length === 0 && <option value="">(no models)</option>}
-        {modelOptions.map((m) => (
-          <option key={m} value={m}>
-            {m}
-          </option>
-        ))}
-      </select>
       <button
         type="button"
         className={styles.stopBtn}
