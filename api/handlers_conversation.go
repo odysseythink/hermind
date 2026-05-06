@@ -109,7 +109,7 @@ func (s *Server) handleConversationPost(w http.ResponseWriter, r *http.Request) 
 		}()
 		opts := &agent.RunOptions{
 			UserMessage: body.UserMessage,
-			Model:       stripProviderPrefix(body.Model),
+			Model:       stripProviderPrefix(s.opts.Config.Model),
 		}
 		if body.ObsidianCtx != nil {
 			opts.ObsidianCtx = &agent.ObsidianContext{

@@ -55,6 +55,8 @@ type ConversationHistoryResponse struct {
 // ConversationPostRequest is the body of POST /api/conversation/messages.
 type ConversationPostRequest struct {
 	UserMessage string           `json:"user_message"`
+	// Deprecated: model is no longer read by the backend. The configured
+	// default model (Config.Model) is used for all messages.
 	Model       string           `json:"model,omitempty"`
 	ObsidianCtx *ObsidianContext `json:"obsidian_context,omitempty"`
 }
