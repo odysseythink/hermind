@@ -3,17 +3,21 @@ package api
 import (
 	"context"
 	"encoding/json"
+	"io"
 	"net/http"
 	"net/http/httptest"
 	"path/filepath"
 	"strconv"
 	"strings"
 	"testing"
+	"time"
 
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 
 	"github.com/odysseythink/hermind/config"
+	"github.com/odysseythink/hermind/message"
+	"github.com/odysseythink/hermind/provider"
 	"github.com/odysseythink/hermind/storage"
 	"github.com/odysseythink/hermind/storage/sqlite"
 )
@@ -150,4 +154,70 @@ func TestConversationMessageDelete(t *testing.T) {
 	history, _ = store.GetHistory(ctx, 10, 0)
 	require.Len(t, history, 1)
 	assert.Equal(t, "b", history[0].Content)
+}
+
+// recordingProvider captures the model from the last request.
+type recordingProvider struct {
+	stubProvider
+	lastModel string
+}
+
+func (r *recordingProvider) Stream(ctx context.Context, req *provider.Request) (provider.Stream, error) {
+	r.lastModel = req.Model
+	return &recordingStream{resp: r.stubProvider.resp}, nil
+}
+
+type recordingStream struct {
+	done bool
+	resp *provider.Response
+}
+
+func (s *recordingStream) Recv() (*provider.StreamEvent, error) {
+	if !s.done {
+		s.done = true
+		return &provider.StreamEvent{Type: provider.EventDone, Response: s.resp}, nil
+	}
+	return nil, io.EOF
+}
+
+func (s *recordingStream) Close() error { return nil }
+
+func TestConversationPost_IgnoresBodyModel(t *testing.T) {
+	store := newTempStore(t)
+	rec := &recordingProvider{
+		stubProvider: stubProvider{
+			resp: &provider.Response{
+				Message: message.Message{
+					Role:    message.RoleAssistant,
+					Content: message.TextContent("ok"),
+				},
+			},
+		},
+	}
+
+	srv, err := NewServer(&ServerOpts{
+		Config: &config.Config{
+			Model: "anthropic/claude-opus-4-6",
+		},
+		Version: "test",
+		Storage: store,
+		Deps:    EngineDeps{Provider: rec, AgentCfg: config.AgentConfig{MaxTurns: 5}},
+	})
+	require.NoError(t, err)
+
+	// Send a request with a different model in the body.
+	body := strings.NewReader(`{"user_message":"hi","model":"openai/gpt-4o"}`)
+	req := httptest.NewRequest(http.MethodPost, "/api/conversation/messages", body)
+	recoder := httptest.NewRecorder()
+	srv.Router().ServeHTTP(recoder, req)
+
+	require.Equal(t, http.StatusAccepted, recoder.Code)
+
+	// Wait for the async engine goroutine to reach the provider.
+	require.Eventually(t, func() bool {
+		return rec.lastModel != ""
+	}, 2*time.Second, 10*time.Millisecond)
+
+	// The backend should have used Config.Model, not body.Model.
+	assert.Equal(t, "claude-opus-4-6", rec.lastModel)
 }
