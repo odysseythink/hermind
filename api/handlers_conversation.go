@@ -34,6 +34,31 @@ func stripProviderPrefix(s string) string {
 	return s
 }
 
+// storedContentToPlainText decodes a JSON-encoded message.Content string
+// (as persisted by storage.StoredMessage) into plain text for the frontend.
+func storedContentToPlainText(raw string) string {
+	if raw == "" {
+		return ""
+	}
+	// Try to parse as JSON-encoded message.Content (string or array).
+	var content message.Content
+	if err := content.UnmarshalJSON([]byte(raw)); err == nil {
+		if content.IsText() {
+			return content.Text()
+		}
+		// For block content, concatenate text blocks.
+		var parts []string
+		for _, b := range content.Blocks() {
+			if b.Type == "text" {
+				parts = append(parts, b.Text)
+			}
+		}
+		return strings.Join(parts, "\n")
+	}
+	// Fallback: if it's not valid JSON (legacy plain text), return as-is.
+	return raw
+}
+
 // handleConversationGet responds to GET /api/conversation with the
 // entire instance-scoped history.
 func (s *Server) handleConversationGet(w http.ResponseWriter, r *http.Request) {
@@ -54,7 +79,7 @@ func (s *Server) handleConversationGet(w http.ResponseWriter, r *http.Request) {
 		out = append(out, StoredMessageDTO{
 			ID:           row.ID,
 			Role:         row.Role,
-			Content:      row.Content,
+			Content:      storedContentToPlainText(row.Content),
 			ToolCallID:   row.ToolCallID,
 			ToolName:     row.ToolName,
 			Timestamp:    float64(row.Timestamp.UnixNano()) / 1e9,

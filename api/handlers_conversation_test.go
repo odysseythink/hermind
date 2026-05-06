@@ -221,3 +221,46 @@ func TestConversationPost_IgnoresBodyModel(t *testing.T) {
 	// The backend should have used Config.Model, not body.Model.
 	assert.Equal(t, "claude-opus-4-6", rec.lastModel)
 }
+
+func TestStoredContentToPlainText(t *testing.T) {
+	tests := []struct {
+		name string
+		raw  string
+		want string
+	}{
+		{"empty", "", ""},
+		{"json string", `"hello\nworld"`, "hello\nworld"},
+		{"json array", `[{"type":"text","text":"hello"},{"type":"text","text":"world"}]`, "hello\nworld"},
+		{"legacy plain text", "plain text", "plain text"},
+		{"json string with quotes", `"say \"hi\""`, `say "hi"`},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			got := storedContentToPlainText(tt.raw)
+			assert.Equal(t, tt.want, got)
+		})
+	}
+}
+
+func TestConversationGet_DecodesStoredContent(t *testing.T) {
+	store := newTempStore(t)
+	// Insert a message with JSON-encoded text content (as stored by agent/storedFromMessage)
+	contentJSON, _ := message.TextContent("hello\nworld").MarshalJSON()
+	require.NoError(t, store.AppendMessage(context.Background(), &storage.StoredMessage{
+		Role:    "assistant",
+		Content: string(contentJSON),
+	}))
+
+	srv, _ := NewServer(&ServerOpts{
+		Config: &config.Config{}, Version: "test", Storage: store,
+	})
+	req := httptest.NewRequest(http.MethodGet, "/api/conversation", nil)
+	rec := httptest.NewRecorder()
+	srv.Router().ServeHTTP(rec, req)
+
+	var body ConversationHistoryResponse
+	require.NoError(t, json.NewDecoder(rec.Body).Decode(&body))
+	require.Len(t, body.Messages, 1)
+	assert.Equal(t, "assistant", body.Messages[0].Role)
+	assert.Equal(t, "hello\nworld", body.Messages[0].Content)
+}
