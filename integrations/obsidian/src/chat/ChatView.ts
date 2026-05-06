@@ -62,6 +62,11 @@ export class ChatView extends ItemView {
 
 		try {
 			const ctx = this.settings.autoAttachContext ? extractContext(this.app) : undefined;
+			if (ctx) {
+				this.ui.setContextIndicator(ctx.current_note, ctx.selected_text);
+			} else {
+				this.ui.setContextIndicator();
+			}
 			await this.api.sendMessage(text, ctx);
 		} catch (err) {
 			this.ui.showError(`Failed to send: ${err}`);
@@ -87,7 +92,7 @@ export class ChatView extends ItemView {
 				const id = evt.data.id as string;
 				if (this.currentToolCalls[id]) {
 					this.currentToolCalls[id].result = evt.data.result as string;
-					this.ui.updateToolCallResult(id, this.currentToolCalls[id].result);
+					this.ui.updateToolCallResult(id, this.currentToolCalls[id].result ?? "");
 				}
 				break;
 			}
@@ -105,6 +110,9 @@ export class ChatView extends ItemView {
 				};
 				this.messages.push(assistantMsg);
 				this.ui.finalizeAssistantMessage();
+				if (this.settings.autoSave) {
+					this.saveConversation().catch(() => { /* ignore auto-save errors */ });
+				}
 				break;
 			}
 			case "error":
@@ -113,7 +121,7 @@ export class ChatView extends ItemView {
 		}
 	}
 
-	private async saveConversation(): Promise<void> {
+	async saveConversation(): Promise<void> {
 		if (this.messages.length === 0) return;
 		const folder = this.settings.saveFolder || "Hermind Conversations";
 		await this.app.vault.createFolder(folder).catch(() => { /* may exist */ });

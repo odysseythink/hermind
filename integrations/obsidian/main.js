@@ -35,7 +35,8 @@ var DEFAULT_SETTINGS = {
   hermindUrl: "http://127.0.0.1:30000",
   autoAttachContext: true,
   saveFolder: "Hermind Conversations",
-  showToolCalls: false
+  showToolCalls: false,
+  autoSave: false
 };
 var HermindSettingTab = class extends import_obsidian.PluginSettingTab {
   constructor(app, plugin) {
@@ -67,6 +68,12 @@ var HermindSettingTab = class extends import_obsidian.PluginSettingTab {
     new import_obsidian.Setting(containerEl).setName("Show tool calls").setDesc("Expand tool call details in chat messages").addToggle(
       (toggle) => toggle.setValue(this.plugin.settings.showToolCalls).onChange(async (value) => {
         this.plugin.settings.showToolCalls = value;
+        await this.plugin.saveSettings();
+      })
+    );
+    new import_obsidian.Setting(containerEl).setName("Auto-save conversation").setDesc("Automatically save conversation to a note after each reply").addToggle(
+      (toggle) => toggle.setValue(this.plugin.settings.autoSave).onChange(async (value) => {
+        this.plugin.settings.autoSave = value;
         await this.plugin.saveSettings();
       })
     );
@@ -175,11 +182,18 @@ function extractContext(app) {
 var ChatUI = class {
   constructor(parent, opts) {
     this.currentAssistantEl = null;
+    this.toolCallEls = /* @__PURE__ */ new Map();
     this.opts = opts;
     this.container = parent.createDiv({ cls: "hermind-chat-container" });
     this.container.style.display = "flex";
     this.container.style.flexDirection = "column";
     this.container.style.height = "100%";
+    this.contextEl = this.container.createDiv({ cls: "hermind-context" });
+    this.contextEl.style.display = "none";
+    this.contextEl.style.padding = "4px 8px";
+    this.contextEl.style.fontSize = "11px";
+    this.contextEl.style.color = "var(--text-muted)";
+    this.contextEl.style.borderBottom = "1px solid var(--background-modifier-border)";
     this.errorEl = this.container.createDiv({ cls: "hermind-error" });
     this.errorEl.style.display = "none";
     this.errorEl.style.color = "var(--text-error)";
@@ -210,6 +224,19 @@ var ChatUI = class {
     const saveBtn = inputContainer.createEl("button", { text: "Save" });
     saveBtn.onclick = () => this.opts.onSave();
   }
+  setContextIndicator(notePath, selection) {
+    if (!notePath && !selection) {
+      this.contextEl.style.display = "none";
+      return;
+    }
+    this.contextEl.style.display = "block";
+    let text = `\u{1F4CE} ${notePath || "vault"}`;
+    if (selection && selection.length > 0) {
+      const snippet = selection.length > 40 ? selection.slice(0, 40) + "..." : selection;
+      text += ` \xB7 "${snippet}"`;
+    }
+    this.contextEl.setText(text);
+  }
   addMessage(msg) {
     const el = this.messagesEl.createDiv({ cls: `hermind-message hermind-message-${msg.role}` });
     el.style.marginBottom = "12px";
@@ -221,6 +248,17 @@ var ChatUI = class {
       for (const tc of msg.toolCalls) {
         this.renderToolCall(el, tc);
       }
+    }
+  }
+  renderToolCall(parent, tc) {
+    const el = parent.createDiv({ cls: "hermind-tool-call" });
+    el.style.fontSize = "11px";
+    el.style.color = "var(--text-muted)";
+    el.style.marginTop = "4px";
+    el.createEl("div", { text: `\u{1F527} ${tc.name}` });
+    if (tc.result) {
+      const snippet = tc.result.length > 200 ? tc.result.slice(0, 200) + "..." : tc.result;
+      el.createEl("div", { text: `\u2192 ${snippet}` });
     }
   }
   startAssistantMessage() {
@@ -238,6 +276,7 @@ var ChatUI = class {
   }
   finalizeAssistantMessage() {
     this.currentAssistantEl = null;
+    this.toolCallEls.clear();
   }
   addToolCall(id, tc) {
     if (!this.currentAssistantEl || !this.opts.showToolCalls)
@@ -245,15 +284,19 @@ var ChatUI = class {
     const el = this.currentAssistantEl.createDiv({ cls: "hermind-tool-call" });
     el.style.fontSize = "11px";
     el.style.color = "var(--text-muted)";
-    el.createEl("div", { text: `\u{1F527} ${tc.name}` });
+    el.style.marginTop = "4px";
+    const header = el.createEl("div", { text: `\u{1F527} ${tc.name}` });
+    const resultEl = el.createEl("div", { cls: "hermind-tool-result" });
+    resultEl.style.display = "none";
+    this.toolCallEls.set(id, resultEl);
   }
   updateToolCallResult(id, result) {
-  }
-  renderToolCall(parent, tc) {
-    const el = parent.createDiv({ cls: "hermind-tool-call" });
-    el.style.fontSize = "11px";
-    el.style.color = "var(--text-muted)";
-    el.createEl("div", { text: `\u{1F527} ${tc.name}` });
+    const el = this.toolCallEls.get(id);
+    if (!el)
+      return;
+    el.style.display = "block";
+    const snippet = result.length > 200 ? result.slice(0, 200) + "..." : result;
+    el.setText(`\u2192 ${snippet}`);
   }
   showError(msg) {
     this.errorEl.style.display = "block";
@@ -319,12 +362,18 @@ var ChatView = class extends import_obsidian4.ItemView {
     this.ui.startAssistantMessage();
     try {
       const ctx = this.settings.autoAttachContext ? extractContext(this.app) : void 0;
+      if (ctx) {
+        this.ui.setContextIndicator(ctx.current_note, ctx.selected_text);
+      } else {
+        this.ui.setContextIndicator();
+      }
       await this.api.sendMessage(text, ctx);
     } catch (err) {
       this.ui.showError(`Failed to send: ${err}`);
     }
   }
   handleSSE(evt) {
+    var _a;
     switch (evt.type) {
       case "message_chunk":
         this.currentAssistantMessage += evt.data.text || "";
@@ -343,7 +392,7 @@ var ChatView = class extends import_obsidian4.ItemView {
         const id = evt.data.id;
         if (this.currentToolCalls[id]) {
           this.currentToolCalls[id].result = evt.data.result;
-          this.ui.updateToolCallResult(id, this.currentToolCalls[id].result);
+          this.ui.updateToolCallResult(id, (_a = this.currentToolCalls[id].result) != null ? _a : "");
         }
         break;
       }
@@ -361,6 +410,10 @@ var ChatView = class extends import_obsidian4.ItemView {
         };
         this.messages.push(assistantMsg);
         this.ui.finalizeAssistantMessage();
+        if (this.settings.autoSave) {
+          this.saveConversation().catch(() => {
+          });
+        }
         break;
       }
       case "error":
@@ -429,6 +482,16 @@ var HermindPlugin = class extends import_obsidian5.Plugin {
         });
       }
     });
+    this.addCommand({
+      id: "save-hermind-conversation",
+      name: "Save Hermind Conversation",
+      callback: () => {
+        const leaf = this.app.workspace.getLeavesOfType(VIEW_TYPE_HERMIND)[0];
+        if (leaf && leaf.view instanceof ChatView) {
+          leaf.view.saveConversation();
+        }
+      }
+    });
     this.addSettingTab(new HermindSettingTab(this.app, this));
   }
   onunload() {
@@ -443,13 +506,11 @@ var HermindPlugin = class extends import_obsidian5.Plugin {
   async activateView() {
     var _a;
     const { workspace } = this.app;
-    const existing = workspace.getLeavesOfType(VIEW_TYPE_HERMIND)[0];
-    if (existing) {
-      workspace.revealLeaf(existing);
-      return;
+    let leaf = workspace.getLeavesOfType(VIEW_TYPE_HERMIND)[0];
+    if (!leaf) {
+      leaf = (_a = workspace.getRightLeaf(false)) != null ? _a : workspace.getLeaf(true);
+      await leaf.setViewState({ type: VIEW_TYPE_HERMIND, active: true });
     }
-    const leaf = (_a = workspace.getRightLeaf(false)) != null ? _a : workspace.getLeaf(true);
-    await leaf.setViewState({ type: VIEW_TYPE_HERMIND, active: true });
     workspace.revealLeaf(leaf);
   }
 };

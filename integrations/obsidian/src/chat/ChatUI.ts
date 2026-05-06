@@ -8,11 +8,13 @@ interface ChatUIOptions {
 
 export class ChatUI {
 	private container: HTMLElement;
+	private contextEl: HTMLElement;
 	private messagesEl: HTMLElement;
 	private inputEl: HTMLTextAreaElement;
 	private currentAssistantEl: HTMLElement | null = null;
 	private errorEl: HTMLElement;
 	private opts: ChatUIOptions;
+	private toolCallEls: Map<string, HTMLElement> = new Map();
 
 	constructor(parent: HTMLElement, opts: ChatUIOptions) {
 		this.opts = opts;
@@ -20,6 +22,13 @@ export class ChatUI {
 		this.container.style.display = "flex";
 		this.container.style.flexDirection = "column";
 		this.container.style.height = "100%";
+
+		this.contextEl = this.container.createDiv({ cls: "hermind-context" });
+		this.contextEl.style.display = "none";
+		this.contextEl.style.padding = "4px 8px";
+		this.contextEl.style.fontSize = "11px";
+		this.contextEl.style.color = "var(--text-muted)";
+		this.contextEl.style.borderBottom = "1px solid var(--background-modifier-border)";
 
 		this.errorEl = this.container.createDiv({ cls: "hermind-error" });
 		this.errorEl.style.display = "none";
@@ -57,6 +66,20 @@ export class ChatUI {
 		saveBtn.onclick = () => this.opts.onSave();
 	}
 
+	setContextIndicator(notePath?: string, selection?: string): void {
+		if (!notePath && !selection) {
+			this.contextEl.style.display = "none";
+			return;
+		}
+		this.contextEl.style.display = "block";
+		let text = `📎 ${notePath || "vault"}`;
+		if (selection && selection.length > 0) {
+			const snippet = selection.length > 40 ? selection.slice(0, 40) + "..." : selection;
+			text += ` · "${snippet}"`;
+		}
+		this.contextEl.setText(text);
+	}
+
 	addMessage(msg: ChatMessage): void {
 		const el = this.messagesEl.createDiv({ cls: `hermind-message hermind-message-${msg.role}` });
 		el.style.marginBottom = "12px";
@@ -69,6 +92,18 @@ export class ChatUI {
 			for (const tc of msg.toolCalls) {
 				this.renderToolCall(el, tc);
 			}
+		}
+	}
+
+	private renderToolCall(parent: HTMLElement, tc: ToolCallEvent): void {
+		const el = parent.createDiv({ cls: "hermind-tool-call" });
+		el.style.fontSize = "11px";
+		el.style.color = "var(--text-muted)";
+		el.style.marginTop = "4px";
+		el.createEl("div", { text: `🔧 ${tc.name}` });
+		if (tc.result) {
+			const snippet = tc.result.length > 200 ? tc.result.slice(0, 200) + "..." : tc.result;
+			el.createEl("div", { text: `→ ${snippet}` });
 		}
 	}
 
@@ -88,6 +123,7 @@ export class ChatUI {
 
 	finalizeAssistantMessage(): void {
 		this.currentAssistantEl = null;
+		this.toolCallEls.clear();
 	}
 
 	addToolCall(id: string, tc: { name: string; input: Record<string, unknown> }): void {
@@ -95,11 +131,19 @@ export class ChatUI {
 		const el = this.currentAssistantEl.createDiv({ cls: "hermind-tool-call" });
 		el.style.fontSize = "11px";
 		el.style.color = "var(--text-muted)";
-		el.createEl("div", { text: `🔧 ${tc.name}` });
+		el.style.marginTop = "4px";
+		const header = el.createEl("div", { text: `🔧 ${tc.name}` });
+		const resultEl = el.createEl("div", { cls: "hermind-tool-result" });
+		resultEl.style.display = "none";
+		this.toolCallEls.set(id, resultEl);
 	}
 
 	updateToolCallResult(id: string, result: string): void {
-		// No-op for now
+		const el = this.toolCallEls.get(id);
+		if (!el) return;
+		el.style.display = "block";
+		const snippet = result.length > 200 ? result.slice(0, 200) + "..." : result;
+		el.setText(`→ ${snippet}`);
 	}
 
 	showError(msg: string): void {

@@ -37,6 +37,17 @@ export default class HermindPlugin extends Plugin {
 			},
 		});
 
+		this.addCommand({
+			id: "save-hermind-conversation",
+			name: "Save Hermind Conversation",
+			callback: () => {
+				const leaf = this.app.workspace.getLeavesOfType(VIEW_TYPE_HERMIND)[0];
+				if (leaf && leaf.view instanceof ChatView) {
+					leaf.view.saveConversation();
+				}
+			},
+		});
+
 		this.addSettingTab(new HermindSettingTab(this.app, this));
 	}
 
@@ -56,7 +67,7 @@ export default class HermindPlugin extends Plugin {
 		const { workspace } = this.app;
 		let leaf = workspace.getLeavesOfType(VIEW_TYPE_HERMIND)[0];
 		if (!leaf) {
-			leaf = workspace.getRightLeaf(false);
+			leaf = workspace.getRightLeaf(false) ?? workspace.getLeaf(true);
 			await leaf.setViewState({ type: VIEW_TYPE_HERMIND, active: true });
 		}
 		workspace.revealLeaf(leaf);

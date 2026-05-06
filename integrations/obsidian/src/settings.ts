@@ -6,6 +6,7 @@ export interface HermindSettings {
 	autoAttachContext: boolean;
 	saveFolder: string;
 	showToolCalls: boolean;
+	autoSave: boolean;
 }
 
 export const DEFAULT_SETTINGS: HermindSettings = {
@@ -13,6 +14,7 @@ export const DEFAULT_SETTINGS: HermindSettings = {
 	autoAttachContext: true,
 	saveFolder: "Hermind Conversations",
 	showToolCalls: false,
+	autoSave: false,
 };
 
 export class HermindSettingTab extends PluginSettingTab {
@@ -74,6 +76,18 @@ export class HermindSettingTab extends PluginSettingTab {
 					.setValue(this.plugin.settings.showToolCalls)
 					.onChange(async (value) => {
 						this.plugin.settings.showToolCalls = value;
+						await this.plugin.saveSettings();
+					})
+			);
+
+		new Setting(containerEl)
+			.setName("Auto-save conversation")
+			.setDesc("Automatically save conversation to a note after each reply")
+			.addToggle((toggle) =>
+				toggle
+					.setValue(this.plugin.settings.autoSave)
+					.onChange(async (value) => {
+						this.plugin.settings.autoSave = value;
 						await this.plugin.saveSettings();
 					})
 			);

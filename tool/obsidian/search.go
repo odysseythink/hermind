@@ -49,7 +49,13 @@ func searchVaultHandler(ctx context.Context, raw json.RawMessage) (string, error
 	lowerQuery := strings.ToLower(args.Query)
 
 	err := filepath.WalkDir(vaultPath, func(path string, d os.DirEntry, err error) error {
-		if err != nil || d.IsDir() || !strings.HasSuffix(path, ".md") {
+		if err != nil {
+			return nil
+		}
+		if d.IsDir() && strings.HasPrefix(d.Name(), ".") {
+			return filepath.SkipDir
+		}
+		if d.IsDir() || !strings.HasSuffix(path, ".md") {
 			return nil
 		}
 		data, err := os.ReadFile(path)
