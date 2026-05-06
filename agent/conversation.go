@@ -85,6 +85,7 @@ func (e *Engine) RunConversation(ctx context.Context, opts *RunOptions) (*Conver
 		Model:          model,
 		ActiveSkills:   activeSkills,
 		ActiveMemories: memContents,
+		ObsidianCtx:    opts.ObsidianCtx,
 	})
 
 	// Preserve the full injected set for end-of-conversation feedback.
