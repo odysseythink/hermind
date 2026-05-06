@@ -6,6 +6,7 @@ import (
 	"fmt"
 	"os"
 	"path/filepath"
+	"strings"
 
 	"github.com/odysseythink/hermind/tool"
 )
@@ -53,7 +54,7 @@ func writeNoteHandler(ctx context.Context, raw json.RawMessage) (string, error) 
 	if _, err := os.Stat(resolved); err == nil {
 		backupDir := filepath.Join(vaultPath, ".hermind", "obsidian-backups")
 		_ = os.MkdirAll(backupDir, 0o755)
-		backupPath := filepath.Join(backupDir, filepath.Base(args.Path)+".backup")
+		backupPath := filepath.Join(backupDir, strings.ReplaceAll(args.Path, string(filepath.Separator), "_")+".backup")
 		b, _ := os.ReadFile(resolved)
 		_ = os.WriteFile(backupPath, b, 0o644)
 	}
