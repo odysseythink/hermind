@@ -1,0 +1,10 @@
+{
+	"id": "hermind",
+	"name": "Hermind",
+	"version": "0.1.0",
+	"minAppVersion": "0.15.0",
+	"description": "Chat with your local hermind AI agent directly from Obsidian.",
+	"author": "odysseythink",
+	"authorUrl": "https://github.com/odysseythink/hermind",
+	"isDesktopOnly": true
+}
