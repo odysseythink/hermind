@@ -54,13 +54,23 @@ type ConversationHistoryResponse struct {
 
 // ConversationPostRequest is the body of POST /api/conversation/messages.
 type ConversationPostRequest struct {
-	UserMessage string `json:"user_message"`
-	Model       string `json:"model,omitempty"`
+	UserMessage string           `json:"user_message"`
+	Model       string           `json:"model,omitempty"`
+	ObsidianCtx *ObsidianContext `json:"obsidian_context,omitempty"`
 }
 
 // ConversationPostResponse is returned on 202.
 type ConversationPostResponse struct {
 	Accepted bool `json:"accepted"`
+}
+
+// ObsidianContext carries the active vault/note/selection context from the
+// Obsidian plugin so the agent can reason about the user's current workspace.
+type ObsidianContext struct {
+	VaultPath    string `json:"vault_path"`
+	CurrentNote  string `json:"current_note,omitempty"`
+	SelectedText string `json:"selected_text,omitempty"`
+	CursorLine   int    `json:"cursor_line,omitempty"`
 }
 
 // ConfigResponse is the payload for GET /api/config.
