@@ -32,7 +32,7 @@ func init() {
 				Label: "Search provider",
 				Help:  "Leave blank to auto-select by priority (Tavily > Brave > Exa > DuckDuckGo).",
 				Kind:  FieldEnum,
-				Enum:  []string{"", "tavily", "brave", "exa", "DuckDuckGo"},
+				Enum:  []string{"tavily", "brave", "exa", "DuckDuckGo"},
 			},
 			{
 				Name:        "search.providers.tavily.api_key",

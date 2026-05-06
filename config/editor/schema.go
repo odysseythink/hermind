@@ -46,8 +46,8 @@ func enumValidator(allowed []string) func(any) error {
 func Schema() []Field {
 	terminalBackends := []string{"local", "modal", "singularity"}
 	storageDrivers := []string{"sqlite"}
-	memoryProviders := []string{"", "honcho", "mem0", "supermemory", "hindsight", "retaindb", "openviking", "byterover", "holographic"}
-	browserProviders := []string{"", "browserbase", "camofox"}
+	memoryProviders := []string{"honcho", "mem0", "supermemory", "hindsight", "retaindb", "openviking", "byterover", "holographic"}
+	browserProviders := []string{"browserbase", "camofox"}
 
 	return []Field{
 		// --- Model ---

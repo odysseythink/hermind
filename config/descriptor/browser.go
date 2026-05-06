@@ -27,7 +27,7 @@ func init() {
 				Label: "Provider",
 				Help:  "Browser automation backend. Leave blank to disable.",
 				Kind:  FieldEnum,
-				Enum:  []string{"", "browserbase", "camofox"},
+				Enum:  []string{"browserbase", "camofox"},
 			},
 
 			// Browserbase (cloud)

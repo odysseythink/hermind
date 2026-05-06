@@ -33,7 +33,7 @@ func TestBrowserProviderEnum(t *testing.T) {
 	if p.Kind != FieldEnum {
 		t.Errorf("provider.Kind = %s, want enum", p.Kind)
 	}
-	want := map[string]bool{"": true, "browserbase": true, "camofox": true}
+	want := map[string]bool{"browserbase": true, "camofox": true}
 	got := map[string]bool{}
 	for _, v := range p.Enum {
 		got[v] = true

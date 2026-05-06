@@ -164,7 +164,6 @@
         "help": "Browser automation backend. Leave blank to disable.",
         "kind": "enum",
         "enum": [
-          "",
           "browserbase",
           "camofox"
         ]
@@ -1192,7 +1191,6 @@
         "help": "Leave blank to auto-select by priority (Tavily \u003e Brave \u003e Exa \u003e DuckDuckGo).",
         "kind": "enum",
         "enum": [
-          "",
           "tavily",
           "brave",
           "exa",
@@ -1246,7 +1244,6 @@
         "visible_when": {
           "field": "search.provider",
           "in": [
-            "",
             "DuckDuckGo"
           ]
         }
@@ -1259,7 +1256,6 @@
         "visible_when": {
           "field": "search.provider",
           "in": [
-            "",
             "DuckDuckGo"
           ]
         }
@@ -1272,7 +1268,6 @@
         "visible_when": {
           "field": "search.provider",
           "in": [
-            "",
             "DuckDuckGo"
           ]
         }

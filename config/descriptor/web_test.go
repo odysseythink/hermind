@@ -30,7 +30,7 @@ func TestWebSearchProviderEnum(t *testing.T) {
 	if p.Kind != FieldEnum {
 		t.Errorf("search.provider.Kind = %s, want enum", p.Kind)
 	}
-	want := map[string]bool{"": true, "tavily": true, "brave": true, "exa": true, "DuckDuckGo": true}
+	want := map[string]bool{"tavily": true, "brave": true, "exa": true, "DuckDuckGo": true}
 	got := map[string]bool{}
 	for _, v := range p.Enum {
 		got[v] = true
