@@ -22,6 +22,10 @@ var (
 func NewRootCmd(app *App) *cobra.Command {
 	logging.Setup(app.Config.Logging.Level)
 
+	// Disable Cobra’s Windows mousetrap so double-clicking hermind.exe
+	// from Explorer works (the default action is to launch the web UI).
+	cobra.MousetrapHelpText = ""
+
 	root := &cobra.Command{
 		Use:           "hermind",
 		Short:         "Hermind — Go port of the hermes AI agent framework",
