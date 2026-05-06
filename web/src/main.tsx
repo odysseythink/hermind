@@ -4,6 +4,10 @@ import './styles/theme.css';
 import 'katex/dist/katex.min.css';
 import App from './App';
 import { initI18n } from './i18n';
+import { applyTheme, getSavedTheme } from './hooks/useTheme';
+
+// Apply saved theme before React mounts to avoid a flash of the wrong scheme.
+applyTheme(getSavedTheme());
 
 const rootElem = document.getElementById('root');
 if (!rootElem) {

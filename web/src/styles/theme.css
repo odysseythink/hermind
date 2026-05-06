@@ -66,9 +66,12 @@
   --dot-lg:   8px;
 }
 
-/* Light mode — warm off-white + cream + warm near-black. */
+/* Light mode — warm off-white + cream + warm near-black.
+ * Applied automatically when the OS prefers light AND no explicit
+ * data-theme attribute is set on <html>.
+ */
 @media (prefers-color-scheme: light) {
-  :root {
+  :root:not([data-theme]) {
     --bg:         #fafaf7;
     --surface:    #f0ede4;
     --surface-2:  #e8e4d6;
@@ -87,6 +90,50 @@
     --active-tint: rgba(255, 184, 0, .14);
     --hover-tint:  rgba(0, 0, 0, .04);
   }
+}
+
+/* Explicit light mode override (higher specificity than the media query). */
+:root[data-theme="light"] {
+  --bg:         #fafaf7;
+  --surface:    #f0ede4;
+  --surface-2:  #e8e4d6;
+  --border:     #d9d4c8;
+  --text:       #1a1817;
+  --muted:      #5c584f;
+  --accent:     #FFB800;
+  --accent-2:   #E89F00;
+  --accent-fg:  #0a0b0d;
+  --accent-bg:  rgba(255, 184, 0, .14);
+  --focus:      rgba(255, 184, 0, .45);
+  --success:    #2f7d32;
+  --error:      #c9302c;
+  --warning:    #b37b04;
+
+  --active-tint: rgba(255, 184, 0, .14);
+  --hover-tint:  rgba(0, 0, 0, .04);
+}
+
+/* Explicit dark mode override — re-declares the default dark tokens so
+ * they win over the light media query when the user manually picks dark.
+ */
+:root[data-theme="dark"] {
+  --bg:         #0a0b0d;
+  --surface:    #14161a;
+  --surface-2:  #1d2027;
+  --border:     #2a2e36;
+  --text:       #e8e6e3;
+  --muted:      #8a8680;
+  --accent:     #FFB800;
+  --accent-2:   #FF8A00;
+  --accent-fg:  #0a0b0d;
+  --accent-bg:  rgba(255, 184, 0, .08);
+  --focus:      rgba(255, 184, 0, .35);
+  --success:    #7ee787;
+  --error:      #ff6b6b;
+  --warning:    #d29922;
+
+  --active-tint: rgba(255, 184, 0, .08);
+  --hover-tint:  rgba(255, 255, 255, .04);
 }
 
 /* ============================================================

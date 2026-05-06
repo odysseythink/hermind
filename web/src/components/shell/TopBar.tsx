@@ -1,6 +1,7 @@
 import styles from './TopBar.module.css';
 import type { Status } from '../../state';
 import LanguageToggle from './LanguageToggle';
+import ThemeToggle from './ThemeToggle';
 import { useTranslation } from 'react-i18next';
 
 export type ShellMode = 'chat' | 'settings';
@@ -58,6 +59,9 @@ export default function TopBar({ dirtyCount, status, onSave, mode = 'settings', 
       </span>
       <span className={styles.langSlot}>
         <LanguageToggle />
+      </span>
+      <span className={styles.themeSlot}>
+        <ThemeToggle />
       </span>
       <button
         type="button"

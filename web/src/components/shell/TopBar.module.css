@@ -80,6 +80,11 @@
   align-items: center;
 }
 
+.themeSlot {
+  display: inline-flex;
+  align-items: center;
+}
+
 .modeToggle {
   display: inline-flex;
   border: 1px solid var(--border);

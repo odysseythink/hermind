@@ -1,0 +1,33 @@
+.toggle {
+  display: inline-flex;
+  border: 1px solid var(--border);
+  border-radius: var(--r-sm);
+  overflow: hidden;
+  font-family: var(--font-mono);
+  font-size: var(--fs-xs);
+}
+
+.toggle button {
+  background: transparent;
+  border: none;
+  color: var(--muted);
+  padding: var(--space-1) var(--space-2);
+  cursor: pointer;
+  font: inherit;
+  transition: background var(--t-fast) ease-out, color var(--t-fast) ease-out;
+}
+
+.toggle button:not(:last-child) {
+  border-right: 1px solid var(--border);
+}
+
+.toggle button.active {
+  background: var(--accent-bg);
+  color: var(--accent);
+  font-weight: 600;
+}
+
+.toggle button:hover:not(.active) {
+  background: var(--hover-tint);
+  color: var(--text);
+}
