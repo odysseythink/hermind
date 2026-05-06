@@ -3,6 +3,7 @@ package agent
 
 import (
 	"sort"
+	"strconv"
 	"strings"
 )
 
@@ -33,6 +34,7 @@ type PromptOptions struct {
 	SkipContext    bool
 	ActiveSkills   []ActiveSkill // prepended under a stable header
 	ActiveMemories []string      // recalled memory snippets, one per line
+	ObsidianCtx    *ObsidianContext
 }
 
 // PromptBuilder assembles system prompts for the agent engine.
@@ -64,6 +66,9 @@ func (pb *PromptBuilder) Build(opts *PromptOptions) string {
 	}
 	if opts != nil && len(opts.ActiveMemories) > 0 {
 		parts = append(parts, renderActiveMemories(opts.ActiveMemories))
+	}
+	if opts != nil && opts.ObsidianCtx != nil {
+		parts = append(parts, renderObsidianContext(opts.ObsidianCtx))
 	}
 	return strings.Join(parts, "\n\n")
 }
@@ -103,4 +108,25 @@ func renderActiveSkills(active []ActiveSkill) string {
 		b.WriteString("\n")
 	}
 	return strings.TrimRight(b.String(), "\n")
+}
+
+func renderObsidianContext(ctx *ObsidianContext) string {
+	var b strings.Builder
+	b.WriteString("# Obsidian Context\n\n")
+	b.WriteString("The user is currently working in an Obsidian vault. Use the following context to ground your answers. When you need to read or write notes, use the obsidian_* tools.\n")
+	b.WriteString("\n- Vault path: ")
+	b.WriteString(ctx.VaultPath)
+	if ctx.CurrentNote != "" {
+		b.WriteString("\n- Active note: ")
+		b.WriteString(ctx.CurrentNote)
+	}
+	if ctx.SelectedText != "" {
+		b.WriteString("\n- Selected text: ")
+		b.WriteString(ctx.SelectedText)
+	}
+	if ctx.CursorLine > 0 {
+		b.WriteString("\n- Cursor line: ")
+		b.WriteString(strconv.Itoa(ctx.CursorLine))
+	}
+	return b.String()
 }
