@@ -40,8 +40,10 @@ func (c *Client) Stream(ctx context.Context, req *provider.Request) (provider.St
 		httpReq.Header.Set(k, v)
 	}
 
+	log.Printf("[%s] Sending HTTP POST to %s", c.cfg.ProviderName, c.cfg.BaseURL+"/chat/completions")
 	httpResp, err := c.http.Do(httpReq)
 	if err != nil {
+		log.Printf("[%s] HTTP request failed: %v", c.cfg.ProviderName, err)
 		return nil, &provider.Error{
 			Kind:     provider.ErrServerError,
 			Provider: c.cfg.ProviderName,
@@ -49,15 +51,18 @@ func (c *Client) Stream(ctx context.Context, req *provider.Request) (provider.St
 			Cause:    err,
 		}
 	}
+	log.Printf("[%s] HTTP response status: %d", c.cfg.ProviderName, httpResp.StatusCode)
 	if httpResp.StatusCode != http.StatusOK {
 		err := mapHTTPError(c.cfg.ProviderName, httpResp)
 		_ = httpResp.Body.Close()
+		log.Printf("[%s] HTTP error: %v", c.cfg.ProviderName, err)
 		return nil, err
 	}
 
 	scanner := bufio.NewScanner(httpResp.Body)
 	scanner.Buffer(make([]byte, 0, 64*1024), sseMaxLineBytes)
 	scanner.Split(splitSSEEvents)
+	log.Printf("[%s] SSE stream started", c.cfg.ProviderName)
 
 	return &openaiStream{
 		providerName: c.cfg.ProviderName,
@@ -124,9 +129,11 @@ func (s *openaiStream) Recv() (*provider.StreamEvent, error) {
 	for {
 		if !s.scanner.Scan() {
 			if err := s.scanner.Err(); err != nil {
+				log.Printf("[%s] SSE scan error: %v", s.providerName, err)
 				return nil, fmt.Errorf("%s stream: scan: %w", s.providerName, err)
 			}
 			// Clean EOF with no explicit [DONE] terminator — synthesize a Done event.
+			log.Printf("[%s] SSE EOF without [DONE]", s.providerName)
 			s.done = true
 			return s.buildDoneEvent(), nil
 		}
@@ -148,6 +155,7 @@ func (s *openaiStream) Recv() (*provider.StreamEvent, error) {
 
 		// Terminator
 		if bytes.Equal(data, []byte("[DONE]")) {
+			log.Printf("[%s] SSE [DONE] received", s.providerName)
 			s.done = true
 			return s.buildDoneEvent(), nil
 		}
@@ -155,6 +163,7 @@ func (s *openaiStream) Recv() (*provider.StreamEvent, error) {
 		// Parse the chunk
 		var chunk chatStreamChunk
 		if err := json.Unmarshal(data, &chunk); err != nil {
+			log.Printf("[%s] SSE chunk parse error: %v | data=%s", s.providerName, err, string(data))
 			return nil, fmt.Errorf("%s stream: parse chunk: %w", s.providerName, err)
 		}
 
@@ -163,6 +172,7 @@ func (s *openaiStream) Recv() (*provider.StreamEvent, error) {
 			return nil, err
 		}
 		if ev != nil {
+			log.Printf("[%s] SSE event: type=%d content=%q", s.providerName, ev.Type, ev.Delta.Content)
 			return ev, nil
 		}
 		// keep scanning
