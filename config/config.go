@@ -383,6 +383,9 @@ type AgentConfig struct {
 	// DynamicToolSelection filters the tool list sent to the LLM based on the
 	// user query keywords. Reduces token usage for small-context models.
 	DynamicToolSelection bool `yaml:"dynamic_tool_selection,omitempty"`
+	// HistoryLimit caps the number of past messages loaded into context.
+	// 0 means unlimited (default). Set to 20-50 for small-context models.
+	HistoryLimit int `yaml:"history_limit,omitempty"`
 }
 
 // TerminalConfig holds settings for the terminal (shell exec) backend.
