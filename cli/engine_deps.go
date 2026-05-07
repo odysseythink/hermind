@@ -162,6 +162,7 @@ func BuildEngineDeps(ctx context.Context, app *App) (api.EngineDeps, func(), err
 		FirecrawlAPIKey: os.Getenv("FIRECRAWL_API_KEY"),
 		BingMarket:      app.Config.Web.Search.Providers.Bing.Market,
 		SearXNGBaseURL:  app.Config.Web.Search.Providers.SearXNG.BaseURL,
+		DisableWebFetch: app.Config.Web.DisableWebFetch,
 	})
 
 	if app.Storage != nil {

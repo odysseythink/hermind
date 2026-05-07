@@ -97,6 +97,7 @@ type openaiStream struct {
 
 	// Accumulated state
 	text         strings.Builder
+	reasoning    strings.Builder
 	model        string
 	finishReason string
 	usage        message.Usage
@@ -200,6 +201,17 @@ func (s *openaiStream) handleChunk(chunk *chatStreamChunk) (*provider.StreamEven
 		s.finishReason = choice.FinishReason
 	}
 
+	// Reasoning delta (deepseek-reasoner)
+	if choice.Delta.ReasoningContent != "" {
+		s.reasoning.WriteString(choice.Delta.ReasoningContent)
+		return &provider.StreamEvent{
+			Type: provider.EventDelta,
+			Delta: &provider.StreamDelta{
+				Reasoning: choice.Delta.ReasoningContent,
+			},
+		}, nil
+	}
+
 	// Text delta
 	if choice.Delta.Content != "" {
 		s.text.WriteString(choice.Delta.Content)
@@ -275,8 +287,9 @@ func (s *openaiStream) buildDoneEvent() *provider.StreamEvent {
 		Type: provider.EventDone,
 		Response: &provider.Response{
 			Message: message.Message{
-				Role:    message.RoleAssistant,
-				Content: content,
+				Role:      message.RoleAssistant,
+				Content:   content,
+				Reasoning: s.reasoning.String(),
 			},
 			FinishReason: s.finishReason,
 			Usage:        s.usage,

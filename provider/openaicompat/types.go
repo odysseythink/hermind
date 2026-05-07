@@ -25,11 +25,12 @@ type streamOptions struct {
 // apiMessage is one message in the chat array.
 // OpenAI uses: "system", "user", "assistant", "tool"
 type apiMessage struct {
-	Role       string         `json:"role"`
-	Content    any            `json:"content"` // string or []apiContentPart or nil
-	Name       string         `json:"name,omitempty"`
-	ToolCalls  []apiToolCall  `json:"tool_calls,omitempty"`
-	ToolCallID string         `json:"tool_call_id,omitempty"`
+	Role             string         `json:"role"`
+	Content          any            `json:"content"` // string or []apiContentPart or nil
+	Name             string         `json:"name,omitempty"`
+	ToolCalls        []apiToolCall  `json:"tool_calls,omitempty"`
+	ToolCallID       string         `json:"tool_call_id,omitempty"`
+	ReasoningContent string         `json:"reasoning_content,omitempty"`
 }
 
 // apiContentPart is one element of a multimodal content array.
@@ -107,9 +108,10 @@ type apiStreamChoice struct {
 }
 
 type apiStreamDelta struct {
-	Role      string               `json:"role,omitempty"`
-	Content   string               `json:"content,omitempty"`
-	ToolCalls []apiStreamToolCall  `json:"tool_calls,omitempty"`
+	Role             string               `json:"role,omitempty"`
+	Content          string               `json:"content,omitempty"`
+	ReasoningContent string               `json:"reasoning_content,omitempty"`
+	ToolCalls        []apiStreamToolCall  `json:"tool_calls,omitempty"`
 }
 
 // apiStreamToolCall is a tool call chunk in a streaming response.

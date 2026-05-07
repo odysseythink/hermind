@@ -56,8 +56,10 @@ func (c *Client) Complete(ctx context.Context, req *provider.Request) (*provider
 	}
 
 	choice := apiResp.Choices[0]
+	msg := convertResponseMessage(choice.Message)
+	msg.Reasoning = choice.Message.ReasoningContent
 	return &provider.Response{
-		Message:      convertResponseMessage(choice.Message),
+		Message:      msg,
 		FinishReason: choice.FinishReason,
 		Usage: message.Usage{
 			InputTokens:  apiResp.Usage.PromptTokens,
