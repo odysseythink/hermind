@@ -155,10 +155,13 @@ type webSearchPayload struct {
 // normalize → cache.Set.
 func (d *searchDispatcher) Handler() tool.Handler {
 	return func(ctx context.Context, raw json.RawMessage) (string, error) {
+		log.Printf("[web_search] Handler invoked")
 		var args searchArgs
 		if err := json.Unmarshal(raw, &args); err != nil {
+			log.Printf("[web_search] Invalid arguments: %v", err)
 			return tool.ToolError("invalid arguments: " + err.Error()), nil
 		}
+		log.Printf("[web_search] Parsed args: query=%q num_results=%d", args.Query, args.NumResults)
 		if args.Query == "" {
 			return tool.ToolError("query is required"), nil
 		}
@@ -175,15 +178,18 @@ func (d *searchDispatcher) Handler() tool.Handler {
 			log.Printf("[web_search] resolve err=%v", err)
 			return tool.ToolError(err.Error()), nil
 		}
+		log.Printf("[web_search] Resolved provider: %s (explicit=%q)", provider.ID(), d.explicit)
 
 		cacheKey := fmt.Sprintf("%s|%s|%d", provider.ID(), strings.ToLower(args.Query), n)
 		if cached, ok := d.cache.Get(cacheKey); ok {
+			log.Printf("[web_search] Cache hit for key=%s", cacheKey)
 			return tool.ToolResult(webSearchPayload{
 				Query:    args.Query,
 				Provider: provider.ID(),
 				Results:  cached,
 			}), nil
 		}
+		log.Printf("[web_search] Cache miss, calling provider.Search")
 
 		results, err := provider.Search(ctx, args.Query, n)
 		if err != nil {
@@ -194,6 +200,7 @@ func (d *searchDispatcher) Handler() tool.Handler {
 			return tool.ToolError(provider.ID() + ": " + err.Error()), nil
 		}
 
+		log.Printf("[web_search] provider=%s returned %d results", provider.ID(), len(results))
 		d.cache.Set(cacheKey, results)
 		return tool.ToolResult(webSearchPayload{
 			Query:    args.Query,
