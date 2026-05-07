@@ -106,6 +106,8 @@ func TestDispatcher_ExplicitProviderWins(t *testing.T) {
 		"tavily":     &fakeProvider{id: "tavily", configured: true},
 		"brave":      &fakeProvider{id: "brave", configured: true},
 		"exa":        &fakeProvider{id: "exa", configured: true},
+		"searxng":    &fakeProvider{id: "searxng", configured: true},
+		"bing":       &fakeProvider{id: "bing", configured: true},
 		"DuckDuckGo": &fakeProvider{id: "DuckDuckGo", configured: true},
 	}
 	d := dispatcherWith(providers, "brave")
@@ -138,14 +140,16 @@ func TestDispatcher_ExplicitUnconfiguredErrors(t *testing.T) {
 func TestDispatcher_AutoPriority(t *testing.T) {
 	providers := map[string]SearchProvider{
 		"tavily":     &fakeProvider{id: "tavily", configured: false},
-		"brave":      &fakeProvider{id: "brave", configured: true},
-		"exa":        &fakeProvider{id: "exa", configured: true},
+		"brave":      &fakeProvider{id: "brave", configured: false},
+		"exa":        &fakeProvider{id: "exa", configured: false},
+		"searxng":    &fakeProvider{id: "searxng", configured: true},
+		"bing":       &fakeProvider{id: "bing", configured: true},
 		"DuckDuckGo": &fakeProvider{id: "DuckDuckGo", configured: true},
 	}
 	d := dispatcherWith(providers, "")
 	p, err := d.resolveProvider()
 	require.NoError(t, err)
-	assert.Equal(t, "brave", p.ID())
+	assert.Equal(t, "searxng", p.ID())
 }
 
 func TestDispatcher_AutoFallsBackToDDG(t *testing.T) {
@@ -153,6 +157,8 @@ func TestDispatcher_AutoFallsBackToDDG(t *testing.T) {
 		"tavily":     &fakeProvider{id: "tavily", configured: false},
 		"brave":      &fakeProvider{id: "brave", configured: false},
 		"exa":        &fakeProvider{id: "exa", configured: false},
+		"searxng":    &fakeProvider{id: "searxng", configured: false},
+		"bing":       &fakeProvider{id: "bing", configured: false},
 		"DuckDuckGo": &fakeProvider{id: "DuckDuckGo", configured: true},
 	}
 	d := dispatcherWith(providers, "")
