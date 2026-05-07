@@ -1,9 +1,11 @@
 package web
 
 import (
+	"bytes"
 	"context"
 	"encoding/base64"
 	"fmt"
+	"io"
 	"log"
 	"net/http"
 	"net/url"
@@ -69,7 +71,17 @@ func (p *bingProvider) Search(ctx context.Context, q string, n int) ([]SearchRes
 		return nil, fmt.Errorf("bing: http %d", resp.StatusCode)
 	}
 
-	doc, err := goquery.NewDocumentFromReader(resp.Body)
+	bodyBytes, err := io.ReadAll(resp.Body)
+	if err != nil {
+		return nil, fmt.Errorf("bing: read body error: %w", err)
+	}
+	preview := string(bodyBytes)
+	if len(preview) > 500 {
+		preview = preview[:500] + "..."
+	}
+	log.Printf("[Bing] Response body preview: %s", preview)
+
+	doc, err := goquery.NewDocumentFromReader(bytes.NewReader(bodyBytes))
 	if err != nil {
 		return nil, fmt.Errorf("bing: parse error: %w", err)
 	}
