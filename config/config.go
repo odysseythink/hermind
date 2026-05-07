@@ -80,11 +80,23 @@ type SearchProvidersConfig struct {
 	Brave      ProviderKeyConfig `yaml:"brave,omitempty"`
 	Exa        ProviderKeyConfig `yaml:"exa,omitempty"`
 	DuckDuckGo *DDGProxyConfig   `yaml:"duckduckgo,omitempty"`
+	Bing       BingConfig        `yaml:"bing,omitempty"`
+	SearXNG    SearXNGConfig     `yaml:"searxng,omitempty"`
 }
 
 // ProviderKeyConfig is the shared shape for an API-key-only provider.
 type ProviderKeyConfig struct {
 	APIKey string `yaml:"api_key,omitempty"`
+}
+
+// BingConfig holds Bing-specific search settings.
+type BingConfig struct {
+	Market string `yaml:"market,omitempty"`
+}
+
+// SearXNGConfig holds SearXNG-specific search settings.
+type SearXNGConfig struct {
+	BaseURL string `yaml:"base_url,omitempty"`
 }
 
 // SkillsConfig records user skill enable/disable selections. It mirrors
