@@ -465,7 +465,7 @@ func Default() *Config {
 		Model:     "anthropic/claude-opus-4-6",
 		Providers: map[string]ProviderConfig{},
 		Agent: AgentConfig{
-			MaxTurns:       90,
+			MaxTurns:       15,
 			GatewayTimeout: 1800,
 			Compression: CompressionConfig{
 				Enabled:             true,
