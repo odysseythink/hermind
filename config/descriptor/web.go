@@ -12,7 +12,7 @@ func init() {
 	// Gate api_key fields on the selected provider. The "" (auto-select)
 	// case also reveals all three so users can pre-populate keys before
 	// committing to one — auto-select picks the first provider with a
-	// configured key by priority (Tavily > Brave > Exa > DuckDuckGo).
+	// configured key by priority (Tavily > Brave > Exa > SearXNG > Bing > DuckDuckGo).
 	gate := func(provider string) *Predicate {
 		return &Predicate{Field: "search.provider", In: []any{"", provider}}
 	}
@@ -30,9 +30,9 @@ func init() {
 			{
 				Name:  "search.provider",
 				Label: "Search provider",
-				Help:  "Leave blank to auto-select by priority (Tavily > Brave > Exa > DuckDuckGo).",
+				Help:  "Leave blank to auto-select by priority (Tavily > Brave > Exa > SearXNG > Bing > DuckDuckGo).",
 				Kind:  FieldEnum,
-				Enum:  []string{"tavily", "brave", "exa", "DuckDuckGo"},
+				Enum:  []string{"tavily", "brave", "exa", "searxng", "bing", "DuckDuckGo"},
 			},
 			{
 				Name:        "search.providers.tavily.api_key",
@@ -54,6 +54,20 @@ func init() {
 				Kind:        FieldSecret,
 				Help:        "Env var EXA_API_KEY overrides this value at runtime.",
 				VisibleWhen: gate("exa"),
+			},
+			{
+				Name:        "search.providers.bing.market",
+				Label:       "Bing market",
+				Kind:        FieldString,
+				Help:        "Market code for Bing results, e.g. zh-CN, en-US. Leave blank for default.",
+				VisibleWhen: gate("bing"),
+			},
+			{
+				Name:        "search.providers.searxng.base_url",
+				Label:       "SearXNG base URL",
+				Kind:        FieldString,
+				Help:        "Base URL of your SearXNG instance, e.g. http://localhost:8080.",
+				VisibleWhen: gate("searxng"),
 			},
 			{
 				Name:        "search.providers.duckduckgo.url",
