@@ -51,7 +51,8 @@ func (c *Client) buildRequest(req *provider.Request, stream bool) *chatRequest {
 		for _, t := range req.Tools {
 			apiReq.Tools = append(apiReq.Tools, convertToolDefinition(t))
 		}
-		log.Printf("[%s] buildRequest: sending %d tools", c.cfg.ProviderName, len(apiReq.Tools))
+		apiReq.ToolChoice = "auto"
+		log.Printf("[%s] buildRequest: sending %d tools (tool_choice=auto)", c.cfg.ProviderName, len(apiReq.Tools))
 		for _, t := range apiReq.Tools {
 			log.Printf("[%s]   tool: %s", c.cfg.ProviderName, t.Function.Name)
 		}
