@@ -39,6 +39,13 @@ func init() {
 				Help:  "When enabled, only sends tool definitions relevant to the user query. Reduces token usage for small-context models.",
 				Kind:  FieldBool,
 			},
+			{
+				Name:    "history_limit",
+				Label:   "History limit",
+				Help:    "Maximum number of past messages to load into context. 0 = unlimited. Set to 20-50 for small-context models.",
+				Kind:    FieldInt,
+				Default: 0,
+			},
 		},
 	})
 }

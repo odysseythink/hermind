@@ -40,7 +40,11 @@ func (e *Engine) RunConversation(ctx context.Context, opts *RunOptions) (*Conver
 	if opts.Ephemeral {
 		history = append([]message.Message{}, opts.History...)
 	} else if e.storage != nil {
-		rows, err := e.storage.GetHistory(ctx, 0, 0)
+		limit := e.config.HistoryLimit
+		if limit <= 0 {
+			limit = 1000
+		}
+		rows, err := e.storage.GetHistory(ctx, limit, 0)
 		if err != nil {
 			return nil, fmt.Errorf("engine: load history: %w", err)
 		}
@@ -52,6 +56,13 @@ func (e *Engine) RunConversation(ctx context.Context, opts *RunOptions) (*Conver
 			history = append(history, msg)
 		}
 	}
+
+	// Log history size for debugging context-overflow issues.
+	historyChars := 0
+	for _, m := range history {
+		historyChars += len(m.Content.Text())
+	}
+	slog.Info("conversation history loaded", "messages", len(history), "chars", historyChars)
 
 	userMsg := message.Message{
 		Role:    message.RoleUser,
