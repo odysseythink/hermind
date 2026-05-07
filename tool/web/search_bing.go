@@ -112,7 +112,7 @@ func (p *bingProvider) Search(ctx context.Context, q string, n int) ([]SearchRes
 		if title != "" && href != "" {
 			results = append(results, SearchResult{
 				Title:   title,
-				URL:     href,
+				URL:     decodeBingURL(href),
 				Snippet: snippet,
 			})
 		} else {

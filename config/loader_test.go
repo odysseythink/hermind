@@ -13,7 +13,7 @@ import (
 func TestDefaultConfigHasSensibleDefaults(t *testing.T) {
 	cfg := Default()
 	assert.Equal(t, "anthropic/claude-opus-4-6", cfg.Model)
-	assert.Equal(t, 90, cfg.Agent.MaxTurns)
+	assert.Equal(t, 15, cfg.Agent.MaxTurns)
 	assert.Equal(t, 1800, cfg.Agent.GatewayTimeout)
 	assert.Equal(t, "sqlite", cfg.Storage.Driver)
 	assert.NotNil(t, cfg.Providers)
