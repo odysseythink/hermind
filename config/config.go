@@ -59,7 +59,7 @@ type ReplayConfig struct {
 
 // SearchConfig configures the web_search tool's provider abstraction.
 // Provider selects the active backend; empty string enables auto-selection
-// by priority (tavily > brave > exa > DuckDuckGo).
+// by priority (tavily > brave > exa > searxng > bing > DuckDuckGo).
 type SearchConfig struct {
 	Provider  string                `yaml:"provider,omitempty"`
 	Providers SearchProvidersConfig `yaml:"providers,omitempty"`

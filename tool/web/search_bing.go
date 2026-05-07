@@ -2,6 +2,7 @@ package web
 
 import (
 	"context"
+	"encoding/base64"
 	"fmt"
 	"net/http"
 	"net/url"
@@ -98,4 +99,34 @@ func (p *bingProvider) Search(ctx context.Context, q string, n int) ([]SearchRes
 	})
 
 	return results, nil
+}
+
+// decodeBingURL attempts to extract the original destination URL from Bing's
+// redirect wrapper links (e.g. https://www.bing.com/ck/a?...&u=<base64>).
+// If the href is not a Bing redirect or decoding fails, the original href
+// is returned unchanged.
+func decodeBingURL(href string) string {
+	u, err := url.Parse(href)
+	if err != nil {
+		return href
+	}
+	if !strings.Contains(u.Host, "bing.com") {
+		return href
+	}
+	encoded := u.Query().Get("u")
+	if encoded == "" {
+		return href
+	}
+	decoded, err := base64.RawStdEncoding.DecodeString(encoded)
+	if err != nil {
+		decoded, err = base64.StdEncoding.DecodeString(encoded)
+		if err != nil {
+			return href
+		}
+	}
+	result := string(decoded)
+	if strings.HasPrefix(result, "http://") || strings.HasPrefix(result, "https://") {
+		return result
+	}
+	return href
 }
