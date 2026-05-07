@@ -88,3 +88,15 @@ func TestReplayConfigYAMLRoundTrip(t *testing.T) {
 	require.Equal(t, ".hermind/replay", cfg.Benchmark.Replay.OutDir)
 	require.Equal(t, "claude-haiku-4-5", cfg.Benchmark.Replay.JudgeModel)
 }
+
+func TestWebConfigYAMLRoundTrip(t *testing.T) {
+	yamlSrc := []byte(
+		"web:\n" +
+			"  addr: 127.0.0.1:34567\n" +
+			"  disable_web_fetch: true\n",
+	)
+	var cfg Config
+	require.NoError(t, yaml.Unmarshal(yamlSrc, &cfg))
+	require.Equal(t, "127.0.0.1:34567", cfg.Web.Addr)
+	require.True(t, cfg.Web.DisableWebFetch)
+}

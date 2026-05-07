@@ -5,6 +5,7 @@ import (
 	"errors"
 	"fmt"
 	"io"
+	"log/slog"
 	"net"
 	"net/http"
 	"os"
@@ -16,6 +17,7 @@ import (
 
 	"github.com/odysseythink/hermind/agent/idle"
 	"github.com/odysseythink/hermind/api"
+	"github.com/odysseythink/hermind/config"
 )
 
 // webRunOptions parameterize runWeb. Shared by newWebCmd, newRunCmd,
@@ -59,15 +61,36 @@ func runWeb(ctx context.Context, app *App, opts webRunOptions) error {
 	}
 
 	var ln net.Listener
-	if opts.Addr == "" {
+	if opts.Addr != "" {
+		// CLI override — highest priority, do NOT persist
+		ln, err = net.Listen("tcp", opts.Addr)
+		if err != nil {
+			return fmt.Errorf("web: listen %s: %w", opts.Addr, err)
+		}
+	} else if app.Config.Web.Addr != "" {
+		// Previously persisted address
+		ln, err = net.Listen("tcp", app.Config.Web.Addr)
+		if err != nil {
+			// Port taken or invalid address — clear stale address and fall back to random
+			app.Config.Web.Addr = ""
+			ln, err = listenRandomLocalhost()
+			if err != nil {
+				return fmt.Errorf("web: %w", err)
+			}
+			app.Config.Web.Addr = ln.Addr().String()
+			if serr := config.SaveToPath(app.ConfigPath, app.Config); serr != nil {
+				slog.Warn("web: failed to save config with fallback random port", "err", serr)
+			}
+		}
+	} else {
+		// First start — random port
 		ln, err = listenRandomLocalhost()
 		if err != nil {
 			return fmt.Errorf("web: %w", err)
 		}
-	} else {
-		ln, err = net.Listen("tcp", opts.Addr)
-		if err != nil {
-			return fmt.Errorf("web: listen %s: %w", opts.Addr, err)
+		app.Config.Web.Addr = ln.Addr().String()
+		if serr := config.SaveToPath(app.ConfigPath, app.Config); serr != nil {
+			slog.Warn("web: failed to save config with new random port", "err", serr)
 		}
 	}
 	realAddr := "http://" + ln.Addr().String()
