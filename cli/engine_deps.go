@@ -160,6 +160,8 @@ func BuildEngineDeps(ctx context.Context, app *App) (api.EngineDeps, func(), err
 		ExaAPIKey:       app.Config.Web.Search.Providers.Exa.APIKey,
 		DDGProxyConfig:  app.Config.Web.Search.Providers.DuckDuckGo,
 		FirecrawlAPIKey: os.Getenv("FIRECRAWL_API_KEY"),
+		BingMarket:      app.Config.Web.Search.Providers.Bing.Market,
+		SearXNGBaseURL:  app.Config.Web.Search.Providers.SearXNG.BaseURL,
 	})
 
 	if app.Storage != nil {
