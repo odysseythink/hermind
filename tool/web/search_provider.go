@@ -30,13 +30,15 @@ type SearchResult struct {
 
 // Options is the flat parameter bundle consumed by RegisterAll.
 type Options struct {
-	SearchProvider   string
-	TavilyAPIKey     string
-	BraveAPIKey      string
-	ExaAPIKey        string
-	FirecrawlAPIKey  string
-	DDGProxyConfig   *config.DDGProxyConfig
-	BingMarket       string
-	SearXNGBaseURL   string
-	DisableWebFetch  bool
+	SearchProvider    string
+	TavilyAPIKey      string
+	BraveAPIKey       string
+	ExaAPIKey         string
+	FirecrawlAPIKey   string
+	DDGProxyConfig    *config.DDGProxyConfig
+	BingMarket        string
+	SearXNGBaseURL    string
+	DisableWebFetch   bool
+	DefaultNumResults int
+	MaxNumResults     int
 }

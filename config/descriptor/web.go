@@ -96,6 +96,18 @@ func init() {
 				Help:  "When enabled, the web_fetch tool is not registered and will not be exposed to the LLM. Useful when you rely on web_search or browser automation instead of raw HTTP fetches.",
 				Kind:  FieldBool,
 			},
+			{
+				Name:  "search.default_num_results",
+				Label: "Default result count",
+				Help:  "Number of search results to return when the LLM does not specify. 0 = 5.",
+				Kind:  FieldInt,
+			},
+			{
+				Name:  "search.max_num_results",
+				Label: "Max result count",
+				Help:  "Upper limit for search results. Requests exceeding this are clamped. 0 = 20.",
+				Kind:  FieldInt,
+			},
 		},
 	})
 }

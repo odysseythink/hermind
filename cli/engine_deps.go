@@ -154,15 +154,17 @@ func BuildEngineDeps(ctx context.Context, app *App) (api.EngineDeps, func(), err
 	terminal.RegisterShellExecute(toolRegistry, backend)
 
 	web.RegisterAll(toolRegistry, web.Options{
-		SearchProvider:  app.Config.Web.Search.Provider,
-		TavilyAPIKey:    app.Config.Web.Search.Providers.Tavily.APIKey,
-		BraveAPIKey:     app.Config.Web.Search.Providers.Brave.APIKey,
-		ExaAPIKey:       app.Config.Web.Search.Providers.Exa.APIKey,
-		DDGProxyConfig:  app.Config.Web.Search.Providers.DuckDuckGo,
-		FirecrawlAPIKey: os.Getenv("FIRECRAWL_API_KEY"),
-		BingMarket:      app.Config.Web.Search.Providers.Bing.Market,
-		SearXNGBaseURL:  app.Config.Web.Search.Providers.SearXNG.BaseURL,
-		DisableWebFetch: app.Config.Web.DisableWebFetch,
+		SearchProvider:    app.Config.Web.Search.Provider,
+		TavilyAPIKey:      app.Config.Web.Search.Providers.Tavily.APIKey,
+		BraveAPIKey:       app.Config.Web.Search.Providers.Brave.APIKey,
+		ExaAPIKey:         app.Config.Web.Search.Providers.Exa.APIKey,
+		DDGProxyConfig:    app.Config.Web.Search.Providers.DuckDuckGo,
+		FirecrawlAPIKey:   os.Getenv("FIRECRAWL_API_KEY"),
+		BingMarket:        app.Config.Web.Search.Providers.Bing.Market,
+		SearXNGBaseURL:    app.Config.Web.Search.Providers.SearXNG.BaseURL,
+		DisableWebFetch:   app.Config.Web.DisableWebFetch,
+		DefaultNumResults: app.Config.Web.Search.DefaultNumResults,
+		MaxNumResults:     app.Config.Web.Search.MaxNumResults,
 	})
 
 	if app.Storage != nil {

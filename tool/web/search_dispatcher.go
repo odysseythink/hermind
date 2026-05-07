@@ -92,9 +92,11 @@ func (c *searchCache) touchLocked(key string) {
 // tool.Handler shape via Handler() so the tool.Registry can invoke it
 // directly.
 type searchDispatcher struct {
-	providers map[string]SearchProvider
-	explicit  string // opts.SearchProvider — "" means auto-priority
-	cache     *searchCache
+	providers         map[string]SearchProvider
+	explicit          string // opts.SearchProvider — "" means auto-priority
+	cache             *searchCache
+	defaultNumResults int
+	maxNumResults     int
 }
 
 // priorityOrder is the auto-select sequence. DuckDuckGo is always last
@@ -105,7 +107,7 @@ var priorityOrder = []string{"tavily", "brave", "exa", "searxng", "bing", "DuckD
 // Options. DuckDuckGo is always registered; the other three are registered
 // regardless of key presence and Configured() reports the real state.
 func newSearchDispatcher(opts Options) *searchDispatcher {
-	return &searchDispatcher{
+	d := &searchDispatcher{
 		providers: map[string]SearchProvider{
 			"DuckDuckGo": newDDGProvider(opts.DDGProxyConfig, ""),
 			"tavily":     newTavilyProvider(opts.TavilyAPIKey, ""),
@@ -114,9 +116,18 @@ func newSearchDispatcher(opts Options) *searchDispatcher {
 			"bing":       newBingProvider(opts.BingMarket, ""),
 			"searxng":    newSearXNGProvider(opts.SearXNGBaseURL),
 		},
-		explicit: opts.SearchProvider,
-		cache:    newSearchCache(128, 60*time.Second),
+		explicit:          opts.SearchProvider,
+		cache:             newSearchCache(128, 60*time.Second),
+		defaultNumResults: opts.DefaultNumResults,
+		maxNumResults:     opts.MaxNumResults,
 	}
+	if d.defaultNumResults <= 0 {
+		d.defaultNumResults = 5
+	}
+	if d.maxNumResults <= 0 {
+		d.maxNumResults = 20
+	}
+	return d
 }
 
 func (d *searchDispatcher) resolveProvider() (SearchProvider, error) {
@@ -167,10 +178,10 @@ func (d *searchDispatcher) Handler() tool.Handler {
 		}
 		n := args.NumResults
 		if n <= 0 {
-			n = 5
+			n = d.defaultNumResults
 		}
-		if n > 20 {
-			n = 20
+		if n > d.maxNumResults {
+			n = d.maxNumResults
 		}
 
 		provider, err := d.resolveProvider()
