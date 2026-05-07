@@ -8,6 +8,7 @@ type chatRequest struct {
 	Model       string        `json:"model"`
 	Messages    []apiMessage  `json:"messages"`
 	Tools       []apiTool     `json:"tools,omitempty"`
+	ToolChoice  any           `json:"tool_choice,omitempty"`
 	MaxTokens   int           `json:"max_tokens,omitempty"`
 	Temperature *float64      `json:"temperature,omitempty"`
 	TopP        *float64      `json:"top_p,omitempty"`
