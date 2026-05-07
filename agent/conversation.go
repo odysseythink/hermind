@@ -96,7 +96,12 @@ func (e *Engine) RunConversation(ctx context.Context, opts *RunOptions) (*Conver
 
 	var toolDefs []tool.ToolDefinition
 	if e.tools != nil {
-		toolDefs = e.tools.Definitions(nil)
+		if e.toolSelector != nil {
+			toolDefs = e.toolSelector.Select(opts.UserMessage, history, e.tools)
+			slog.Info("dynamic tool selection", "selected", len(toolDefs), "total", len(e.tools.Entries(nil)))
+		} else {
+			toolDefs = e.tools.Definitions(nil)
+		}
 	}
 
 	budget := NewBudget(e.config.MaxTurns)

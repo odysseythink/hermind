@@ -380,6 +380,9 @@ type AgentConfig struct {
 	DefaultSystemPrompt string            `yaml:"default_system_prompt,omitempty"`
 	// MaxTokens caps the output tokens per LLM turn. 0 uses the default (4096).
 	MaxTokens int `yaml:"max_tokens,omitempty"`
+	// DynamicToolSelection filters the tool list sent to the LLM based on the
+	// user query keywords. Reduces token usage for small-context models.
+	DynamicToolSelection bool `yaml:"dynamic_tool_selection,omitempty"`
 }
 
 // TerminalConfig holds settings for the terminal (shell exec) backend.
