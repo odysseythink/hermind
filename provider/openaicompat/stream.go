@@ -8,6 +8,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"io"
+	"log"
 	"net/http"
 	"strings"
 
@@ -229,6 +230,7 @@ func (s *openaiStream) buildDoneEvent() *provider.StreamEvent {
 	var content message.Content
 
 	if len(s.toolCalls) > 0 {
+		log.Printf("[%s] stream done: %d tool calls accumulated", s.providerName, len(s.toolCalls))
 		blocks := make([]message.ContentBlock, 0, 1+len(s.toolCalls))
 		if s.text.Len() > 0 {
 			blocks = append(blocks, message.ContentBlock{
@@ -245,6 +247,7 @@ func (s *openaiStream) buildDoneEvent() *provider.StreamEvent {
 			if args == "" {
 				args = "{}"
 			}
+			log.Printf("[%s]   tool_call: id=%s name=%s args=%s", s.providerName, b.ID, b.Name, args)
 			blocks = append(blocks, message.ContentBlock{
 				Type:         "tool_use",
 				ToolUseID:    b.ID,
@@ -254,6 +257,7 @@ func (s *openaiStream) buildDoneEvent() *provider.StreamEvent {
 		}
 		content = message.BlockContent(blocks)
 	} else {
+		log.Printf("[%s] stream done: no tool calls", s.providerName)
 		content = message.TextContent(s.text.String())
 	}
 

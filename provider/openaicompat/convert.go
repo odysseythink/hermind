@@ -2,6 +2,8 @@
 package openaicompat
 
 import (
+	"log"
+
 	"github.com/odysseythink/hermind/message"
 	"github.com/odysseythink/hermind/provider"
 	"github.com/odysseythink/hermind/tool"
@@ -49,6 +51,12 @@ func (c *Client) buildRequest(req *provider.Request, stream bool) *chatRequest {
 		for _, t := range req.Tools {
 			apiReq.Tools = append(apiReq.Tools, convertToolDefinition(t))
 		}
+		log.Printf("[%s] buildRequest: sending %d tools", c.cfg.ProviderName, len(apiReq.Tools))
+		for _, t := range apiReq.Tools {
+			log.Printf("[%s]   tool: %s", c.cfg.ProviderName, t.Function.Name)
+		}
+	} else {
+		log.Printf("[%s] buildRequest: no tools in request", c.cfg.ProviderName)
 	}
 
 	// Convert conversation messages
