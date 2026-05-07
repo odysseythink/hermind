@@ -62,8 +62,12 @@ type ReplayConfig struct {
 // Provider selects the active backend; empty string enables auto-selection
 // by priority (tavily > brave > exa > searxng > bing > DuckDuckGo).
 type SearchConfig struct {
-	Provider  string                `yaml:"provider,omitempty"`
-	Providers SearchProvidersConfig `yaml:"providers,omitempty"`
+	Provider          string                `yaml:"provider,omitempty"`
+	Providers         SearchProvidersConfig `yaml:"providers,omitempty"`
+	// DefaultNumResults is the fallback when the LLM omits num_results. 0 = 5.
+	DefaultNumResults int `yaml:"default_num_results,omitempty"`
+	// MaxNumResults caps results per search. 0 = 20.
+	MaxNumResults int `yaml:"max_num_results,omitempty"`
 }
 
 // DDGProxyConfig holds proxy settings for DuckDuckGo web search requests.
@@ -374,6 +378,8 @@ type AgentConfig struct {
 	GatewayTimeout      int               `yaml:"gateway_timeout,omitempty"`
 	Compression         CompressionConfig `yaml:"compression,omitempty"`
 	DefaultSystemPrompt string            `yaml:"default_system_prompt,omitempty"`
+	// MaxTokens caps the output tokens per LLM turn. 0 uses the default (4096).
+	MaxTokens int `yaml:"max_tokens,omitempty"`
 }
 
 // TerminalConfig holds settings for the terminal (shell exec) backend.

@@ -9,7 +9,7 @@ const webSearchSchema = `{
   "type": "object",
   "properties": {
     "query":       { "type": "string", "description": "Search query" },
-    "num_results": { "type": "number", "description": "Number of results to return (default 5, max 20)" }
+    "num_results": { "type": "number", "description": "Number of results to return (configurable default and max via web.search settings)" }
   },
   "required": ["query"]
 }`

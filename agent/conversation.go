@@ -119,12 +119,16 @@ func (e *Engine) RunConversation(ctx context.Context, opts *RunOptions) (*Conver
 			}
 		}
 
+		maxTokens := e.config.MaxTokens
+		if maxTokens == 0 {
+			maxTokens = 4096
+		}
 		req := &provider.Request{
 			Model:        model,
 			SystemPrompt: systemPrompt,
 			Messages:     history,
 			Tools:        toolDefs,
-			MaxTokens:    4096,
+			MaxTokens:    maxTokens,
 		}
 
 		resp, err := e.streamOnce(ctx, req)
