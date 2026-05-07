@@ -129,3 +129,17 @@ func TestBingProvider_MarketParam(t *testing.T) {
 	_, _ = p.Search(context.Background(), "q", 5)
 	assert.Equal(t, "zh-CN", capturedMarket)
 }
+
+func TestDecodeBingURL(t *testing.T) {
+	// Direct URL — unchanged
+	assert.Equal(t, "https://go.dev", decodeBingURL("https://go.dev"))
+
+	// Bing redirect with base64 "u" parameter
+	assert.Equal(t, "https://go.dev", decodeBingURL("https://www.bing.com/ck/a?!&&p=abc&u=aHR0cHM6Ly9nby5kZXY"))
+
+	// Non-Bing host with "u" param — unchanged
+	assert.Equal(t, "https://example.com/?u=aHR0cHM6Ly9nby5kZXY", decodeBingURL("https://example.com/?u=aHR0cHM6Ly9nby5kZXY"))
+
+	// Bing link without "u" param — unchanged
+	assert.Equal(t, "https://www.bing.com/search?q=test", decodeBingURL("https://www.bing.com/search?q=test"))
+}
