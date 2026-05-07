@@ -36,7 +36,7 @@ func RegisterAll(reg *tool.Registry, opts Options) {
 	reg.Register(&tool.Entry{
 		Name:        "web_search",
 		Toolset:     "web",
-		Description: "Search the web via a configured provider (DuckDuckGo, Tavily, Brave, or Exa).",
+		Description: "Search the web via a configured provider (Tavily, Brave, Exa, SearXNG, Bing, or DuckDuckGo).",
 		Emoji:       "🔎",
 		Handler:     dispatcher.Handler(),
 		Schema: tool.ToolDefinition{

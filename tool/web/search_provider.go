@@ -36,4 +36,6 @@ type Options struct {
 	ExaAPIKey       string
 	FirecrawlAPIKey string
 	DDGProxyConfig  *config.DDGProxyConfig
+	BingMarket      string
+	SearXNGBaseURL  string
 }
