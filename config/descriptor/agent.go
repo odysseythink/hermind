@@ -33,6 +33,12 @@ func init() {
 				Kind:    FieldText,
 				Default: "",
 			},
+			{
+				Name:  "dynamic_tool_selection",
+				Label: "Dynamic tool selection",
+				Help:  "When enabled, only sends tool definitions relevant to the user query. Reduces token usage for small-context models.",
+				Kind:  FieldBool,
+			},
 		},
 	})
 }

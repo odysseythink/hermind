@@ -24,8 +24,9 @@ type Engine struct {
 	prompt      *PromptBuilder
 	compressor  *Compressor // optional, nil means compression disabled
 
-	aux    *provider.AuxClient
-	memory *MemoryManager
+	aux          *provider.AuxClient
+	memory       *MemoryManager
+	toolSelector *ToolSelector // nil when dynamic tool selection is disabled
 
 	// Callbacks — optional. Nil means no-op.
 	onStreamDelta func(delta *provider.StreamDelta)
@@ -106,6 +107,9 @@ func NewEngineWithToolsAndAux(p, aux provider.Provider, s storage.Storage, tools
 	}
 	if e.compressor != nil {
 		e.memory.SetCompressor(e.compressor)
+	}
+	if cfg.DynamicToolSelection && tools != nil {
+		e.toolSelector = NewToolSelector()
 	}
 	return e
 }

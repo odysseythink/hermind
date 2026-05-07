@@ -112,6 +112,24 @@ func (r *Registry) Definitions(filter func(*Entry) bool) []ToolDefinition {
 	return defs
 }
 
+// Entries returns a shallow copy of all registered entries that pass filter
+// and whose CheckFn returns true. Safe to call concurrently.
+func (r *Registry) Entries(filter func(*Entry) bool) []*Entry {
+	r.mu.RLock()
+	defer r.mu.RUnlock()
+	out := make([]*Entry, 0, len(r.entries))
+	for _, entry := range r.entries {
+		if filter != nil && !filter(entry) {
+			continue
+		}
+		if entry.CheckFn != nil && !entry.CheckFn() {
+			continue
+		}
+		out = append(out, entry)
+	}
+	return out
+}
+
 // ToolDefinition is the OpenAI function-calling schema shape.
 // Providers convert this to their own wire format.
 type ToolDefinition struct {
