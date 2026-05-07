@@ -99,7 +99,7 @@ type searchDispatcher struct {
 
 // priorityOrder is the auto-select sequence. DuckDuckGo is always last
 // because it is the keyless fallback.
-var priorityOrder = []string{"tavily", "brave", "exa", "DuckDuckGo"}
+var priorityOrder = []string{"tavily", "brave", "exa", "searxng", "bing", "DuckDuckGo"}
 
 // newSearchDispatcher constructs a dispatcher from the caller's
 // Options. DuckDuckGo is always registered; the other three are registered
@@ -111,6 +111,8 @@ func newSearchDispatcher(opts Options) *searchDispatcher {
 			"tavily":     newTavilyProvider(opts.TavilyAPIKey, ""),
 			"brave":      newBraveProvider(opts.BraveAPIKey, ""),
 			"exa":        newExaProvider(opts.ExaAPIKey, ""),
+			"bing":       newBingProvider(opts.BingMarket, ""),
+			"searxng":    newSearXNGProvider(opts.SearXNGBaseURL),
 		},
 		explicit: opts.SearchProvider,
 		cache:    newSearchCache(128, 60*time.Second),
