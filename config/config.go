@@ -36,7 +36,8 @@ type Config struct {
 // Firecrawl (used by web_extract) continues to read FIRECRAWL_API_KEY
 // directly and is not represented here.
 type WebConfig struct {
-	Search SearchConfig `yaml:"search,omitempty"`
+	Search           SearchConfig `yaml:"search,omitempty"`
+	DisableWebFetch  bool         `yaml:"disable_web_fetch,omitempty"`
 }
 
 // BenchmarkConfig parameterizes `hermind bench` subcommands.

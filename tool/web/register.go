@@ -9,28 +9,30 @@ import (
 
 // RegisterAll wires the web toolset into reg according to opts.
 //
-//   - web_fetch is always registered (uses stdlib http, no credentials).
+//   - web_fetch is registered unless opts.DisableWebFetch is true.
 //   - web_search is always registered; the dispatcher chooses a provider
 //     based on opts.SearchProvider or built-in priority. DuckDuckGo is the
 //     keyless fallback so this tool is never unavailable.
 //   - web_extract is registered only when opts.FirecrawlAPIKey is
 //     non-empty.
 func RegisterAll(reg *tool.Registry, opts Options) {
-	reg.Register(&tool.Entry{
-		Name:        "web_fetch",
-		Toolset:     "web",
-		Description: "Fetch a URL and return status + headers + body (max 2 MiB).",
-		Emoji:       "🌐",
-		Handler:     webFetchHandler,
-		Schema: tool.ToolDefinition{
-			Type: "function",
-			Function: tool.FunctionDef{
-				Name:        "web_fetch",
-				Description: "Perform an HTTP GET/POST to a URL and return the response.",
-				Parameters:  json.RawMessage(webFetchSchema),
+	if !opts.DisableWebFetch {
+		reg.Register(&tool.Entry{
+			Name:        "web_fetch",
+			Toolset:     "web",
+			Description: "Fetch a URL and return status + headers + body (max 2 MiB).",
+			Emoji:       "🌐",
+			Handler:     webFetchHandler,
+			Schema: tool.ToolDefinition{
+				Type: "function",
+				Function: tool.FunctionDef{
+					Name:        "web_fetch",
+					Description: "Perform an HTTP GET/POST to a URL and return the response.",
+					Parameters:  json.RawMessage(webFetchSchema),
+				},
 			},
-		},
-	})
+		})
+	}
 
 	dispatcher := newSearchDispatcher(opts)
 	reg.Register(&tool.Entry{

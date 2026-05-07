@@ -135,9 +135,10 @@ func convertMessage(m message.Message) []apiMessage {
 			content = joinStrings(textParts)
 		}
 		primary = apiMessage{
-			Role:      string(m.Role),
-			Content:   content,
-			ToolCalls: toolUses,
+			Role:             string(m.Role),
+			Content:          content,
+			ToolCalls:        toolUses,
+			ReasoningContent: m.Reasoning,
 		}
 		// tool_result blocks shouldn't be in the same message as tool_use, but
 		// if they are, append them after the primary as separate tool messages.
@@ -156,8 +157,9 @@ func convertMessage(m message.Message) []apiMessage {
 
 	// Plain text-in-blocks fallback
 	primary = apiMessage{
-		Role:    string(m.Role),
-		Content: joinStrings(textParts),
+		Role:             string(m.Role),
+		Content:          joinStrings(textParts),
+		ReasoningContent: m.Reasoning,
 	}
 	return []apiMessage{primary}
 }
@@ -204,15 +206,17 @@ func convertResponseMessage(m apiMessage) message.Message {
 		}
 
 		return message.Message{
-			Role:    message.Role(m.Role),
-			Content: message.BlockContent(blocks),
+			Role:      message.Role(m.Role),
+			Content:   message.BlockContent(blocks),
+			Reasoning: m.ReasoningContent,
 		}
 	}
 
 	// Plain text response
 	return message.Message{
-		Role:    message.Role(m.Role),
-		Content: message.TextContent(asString(m.Content)),
+		Role:      message.Role(m.Role),
+		Content:   message.TextContent(asString(m.Content)),
+		Reasoning: m.ReasoningContent,
 	}
 }
 
