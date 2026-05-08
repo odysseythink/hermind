@@ -119,6 +119,7 @@ func convertMessage(m message.Message) []apiMessage {
 			toolResults = append(toolResults, apiMessage{
 				Role:       "tool",
 				ToolCallID: b.ToolUseID,
+				Name:       b.ToolUseName,
 				Content:    b.ToolResult,
 			})
 		}

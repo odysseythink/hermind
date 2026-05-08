@@ -176,9 +176,10 @@ func TestCompleteSendsToolResult(t *testing.T) {
 			Role: message.RoleUser,
 			Content: message.BlockContent([]message.ContentBlock{
 				{
-					Type:       "tool_result",
-					ToolUseID:  "call_01",
-					ToolResult: `{"content":"module x"}`,
+					Type:        "tool_result",
+					ToolUseID:   "call_01",
+					ToolUseName: "read_file",
+					ToolResult:  `{"content":"module x"}`,
 				},
 			}),
 		},
@@ -194,6 +195,7 @@ func TestCompleteSendsToolResult(t *testing.T) {
 	assert.Equal(t, "call_01", captured.Messages[1].ToolCalls[0].ID)
 	assert.Equal(t, "tool", captured.Messages[2].Role)
 	assert.Equal(t, "call_01", captured.Messages[2].ToolCallID)
+	assert.Equal(t, "read_file", captured.Messages[2].Name)
 	assert.Equal(t, `{"content":"module x"}`, captured.Messages[2].Content)
 }
 
