@@ -9,6 +9,7 @@ import (
 	"path/filepath"
 	"strconv"
 	"strings"
+	"sync"
 	"testing"
 	"time"
 
@@ -159,12 +160,21 @@ func TestConversationMessageDelete(t *testing.T) {
 // recordingProvider captures the model from the last request.
 type recordingProvider struct {
 	stubProvider
+	mu        sync.Mutex
 	lastModel string
 }
 
 func (r *recordingProvider) Stream(ctx context.Context, req *provider.Request) (provider.Stream, error) {
+	r.mu.Lock()
 	r.lastModel = req.Model
+	r.mu.Unlock()
 	return &recordingStream{resp: r.stubProvider.resp}, nil
+}
+
+func (r *recordingProvider) getLastModel() string {
+	r.mu.Lock()
+	defer r.mu.Unlock()
+	return r.lastModel
 }
 
 type recordingStream struct {
@@ -215,11 +225,11 @@ func TestConversationPost_IgnoresBodyModel(t *testing.T) {
 
 	// Wait for the async engine goroutine to reach the provider.
 	require.Eventually(t, func() bool {
-		return rec.lastModel != ""
+		return rec.getLastModel() != ""
 	}, 2*time.Second, 10*time.Millisecond)
 
 	// The backend should have used Config.Model, not body.Model.
-	assert.Equal(t, "claude-opus-4-6", rec.lastModel)
+	assert.Equal(t, "claude-opus-4-6", rec.getLastModel())
 }
 
 func TestStoredContentToPlainText(t *testing.T) {

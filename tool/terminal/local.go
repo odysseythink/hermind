@@ -45,6 +45,12 @@ func (l *Local) Execute(ctx context.Context, command string, opts *ExecOptions) 
 
 	shell, shellFlag := defaultShell()
 	cmd := exec.CommandContext(runCtx, shell, shellFlag, command)
+	setupCmdProcessGroup(cmd)
+	// When the context times out, kill the entire process group so that
+	// child processes (e.g. "sleep" launched by "sh -c") are also terminated.
+	cmd.Cancel = func() error {
+		return killProcessGroup(cmd)
+	}
 
 	// Working directory
 	if opts.Cwd != "" {
