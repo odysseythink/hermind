@@ -1,0 +1,16 @@
+.data/
+.mneme/
+.qoder/
+.superpowers/
+.vscode/
+.worktrees/
+bin/
+.git/
+.github/
+.hermind/
+.gstack/
+web/node_modules/
+web/dist/
+dist/
+.claude/
+.gstack/
