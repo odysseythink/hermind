@@ -335,9 +335,10 @@ func (e *Engine) executeToolCalls(ctx context.Context, calls []message.ContentBl
 		}
 
 		results = append(results, message.ContentBlock{
-			Type:       "tool_result",
-			ToolUseID:  call.ToolUseID,
-			ToolResult: result,
+			Type:        "tool_result",
+			ToolUseID:   call.ToolUseID,
+			ToolUseName: call.ToolUseName,
+			ToolResult:  result,
 		})
 	}
 	return results
