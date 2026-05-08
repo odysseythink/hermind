@@ -43,25 +43,6 @@ archives:
       - README*
       - CHANGELOG*
 
-brews:
-  - name: hermind
-    ids: [hermind]
-    homepage: https://github.com/odysseythink/hermind
-    description: "Hermind — Go port of the hermes AI agent framework"
-    license: MIT
-    repository:
-      owner: odysseythink
-      name: homebrew-tap
-      token: "{{ .Env.HOMEBREW_TAP_TOKEN }}"
-    directory: Formula
-    commit_author:
-      name: hermind-release-bot
-      email: hermind-release-bot@users.noreply.github.com
-    commit_msg_template: "brew: update hermind to {{ .Tag }}"
-    install: |
-      bin.install "hermind"
-    test: |
-      system "#{bin}/hermind", "version"
 
 checksum:
   name_template: 'checksums.txt'
