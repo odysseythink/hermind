@@ -1,0 +1,5 @@
+# This directory is a Syncthing folder marker.
+# Do not delete.
+
+folderID: hermind
+created: 2026-05-08T16:27:48+08:00

@@ -8,6 +8,7 @@ import (
 	"fmt"
 	"io"
 	"log/slog"
+	"strings"
 	"time"
 
 	"github.com/odysseythink/hermind/config"
@@ -118,6 +119,8 @@ func (e *Engine) RunConversation(ctx context.Context, opts *RunOptions) (*Conver
 	budget := NewBudget(e.config.MaxTurns)
 	totalUsage := message.Usage{}
 	iterations := 0
+	emptyRetries := 0
+	stripTools := false // set true when retrying after empty response
 	var lastResponse message.Message
 
 	for {
@@ -143,8 +146,10 @@ func (e *Engine) RunConversation(ctx context.Context, opts *RunOptions) (*Conver
 			Model:        model,
 			SystemPrompt: systemPrompt,
 			Messages:     history,
-			Tools:        toolDefs,
 			MaxTokens:    maxTokens,
+		}
+		if !stripTools {
+			req.Tools = toolDefs
 		}
 
 		resp, err := e.streamOnce(ctx, req)
@@ -183,6 +188,33 @@ func (e *Engine) RunConversation(ctx context.Context, opts *RunOptions) (*Conver
 
 		toolCalls := extractToolCalls(resp.Message.Content)
 		if len(toolCalls) == 0 {
+			// If the model produced only whitespace after tool calls,
+			// it likely failed to summarize the results. Inject a
+			// follow-up message to give it another chance (up to 2
+			// retries). This is common with smaller local models that
+			// struggle with multi-turn tool calling.
+			reply := resp.Message.Content.Text()
+			if strings.TrimSpace(reply) == "" && iterations > 1 {
+				emptyRetries++
+				if emptyRetries <= 2 {
+					slog.Warn("model returned empty response after tool calls, retrying",
+						"iteration", iterations, "empty_retry", emptyRetries)
+					nudge := message.Message{
+						Role:    message.RoleUser,
+						Content: message.TextContent("Please provide your answer based on the search results above. Do not call any more tools."),
+					}
+					history = append(history, nudge)
+					if !opts.Ephemeral && e.storage != nil {
+						if err := e.persistMessage(ctx, &nudge); err != nil {
+							return nil, fmt.Errorf("engine: persist nudge: %w", err)
+						}
+					}
+					stripTools = true
+					continue
+				}
+				slog.Warn("model returned empty response after tool calls, giving up",
+					"iteration", iterations, "empty_retries", emptyRetries)
+			}
 			break
 		}
 
