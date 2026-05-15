@@ -49,6 +49,11 @@ QString PromptInput::text() const
     return m_textEdit->toPlainText();
 }
 
+void PromptInput::insertText(const QString &text)
+{
+    m_textEdit->insertPlainText(text);
+}
+
 void PromptInput::clear()
 {
     m_textEdit->clear();

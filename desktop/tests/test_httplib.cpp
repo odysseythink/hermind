@@ -63,20 +63,23 @@ void TestHttpLib::testUpload()
     HermindClient client(QString("http://127.0.0.1:%1").arg(port));
     QNetworkAccessManager *manager = client.findChild<QNetworkAccessManager*>();
     QVERIFY(manager);
-    QSignalSpy spy(manager, &QNetworkAccessManager::finished);
+    QSignalSpy finishedSpy(manager, &QNetworkAccessManager::finished);
+    QSignalSpy connSpy(&server, &QTcpServer::newConnection);
 
     client.upload("/upload", QByteArray("hello"), "test.txt", "text/plain",
                   [](const QJsonObject &, const QString &){});
 
-    QVERIFY(server.waitForNewConnection(5000));
+    QVERIFY(connSpy.wait(5000));
     QTcpSocket *socket = server.nextPendingConnection();
     QVERIFY(socket);
 
     QByteArray request;
-    while (request.indexOf("\r\n\r\n") == -1 && socket->waitForReadyRead(500)) {
+    for (int i = 0; i < 30 && request.indexOf("\r\n\r\n") == -1; ++i) {
+        QTest::qWait(100);
         request.append(socket->readAll());
     }
-    while (socket->waitForReadyRead(500)) {
+    for (int i = 0; i < 10; ++i) {
+        QTest::qWait(100);
         request.append(socket->readAll());
     }
 
@@ -88,8 +91,8 @@ void TestHttpLib::testUpload()
     socket->write("HTTP/1.1 200 OK\r\nContent-Length: 2\r\nContent-Type: application/json\r\n\r\n{}");
     socket->flush();
 
-    QVERIFY(spy.wait(5000));
-    QNetworkReply *reply = qvariant_cast<QNetworkReply*>(spy.at(0).at(0));
+    QVERIFY(finishedSpy.wait(5000));
+    QNetworkReply *reply = qvariant_cast<QNetworkReply*>(finishedSpy.at(0).at(0));
     QVERIFY(reply);
     QCOMPARE(reply->operation(), QNetworkAccessManager::PostOperation);
 

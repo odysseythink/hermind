@@ -125,7 +125,7 @@ void ConfigFormEngine::trackEditor(QWidget *editor, const QString &key)
     } else if (QComboBox *cb = qobject_cast<QComboBox*>(editor)) {
         connect(cb, QOverload<int>::of(&QComboBox::currentIndexChanged), this, &ConfigFormEngine::checkDirty);
     } else if (QCheckBox *chk = qobject_cast<QCheckBox*>(editor)) {
-        connect(chk, &QCheckBox::stateChanged, this, &ConfigFormEngine::checkDirty);
+        connect(chk, &QCheckBox::checkStateChanged, this, [this](Qt::CheckState) { checkDirty(); });
     } else if (QSpinBox *sb = qobject_cast<QSpinBox*>(editor)) {
         connect(sb, QOverload<int>::of(&QSpinBox::valueChanged), this, &ConfigFormEngine::checkDirty);
     } else if (QDoubleSpinBox *dsb = qobject_cast<QDoubleSpinBox*>(editor)) {

@@ -12,6 +12,7 @@ class PromptInput : public QWidget
 public:
     explicit PromptInput(QWidget *parent = nullptr);
     QString text() const;
+    void insertText(const QString &text);
     void clear();
     void setEnabled(bool enabled);
 
