@@ -1,0 +1,183 @@
+- generic [active] [ref=e1]:
+  - heading "🔍 Web UI vs Qt Desktop UI 视觉对比" [level=1] [ref=e2]
+  - paragraph [ref=e3]: 以下是 web 前端和当前 Qt 桌面端的视觉差异全景图
+  - heading "1. 整体布局对比" [level=2] [ref=e4]
+  - generic [ref=e5]:
+    - generic [ref=e6]:
+      - generic [ref=e7]: 🌐 Web UI (React)
+      - generic [ref=e9]:
+        - generic [ref=e10]:
+          - generic [ref=e11]:
+            - generic [ref=e12]: ◈
+            - text: HERMIND
+          - generic [ref=e13]: READY
+          - button "SAVE" [ref=e15] [cursor=pointer]
+        - generic [ref=e16]:
+          - generic [ref=e17]:
+            - generic [ref=e18] [cursor=pointer]: + New Chat
+            - generic [ref=e19] [cursor=pointer]: 📄 Project setup help
+            - generic [ref=e20] [cursor=pointer]: 📄 Go error handling
+            - generic [ref=e21] [cursor=pointer]: 📄 Qt6 CMake config
+          - generic [ref=e22]:
+            - generic [ref=e23]:
+              - generic [ref=e24]:
+                - generic [ref=e25]: YOU
+                - generic [ref=e26]: How do I configure Qt6 with CMake?
+              - generic [ref=e27]:
+                - generic [ref=e28]: HERMIND
+                - generic [ref=e29]:
+                  - text: To configure Qt6 with CMake, use
+                  - code [ref=e30]: find_package(Qt6)
+                  - text: and link the required components.
+            - generic [ref=e31]:
+              - textbox "Ask anything..." [ref=e32]
+              - button "Send" [ref=e33] [cursor=pointer]
+    - generic [ref=e34]:
+      - generic [ref=e35]: 🖥️ Qt Desktop UI (当前)
+      - generic [ref=e37]:
+        - generic [ref=e38]: File Edit View Help
+        - generic [ref=e39]:
+          - generic [ref=e40]:
+            - button "+ New Chat" [ref=e41] [cursor=pointer]
+            - generic [ref=e42] [cursor=pointer]: Project setup help
+            - generic [ref=e43] [cursor=pointer]: Go error handling
+            - generic [ref=e44] [cursor=pointer]: Qt6 CMake config
+          - generic [ref=e45]:
+            - generic [ref=e46]:
+              - generic [ref=e47]:
+                - generic [ref=e48]: U
+                - generic [ref=e49]: How do I configure Qt6 with CMake?
+              - generic [ref=e50]:
+                - generic [ref=e51]: A
+                - generic [ref=e52]: To configure Qt6 with CMake, use find_package(Qt6) and link the required components.
+            - generic [ref=e53]:
+              - textbox "Type a message..." [ref=e54]
+              - button "Send" [ref=e55] [cursor=pointer]
+  - generic [ref=e56]:
+    - strong [ref=e57]: 核心差异：
+    - text: Web 有 48px 的品牌 TopBar（ amber 色 Save 按钮、状态指示点、模式切换）；Qt 使用原生 MenuBar（File > Settings）。Web 侧边栏有 amber 左边框激活态；Qt 侧边栏是 plain QListWidget。
+  - heading "2. 颜色系统对比" [level=2] [ref=e58]
+  - table [ref=e59]:
+    - rowgroup [ref=e60]:
+      - row "元素 Web UI Qt UI (当前) 差异等级" [ref=e61]:
+        - columnheader "元素" [ref=e62]
+        - columnheader "Web UI" [ref=e63]
+        - columnheader "Qt UI (当前)" [ref=e64]
+        - columnheader "差异等级" [ref=e65]
+      - 'row "背景色 #0a0b0d #1e1e1e 高 — Web 更深更暖" [ref=e66]':
+        - cell "背景色" [ref=e67]
+        - cell "#0a0b0d" [ref=e68]: "#0a0b0d"
+        - cell "#1e1e1e" [ref=e70]: "#1e1e1e"
+        - cell "高 — Web 更深更暖" [ref=e72]
+      - 'row "表面色 (surface) #14161a #252526 高 — Qt 偏亮偏灰" [ref=e73]':
+        - cell "表面色 (surface)" [ref=e74]
+        - cell "#14161a" [ref=e75]: "#14161a"
+        - cell "#252526" [ref=e77]: "#252526"
+        - cell "高 — Qt 偏亮偏灰" [ref=e79]
+      - 'row "主文字色 #e8e6e3 (暖白) #d4d4d4 (冷灰) 中 — 冷暖不同" [ref=e80]':
+        - cell "主文字色" [ref=e81]
+        - cell "#e8e6e3 (暖白)" [ref=e82]: "#e8e6e3 (暖白)"
+        - cell "#d4d4d4 (冷灰)" [ref=e84]: "#d4d4d4 (冷灰)"
+        - cell "中 — 冷暖不同" [ref=e86]
+      - 'row "强调色 (accent) #FFB800 (amber) #0e639c (blue) 极高 — 品牌色完全不同" [ref=e87]':
+        - cell "强调色 (accent)" [ref=e88]
+        - cell "#FFB800 (amber)" [ref=e89]: "#FFB800 (amber)"
+        - cell "#0e639c (blue)" [ref=e91]: "#0e639c (blue)"
+        - cell "极高 — 品牌色完全不同" [ref=e93]
+      - 'row "边框色 #2a2e36 #3c3c3c 中 — Qt 边框更亮" [ref=e94]':
+        - cell "边框色" [ref=e95]
+        - cell "#2a2e36" [ref=e96]: "#2a2e36"
+        - cell "#3c3c3c" [ref=e98]: "#3c3c3c"
+        - cell "中 — Qt 边框更亮" [ref=e100]
+      - 'row "用户气泡 透明背景 + amber 边框 #2b5278 蓝色填充 高 — 设计语言完全不同" [ref=e101]':
+        - cell "用户气泡" [ref=e102]
+        - cell "透明背景 + amber 边框" [ref=e103]
+        - cell "#2b5278 蓝色填充" [ref=e104]
+        - cell "高 — 设计语言完全不同" [ref=e105]
+      - 'row "助手气泡 #14161a surface 背景 #3a3a3a 暖灰填充 中 — 接近但不匹配" [ref=e106]':
+        - cell "助手气泡" [ref=e107]
+        - cell "#14161a surface 背景" [ref=e108]
+        - cell "#3a3a3a 暖灰填充" [ref=e109]
+        - cell "中 — 接近但不匹配" [ref=e110]
+  - heading "3. 组件细节对比" [level=2] [ref=e111]
+  - heading "3.1 消息气泡" [level=3] [ref=e112]
+  - generic [ref=e113]:
+    - generic [ref=e114]:
+      - generic [ref=e115]: Web 消息气泡
+      - generic [ref=e117]:
+        - generic [ref=e118]:
+          - generic [ref=e119]: YOU
+          - generic [ref=e120]: Can you help me with this code?
+        - generic [ref=e121]:
+          - generic [ref=e122]: HERMIND
+          - generic [ref=e123]:
+            - text: Sure! Here's a
+            - code [ref=e124]: function
+            - text: that handles it.
+    - generic [ref=e125]:
+      - generic [ref=e126]: Qt 消息气泡 (当前)
+      - generic [ref=e128]:
+        - generic [ref=e129]:
+          - generic [ref=e130]: U
+          - generic [ref=e131]: Can you help me with this code?
+        - generic [ref=e132]:
+          - generic [ref=e133]: A
+          - generic [ref=e134]: Sure! Here's a function that handles it.
+  - heading "3.2 输入栏 (Composer)" [level=3] [ref=e135]
+  - generic [ref=e136]:
+    - generic [ref=e137]:
+      - generic [ref=e138]: Web Composer
+      - generic [ref=e140]:
+        - generic [ref=e141]: Ask anything... |
+        - button "Send" [ref=e142] [cursor=pointer]
+    - generic [ref=e143]:
+      - generic [ref=e144]: Qt Composer (当前)
+      - generic [ref=e146]:
+        - generic [ref=e147]: Type a message... |
+        - button "Send" [ref=e148] [cursor=pointer]
+  - heading "4. 缺失组件清单" [level=2] [ref=e149]
+  - table [ref=e150]:
+    - rowgroup [ref=e151]:
+      - row "组件 Web UI Qt UI" [ref=e152]:
+        - columnheader "组件" [ref=e153]
+        - columnheader "Web UI" [ref=e154]
+        - columnheader "Qt UI" [ref=e155]
+      - row "TopBar (品牌栏) ✅ 48px, amber Save, 状态点, 模式切换 ❌ 原生 MenuBar 替代" [ref=e156]:
+        - cell "TopBar (品牌栏)" [ref=e157]
+        - cell "✅ 48px, amber Save, 状态点, 模式切换" [ref=e158]
+        - cell "❌ 原生 MenuBar 替代" [ref=e159]
+      - row "Empty State (空状态) ✅ 居中问候语 + 建议卡片 ❌ 空白" [ref=e160]:
+        - cell "Empty State (空状态)" [ref=e161]
+        - cell "✅ 居中问候语 + 建议卡片" [ref=e162]
+        - cell "❌ 空白" [ref=e163]
+      - row "Footer (状态栏) ✅ 32px 状态信息栏 ❌ 缺失" [ref=e164]:
+        - cell "Footer (状态栏)" [ref=e165]
+        - cell "✅ 32px 状态信息栏" [ref=e166]
+        - cell "❌ 缺失" [ref=e167]
+      - row "侧边栏激活态 ✅ amber 左边框 + 背景色 ❌ 无视觉区分" [ref=e168]:
+        - cell "侧边栏激活态" [ref=e169]
+        - cell "✅ amber 左边框 + 背景色" [ref=e170]
+        - cell "❌ 无视觉区分" [ref=e171]
+      - row "焦点环 (Focus ring) ✅ amber 2px box-shadow ❌ 无" [ref=e172]:
+        - cell "焦点环 (Focus ring)" [ref=e173]
+        - cell "✅ amber 2px box-shadow" [ref=e174]
+        - cell "❌ 无" [ref=e175]
+      - row "自定义字体 ✅ IBM Plex Sans + JetBrains Mono ❌ 系统默认" [ref=e176]:
+        - cell "自定义字体" [ref=e177]
+        - cell "✅ IBM Plex Sans + JetBrains Mono" [ref=e178]
+        - cell "❌ 系统默认" [ref=e179]
+      - row "主题切换 ✅ 暗/亮/自动 ❌ UI 有 dropdown 但未实现" [ref=e180]:
+        - cell "主题切换" [ref=e181]
+        - cell "✅ 暗/亮/自动" [ref=e182]
+        - cell "❌ UI 有 dropdown 但未实现" [ref=e183]
+      - row "滚动条样式 ✅ 10px 细滚动条, hover 效果 ❌ 原生 OS 滚动条" [ref=e184]:
+        - cell "滚动条样式" [ref=e185]
+        - cell "✅ 10px 细滚动条, hover 效果" [ref=e186]
+        - cell "❌ 原生 OS 滚动条" [ref=e187]
+      - row "消息操作按钮 ✅ 复制、重新生成等 ❌ 缺失" [ref=e188]:
+        - cell "消息操作按钮" [ref=e189]
+        - cell "✅ 复制、重新生成等" [ref=e190]
+        - cell "❌ 缺失" [ref=e191]
+  - generic [ref=e192]:
+    - strong [ref=e193]: 建议：
+    - text: "\"完全仿照\" 的工作量非常大，涉及颜色系统、字体、布局重构、新增多个组件。建议分阶段实施：第一阶段对齐颜色和基础组件样式，第二阶段对齐布局和新增缺失组件。"

@@ -22,6 +22,10 @@ set(SOURCES
     src/shortcutmanager.cpp
     src/trayicon.cpp
     src/settingsdialog.cpp
+    src/topbar.cpp
+    src/statusfooter.cpp
+    src/emptystatewidget.cpp
+    src/conversationheader.cpp
     resources/resources.qrc
 )
 
@@ -37,6 +41,10 @@ set(HEADERS
     src/shortcutmanager.h
     src/trayicon.h
     src/settingsdialog.h
+    src/topbar.h
+    src/statusfooter.h
+    src/emptystatewidget.h
+    src/conversationheader.h
 )
 
 add_executable(hermind-desktop ${SOURCES} ${HEADERS})

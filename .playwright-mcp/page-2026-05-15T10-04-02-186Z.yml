@@ -1,0 +1,67 @@
+- generic [active] [ref=e1]:
+  - heading "🎯 目标 Qt UI 效果图" [level=1] [ref=e2]
+  - paragraph [ref=e3]: 以下是用 HTML/CSS 模拟的改造后 Qt 桌面端目标效果，完全对齐 web 暗色主题
+  - generic [ref=e4]:
+    - button "💬 聊天界面" [ref=e5] [cursor=pointer]
+    - button "✨ 空状态" [ref=e6] [cursor=pointer]
+  - generic [ref=e9]:
+    - generic [ref=e10]:
+      - generic [ref=e11]:
+        - generic [ref=e12]: ◈
+        - text: HERMIND
+      - generic [ref=e13]:
+        - button "Chat" [ref=e14] [cursor=pointer]
+        - button "Settings" [ref=e15] [cursor=pointer]
+      - generic [ref=e16]: Ready
+      - button "Save" [ref=e18] [cursor=pointer]
+    - generic [ref=e19]:
+      - generic [ref=e20]:
+        - generic [ref=e21] [cursor=pointer]: + New Chat
+        - generic [ref=e22] [cursor=pointer]: 📄 Project setup help
+        - generic [ref=e23] [cursor=pointer]: 📄 Go error handling patterns
+        - generic [ref=e24] [cursor=pointer]: 📄 Qt6 CMake configuration
+        - generic [ref=e25] [cursor=pointer]: 📄 Markdown rendering
+        - generic [ref=e26] [cursor=pointer]: 📄 SSE streaming
+      - generic [ref=e27]:
+        - generic [ref=e28]: "Conversation #1284"
+        - generic [ref=e29]:
+          - generic [ref=e30]:
+            - generic [ref=e31]: YOU
+            - generic [ref=e32]: How do I configure Qt6 with CMake?
+          - generic [ref=e33]:
+            - generic [ref=e34]: HERMIND
+            - generic [ref=e35]:
+              - text: To configure Qt6 with CMake, use
+              - code [ref=e36]: find_package(Qt6)
+              - text: and link the required components like
+              - code [ref=e37]: Core
+              - text: ","
+              - code [ref=e38]: Gui
+              - text: ","
+              - code [ref=e39]: Widgets
+              - text: ", and"
+              - code [ref=e40]: Network
+              - text: .
+          - generic [ref=e41]:
+            - generic [ref=e42]: YOU
+            - generic [ref=e43]: What about test support?
+          - generic [ref=e44]:
+            - generic [ref=e45]: HERMIND
+            - generic [ref=e46]:
+              - text: Add
+              - code [ref=e47]: Test
+              - text: to your
+              - code [ref=e48]: find_package
+              - text: call and use
+              - code [ref=e49]: Qt6::Test
+              - text: in
+              - code [ref=e50]: target_link_libraries
+              - text: . Then create test executables with
+              - code [ref=e51]: add_executable
+              - text: and
+              - code [ref=e52]: add_test
+              - text: .
+        - generic [ref=e53]:
+          - textbox "Ask anything..." [ref=e54]
+          - button "Send" [ref=e55] [cursor=pointer]
+    - generic [ref=e56]: "◈ hermind v0.12.0 · Qt6 Desktop · model: gpt-4o"

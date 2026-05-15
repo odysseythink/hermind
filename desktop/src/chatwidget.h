@@ -6,11 +6,14 @@
 
 class QScrollArea;
 class QVBoxLayout;
+class QStackedWidget;
 class PromptInput;
 class MessageBubble;
 class HermindClient;
 class QNetworkReply;
 class SSEParser;
+class ConversationHeader;
+class EmptyStateWidget;
 
 class ChatWidget : public QWidget
 {
@@ -37,11 +40,18 @@ private slots:
 private:
     void addMessageBubble(MessageBubble *bubble);
     void startStream();
+    void setEmptyState(bool empty);
+    void appendToCurrentBubble(const QString &text);
+    void finalizeCurrentBubble();
 
     HermindClient *m_client;
+    ConversationHeader *m_header;
+    QStackedWidget *m_stack;
+    QWidget *m_messagesPage;
     QScrollArea *m_scrollArea;
     QWidget *m_messagesContainer;
     QVBoxLayout *m_messagesLayout;
+    EmptyStateWidget *m_emptyState;
     PromptInput *m_promptInput;
     MessageBubble *m_currentBubble;
     SSEParser *m_sseParser;

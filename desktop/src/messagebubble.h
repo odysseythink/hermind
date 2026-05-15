@@ -11,17 +11,19 @@ class MessageBubble : public QWidget
 {
     Q_OBJECT
 public:
-    explicit MessageBubble(const QString &role, QWidget *parent = nullptr);
+    explicit MessageBubble(bool isUser, QWidget *parent = nullptr);
 
     void appendMarkdown(const QString &text);
     QString markdownBuffer() const;
     void setHtmlContent(const QString &html);
 
 private:
-    QString m_role;
+    void setupUI();
+
+    bool m_isUser;
     QString m_markdownBuffer;
-    QLabel *m_avatarLabel;
-    QTextEdit *m_textEdit;
+    QLabel *m_roleTag;
+    QTextEdit *m_content;
 };
 
 #endif
