@@ -31,6 +31,7 @@ public slots:
     void sendMessage(const QString &text);
     void loadSession(const QString &sessionId);
     void startNewSession();
+    void cancelGeneration();
 
 private slots:
     void onStreamReadyRead();
@@ -43,6 +44,8 @@ private:
     void setEmptyState(bool empty);
     void appendToCurrentBubble(const QString &text);
     void finalizeCurrentBubble();
+    void deleteMessageBubble(MessageBubble *bubble);
+    void regenerateMessageBubble(MessageBubble *bubble);
 
     HermindClient *m_client;
     ConversationHeader *m_header;

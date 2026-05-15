@@ -167,6 +167,8 @@ func (s *Server) buildRouter() chi.Router {
 	r.Route("/api", func(r chi.Router) {
 		r.Get("/status", s.handleStatus)
 		r.Post("/render", handleRender)
+		r.Post("/render/math", handleRenderMath)
+		r.Post("/render/mermaid", handleRenderMermaid)
 		r.Get("/model/info", s.handleModelInfo)
 
 		r.Get("/config", s.handleConfigGet)

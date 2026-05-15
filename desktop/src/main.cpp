@@ -1,11 +1,12 @@
 #include <QApplication>
-#include <QFile>
 #include <QFont>
 #include "appwindow.h"
 #include "hermindprocess.h"
 #include "httplib.h"
 #include "shortcutmanager.h"
 #include "trayicon.h"
+#include "thememanager.h"
+#include "i18nmanager.h"
 
 int main(int argc, char *argv[])
 {
@@ -24,10 +25,8 @@ int main(int argc, char *argv[])
     appFont.setPointSize(10);
     QApplication::setFont(appFont);
 
-    QFile styleFile(":/styles.qss");
-    if (styleFile.open(QFile::ReadOnly)) {
-        app.setStyleSheet(QString::fromUtf8(styleFile.readAll()));
-    }
+    ThemeManager themeManager;
+    I18nManager i18nManager;
 
     AppWindow window;
     HermindProcess backend;
@@ -54,9 +53,12 @@ int main(int argc, char *argv[])
     });
     QObject::connect(&tray, &TrayIcon::quitRequested, &app, &QApplication::quit);
 
+    window.setThemeManager(&themeManager);
+    window.setI18nManager(&i18nManager);
+
     QObject::connect(&backend, &HermindProcess::backendReady,
                      &window, [&window, &client](const QHostAddress&, int port) {
-        client = new HermindClient(QString("http://127.0.0.1:%1").arg(port), &window);
+        client = new HermindClient(QStringLiteral("http://127.0.0.1:%1").arg(port), &window);
         window.setClient(client);
     });
 

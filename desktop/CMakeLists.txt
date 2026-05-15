@@ -14,6 +14,13 @@ set(SOURCES
     src/hermindprocess.cpp
     src/httplib.cpp
     src/sseparser.cpp
+    src/thememanager.cpp
+    src/i18nmanager.cpp
+    src/codehighlighter.cpp
+    src/markdownrenderer.cpp
+    src/toolcallwidget.cpp
+    src/configformengine.cpp
+    src/settingseditor.cpp
     src/appwindow.cpp
     src/sessionlistwidget.cpp
     src/chatwidget.cpp
@@ -33,6 +40,13 @@ set(HEADERS
     src/hermindprocess.h
     src/httplib.h
     src/sseparser.h
+    src/thememanager.h
+    src/i18nmanager.h
+    src/codehighlighter.h
+    src/markdownrenderer.h
+    src/toolcallwidget.h
+    src/configformengine.h
+    src/settingseditor.h
     src/appwindow.h
     src/sessionlistwidget.h
     src/chatwidget.h

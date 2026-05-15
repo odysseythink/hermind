@@ -4,7 +4,9 @@
 #include "chatwidget.h"
 #include "statusfooter.h"
 #include "httplib.h"
-#include "settingsdialog.h"
+#include "settingseditor.h"
+#include "thememanager.h"
+#include "i18nmanager.h"
 
 #include <QVBoxLayout>
 #include <QCloseEvent>
@@ -16,9 +18,11 @@ AppWindow::AppWindow(QWidget *parent)
       m_sessionList(new SessionListWidget(this)),
       m_chatWidget(new ChatWidget(this)),
       m_footer(new StatusFooter(this)),
-      m_settingsDialog(nullptr)
+      m_settingsEditor(nullptr),
+      m_themeManager(nullptr),
+      m_i18nManager(nullptr)
 {
-    setWindowTitle("hermind");
+    setWindowTitle(QStringLiteral("hermind"));
     resize(1200, 800);
 
     setupUI();
@@ -49,12 +53,24 @@ void AppWindow::setupTopBar()
 {
     m_topBar = new TopBar(this);
     connect(m_topBar, &TopBar::modeChanged, this, [this](const QString &mode) {
-        if (mode == "settings") {
-            if (!m_settingsDialog) {
-                m_settingsDialog = new SettingsDialog(m_chatWidget->client(), this);
+        if (mode == QStringLiteral("settings")) {
+            if (!m_settingsEditor) {
+                m_settingsEditor = new SettingsEditor(m_chatWidget->client(), this);
             }
-            m_settingsDialog->exec();
-            // Reset mode back to chat after dialog closes
+            m_settingsEditor->exec();
+        }
+    });
+    connect(m_topBar, &TopBar::themeToggled, this, [this]() {
+        if (m_themeManager) {
+            ThemeManager::Theme next = (m_themeManager->currentTheme() == ThemeManager::Dark)
+                                           ? ThemeManager::Light
+                                           : ThemeManager::Dark;
+            m_themeManager->setTheme(next);
+        }
+    });
+    connect(m_topBar, &TopBar::languageChanged, this, [this](const QString &langCode) {
+        if (m_i18nManager) {
+            m_i18nManager->setLanguage(langCode);
         }
     });
 }
@@ -83,6 +99,22 @@ void AppWindow::setupFooter()
 void AppWindow::setClient(HermindClient *client)
 {
     m_chatWidget->setClient(client);
+}
+
+void AppWindow::setThemeManager(ThemeManager *manager)
+{
+    m_themeManager = manager;
+    if (m_themeManager) {
+        m_topBar->setThemeDark(m_themeManager->currentTheme() == ThemeManager::Dark);
+        connect(m_themeManager, &ThemeManager::themeChanged, this, [this](ThemeManager::Theme theme) {
+            m_topBar->setThemeDark(theme == ThemeManager::Dark);
+        });
+    }
+}
+
+void AppWindow::setI18nManager(I18nManager *manager)
+{
+    m_i18nManager = manager;
 }
 
 void AppWindow::closeEvent(QCloseEvent *event)

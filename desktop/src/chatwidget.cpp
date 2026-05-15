@@ -5,6 +5,7 @@
 #include "emptystatewidget.h"
 #include "httplib.h"
 #include "sseparser.h"
+#include "markdownrenderer.h"
 
 #include <QScrollArea>
 #include <QVBoxLayout>
@@ -18,6 +19,7 @@
 #include <QMimeData>
 #include <QUrl>
 #include <QFile>
+#include <QFileInfo>
 
 ChatWidget::ChatWidget(QWidget *parent)
     : QWidget(parent),
@@ -83,6 +85,19 @@ ChatWidget::ChatWidget(QWidget *parent)
                 m_pendingMarkdown = m_currentBubble->markdownBuffer();
                 m_renderTimer->start(150);
             }
+        } else if (type == "tool_call") {
+            QJsonObject payload = obj.value("data").toObject();
+            QString id = payload.value("id").toString();
+            QString name = payload.value("name").toString();
+            QString status = payload.value("status").toString();
+            if (id.isEmpty()) id = name;
+            if (m_currentBubble) {
+                if (status == "started") {
+                    m_currentBubble->addToolCall(id, name, status);
+                } else {
+                    m_currentBubble->updateToolCall(id, status);
+                }
+            }
         } else if (type == "done") {
             m_isStreaming = false;
             m_renderTimer->stop();
@@ -118,6 +133,7 @@ ChatWidget::ChatWidget(QWidget *parent)
 void ChatWidget::setClient(HermindClient *client)
 {
     m_client = client;
+    m_emptyState->setClient(client);
 }
 
 HermindClient* ChatWidget::client() const
@@ -188,26 +204,30 @@ void ChatWidget::onStreamFinished()
 
 void ChatWidget::onRenderTimer()
 {
-    if (!m_client || m_pendingMarkdown.isEmpty())
+    if (m_pendingMarkdown.isEmpty())
         return;
 
-    int gen = ++m_renderGeneration;
     QString markdown = m_pendingMarkdown;
     m_pendingMarkdown.clear();
 
-    QJsonObject body;
-    body["content"] = markdown;
-    m_client->post("/api/render", body,
-                   [this, gen](const QJsonObject &resp, const QString &error) {
-        if (error.isEmpty() && m_currentBubble && gen == m_renderGeneration) {
-            m_currentBubble->setHtmlContent(resp.value("html").toString());
-        }
-    });
+    if (m_currentBubble) {
+        QString html = MarkdownRenderer::render(markdown, m_client);
+        m_currentBubble->setHtmlContent(html);
+    }
 }
 
 void ChatWidget::addMessageBubble(MessageBubble *bubble)
 {
     m_messagesLayout->insertWidget(m_messagesLayout->count() - 1, bubble);
+
+    if (!bubble->isUser()) {
+        connect(bubble, &MessageBubble::deleteClicked, this, [this, bubble]() {
+            deleteMessageBubble(bubble);
+        });
+        connect(bubble, &MessageBubble::regenerateClicked, this, [this, bubble]() {
+            regenerateMessageBubble(bubble);
+        });
+    }
 }
 
 void ChatWidget::setEmptyState(bool empty)
@@ -246,7 +266,7 @@ void ChatWidget::dragEnterEvent(QDragEnterEvent *event)
 void ChatWidget::dropEvent(QDropEvent *event)
 {
     const QMimeData *mime = event->mimeData();
-    if (!mime->hasUrls())
+    if (!mime->hasUrls() || !m_client)
         return;
 
     for (const QUrl &url : mime->urls()) {
@@ -257,8 +277,81 @@ void ChatWidget::dropEvent(QDropEvent *event)
         if (!file.open(QIODevice::ReadOnly))
             continue;
         QByteArray data = file.readAll();
-        qDebug() << "Dropped file:" << path << "size:" << data.size();
+        QString fileName = QFileInfo(path).fileName();
+
+        m_client->upload("/api/upload", data, fileName, QStringLiteral("application/octet-stream"),
+            [this, fileName](const QJsonObject &resp, const QString &error) {
+                if (!error.isEmpty()) {
+                    qWarning() << "Upload failed:" << error;
+                    return;
+                }
+                QString fileUrl = resp.value(QStringLiteral("url")).toString();
+                m_promptInput->insertText(QStringLiteral("[%1](%2) ").arg(fileName, fileUrl));
+            });
     }
+}
+
+void ChatWidget::cancelGeneration()
+{
+    if (m_streamReply) {
+        m_streamReply->abort();
+        m_streamReply->deleteLater();
+        m_streamReply = nullptr;
+    }
+    m_isStreaming = false;
+    m_renderTimer->stop();
+    if (m_currentBubble) {
+        m_currentBubble->setOperationsEnabled(true);
+    }
+}
+
+void ChatWidget::deleteMessageBubble(MessageBubble *bubble)
+{
+    if (bubble == m_currentBubble) {
+        cancelGeneration();
+        m_currentBubble = nullptr;
+    }
+    m_messagesLayout->removeWidget(bubble);
+    bubble->deleteLater();
+
+    if (!bubble->messageId().isEmpty() && m_client) {
+        m_client->delete_(QStringLiteral("/api/conversation/messages/%1").arg(bubble->messageId()),
+                          [](const QJsonObject &, const QString &){});
+    }
+}
+
+void ChatWidget::regenerateMessageBubble(MessageBubble *bubble)
+{
+    int index = m_messagesLayout->indexOf(bubble);
+    if (index <= 0)
+        return;
+
+    QLayoutItem *item = m_messagesLayout->itemAt(index - 1);
+    MessageBubble *userBubble = qobject_cast<MessageBubble*>(item->widget());
+    if (!userBubble || !userBubble->isUser())
+        return;
+
+    deleteMessageBubble(bubble);
+
+    m_currentBubble = new MessageBubble(false, this);
+    addMessageBubble(m_currentBubble);
+    m_pendingMarkdown.clear();
+    m_renderGeneration = 0;
+
+    QJsonObject body;
+    body[QStringLiteral("user_message")] = userBubble->markdownBuffer();
+    m_client->post(QStringLiteral("/api/conversation/messages"), body,
+                   [this](const QJsonObject &resp, const QString &error) {
+        Q_UNUSED(resp)
+        if (!error.isEmpty()) {
+            qWarning() << "Failed to regenerate:" << error;
+            if (m_currentBubble) {
+                m_currentBubble->setHtmlContent(QStringLiteral("<i>Failed to regenerate</i>"));
+            }
+            return;
+        }
+        startStream();
+    });
 }
 
 void ChatWidget::startNewSession()
@@ -280,5 +373,5 @@ void ChatWidget::startNewSession()
         m_streamReply = nullptr;
     }
     setEmptyState(true);
-    m_header->setTitle("New Conversation");
+    m_header->setTitle(QStringLiteral("New Conversation"));
 }
