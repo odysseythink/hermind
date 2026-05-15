@@ -1,0 +1,61 @@
+name: Desktop Build
+on:
+  push:
+    paths:
+      - 'desktop/**'
+      - 'api/**'
+      - 'cmd/**'
+      - '.github/workflows/desktop-build.yml'
+  pull_request:
+    paths:
+      - 'desktop/**'
+      - 'api/**'
+      - 'cmd/**'
+
+jobs:
+  build-macos:
+    runs-on: macos-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: jurplel/install-qt-action@v4
+        with:
+          version: '6.8.0'
+          cache: true
+      - uses: actions/setup-go@v5
+        with:
+          go-version: '1.23'
+      - name: Build Go backend
+        run: go build -o bin/hermind-desktop-backend ./cmd/hermind
+      - name: Build Qt app
+        run: |
+          cd desktop/packaging/macos
+          bash build.sh
+      - name: Upload artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: hermind-desktop-macos
+          path: desktop/build/hermind-desktop.app
+
+  build-windows:
+    runs-on: windows-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: jurplel/install-qt-action@v4
+        with:
+          version: '6.8.0'
+          arch: 'win64_msvc2022_64'
+          cache: true
+      - uses: actions/setup-go@v5
+        with:
+          go-version: '1.23'
+      - name: Build Go backend
+        run: go build -ldflags "-H=windowsgui" -o bin/hermind-desktop-backend.exe ./cmd/hermind
+      - name: Build Qt app
+        run: |
+          cd desktop/packaging/windows
+          cmd /c build.bat
+      - name: Upload artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: hermind-desktop-windows
+          path: desktop/build/hermind-desktop.exe

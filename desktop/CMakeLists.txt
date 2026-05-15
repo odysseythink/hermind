@@ -22,6 +22,7 @@ set(SOURCES
     src/shortcutmanager.cpp
     src/trayicon.cpp
     src/settingsdialog.cpp
+    resources/resources.qrc
 )
 
 set(HEADERS
@@ -50,6 +51,7 @@ target_link_libraries(hermind-desktop PRIVATE
 set_target_properties(hermind-desktop PROPERTIES
     WIN32_EXECUTABLE TRUE
     MACOSX_BUNDLE TRUE
+    MACOSX_BUNDLE_INFO_PLIST ${CMAKE_SOURCE_DIR}/packaging/macos/Info.plist.in
 )
 
 add_executable(test_httplib tests/test_httplib.cpp src/httplib.cpp)
