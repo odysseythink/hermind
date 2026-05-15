@@ -10,6 +10,7 @@ import (
 	"os"
 	"os/exec"
 	"runtime"
+	"strconv"
 	"time"
 
 	"github.com/spf13/cobra"
@@ -17,15 +18,18 @@ import (
 	"github.com/odysseythink/hermind/agent/idle"
 	"github.com/odysseythink/hermind/api"
 	"github.com/odysseythink/hermind/config"
+	"github.com/odysseythink/hermind/logging"
 	"github.com/odysseythink/mlog"
 )
 
 // webRunOptions parameterize runWeb. Shared by newWebCmd, newRunCmd,
 // and the bare `hermind` RunE.
 type webRunOptions struct {
-	Addr      string
-	NoBrowser bool
-	ExitAfter time.Duration
+	Addr             string
+	NoBrowser        bool
+	ExitAfter        time.Duration
+	PrintReadySignal bool   // print HERMIND_READY <port> to stdout
+	FileLogPath      string // if set, InitFileLogger is called
 	// Out is where the listening-URL banner lines are written. Nil
 	// defaults to os.Stdout. Tests inject a buffer to capture the output.
 	Out io.Writer
@@ -98,9 +102,26 @@ func runWeb(ctx context.Context, app *App, opts webRunOptions) error {
 	if out == nil {
 		out = os.Stdout
 	}
+
+	if opts.FileLogPath != "" {
+		if err := logging.InitFileLogger(opts.FileLogPath); err != nil {
+			mlog.Warning("web: failed to init file logger", mlog.String("err", err.Error()))
+		}
+	}
+
 	fmt.Fprintf(out, "hermind web listening on %s\n", realAddr)
 	fmt.Fprintf(out, "instance:  %s\n", app.InstanceRoot)
 	fmt.Fprintf(out, "open:      %s/\n", realAddr)
+
+	if opts.PrintReadySignal {
+		_, portStr, err := net.SplitHostPort(ln.Addr().String())
+		if err == nil {
+			if port, err := strconv.Atoi(portStr); err == nil {
+				fmt.Fprintf(os.Stdout, "HERMIND_READY %d\n", port)
+				_ = os.Stdout.Sync()
+			}
+		}
+	}
 
 	if !opts.NoBrowser {
 		go openBrowser(realAddr + "/")
