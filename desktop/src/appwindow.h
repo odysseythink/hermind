@@ -9,7 +9,9 @@ class SessionListWidget;
 class ChatWidget;
 class StatusFooter;
 class HermindClient;
-class SettingsDialog;
+class SettingsEditor;
+class ThemeManager;
+class I18nManager;
 
 class AppWindow : public QWidget
 {
@@ -17,6 +19,8 @@ class AppWindow : public QWidget
 public:
     explicit AppWindow(QWidget *parent = nullptr);
     void setClient(HermindClient *client);
+    void setThemeManager(ThemeManager *manager);
+    void setI18nManager(I18nManager *manager);
 
 protected:
     void closeEvent(QCloseEvent *event) override;
@@ -33,7 +37,9 @@ private:
     SessionListWidget *m_sessionList;
     ChatWidget *m_chatWidget;
     StatusFooter *m_footer;
-    SettingsDialog *m_settingsDialog;
+    SettingsEditor *m_settingsEditor;
+    ThemeManager *m_themeManager;
+    I18nManager *m_i18nManager;
 };
 
 #endif

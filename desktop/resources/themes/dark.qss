@@ -1,0 +1,131 @@
+/* ===== Base ===== */
+QMainWindow, QWidget {
+    background: #0a0b0d;
+    color: #e8e6e3;
+}
+
+/* ===== Input Controls ===== */
+QTextEdit, QLineEdit, QComboBox {
+    background: #0a0b0d;
+    color: #e8e6e3;
+    border: 1px solid #2a2e36;
+    border-radius: 4px;
+    padding: 8px 12px;
+    font-size: 13px;
+}
+QTextEdit:focus, QLineEdit:focus, QComboBox:focus {
+    border-color: #FFB800;
+}
+
+/* ===== Buttons ===== */
+QPushButton {
+    background: #FFB800;
+    color: #0a0b0d;
+    border: 1px solid #FFB800;
+    border-radius: 4px;
+    padding: 6px 16px;
+    font-weight: 600;
+    font-size: 12px;
+}
+QPushButton:hover {
+    background: #FF8A00;
+    border-color: #FF8A00;
+}
+QPushButton:disabled {
+    background: transparent;
+    color: #8a8680;
+    border-color: #2a2e36;
+    opacity: 0.35;
+}
+
+/* ===== Lists ===== */
+QListWidget {
+    background: #14161a;
+    color: #e8e6e3;
+    border: none;
+    outline: none;
+}
+QListWidget::item {
+    padding: 8px 16px;
+    border-left: 2px solid transparent;
+    color: #8a8680;
+}
+QListWidget::item:hover {
+    background: rgba(255,255,255,0.04);
+}
+QListWidget::item:selected {
+    background: rgba(255,184,0,0.08);
+    color: #e8e6e3;
+    border-left: 2px solid #FFB800;
+}
+
+/* ===== Scrollbars ===== */
+QScrollBar:vertical {
+    width: 10px;
+    background: transparent;
+    border: none;
+}
+QScrollBar::handle:vertical {
+    background: #2a2e36;
+    border-radius: 2px;
+    border: 2px solid #0a0b0d;
+    min-height: 20px;
+}
+QScrollBar::handle:vertical:hover {
+    background: #8a8680;
+}
+QScrollBar::add-line:vertical, QScrollBar::sub-line:vertical {
+    height: 0;
+}
+QScrollBar:horizontal {
+    height: 10px;
+    background: transparent;
+    border: none;
+}
+QScrollBar::handle:horizontal {
+    background: #2a2e36;
+    border-radius: 2px;
+    border: 2px solid #0a0b0d;
+    min-width: 20px;
+}
+QScrollBar::handle:horizontal:hover {
+    background: #8a8680;
+}
+QScrollBar::add-line:horizontal, QScrollBar::sub-line:horizontal {
+    width: 0;
+}
+
+/* ===== Menu ===== */
+QMenuBar {
+    background: #14161a;
+    color: #e8e6e3;
+    border-bottom: 1px solid #2a2e36;
+}
+QMenu {
+    background: #14161a;
+    color: #e8e6e3;
+    border: 1px solid #2a2e36;
+}
+QMenu::item:selected {
+    background: rgba(255,255,255,0.04);
+}
+
+/* ===== Dialogs ===== */
+QDialog {
+    background: #0a0b0d;
+}
+QLabel {
+    color: #e8e6e3;
+}
+
+/* ===== Splitter ===== */
+QSplitter::handle {
+    background: #2a2e36;
+}
+
+/* ===== MessageBubble read-only QTextEdit ===== */
+MessageBubble QTextEdit {
+    background: transparent;
+    border: none;
+    color: #e8e6e3;
+}

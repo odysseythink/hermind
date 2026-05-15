@@ -18,6 +18,9 @@ public:
 
     void get(const QString &path, Callback callback);
     void post(const QString &path, const QJsonObject &body, Callback callback);
+    void put(const QString &path, const QJsonObject &body, Callback callback);
+    void delete_(const QString &path, Callback callback);
+    void upload(const QString &path, const QByteArray &data, const QString &fileName, const QString &mimeType, Callback callback);
     QNetworkReply* getStream(const QString &path);
 
     QString baseUrl() const;

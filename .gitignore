@@ -32,6 +32,8 @@ docs/
 # Desktop build artifacts
 desktop/build/
 
-
 # Desktop compiled binaries
 desktop/resources/*.exe
+
+# IDE temp files
+desktop/.qtcreator/CMakeLists.txt.user.bak
