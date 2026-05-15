@@ -162,6 +162,8 @@ func (s *Server) buildRouter() chi.Router {
 		})
 	})
 
+	r.Get("/health", handleHealth)
+
 	r.Route("/api", func(r chi.Router) {
 		r.Get("/status", s.handleStatus)
 		r.Get("/model/info", s.handleModelInfo)
