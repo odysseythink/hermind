@@ -28,3 +28,7 @@ TODOS.md
 .claude/
 logs/
 docs/
+
+# Desktop build artifacts
+desktop/build/
+
