@@ -5,6 +5,8 @@ import (
 	"context"
 	"encoding/json"
 	"log/slog"
+	"os"
+	"path/filepath"
 	"strings"
 	"testing"
 )
@@ -20,6 +22,19 @@ func TestWithRequestIDGenerates(t *testing.T) {
 	ctx := WithRequestID(context.Background(), "")
 	if RequestID(ctx) == "" {
 		t.Error("expected generated id")
+	}
+}
+
+func TestInitFileLogger(t *testing.T) {
+	tmpDir := t.TempDir()
+	logFile := filepath.Join(tmpDir, "hermind", "logs", "app.log")
+
+	if err := InitFileLogger(logFile); err != nil {
+		t.Fatalf("InitFileLogger failed: %v", err)
+	}
+
+	if _, err := os.Stat(logFile); os.IsNotExist(err) {
+		t.Fatalf("log file was not created: %s", logFile)
 	}
 }
 

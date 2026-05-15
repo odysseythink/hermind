@@ -12,6 +12,8 @@ import (
 	"context"
 	"flag"
 	"log/slog"
+	"os"
+	"path/filepath"
 	"time"
 
 	"github.com/google/uuid"
@@ -50,6 +52,25 @@ func Setup(level string) {
 
 	h := &mlogHandler{level: slogLvl}
 	slog.SetDefault(slog.New(&contextHandler{inner: h}))
+}
+
+// InitFileLogger configures logging to write JSON lines to logPath.
+// Parent directories are created as needed. This is used in desktop
+// mode where stderr is not available.
+func InitFileLogger(logPath string) error {
+	dir := filepath.Dir(logPath)
+	if err := os.MkdirAll(dir, 0750); err != nil {
+		return err
+	}
+
+	f, err := os.OpenFile(logPath, os.O_CREATE|os.O_WRONLY|os.O_APPEND, 0640)
+	if err != nil {
+		return err
+	}
+
+	h := slog.NewJSONHandler(f, nil)
+	slog.SetDefault(slog.New(&contextHandler{inner: h}))
+	return nil
 }
 
 // WithRequestID attaches a request ID to ctx. If id is empty a new
