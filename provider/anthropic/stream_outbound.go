@@ -9,9 +9,9 @@ import (
 	"net/http"
 	"time"
 
+	"github.com/odysseythink/hermind/message"
 	"github.com/odysseythink/hermind/provider"
 	"github.com/odysseythink/pantheon/core"
-	"github.com/odysseythink/pantheon/types"
 )
 
 // StreamOutbound consumes events from the provider stream and writes
@@ -71,7 +71,7 @@ func StreamOutbound(
 	ticker := time.NewTicker(keepAlive)
 	defer ticker.Stop()
 
-	var usage core.Usage
+	var usage message.Usage
 	var finishReason string
 
 	for {
@@ -98,10 +98,10 @@ func StreamOutbound(
 				state.handleDelta(&provider.StreamDelta{Content: part.TextDelta})
 			case core.StreamPartTypeToolCall:
 				state.handleDelta(&provider.StreamDelta{
-					ToolCalls: []types.ToolCall{{
+					ToolCalls: []message.ToolCall{{
 						ID:   part.ToolCall.ID,
 						Type: "function",
-						Function: types.ToolCallFunction{
+						Function: message.ToolCallFunction{
 							Name:      part.ToolCall.Name,
 							Arguments: part.ToolCall.Arguments,
 						},

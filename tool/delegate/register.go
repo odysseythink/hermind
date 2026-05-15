@@ -2,9 +2,8 @@
 package delegate
 
 import (
-	"encoding/json"
-
 	"github.com/odysseythink/hermind/tool"
+	"github.com/odysseythink/pantheon/core"
 )
 
 // RegisterDelegate registers the delegate tool bound to a SubagentRunner.
@@ -17,13 +16,10 @@ func RegisterDelegate(reg *tool.Registry, runner SubagentRunner) {
 		Description: "Delegate a self-contained task to a subagent. The subagent has its own budget and history.",
 		Emoji:       "👥",
 		Handler:     newDelegateHandler(runner),
-		Schema: tool.ToolDefinition{
-			Type: "function",
-			Function: tool.FunctionDef{
-				Name:        "delegate",
-				Description: "Run a fresh subagent on a specific, self-contained task.",
-				Parameters:  json.RawMessage(delegateSchema),
-			},
+		Schema: core.ToolDefinition{
+			Name:        "delegate",
+			Description: "Run a fresh subagent on a specific, self-contained task.",
+			Parameters:  core.MustSchemaFromJSON([]byte(delegateSchema)),
 		},
 	})
 }

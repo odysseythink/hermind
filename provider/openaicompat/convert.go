@@ -2,11 +2,12 @@
 package openaicompat
 
 import (
+	"encoding/json"
 	"log"
 
 	"github.com/odysseythink/hermind/message"
 	"github.com/odysseythink/hermind/provider"
-	"github.com/odysseythink/hermind/tool"
+	"github.com/odysseythink/pantheon/core"
 )
 
 // buildRequest converts a provider.Request into an OpenAI-compatible chatRequest.
@@ -68,14 +69,14 @@ func (c *Client) buildRequest(req *provider.Request, stream bool) *chatRequest {
 	return apiReq
 }
 
-// convertToolDefinition maps a tool.ToolDefinition to an apiTool.
-func convertToolDefinition(t tool.ToolDefinition) apiTool {
+// convertToolDefinition maps a core.ToolDefinition to an apiTool.
+func convertToolDefinition(t core.ToolDefinition) apiTool {
 	return apiTool{
 		Type: "function",
 		Function: apiFunctionDef{
-			Name:        t.Function.Name,
-			Description: t.Function.Description,
-			Parameters:  t.Function.Parameters,
+			Name:        t.Name,
+			Description: t.Description,
+			Parameters:  schemaToRaw(t.Parameters),
 		},
 	}
 }
@@ -261,3 +262,16 @@ func convertUsage(u apiUsage) provider.Response {
 
 // Silence unused imports (message is used in Message return types)
 var _ = message.RoleAssistant
+
+// schemaToRaw marshals a pantheon core.Schema to json.RawMessage.
+// Returns nil if schema is nil.
+func schemaToRaw(schema *core.Schema) json.RawMessage {
+	if schema == nil {
+		return nil
+	}
+	b, err := json.Marshal(schema)
+	if err != nil {
+		return nil
+	}
+	return b
+}

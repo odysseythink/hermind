@@ -5,6 +5,9 @@ import (
 	"github.com/odysseythink/pantheon/agent/compression"
 )
 
+// CompressionConfig is an alias for the pantheon compression config.
+type CompressionConfig = compression.CompressionConfig
+
 // YAML tags mirror the existing Python hermes config.yaml format.
 type Config struct {
 	Model             string                    `yaml:"model"`

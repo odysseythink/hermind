@@ -27,10 +27,11 @@ func BuildPrompt(req *provider.Request) string {
 	if len(req.Tools) > 0 {
 		b.WriteString("Available tools:\n")
 		for _, t := range req.Tools {
+			params, _ := json.Marshal(t.Parameters)
 			schema, _ := json.Marshal(map[string]any{
-				"name":        t.Function.Name,
-				"description": t.Function.Description,
-				"parameters":  json.RawMessage(t.Function.Parameters),
+				"name":        t.Name,
+				"description": t.Description,
+				"parameters":  json.RawMessage(params),
 			})
 			b.Write(schema)
 			b.WriteString("\n")
