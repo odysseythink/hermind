@@ -10,6 +10,11 @@
 #include <QJsonDocument>
 #include <QJsonObject>
 #include <QDebug>
+#include <QDragEnterEvent>
+#include <QDropEvent>
+#include <QMimeData>
+#include <QUrl>
+#include <QFile>
 
 ChatWidget::ChatWidget(QWidget *parent)
     : QWidget(parent),
@@ -84,11 +89,18 @@ ChatWidget::ChatWidget(QWidget *parent)
             this, &ChatWidget::onRenderTimer);
 
     m_renderTimer->setSingleShot(true);
+
+    setAcceptDrops(true);
 }
 
 void ChatWidget::setClient(HermindClient *client)
 {
     m_client = client;
+}
+
+HermindClient* ChatWidget::client() const
+{
+    return m_client;
 }
 
 void ChatWidget::sendMessage(const QString &text)
@@ -177,6 +189,31 @@ void ChatWidget::addMessageBubble(MessageBubble *bubble)
 void ChatWidget::loadSession(const QString &sessionId)
 {
     Q_UNUSED(sessionId)
+}
+
+void ChatWidget::dragEnterEvent(QDragEnterEvent *event)
+{
+    if (event->mimeData()->hasUrls()) {
+        event->acceptProposedAction();
+    }
+}
+
+void ChatWidget::dropEvent(QDropEvent *event)
+{
+    const QMimeData *mime = event->mimeData();
+    if (!mime->hasUrls())
+        return;
+
+    for (const QUrl &url : mime->urls()) {
+        QString path = url.toLocalFile();
+        if (path.isEmpty())
+            continue;
+        QFile file(path);
+        if (!file.open(QIODevice::ReadOnly))
+            continue;
+        QByteArray data = file.readAll();
+        qDebug() << "Dropped file:" << path << "size:" << data.size();
+    }
 }
 
 void ChatWidget::startNewSession()

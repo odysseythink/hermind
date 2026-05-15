@@ -2,6 +2,12 @@
 #include "sessionlistwidget.h"
 #include "chatwidget.h"
 #include "httplib.h"
+#include "settingsdialog.h"
+
+#include <QMenuBar>
+#include <QMenu>
+#include <QAction>
+#include <QCloseEvent>
 
 AppWindow::AppWindow(QWidget *parent)
     : QMainWindow(parent),
@@ -28,6 +34,13 @@ AppWindow::AppWindow(QWidget *parent)
             m_chatWidget, &ChatWidget::loadSession);
     connect(m_sessionList, &SessionListWidget::newSessionRequested,
             m_chatWidget, &ChatWidget::startNewSession);
+
+    QMenu *fileMenu = menuBar()->addMenu("File");
+    QAction *settingsAction = fileMenu->addAction("Settings");
+    connect(settingsAction, &QAction::triggered, this, [this]() {
+        SettingsDialog dlg(m_chatWidget->client(), this);
+        dlg.exec();
+    });
 }
 
 void AppWindow::setClient(HermindClient *client)
@@ -37,5 +50,6 @@ void AppWindow::setClient(HermindClient *client)
 
 void AppWindow::closeEvent(QCloseEvent *event)
 {
-    QMainWindow::closeEvent(event);
+    event->ignore();
+    hide();
 }
