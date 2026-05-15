@@ -1,0 +1,52 @@
+QMainWindow {
+    background: #1e1e1e;
+}
+QTextEdit {
+    background: #252526;
+    color: #d4d4d4;
+    border: 1px solid #3c3c3c;
+    border-radius: 6px;
+    padding: 8px;
+}
+QPushButton {
+    background: #0e639c;
+    color: white;
+    border-radius: 4px;
+    padding: 6px 16px;
+}
+QPushButton:hover {
+    background: #1177bb;
+}
+QListWidget {
+    background: #252526;
+    color: #d4d4d4;
+    border: none;
+}
+QSplitter::handle {
+    background: #3c3c3c;
+}
+QMenuBar {
+    background: #1e1e1e;
+    color: #d4d4d4;
+}
+QMenuBar::item:selected {
+    background: #3c3c3c;
+}
+QMenu {
+    background: #252526;
+    color: #d4d4d4;
+    border: 1px solid #3c3c3c;
+}
+QDialog {
+    background: #1e1e1e;
+}
+QLabel {
+    color: #d4d4d4;
+}
+QComboBox, QLineEdit {
+    background: #3c3c3c;
+    color: #d4d4d4;
+    border: 1px solid #555555;
+    border-radius: 4px;
+    padding: 4px;
+}

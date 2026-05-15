@@ -1,4 +1,5 @@
 #include <QApplication>
+#include <QFile>
 #include "appwindow.h"
 #include "hermindprocess.h"
 #include "httplib.h"
@@ -10,6 +11,11 @@ int main(int argc, char *argv[])
     QApplication app(argc, argv);
     app.setApplicationName("hermind");
     app.setOrganizationName("hermind");
+
+    QFile styleFile(":/styles.qss");
+    if (styleFile.open(QFile::ReadOnly)) {
+        app.setStyleSheet(QString::fromUtf8(styleFile.readAll()));
+    }
 
     AppWindow window;
     HermindProcess backend;
