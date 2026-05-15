@@ -6,7 +6,8 @@ set(CMAKE_CXX_STANDARD_REQUIRED ON)
 set(CMAKE_AUTOMOC ON)
 set(CMAKE_AUTORCC ON)
 
-find_package(Qt6 REQUIRED COMPONENTS Core Gui Widgets Network)
+enable_testing()
+find_package(Qt6 REQUIRED COMPONENTS Core Gui Widgets Network Test)
 
 set(SOURCES
     src/main.cpp
@@ -54,3 +55,7 @@ set_target_properties(hermind-desktop PROPERTIES
     WIN32_EXECUTABLE TRUE
     MACOSX_BUNDLE TRUE
 )
+
+add_executable(test_httplib tests/test_httplib.cpp src/httplib.cpp)
+target_link_libraries(test_httplib PRIVATE Qt6::Core Qt6::Network Qt6::Test)
+add_test(NAME test_httplib COMMAND test_httplib)
