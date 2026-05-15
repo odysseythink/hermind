@@ -2,6 +2,8 @@
 #include "appwindow.h"
 #include "hermindprocess.h"
 #include "httplib.h"
+#include "shortcutmanager.h"
+#include "trayicon.h"
 
 int main(int argc, char *argv[])
 {
@@ -12,6 +14,27 @@ int main(int argc, char *argv[])
     AppWindow window;
     HermindProcess backend;
     HermindClient *client = nullptr;
+
+    ShortcutManager shortcuts(&window);
+    shortcuts.registerToggle(QKeySequence("Ctrl+Shift+H"));
+    QObject::connect(&shortcuts, &ShortcutManager::toggleRequested, &window, [&window]() {
+        if (window.isVisible()) {
+            window.hide();
+        } else {
+            window.show();
+            window.raise();
+            window.activateWindow();
+        }
+    });
+
+    TrayIcon tray;
+    tray.show();
+    QObject::connect(&tray, &TrayIcon::showWindowRequested, &window, [&window]() {
+        window.show();
+        window.raise();
+        window.activateWindow();
+    });
+    QObject::connect(&tray, &TrayIcon::quitRequested, &app, &QApplication::quit);
 
     QObject::connect(&backend, &HermindProcess::backendReady,
                      &window, [&window, &client](const QHostAddress&, int port) {

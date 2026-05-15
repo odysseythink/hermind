@@ -19,6 +19,9 @@ set(SOURCES
     src/chatwidget.cpp
     src/messagebubble.cpp
     src/promptinput.cpp
+    src/shortcutmanager.cpp
+    src/trayicon.cpp
+    src/settingsdialog.cpp
 )
 
 set(HEADERS
@@ -30,6 +33,9 @@ set(HEADERS
     src/chatwidget.h
     src/messagebubble.h
     src/promptinput.h
+    src/shortcutmanager.h
+    src/trayicon.h
+    src/settingsdialog.h
 )
 
 add_executable(hermind-desktop ${SOURCES} ${HEADERS})

@@ -18,6 +18,11 @@ class ChatWidget : public QWidget
 public:
     explicit ChatWidget(QWidget *parent = nullptr);
     void setClient(HermindClient *client);
+    HermindClient* client() const;
+
+protected:
+    void dragEnterEvent(QDragEnterEvent *event) override;
+    void dropEvent(QDropEvent *event) override;
 
 public slots:
     void sendMessage(const QString &text);
