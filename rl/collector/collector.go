@@ -18,6 +18,7 @@ import (
 	"github.com/odysseythink/hermind/agent/batch"
 	"github.com/odysseythink/hermind/message"
 	"github.com/odysseythink/hermind/rl/trajectory"
+	"github.com/odysseythink/pantheon/core"
 )
 
 // Collector is the bridge between agent/batch/ and rl/trajectory/.
@@ -109,25 +110,32 @@ func stepsFromTrajectory(tr *batch.Trajectory) []trajectory.Step {
 	return steps
 }
 
-func stepFromMessage(m message.Message) trajectory.Step {
+func stepFromMessage(m message.HermindMessage) trajectory.Step {
 	step := trajectory.Step{
 		From:       roleToFrom(m.Role),
-		Value:      m.Content.Text(),
-		ToolName:   m.ToolName,
+		Value:      m.Text(),
 		ToolCallID: m.ToolCallID,
+	}
+	if m.Role == core.MESSAGE_ROLE_TOOL {
+		for _, p := range m.Content {
+			if tr, ok := p.(core.ToolResultPart); ok {
+				step.ToolName = tr.Name
+				break
+			}
+		}
 	}
 	return step
 }
 
-func roleToFrom(role message.Role) string {
+func roleToFrom(role core.MessageRoleType) string {
 	switch role {
-	case message.RoleUser:
+	case core.MESSAGE_ROLE_USER:
 		return "user"
-	case message.RoleAssistant:
+	case core.MESSAGE_ROLE_ASSISTANT:
 		return "assistant"
-	case message.RoleTool:
+	case core.MESSAGE_ROLE_TOOL:
 		return "tool"
-	case message.RoleSystem:
+	case core.MESSAGE_ROLE_SYSTEM:
 		return "system"
 	}
 	return string(role)

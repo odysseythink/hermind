@@ -8,6 +8,7 @@ import (
 
 	"github.com/odysseythink/hermind/message"
 	"github.com/odysseythink/hermind/provider"
+	"github.com/odysseythink/pantheon/core"
 )
 
 func TestInbound_TextOnly(t *testing.T) {
@@ -22,8 +23,8 @@ func TestInbound_TextOnly(t *testing.T) {
 	require.False(t, stream)
 	require.Equal(t, 1024, req.MaxTokens)
 	require.Len(t, req.Messages, 1)
-	require.Equal(t, message.RoleUser, req.Messages[0].Role)
-	require.Equal(t, "hi", req.Messages[0].Content.Text())
+	require.Equal(t, core.MESSAGE_ROLE_USER, req.Messages[0].Role)
+	require.Equal(t, "hi", req.Messages[0].Text())
 }
 
 func TestInbound_SystemAsString(t *testing.T) {
@@ -69,7 +70,7 @@ func TestInbound_MultipleTextBlocks(t *testing.T) {
 	req, _, _, err := Inbound(body)
 	require.NoError(t, err)
 	require.Len(t, req.Messages, 1)
-	require.Equal(t, "a\nb", req.Messages[0].Content.Text())
+	require.Equal(t, "a\nb", req.Messages[0].Text())
 }
 
 func TestInbound_AssistantToolUse(t *testing.T) {
@@ -86,12 +87,13 @@ func TestInbound_AssistantToolUse(t *testing.T) {
 	req, _, _, err := Inbound(body)
 	require.NoError(t, err)
 	require.Len(t, req.Messages, 2)
-	require.Equal(t, message.RoleAssistant, req.Messages[1].Role)
-	require.Equal(t, "checking", req.Messages[1].Content.Text())
-	require.Len(t, req.Messages[1].ToolCalls, 1)
-	require.Equal(t, "toolu_1", req.Messages[1].ToolCalls[0].ID)
-	require.Equal(t, "get_weather", req.Messages[1].ToolCalls[0].Function.Name)
-	require.JSONEq(t, `{"city":"SF"}`, req.Messages[1].ToolCalls[0].Function.Arguments)
+	require.Equal(t, core.MESSAGE_ROLE_ASSISTANT, req.Messages[1].Role)
+	require.Equal(t, "checking", req.Messages[1].Text())
+	toolCalls := req.Messages[1].ExtractToolCalls()
+	require.Len(t, toolCalls, 1)
+	require.Equal(t, "toolu_1", toolCalls[0].ID)
+	require.Equal(t, "get_weather", toolCalls[0].Name)
+	require.JSONEq(t, `{"city":"SF"}`, toolCalls[0].Arguments)
 }
 
 func TestInbound_UserMultipleToolResultsSplit(t *testing.T) {
@@ -108,13 +110,13 @@ func TestInbound_UserMultipleToolResultsSplit(t *testing.T) {
 	req, _, _, err := Inbound(body)
 	require.NoError(t, err)
 	require.Len(t, req.Messages, 3, "two tool results then a user text remainder")
-	require.Equal(t, message.RoleTool, req.Messages[0].Role)
+	require.Equal(t, core.MESSAGE_ROLE_TOOL, req.Messages[0].Role)
 	require.Equal(t, "toolu_1", req.Messages[0].ToolCallID)
-	require.Equal(t, "Sunny", req.Messages[0].Content.Text())
-	require.Equal(t, message.RoleTool, req.Messages[1].Role)
+	require.Equal(t, "Sunny", req.Messages[0].Text())
+	require.Equal(t, core.MESSAGE_ROLE_TOOL, req.Messages[1].Role)
 	require.Equal(t, "toolu_2", req.Messages[1].ToolCallID)
-	require.Equal(t, message.RoleUser, req.Messages[2].Role)
-	require.Equal(t, "thanks", req.Messages[2].Content.Text())
+	require.Equal(t, core.MESSAGE_ROLE_USER, req.Messages[2].Role)
+	require.Equal(t, "thanks", req.Messages[2].Text())
 }
 
 func TestInbound_EmptyMessagesRejected(t *testing.T) {
@@ -143,9 +145,10 @@ func TestInbound_ToolsTranslated(t *testing.T) {
 	req, _, _, err := Inbound(body)
 	require.NoError(t, err)
 	require.Len(t, req.Tools, 1)
-	require.Equal(t, "function", req.Tools[0].Type)
-	require.Equal(t, "get_weather", req.Tools[0].Function.Name)
-	require.JSONEq(t, `{"type":"object"}`, string(req.Tools[0].Function.Parameters))
+	require.Equal(t, "get_weather", req.Tools[0].Name)
+	require.Equal(t, "...", req.Tools[0].Description)
+	require.NotNil(t, req.Tools[0].Parameters)
+	require.Equal(t, "object", req.Tools[0].Parameters.Type)
 }
 
 func TestInbound_StreamFlag(t *testing.T) {
@@ -169,12 +172,12 @@ var _ = json.RawMessage(nil)
 
 func TestOutbound_TextOnly(t *testing.T) {
 	resp := &provider.Response{
-		Message: message.Message{
-			Role:    message.RoleAssistant,
-			Content: message.TextContent("hello there"),
+		Message: message.HermindMessage{
+			Role:    core.MESSAGE_ROLE_ASSISTANT,
+			Content: core.NewTextContent("hello there"),
 		},
 		FinishReason: "stop",
-		Usage:        message.Usage{InputTokens: 10, OutputTokens: 3},
+		Usage:        core.Usage{PromptTokens: 10, CompletionTokens: 3},
 		Model:        "actual-model",
 	}
 	out, err := Outbound(resp, "claude-sonnet-4-6", "msg_abc123")
@@ -213,17 +216,13 @@ func TestOutbound_FinishReasonMapping(t *testing.T) {
 
 func TestOutbound_AssistantWithToolUse(t *testing.T) {
 	resp := &provider.Response{
-		Message: message.Message{
-			Role:    message.RoleAssistant,
-			Content: message.TextContent("calling..."),
-			ToolCalls: []message.ToolCall{{
-				ID:   "toolu_1",
-				Type: "function",
-				Function: message.ToolCallFunction{
-					Name:      "get_weather",
-					Arguments: `{"city":"SF"}`,
-				},
-			}},
+		Message: message.HermindMessage{
+			Role: core.MESSAGE_ROLE_ASSISTANT,
+			Content: append(core.NewTextContent("calling..."), core.ToolCallPart{
+				ID:        "toolu_1",
+				Name:      "get_weather",
+				Arguments: `{"city":"SF"}`,
+			}),
 		},
 		FinishReason: "tool_calls",
 	}
@@ -260,8 +259,8 @@ func TestInbound_ImageBlockEmitsPlaceholder(t *testing.T) {
 	req, _, _, err := Inbound(body)
 	require.NoError(t, err)
 	require.Len(t, req.Messages, 1)
-	require.Equal(t, message.RoleUser, req.Messages[0].Role)
+	require.Equal(t, core.MESSAGE_ROLE_USER, req.Messages[0].Role)
 	// The image block produces a marker so the provider sees non-empty
 	// content; the marker is concatenated with the trailing text via "\n".
-	require.Equal(t, "[image omitted in v1 proxy]\ndescribe this", req.Messages[0].Content.Text())
+	require.Equal(t, "[image omitted in v1 proxy]\ndescribe this", req.Messages[0].Text())
 }

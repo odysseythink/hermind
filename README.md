@@ -12,7 +12,7 @@ A Go port of the hermes AI agent framework. Single-binary, instance-bound, singl
 
 hermind runs an LLM agent locally. Point it at any current working directory and the directory becomes a hermind instance — its config, conversation history, skills, and trajectories all live in `./.hermind/`. One directory, one conversation, one persistent state.
 
-The agent loop is provider-agnostic. Configure one of the supported providers (Anthropic, OpenAI, Bedrock, OpenRouter, Qwen, Kimi, DeepSeek, Minimax, Wenxin, Copilot) as the primary, optionally another as auxiliary, and hermind handles tool use, multi-turn reasoning, compression, fallback chaining, and structured trajectory logging.
+The agent loop is provider-agnostic. Configure one of the supported providers (Anthropic, OpenAI, Bedrock, OpenRouter, Qwen, Kimi, DeepSeek, Minimax, Wenxin) as the primary, optionally another as auxiliary, and hermind handles tool use, multi-turn reasoning, compression, fallback chaining, and structured trajectory logging.
 
 Run it as:
 
@@ -44,7 +44,7 @@ For a one-shot CLI run:
 
 ## Capabilities
 
-**Multi-provider LLM routing.** First-class support for Anthropic, OpenAI, AWS Bedrock, GitHub Copilot, OpenRouter, plus several Chinese-market providers (Qwen, Kimi, DeepSeek, Minimax, Wenxin, Zhipu). Configurable fallback chain when a provider returns rate-limit or quota errors.
+**Multi-provider LLM routing.** First-class support for Anthropic, OpenAI, AWS Bedrock, OpenRouter, plus several Chinese-market providers (Qwen, Kimi, DeepSeek, Minimax, Wenxin, Zhipu). Configurable fallback chain when a provider returns rate-limit or quota errors.
 
 **Skills.** Hot-loadable skill packages from `<instance>/skills/`. The agent auto-injects up to N retrieved skills per turn (configurable). Optionally extracts new skill snippets from each conversation (`auto_extract`). Memory reinforcement signals decay over skill-library generations (`generation_half_life`).
 

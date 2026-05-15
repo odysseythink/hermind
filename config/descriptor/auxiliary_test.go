@@ -56,7 +56,7 @@ func TestAuxiliaryProviderEnumPopulatedFromFactory(t *testing.T) {
 		t.Fatal("provider field not found")
 	}
 	if len(provider.Enum) == 0 {
-		t.Fatal("provider.Enum is empty — did auxiliary.go import provider/factory correctly?")
+		t.Fatal("provider.Enum is empty — did auxiliary.go set SupportedProviders?")
 	}
 	// Sanity floor — the enum must include at least the two reference providers.
 	has := map[string]bool{}

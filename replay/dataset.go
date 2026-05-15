@@ -9,9 +9,11 @@ import (
 	"strings"
 	"time"
 
-	"github.com/odysseythink/hermind/benchmark"
 	"github.com/odysseythink/hermind/message"
 	"github.com/odysseythink/hermind/storage"
+	"github.com/odysseythink/pantheon/benchmark"
+	"github.com/odysseythink/pantheon/core"
+	"github.com/odysseythink/pantheon/types"
 )
 
 // GenerateConfig controls how Generate walks state.db into ReplayItems.
@@ -87,7 +89,7 @@ func Generate(ctx context.Context, store storage.Storage, cfg GenerateConfig) er
 			continue
 		}
 
-		var history []message.Message
+		var history []message.HermindMessage
 		if cfg.Mode == "contextual" && i > 0 {
 			startIdx := i - cfg.HistoryCap
 			if startIdx < 0 {
@@ -133,20 +135,38 @@ func Generate(ctx context.Context, store storage.Storage, cfg GenerateConfig) er
 }
 
 // storedToMessage converts a storage.StoredMessage into the in-memory
-// message.Message form. Only the fields the Engine needs for context
+// message.HermindMessage form. Only the fields the Engine needs for context
 // preload are copied; tool_calls etc. are passed through as JSON.
-func storedToMessage(s *storage.StoredMessage) message.Message {
-	role := message.Role(s.Role)
-	msg := message.Message{
+func storedToMessage(s *storage.StoredMessage) message.HermindMessage {
+	role := core.MessageRoleType(s.Role)
+
+	if role == core.MESSAGE_ROLE_TOOL && s.ToolCallID != "" {
+		return message.HermindMessage{
+			Role: role,
+			Content: []core.ContentParter{core.ToolResultPart{
+				ToolCallID: s.ToolCallID,
+				Name:       s.ToolName,
+				Content:    core.NewTextContent(s.Content),
+			}},
+		}
+	}
+
+	msg := message.HermindMessage{
 		Role:       role,
-		Content:    message.TextContent(s.Content),
+		Content:    core.NewTextContent(s.Content),
 		ToolCallID: s.ToolCallID,
-		ToolName:   s.ToolName,
+		Name:       s.ToolName,
 	}
 	if len(s.ToolCalls) > 0 {
-		var toolCalls []message.ToolCall
+		var toolCalls []types.ToolCall
 		if err := json.Unmarshal(s.ToolCalls, &toolCalls); err == nil {
-			msg.ToolCalls = toolCalls
+			for _, tc := range toolCalls {
+				msg.Content = append(msg.Content, core.ToolCallPart{
+					ID:        tc.ID,
+					Name:      tc.Function.Name,
+					Arguments: tc.Function.Arguments,
+				})
+			}
 		}
 	}
 	return msg

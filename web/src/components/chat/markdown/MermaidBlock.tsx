@@ -1,6 +1,10 @@
-import { useEffect, useRef } from 'react';
+import { useEffect, useRef, useState } from 'react';
 
-type MermaidModule = { initialize(cfg: Record<string, unknown>): void; render(id: string, chart: string): Promise<{ svg: string }> };
+type MermaidModule = {
+  initialize(cfg: Record<string, unknown>): void;
+  parse(chart: string): void;
+  render(id: string, chart: string): Promise<{ svg: string }>;
+};
 
 let mermaidPromise: Promise<MermaidModule> | null = null;
 function loadMermaid(): Promise<MermaidModule> {
@@ -18,16 +22,36 @@ type Props = { chart: string };
 
 export default function MermaidBlock({ chart }: Props) {
   const ref = useRef<HTMLDivElement>(null);
+  const [invalid, setInvalid] = useState(false);
+
   useEffect(() => {
     let cancelled = false;
+    setInvalid(false);
     loadMermaid().then((m) => {
       if (cancelled || !ref.current) return;
+      try {
+        m.parse(chart);
+      } catch {
+        if (!cancelled) setInvalid(true);
+        return;
+      }
       const id = `m-${Date.now()}-${Math.random().toString(36).slice(2, 7)}`;
       m.render(id, chart).then(({ svg }) => {
         if (!cancelled && ref.current) ref.current.innerHTML = svg;
-      }).catch(() => {});
+      }).catch(() => {
+        if (!cancelled) setInvalid(true);
+      });
     });
     return () => { cancelled = true; };
   }, [chart]);
+
+  if (invalid) {
+    return (
+      <pre style={{ overflow: 'auto' }}>
+        <code>{chart}</code>
+      </pre>
+    );
+  }
+
   return <div ref={ref} data-mermaid-container />;
 }

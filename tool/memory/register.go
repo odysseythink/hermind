@@ -2,10 +2,9 @@
 package memory
 
 import (
-	"encoding/json"
-
 	"github.com/odysseythink/hermind/storage"
 	"github.com/odysseythink/hermind/tool"
+	"github.com/odysseythink/pantheon/core"
 )
 
 // RegisterAll registers memory_save, memory_search, and memory_delete into
@@ -18,13 +17,10 @@ func RegisterAll(reg *tool.Registry, store storage.Storage) {
 		Description: "Save a memory the agent should remember across conversations.",
 		Emoji:       "🧠",
 		Handler:     newMemorySaveHandler(store),
-		Schema: tool.ToolDefinition{
-			Type: "function",
-			Function: tool.FunctionDef{
-				Name:        "memory_save",
-				Description: "Save a fact, preference, or instruction to persistent memory.",
-				Parameters:  json.RawMessage(memorySaveSchema),
-			},
+		Schema: core.ToolDefinition{
+			Name:        "memory_save",
+			Description: "Save a fact, preference, or instruction to persistent memory.",
+			Parameters:  core.MustSchemaFromJSON([]byte(memorySaveSchema)),
 		},
 	})
 
@@ -34,13 +30,10 @@ func RegisterAll(reg *tool.Registry, store storage.Storage) {
 		Description: "Search persisted memories via full-text search.",
 		Emoji:       "🔍",
 		Handler:     newMemorySearchHandler(store),
-		Schema: tool.ToolDefinition{
-			Type: "function",
-			Function: tool.FunctionDef{
-				Name:        "memory_search",
-				Description: "Search previously saved memories. Empty query lists recent memories.",
-				Parameters:  json.RawMessage(memorySearchSchema),
-			},
+		Schema: core.ToolDefinition{
+			Name:        "memory_search",
+			Description: "Search previously saved memories. Empty query lists recent memories.",
+			Parameters:  core.MustSchemaFromJSON([]byte(memorySearchSchema)),
 		},
 	})
 
@@ -50,13 +43,10 @@ func RegisterAll(reg *tool.Registry, store storage.Storage) {
 		Description: "Delete a memory by ID.",
 		Emoji:       "🗑",
 		Handler:     newMemoryDeleteHandler(store),
-		Schema: tool.ToolDefinition{
-			Type: "function",
-			Function: tool.FunctionDef{
-				Name:        "memory_delete",
-				Description: "Delete a memory by its ID.",
-				Parameters:  json.RawMessage(memoryDeleteSchema),
-			},
+		Schema: core.ToolDefinition{
+			Name:        "memory_delete",
+			Description: "Delete a memory by its ID.",
+			Parameters:  core.MustSchemaFromJSON([]byte(memoryDeleteSchema)),
 		},
 	})
 }

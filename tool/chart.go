@@ -6,6 +6,8 @@ import (
 	"errors"
 	"fmt"
 	"strings"
+
+	"github.com/odysseythink/pantheon/core"
 )
 
 // ChartType represents the supported chart types.
@@ -215,12 +217,10 @@ func RegisterChart(reg *Registry) {
 		Toolset:     "visualization",
 		Description: "Create a chart, graph, or data visualization. Generate bar charts, line graphs, pie charts, area charts, scatter plots, and more to visualize data, statistics, trends, or results.",
 		Emoji:       "📊",
-		Schema: ToolDefinition{
-			Type: "function",
-			Function: FunctionDef{
-				Name:        "chart",
-				Description: "Create an interactive chart or graph to visualize data",
-				Parameters: json.RawMessage(`{
+		Schema: core.ToolDefinition{
+			Name:        "chart",
+			Description: "Create an interactive chart or graph to visualize data",
+			Parameters: core.MustSchemaFromJSON([]byte(`{
   "type": "object",
   "properties": {
     "type": {
@@ -243,8 +243,7 @@ func RegisterChart(reg *Registry) {
   },
   "required": ["type", "title", "dataset"],
   "additionalProperties": false
-}`),
-			},
+}`)),
 		},
 		Handler:        HandleChart,
 		MaxResultChars: 10000,

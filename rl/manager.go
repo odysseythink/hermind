@@ -3,12 +3,12 @@ package rl
 import (
 	"context"
 	"fmt"
-	"log/slog"
 	"os/exec"
 	"sync"
 	"time"
 
 	"github.com/google/uuid"
+	"github.com/odysseythink/mlog"
 )
 
 type RunStatus struct {
@@ -56,14 +56,14 @@ func (m *Manager) Start(ctx context.Context, command string, args []string) (str
 	go func() {
 		r.err = cmd.Wait()
 		close(r.done)
-		slog.Info("rl: process exited", "run_id", id, "err", r.err)
+		mlog.Info("rl: process exited", mlog.String("run_id", id), mlog.String("err", r.err.Error()))
 	}()
 
 	m.mu.Lock()
 	m.runs[id] = r
 	m.mu.Unlock()
 
-	slog.Info("rl: started", "run_id", id, "pid", cmd.Process.Pid, "command", command)
+	mlog.Info("rl: started", mlog.String("run_id", id), mlog.Int("pid", cmd.Process.Pid), mlog.String("command", command))
 	return id, nil
 }
 

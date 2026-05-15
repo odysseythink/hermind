@@ -8,7 +8,7 @@ import (
 
 	"github.com/odysseythink/hermind/agent/batch"
 	"github.com/odysseythink/hermind/config"
-	"github.com/odysseythink/hermind/provider/factory"
+	"github.com/odysseythink/hermind/pantheonadapter"
 	"github.com/odysseythink/hermind/rl/collector"
 	"github.com/odysseythink/hermind/rl/trajectory"
 	"github.com/spf13/cobra"
@@ -75,12 +75,12 @@ func newBatchRunCmd(app *App) *cobra.Command {
 			if err != nil {
 				return err
 			}
-			p, err := factory.New(provCfg)
+			m, err := pantheonadapter.BuildModel(cmd.Context(), provCfg)
 			if err != nil {
 				return err
 			}
 
-			runner := batch.NewRunner(cfg, p)
+			runner := batch.NewRunner(cfg, m)
 			if coll != nil {
 				runner.WithSink(coll)
 			}
@@ -143,4 +143,3 @@ func resolveProviderForModel(app *App, modelRef string) (config.ProviderConfig, 
 	}
 	return p, nil
 }
-

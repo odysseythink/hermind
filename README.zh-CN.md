@@ -12,7 +12,7 @@ hermes AI Agent 框架的 Go 实现。单一二进制、目录绑定、每实例
 
 hermind 在本地运行一个 LLM Agent。在任意工作目录启动它，该目录就成为一个 hermind 实例 —— 配置、对话历史、技能、轨迹日志全部存放在 `./.hermind/` 下。一个目录、一段对话、一份持久状态。
 
-Agent 主循环与具体供应商解耦。把支持的某个供应商（Anthropic、OpenAI、Bedrock、OpenRouter、Qwen、Kimi、DeepSeek、Minimax、Wenxin、Copilot）配为主模型，再可选地配置一个辅助模型，hermind 自动处理工具调用、多轮推理、上下文压缩、回退链路与结构化轨迹日志。
+Agent 主循环与具体供应商解耦。把支持的某个供应商（Anthropic、OpenAI、Bedrock、OpenRouter、Qwen、Kimi、DeepSeek、Minimax、Wenxin）配为主模型，再可选地配置一个辅助模型，hermind 自动处理工具调用、多轮推理、上下文压缩、回退链路与结构化轨迹日志。
 
 可以这样跑：
 
@@ -44,7 +44,7 @@ CLI 单次执行：
 
 ## 能力一览
 
-**多供应商 LLM 路由。** 一等公民支持 Anthropic、OpenAI、AWS Bedrock、GitHub Copilot、OpenRouter，以及多家国内供应商（通义千问、Kimi、DeepSeek、MiniMax、文心、智谱）。当某个供应商返回限速/超额错误时，可按配置回退到下一个。
+**多供应商 LLM 路由。** 一等公民支持 Anthropic、OpenAI、AWS Bedrock、OpenRouter，以及多家国内供应商（通义千问、Kimi、DeepSeek、MiniMax、文心、智谱）。当某个供应商返回限速/超额错误时，可按配置回退到下一个。
 
 **技能（Skills）。** 从 `<instance>/skills/` 热加载技能包。每轮会话自动注入最多 N 个检索到的相关技能（数量可配）。可选地从每段对话中自动提取新技能片段（`auto_extract`）。记忆强化信号会随着技能库代际演进而衰减（`generation_half_life`）。
 

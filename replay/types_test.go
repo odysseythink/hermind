@@ -5,8 +5,9 @@ import (
 
 	"github.com/stretchr/testify/require"
 
-	"github.com/odysseythink/hermind/benchmark"
 	"github.com/odysseythink/hermind/message"
+	"github.com/odysseythink/pantheon/benchmark"
+	"github.com/odysseythink/pantheon/core"
 )
 
 func TestReplayItem_ImplementsItem(t *testing.T) {
@@ -15,9 +16,9 @@ func TestReplayItem_ImplementsItem(t *testing.T) {
 		ID:       "replay_42",
 		Category: "general",
 		Message:  "what time is it?",
-		History: []message.Message{
-			{Role: message.RoleUser, Content: message.TextContent("hi")},
-			{Role: message.RoleAssistant, Content: message.TextContent("hello!")},
+		History: []message.HermindMessage{
+			{Role: core.MESSAGE_ROLE_USER, Content: core.NewTextContent("hi")},
+			{Role: core.MESSAGE_ROLE_ASSISTANT, Content: core.NewTextContent("hello!")},
 		},
 		Baseline: "It's about 3pm.",
 	}

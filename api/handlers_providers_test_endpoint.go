@@ -5,7 +5,7 @@ import (
 	"net/http"
 
 	"github.com/go-chi/chi/v5"
-	"github.com/odysseythink/hermind/provider/factory"
+	"github.com/odysseythink/hermind/pantheonadapter"
 )
 
 // handleProvidersTest responds to POST /api/providers/{name}/test.
@@ -16,9 +16,9 @@ import (
 // Status codes:
 //
 //	200 - {"ok": true, "latency_ms": N}
-//	400 - factory.New rejected the stored config
+//	400 - BuildModel rejected the stored config
 //	404 - no Providers[name] in stored config
-//	502 - upstream provider errored on Complete
+//	502 - upstream provider errored on Generate
 func (s *Server) handleProvidersTest(w http.ResponseWriter, r *http.Request) {
 	name := chi.URLParam(r, "name")
 	cfg, ok := s.opts.Config.Providers[name]
@@ -26,7 +26,7 @@ func (s *Server) handleProvidersTest(w http.ResponseWriter, r *http.Request) {
 		http.Error(w, fmt.Sprintf("unknown provider %q", name), http.StatusNotFound)
 		return
 	}
-	p, err := factory.New(cfg)
+	p, err := pantheonadapter.BuildModel(r.Context(), cfg)
 	if err != nil {
 		http.Error(w, err.Error(), http.StatusBadRequest)
 		return

@@ -13,10 +13,11 @@ import (
 	"github.com/odysseythink/hermind/agent"
 	"github.com/odysseythink/hermind/config"
 	"github.com/odysseythink/hermind/message"
-	"github.com/odysseythink/hermind/provider/anthropic"
+	"github.com/odysseythink/hermind/pantheonadapter"
 	"github.com/odysseythink/hermind/storage/sqlite"
 	"github.com/odysseythink/hermind/tool"
 	"github.com/odysseythink/hermind/tool/file"
+	"github.com/odysseythink/pantheon/core"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 )
@@ -75,7 +76,7 @@ func TestEngineE2E_ToolRoundTrip(t *testing.T) {
 	defer srv.Close()
 
 	// Build provider
-	p, err := anthropic.New(config.ProviderConfig{
+	p, err := pantheonadapter.BuildModel(context.Background(), config.ProviderConfig{
 		Provider: "anthropic",
 		APIKey:   "test",
 		BaseURL:  srv.URL,
@@ -102,20 +103,19 @@ func TestEngineE2E_ToolRoundTrip(t *testing.T) {
 
 	// 2 iterations: tool_use then final text
 	assert.Equal(t, 2, result.Iterations)
-	assert.Equal(t, "Got it.", result.Response.Content.Text())
+	assert.Equal(t, "Got it.", result.Response.Text())
 
 	// Verify the tool was actually called — the tool_result message should
 	// be the 3rd message (user, assistant_tool_use, user_tool_result, assistant_text)
 	require.Len(t, result.Messages, 4)
 	toolResultMsg := result.Messages[2]
-	assert.Equal(t, message.RoleUser, toolResultMsg.Role)
-	require.False(t, toolResultMsg.Content.IsText())
-	blocks := toolResultMsg.Content.Blocks()
-	require.Len(t, blocks, 1)
-	assert.Equal(t, "tool_result", blocks[0].Type)
-	assert.Equal(t, "tool_e2e", blocks[0].ToolUseID)
+	assert.Equal(t, core.MESSAGE_ROLE_TOOL, toolResultMsg.Role)
+	require.Len(t, toolResultMsg.Content, 1)
+	toolResultPart, ok := toolResultMsg.Content[0].(core.ToolResultPart)
+	require.True(t, ok)
+	assert.Equal(t, "tool_e2e", toolResultPart.ToolCallID)
 	// The tool result should contain the file content
 	var toolResultData map[string]any
-	require.NoError(t, json.Unmarshal([]byte(blocks[0].ToolResult), &toolResultData))
+	require.NoError(t, json.Unmarshal([]byte(message.HermindMessage{Content: toolResultPart.Content}.Text()), &toolResultData))
 	assert.Equal(t, "hi from tool", toolResultData["content"])
 }

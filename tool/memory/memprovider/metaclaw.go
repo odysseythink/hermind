@@ -9,12 +9,11 @@ import (
 	"time"
 
 	"github.com/odysseythink/hermind/config"
-	"github.com/odysseythink/hermind/message"
-	"github.com/odysseythink/hermind/provider"
 	"github.com/odysseythink/hermind/storage"
 	"github.com/odysseythink/hermind/tool"
 	"github.com/odysseythink/hermind/tool/embedding"
 	"github.com/odysseythink/hermind/tool/memory/memprovider/citesink"
+	"github.com/odysseythink/pantheon/core"
 )
 
 // MetaClaw is a Provider that extracts typed memories (episodic, semantic,
@@ -22,7 +21,7 @@ import (
 // embeddings. It registers metaclaw_remember and metaclaw_recall tools.
 type MetaClaw struct {
 	store     storage.Storage
-	llm       provider.Provider
+	llm       core.LanguageModel
 	embedder  embedding.Embedder
 	sessionID string
 	skillsCfg *config.SkillsConfig
@@ -43,7 +42,7 @@ type TurnPair struct {
 }
 
 // NewMetaClaw constructs a MetaClaw provider.
-func NewMetaClaw(store storage.Storage, llm provider.Provider, emb embedding.Embedder, skillsCfg *config.SkillsConfig) *MetaClaw {
+func NewMetaClaw(store storage.Storage, llm core.LanguageModel, emb embedding.Embedder, skillsCfg *config.SkillsConfig) *MetaClaw {
 	return &MetaClaw{
 		store:     store,
 		llm:       llm,
@@ -131,22 +130,27 @@ If there is nothing worth remembering, reply with an empty array [].
 User: %s
 Assistant: %s`, userMsg, assistantMsg)
 
-	req := &provider.Request{
+	req := &core.Request{
 		SystemPrompt: "You are a memory extraction assistant.",
-		Messages: []message.Message{
+		Messages: []core.Message{
 			{
-				Role:    message.RoleUser,
-				Content: message.TextContent(prompt),
+				Role:    core.MESSAGE_ROLE_USER,
+				Content: []core.ContentParter{core.TextPart{Text: prompt}},
 			},
 		},
 	}
 
-	resp, err := mc.llm.Complete(ctx, req)
+	resp, err := mc.llm.Generate(ctx, req)
 	if err != nil {
 		return nil, err
 	}
 
-	text := resp.Message.Content.Text()
+	text := ""
+	for _, part := range resp.Message.Content {
+		if p, ok := part.(core.TextPart); ok {
+			text += p.Text
+		}
+	}
 
 	// Strip markdown code fences if present
 	text = strings.TrimSpace(text)
@@ -277,20 +281,17 @@ func (mc *MetaClaw) RegisterTools(reg *tool.Registry) {
 		Toolset:     "memory",
 		Description: "Store a typed memory in the MetaClaw memory store.",
 		Emoji:       "🧠",
-		Schema: tool.ToolDefinition{
-			Type: "function",
-			Function: tool.FunctionDef{
-				Name:        "metaclaw_remember",
-				Description: "Store a fact or event in the MetaClaw memory store with automatic type classification.",
-				Parameters: json.RawMessage(`{
+		Schema: core.ToolDefinition{
+			Name:        "metaclaw_remember",
+			Description: "Store a fact or event in the MetaClaw memory store with automatic type classification.",
+			Parameters: core.MustSchemaFromJSON([]byte(`{
   "type":"object",
   "properties":{
     "content":{"type":"string"},
     "type":{"type":"string","enum":["episodic","semantic","preference"]}
   },
   "required":["content","type"]
-}`),
-			},
+}`)),
 		},
 		Handler: func(ctx context.Context, raw json.RawMessage) (string, error) {
 			var args struct {
@@ -315,20 +316,17 @@ func (mc *MetaClaw) RegisterTools(reg *tool.Registry) {
 		Toolset:     "memory",
 		Description: "Recall memories from the MetaClaw store.",
 		Emoji:       "🔍",
-		Schema: tool.ToolDefinition{
-			Type: "function",
-			Function: tool.FunctionDef{
-				Name:        "metaclaw_recall",
-				Description: "Search MetaClaw memories by semantic query (with optional vector reranking).",
-				Parameters: json.RawMessage(`{
+		Schema: core.ToolDefinition{
+			Name:        "metaclaw_recall",
+			Description: "Search MetaClaw memories by semantic query (with optional vector reranking).",
+			Parameters: core.MustSchemaFromJSON([]byte(`{
   "type":"object",
   "properties":{
     "query":{"type":"string"},
     "limit":{"type":"number"}
   },
   "required":["query"]
-}`),
-			},
+}`)),
 		},
 		Handler: func(ctx context.Context, raw json.RawMessage) (string, error) {
 			var args struct {
@@ -355,19 +353,16 @@ func (mc *MetaClaw) RegisterTools(reg *tool.Registry) {
 		Toolset:     "memory",
 		Description: "Deduplicate and decay MetaClaw memories.",
 		Emoji:       "🧹",
-		Schema: tool.ToolDefinition{
-			Type: "function",
-			Function: tool.FunctionDef{
-				Name:        "metaclaw_consolidate",
-				Description: "Run a consolidation pass: mark near-duplicate memories as superseded, optionally archive stale episodic memories.",
-				Parameters: json.RawMessage(`{
+		Schema: core.ToolDefinition{
+			Name:        "metaclaw_consolidate",
+			Description: "Run a consolidation pass: mark near-duplicate memories as superseded, optionally archive stale episodic memories.",
+			Parameters: core.MustSchemaFromJSON([]byte(`{
   "type":"object",
   "properties":{
     "mem_type":{"type":"string","enum":["episodic","semantic","preference",""]},
     "decay_days":{"type":"number"}
   }
-}`),
-			},
+}`)),
 		},
 		Handler: func(ctx context.Context, raw json.RawMessage) (string, error) {
 			var args struct {
@@ -396,17 +391,14 @@ func (mc *MetaClaw) RegisterTools(reg *tool.Registry) {
 		Toolset:     "memory",
 		Description: "Record that a memory influenced the current reply.",
 		Emoji:       "📌",
-		Schema: tool.ToolDefinition{
-			Type: "function",
-			Function: tool.FunctionDef{
-				Name:        "metaclaw_cite_memory",
-				Description: "Signal that the specified memory was used when forming the reply.",
-				Parameters: json.RawMessage(`{
+		Schema: core.ToolDefinition{
+			Name:        "metaclaw_cite_memory",
+			Description: "Signal that the specified memory was used when forming the reply.",
+			Parameters: core.MustSchemaFromJSON([]byte(`{
   "type":"object",
   "properties":{"memory_id":{"type":"string"}},
   "required":["memory_id"]
-}`),
-			},
+}`)),
 		},
 		Handler: func(ctx context.Context, raw json.RawMessage) (string, error) {
 			var args struct {
@@ -446,16 +438,22 @@ func (mc *MetaClaw) refreshWorkingSummary(ctx context.Context) {
 		fmt.Fprintf(&transcript, "User: %s\nAssistant: %s\n\n", p.User, p.Assistant)
 	}
 
-	resp, err := mc.llm.Complete(ctx, &provider.Request{
+	resp, err := mc.llm.Generate(ctx, &core.Request{
 		SystemPrompt: "Produce a terse one-paragraph rolling summary of the user's recent activity and current context. Focus on goals, open tasks, and decisions. Replace any prior summary rather than appending. Under 150 words.",
-		Messages: []message.Message{
-			{Role: message.RoleUser, Content: message.TextContent(transcript.String())},
+		Messages: []core.Message{
+			{Role: core.MESSAGE_ROLE_USER, Content: []core.ContentParter{core.TextPart{Text: transcript.String()}}},
 		},
 	})
 	if err != nil {
 		return
 	}
-	summary := strings.TrimSpace(resp.Message.Content.Text())
+	summary := ""
+	for _, part := range resp.Message.Content {
+		if p, ok := part.(core.TextPart); ok {
+			summary += p.Text
+		}
+	}
+	summary = strings.TrimSpace(summary)
 	if summary == "" {
 		return
 	}

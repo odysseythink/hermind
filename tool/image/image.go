@@ -16,6 +16,7 @@ import (
 	"time"
 
 	"github.com/odysseythink/hermind/tool"
+	"github.com/odysseythink/pantheon/core"
 )
 
 // Client talks to an OpenAI-compatible images endpoint.
@@ -133,20 +134,17 @@ func Register(reg *tool.Registry, c *Client) {
 		Toolset:     "image",
 		Description: "Generate an image from a text prompt and return its path.",
 		Emoji:       "🖼",
-		Schema: tool.ToolDefinition{
-			Type: "function",
-			Function: tool.FunctionDef{
-				Name:        "image_generate",
-				Description: "Generate an image via DALL-E / OpenAI-compatible image API.",
-				Parameters: json.RawMessage(`{
+		Schema: core.ToolDefinition{
+			Name:        "image_generate",
+			Description: "Generate an image via DALL-E / OpenAI-compatible image API.",
+			Parameters: core.MustSchemaFromJSON([]byte(`{
   "type":"object",
   "properties":{
     "prompt":{"type":"string"},
     "size":{"type":"string","description":"e.g. 1024x1024"}
   },
   "required":["prompt"]
-}`),
-			},
+}`)),
 		},
 		Handler: func(ctx context.Context, raw json.RawMessage) (string, error) {
 			var args struct {

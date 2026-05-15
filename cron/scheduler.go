@@ -3,11 +3,11 @@ package cron
 import (
 	"context"
 	"fmt"
-	"log/slog"
 	"sync"
 	"time"
 
-	"github.com/odysseythink/hermind/metrics"
+	"github.com/odysseythink/pantheon/observability/metrics"
+	"github.com/odysseythink/mlog"
 )
 
 // Job is a single scheduled work unit.
@@ -60,7 +60,7 @@ func (s *Scheduler) Start(ctx context.Context) error {
 	if len(jobs) == 0 {
 		return fmt.Errorf("cron: no jobs registered")
 	}
-	slog.InfoContext(ctx, "cron: scheduler started", "jobs", len(jobs))
+	mlog.InfoContext(ctx, "cron: scheduler started", mlog.Int("jobs", len(jobs)))
 
 	var wg sync.WaitGroup
 	for _, j := range jobs {
@@ -83,7 +83,7 @@ func (s *Scheduler) runJobLoop(ctx context.Context, j Job) {
 		case <-ctx.Done():
 			return
 		case <-t.C:
-			slog.InfoContext(ctx, "cron: running job", "job", j.Name)
+			mlog.InfoContext(ctx, "cron: running job", mlog.String("job", j.Name))
 			if s.runs != nil {
 				s.runs.With(map[string]string{"job": j.Name}).Inc()
 			}
@@ -95,7 +95,7 @@ func (s *Scheduler) runJobLoop(ctx context.Context, j Job) {
 			if err != nil {
 				status = "error"
 				errMsg = err.Error()
-				slog.ErrorContext(ctx, "cron: job failed", "job", j.Name, "err", errMsg)
+				mlog.ErrorContext(ctx, "cron: job failed", mlog.String("job", j.Name), mlog.String("err", errMsg))
 				if s.errors != nil {
 					s.errors.With(map[string]string{"job": j.Name}).Inc()
 				}

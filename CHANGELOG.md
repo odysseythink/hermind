@@ -2,6 +2,9 @@
 
 ## Unreleased
 
+### Refactor
+- **15 AI-generic capabilities extracted to pantheon** (`budget`, `pricing`, `redact`, `tracing`, `metrics`, `mcpoauth`, `embed/cosine`, `trajectory`, `skills`, `tool registry`, `osv`, `urlsafety`, `judge`, `toolselector`, `delegate`). Hermind retains thin wrappers for instance-aware defaults; new code should import pantheon directly.
+
 ### Added
 - **Memory replay buffer**: a `hermind bench replay` subcommand tree that
   re-runs real historical user turns from `state.db` against the current

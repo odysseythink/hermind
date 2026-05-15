@@ -6,6 +6,7 @@ import (
 	"time"
 
 	"github.com/odysseythink/hermind/tool"
+	"github.com/odysseythink/pantheon/core"
 )
 
 // shellExecuteSchema is the JSON Schema for shell_execute tool arguments.
@@ -57,13 +58,10 @@ func RegisterShellExecute(reg *tool.Registry, backend Backend) {
 		Toolset:     "terminal",
 		Description: "Run a shell command on the host. Returns stdout, stderr, exit code.",
 		Emoji:       "⚡",
-		Schema: tool.ToolDefinition{
-			Type: "function",
-			Function: tool.FunctionDef{
-				Name:        "shell_execute",
-				Description: "Run a shell command. Returns stdout, stderr, and exit code.",
-				Parameters:  json.RawMessage(shellExecuteSchema),
-			},
+		Schema: core.ToolDefinition{
+			Name:        "shell_execute",
+			Description: "Run a shell command. Returns stdout, stderr, and exit code.",
+			Parameters:  core.MustSchemaFromJSON([]byte(shellExecuteSchema)),
 		},
 		Handler: func(ctx context.Context, raw json.RawMessage) (string, error) {
 			var args shellExecuteArgs

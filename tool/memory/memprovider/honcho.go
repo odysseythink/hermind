@@ -8,6 +8,7 @@ import (
 
 	"github.com/odysseythink/hermind/config"
 	"github.com/odysseythink/hermind/tool"
+	"github.com/odysseythink/pantheon/core"
 )
 
 // Honcho is a Provider backed by the Honcho memory service.
@@ -93,17 +94,14 @@ func (h *Honcho) RegisterTools(reg *tool.Registry) {
 		Toolset:     "memory",
 		Description: "Explicitly store a fact in Honcho for future recall.",
 		Emoji:       "🪶",
-		Schema: tool.ToolDefinition{
-			Type: "function",
-			Function: tool.FunctionDef{
-				Name:        "honcho_remember",
-				Description: "Store a fact in Honcho (external memory provider).",
-				Parameters: json.RawMessage(`{
+		Schema: core.ToolDefinition{
+			Name:        "honcho_remember",
+			Description: "Store a fact in Honcho (external memory provider).",
+			Parameters: core.MustSchemaFromJSON([]byte(`{
   "type":"object",
   "properties":{"content":{"type":"string","description":"Text to remember"}},
   "required":["content"]
-}`),
-			},
+}`)),
 		},
 		Handler: func(ctx context.Context, raw json.RawMessage) (string, error) {
 			var args struct {
@@ -127,20 +125,17 @@ func (h *Honcho) RegisterTools(reg *tool.Registry) {
 		Toolset:     "memory",
 		Description: "Recall relevant memories from Honcho by semantic query.",
 		Emoji:       "🔎",
-		Schema: tool.ToolDefinition{
-			Type: "function",
-			Function: tool.FunctionDef{
-				Name:        "honcho_recall",
-				Description: "Search Honcho memories and return matching content.",
-				Parameters: json.RawMessage(`{
+		Schema: core.ToolDefinition{
+			Name:        "honcho_recall",
+			Description: "Search Honcho memories and return matching content.",
+			Parameters: core.MustSchemaFromJSON([]byte(`{
   "type":"object",
   "properties":{
     "query":{"type":"string","description":"Search query"},
     "limit":{"type":"number","description":"Max results (default 5)"}
   },
   "required":["query"]
-}`),
-			},
+}`)),
 		},
 		Handler: func(ctx context.Context, raw json.RawMessage) (string, error) {
 			var args struct {

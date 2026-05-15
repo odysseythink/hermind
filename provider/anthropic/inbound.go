@@ -17,7 +17,7 @@ import (
 
 	"github.com/odysseythink/hermind/message"
 	"github.com/odysseythink/hermind/provider"
-	"github.com/odysseythink/hermind/tool"
+	"github.com/odysseythink/pantheon/core"
 )
 
 // errInvalid wraps an Anthropic-style invalid_request_error message.
@@ -76,15 +76,13 @@ func Inbound(body []byte) (req *provider.Request, requestModel string, stream bo
 		return nil, "", false, err
 	}
 
-	tools := make([]tool.ToolDefinition, 0, len(raw.Tools))
+	tools := make([]core.ToolDefinition, 0, len(raw.Tools))
 	for _, t := range raw.Tools {
-		tools = append(tools, tool.ToolDefinition{
-			Type: "function",
-			Function: tool.FunctionDef{
-				Name:        t.Name,
-				Description: t.Description,
-				Parameters:  t.InputSchema,
-			},
+		params, _ := core.SchemaFromJSON(t.InputSchema)
+		tools = append(tools, core.ToolDefinition{
+			Name:        t.Name,
+			Description: t.Description,
+			Parameters:  params,
 		})
 	}
 
@@ -103,9 +101,9 @@ func Inbound(body []byte) (req *provider.Request, requestModel string, stream bo
 
 // convertInboundMessages converts Anthropic's content-array messages to
 // hermind's per-role internal form, splitting tool_results out of user
-// content into separate RoleTool messages.
-func convertInboundMessages(in []apiMessage) ([]message.Message, error) {
-	out := make([]message.Message, 0, len(in))
+// content into separate core.MESSAGE_ROLE_TOOL messages.
+func convertInboundMessages(in []apiMessage) ([]message.HermindMessage, error) {
+	out := make([]message.HermindMessage, 0, len(in))
 	for _, m := range in {
 		switch m.Role {
 		case "system":
@@ -116,16 +114,16 @@ func convertInboundMessages(in []apiMessage) ([]message.Message, error) {
 				return nil, err
 			}
 			for _, tr := range toolResults {
-				out = append(out, message.Message{
-					Role:       message.RoleTool,
-					Content:    message.TextContent(tr.Content),
+				out = append(out, message.HermindMessage{
+					Role:       core.MESSAGE_ROLE_TOOL,
+					Content:    core.NewTextContent(tr.Content),
 					ToolCallID: tr.ToolUseID,
 				})
 			}
 			if len(textParts) > 0 {
-				out = append(out, message.Message{
-					Role:    message.RoleUser,
-					Content: message.TextContent(strings.Join(textParts, "\n")),
+				out = append(out, message.HermindMessage{
+					Role:    core.MESSAGE_ROLE_USER,
+					Content: core.NewTextContent(strings.Join(textParts, "\n")),
 				})
 			}
 		case "assistant":
@@ -133,21 +131,17 @@ func convertInboundMessages(in []apiMessage) ([]message.Message, error) {
 			if err != nil {
 				return nil, err
 			}
-			calls := make([]message.ToolCall, 0, len(toolUses))
+			contentParts := core.NewTextContent(strings.Join(texts, "\n"))
 			for _, tu := range toolUses {
-				calls = append(calls, message.ToolCall{
-					ID:   tu.ID,
-					Type: "function",
-					Function: message.ToolCallFunction{
-						Name:      tu.Name,
-						Arguments: string(tu.Input),
-					},
+				contentParts = append(contentParts, core.ToolCallPart{
+					ID:        tu.ID,
+					Name:      tu.Name,
+					Arguments: string(tu.Input),
 				})
 			}
-			out = append(out, message.Message{
-				Role:      message.RoleAssistant,
-				Content:   message.TextContent(strings.Join(texts, "\n")),
-				ToolCalls: calls,
+			out = append(out, message.HermindMessage{
+				Role:    core.MESSAGE_ROLE_ASSISTANT,
+				Content: contentParts,
 			})
 		default:
 			return nil, newInvalid("invalid_request_error", "unknown message role: "+m.Role)
@@ -222,16 +216,17 @@ func Outbound(resp *provider.Response, requestModel, msgID string) ([]byte, erro
 	if resp == nil {
 		return nil, fmt.Errorf("anthropic: outbound nil response")
 	}
-	content := make([]apiContentItem, 0, 1+len(resp.Message.ToolCalls))
-	if txt := resp.Message.Content.Text(); txt != "" {
+	toolCalls := resp.Message.ExtractToolCalls()
+	content := make([]apiContentItem, 0, 1+len(toolCalls))
+	if txt := resp.Message.Text(); txt != "" {
 		content = append(content, apiContentItem{Type: "text", Text: txt})
 	}
-	for _, tc := range resp.Message.ToolCalls {
+	for _, tc := range toolCalls {
 		content = append(content, apiContentItem{
 			Type:  "tool_use",
 			ID:    tc.ID,
-			Name:  tc.Function.Name,
-			Input: json.RawMessage(tc.Function.Arguments),
+			Name:  tc.Name,
+			Input: json.RawMessage(tc.Arguments),
 		})
 	}
 	out := messagesResponse{
@@ -242,8 +237,8 @@ func Outbound(resp *provider.Response, requestModel, msgID string) ([]byte, erro
 		Content:    content,
 		StopReason: mapFinishReason(resp.FinishReason),
 		Usage: apiUsage{
-			InputTokens:  resp.Usage.InputTokens,
-			OutputTokens: resp.Usage.OutputTokens,
+			InputTokens:  resp.Usage.PromptTokens,
+			OutputTokens: resp.Usage.CompletionTokens,
 			// CacheRead/CacheCreation intentionally not populated — caching not in v1.
 		},
 	}

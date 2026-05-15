@@ -9,6 +9,7 @@ import (
 
 	"github.com/odysseythink/hermind/config"
 	"github.com/odysseythink/hermind/tool"
+	"github.com/odysseythink/pantheon/core"
 )
 
 // execCommand is indirected so tests can substitute a fake shell command.
@@ -71,17 +72,14 @@ func (b *Byterover) RegisterTools(reg *tool.Registry) {
 		Toolset:     "memory",
 		Description: "Query Byterover for curated context.",
 		Emoji:       "🧳",
-		Schema: tool.ToolDefinition{
-			Type: "function",
-			Function: tool.FunctionDef{
-				Name:        "brv_query",
-				Description: "Run `brv query <text>` and return stdout.",
-				Parameters: json.RawMessage(`{
+		Schema: core.ToolDefinition{
+			Name:        "brv_query",
+			Description: "Run `brv query <text>` and return stdout.",
+			Parameters: core.MustSchemaFromJSON([]byte(`{
   "type":"object",
   "properties":{"query":{"type":"string"}},
   "required":["query"]
-}`),
-			},
+}`)),
 		},
 		Handler: func(ctx context.Context, raw json.RawMessage) (string, error) {
 			var args struct{ Query string `json:"query"` }
@@ -104,17 +102,14 @@ func (b *Byterover) RegisterTools(reg *tool.Registry) {
 		Toolset:     "memory",
 		Description: "Curate a new piece of context in Byterover.",
 		Emoji:       "🗃",
-		Schema: tool.ToolDefinition{
-			Type: "function",
-			Function: tool.FunctionDef{
-				Name:        "brv_curate",
-				Description: "Run `brv curate <content>` to store context.",
-				Parameters: json.RawMessage(`{
+		Schema: core.ToolDefinition{
+			Name:        "brv_curate",
+			Description: "Run `brv curate <content>` to store context.",
+			Parameters: core.MustSchemaFromJSON([]byte(`{
   "type":"object",
   "properties":{"content":{"type":"string"}},
   "required":["content"]
-}`),
-			},
+}`)),
 		},
 		Handler: func(ctx context.Context, raw json.RawMessage) (string, error) {
 			var args struct{ Content string `json:"content"` }
@@ -137,13 +132,10 @@ func (b *Byterover) RegisterTools(reg *tool.Registry) {
 		Toolset:     "memory",
 		Description: "Show Byterover context status.",
 		Emoji:       "📊",
-		Schema: tool.ToolDefinition{
-			Type: "function",
-			Function: tool.FunctionDef{
-				Name:        "brv_status",
-				Description: "Run `brv status` and return stdout.",
-				Parameters:  json.RawMessage(`{"type":"object","properties":{}}`),
-			},
+		Schema: core.ToolDefinition{
+			Name:        "brv_status",
+			Description: "Run `brv status` and return stdout.",
+			Parameters:  core.MustSchemaFromJSON([]byte(`{"type":"object","properties":{}}`)),
 		},
 		Handler: func(ctx context.Context, raw json.RawMessage) (string, error) {
 			out, err := b.run(ctx, "status")

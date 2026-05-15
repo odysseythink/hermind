@@ -17,6 +17,7 @@ import (
 	"time"
 
 	"github.com/odysseythink/hermind/tool"
+	"github.com/odysseythink/pantheon/core"
 )
 
 // Client talks to /v1/audio/transcriptions on the configured base URL.
@@ -101,17 +102,14 @@ func Register(reg *tool.Registry, c *Client) {
 		Toolset:     "audio",
 		Description: "Transcribe a local audio file to text via Whisper.",
 		Emoji:       "🎙",
-		Schema: tool.ToolDefinition{
-			Type: "function",
-			Function: tool.FunctionDef{
-				Name:        "transcribe_audio",
-				Description: "Transcribe a local audio file path via a Whisper-compatible API.",
-				Parameters: json.RawMessage(`{
+		Schema: core.ToolDefinition{
+			Name:        "transcribe_audio",
+			Description: "Transcribe a local audio file path via a Whisper-compatible API.",
+			Parameters: core.MustSchemaFromJSON([]byte(`{
   "type":"object",
   "properties":{"path":{"type":"string"}},
   "required":["path"]
-}`),
-			},
+}`)),
 		},
 		Handler: func(ctx context.Context, raw json.RawMessage) (string, error) {
 			var args struct{ Path string `json:"path"` }

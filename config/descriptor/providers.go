@@ -1,6 +1,17 @@
 package descriptor
 
-import "github.com/odysseythink/hermind/provider/factory"
+// SupportedProviders is the canonical list of provider-type names.
+var SupportedProviders = []string{
+	"openai",
+	"anthropic",
+	"openrouter",
+	"deepseek",
+	"qwen",
+	"zhipu",
+	"kimi",
+	"minimax",
+	"wenxin",
+}
 
 // Providers mirrors config.Config.Providers (map[string]config.ProviderConfig).
 // Each instance conforms to the same 4-field schema regardless of provider
@@ -18,7 +29,7 @@ func init() {
 				Label:    "Provider type",
 				Kind:     FieldEnum,
 				Required: true,
-				Enum:     factory.Types(),
+				Enum:     SupportedProviders,
 			},
 			{
 				Name:  "base_url",

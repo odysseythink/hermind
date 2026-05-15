@@ -3,6 +3,8 @@ package rl
 import (
 	"path/filepath"
 	"testing"
+
+	_ "github.com/odysseythink/hermind/logging"
 )
 
 func TestConfigDefaults(t *testing.T) {

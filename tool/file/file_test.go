@@ -156,3 +156,70 @@ func TestSearchFilesEmptyResults(t *testing.T) {
 	matches, _ := decoded["matches"].([]any)
 	assert.Len(t, matches, 0)
 }
+
+func TestReadFileDirectory(t *testing.T) {
+	dir := t.TempDir()
+	r := newTestRegistry()
+	args, _ := json.Marshal(map[string]string{"path": dir})
+	out, err := r.Dispatch(context.Background(), "read_file", args)
+	require.NoError(t, err)
+	assert.Contains(t, out, `"error"`)
+	assert.Contains(t, out, "directory")
+}
+
+func TestWriteFileOverwrite(t *testing.T) {
+	dir := t.TempDir()
+	path := filepath.Join(dir, "overwrite.txt")
+	require.NoError(t, os.WriteFile(path, []byte("original"), 0o644))
+
+	r := newTestRegistry()
+	args, _ := json.Marshal(map[string]string{"path": path, "content": "updated"})
+	out, err := r.Dispatch(context.Background(), "write_file", args)
+	require.NoError(t, err)
+	assert.NotContains(t, out, `"error"`)
+
+	data, err := os.ReadFile(path)
+	require.NoError(t, err)
+	assert.Equal(t, "updated", string(data))
+}
+
+func TestSearchFilesInvalidPattern(t *testing.T) {
+	dir := t.TempDir()
+	require.NoError(t, os.WriteFile(filepath.Join(dir, "x.txt"), []byte("x"), 0o644))
+	r := newTestRegistry()
+	// [] is an empty character class, which filepath.Match rejects
+	args, _ := json.Marshal(map[string]string{"root": dir, "pattern": "[]"})
+	out, err := r.Dispatch(context.Background(), "search_files", args)
+	require.NoError(t, err)
+	assert.Contains(t, out, `"error"`)
+}
+
+func TestListDirectoryEmpty(t *testing.T) {
+	dir := t.TempDir()
+	r := newTestRegistry()
+	args, _ := json.Marshal(map[string]string{"path": dir})
+	out, err := r.Dispatch(context.Background(), "list_directory", args)
+	require.NoError(t, err)
+
+	var decoded map[string]any
+	require.NoError(t, json.Unmarshal([]byte(out), &decoded))
+	entries, _ := decoded["entries"].([]any)
+	assert.Len(t, entries, 0)
+}
+
+func TestReadFileLargeFile(t *testing.T) {
+	dir := t.TempDir()
+	path := filepath.Join(dir, "big.txt")
+	big := make([]byte, 1<<20+1)
+	for i := range big {
+		big[i] = 'A'
+	}
+	require.NoError(t, os.WriteFile(path, big, 0o644))
+
+	r := newTestRegistry()
+	args, _ := json.Marshal(map[string]string{"path": path})
+	out, err := r.Dispatch(context.Background(), "read_file", args)
+	require.NoError(t, err)
+	assert.Contains(t, out, `"error"`)
+	assert.Contains(t, out, "too large")
+}

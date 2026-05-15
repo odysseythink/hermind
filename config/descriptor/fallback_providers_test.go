@@ -98,7 +98,7 @@ func TestFallbackProvidersProviderEnumPopulatedFromFactory(t *testing.T) {
 		t.Fatal("provider field not found")
 	}
 	if len(provider.Enum) == 0 {
-		t.Fatal("provider.Enum empty — did fallback_providers.go import provider/factory?")
+		t.Fatal("provider.Enum empty — did fallback_providers.go set SupportedProviders?")
 	}
 	for _, got := range provider.Enum {
 		if strings.TrimSpace(got) != got || got == "" {

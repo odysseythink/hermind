@@ -4,7 +4,7 @@ func init() {
 	Register(Section{
 		Key:     "logging",
 		Label:   "Logging",
-		Summary: "slog output level for the hermind process.",
+		Summary: "mlog output level for the hermind process.",
 		GroupID: "observability",
 		Fields: []FieldSpec{
 			{

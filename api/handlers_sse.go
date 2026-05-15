@@ -3,22 +3,23 @@ package api
 import (
 	"encoding/json"
 	"fmt"
-	"log/slog"
 	"net/http"
+
+	"github.com/odysseythink/mlog"
 )
 
 func (s *Server) handleSSE(w http.ResponseWriter, r *http.Request) {
-	slog.Info("SSE connection started")
+	mlog.Info("SSE connection started")
 	flusher, ok := w.(http.Flusher)
 	if !ok {
-		slog.Error("SSE streaming not supported")
+		mlog.Error("SSE streaming not supported")
 		http.Error(w, "streaming unsupported", http.StatusInternalServerError)
 		return
 	}
 	w.Header().Set("Content-Type", "text/event-stream")
 	w.Header().Set("Cache-Control", "no-cache")
 	w.Header().Set("Connection", "keep-alive")
-	slog.Info("SSE headers set, flushing...")
+	mlog.Info("SSE headers set, flushing...")
 
 	events, unsub := s.streams.Subscribe()
 	defer unsub()

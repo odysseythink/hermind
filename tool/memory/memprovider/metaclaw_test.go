@@ -2,18 +2,18 @@ package memprovider_test
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"sync"
 	"testing"
 	"time"
 
-	"github.com/stretchr/testify/assert"
-	"github.com/stretchr/testify/require"
 	"github.com/odysseythink/hermind/config"
-	"github.com/odysseythink/hermind/message"
-	"github.com/odysseythink/hermind/provider"
 	"github.com/odysseythink/hermind/storage"
 	"github.com/odysseythink/hermind/tool/memory/memprovider"
+	"github.com/odysseythink/pantheon/core"
+	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/require"
 )
 
 // fakeStorage is a minimal in-memory storage for testing.
@@ -270,27 +270,24 @@ type stubLLM struct {
 	reply            string
 }
 
-func (s *stubLLM) Name() string { return "stub" }
-func (s *stubLLM) Available() bool { return true }
-func (s *stubLLM) Complete(_ context.Context, req *provider.Request) (*provider.Response, error) {
+func (s *stubLLM) Provider() string { return "stub" }
+func (s *stubLLM) Model() string    { return "stub-model" }
+func (s *stubLLM) Generate(_ context.Context, req *core.Request) (*core.Response, error) {
 	s.mu.Lock()
 	s.lastSystemPrompt = req.SystemPrompt
 	s.mu.Unlock()
-	return &provider.Response{
-		Message: message.Message{
-			Role:    message.RoleAssistant,
-			Content: message.TextContent(s.reply),
+	return &core.Response{
+		Message: core.Message{
+			Role:    core.MESSAGE_ROLE_ASSISTANT,
+			Content: []core.ContentParter{core.TextPart{Text: s.reply}},
 		},
 	}, nil
 }
-func (s *stubLLM) Stream(ctx context.Context, req *provider.Request) (provider.Stream, error) {
+func (s *stubLLM) Stream(ctx context.Context, req *core.Request) (core.StreamResponse, error) {
 	panic("stub: Stream not used")
 }
-func (s *stubLLM) ModelInfo(model string) *provider.ModelInfo {
-	return nil
-}
-func (s *stubLLM) EstimateTokens(model string, text string) (int, error) {
-	return 0, nil
+func (s *stubLLM) GenerateObject(context.Context, *core.ObjectRequest) (*core.ObjectResponse, error) {
+	return nil, errors.New("not implemented")
 }
 
 func TestMetaClawRefreshWorkingSummaryOnThreshold(t *testing.T) {
@@ -423,4 +420,3 @@ func TestMetaClawRecallAppliesGenerationDecay(t *testing.T) {
 	// and that the infrastructure to apply decay (CurrentSkillsSeq + GenerationHalfLife in opts)
 	// is wired correctly. The actual decay math is tested in storage/sqlite/memory_test.go
 }
-

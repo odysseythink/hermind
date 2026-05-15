@@ -13,12 +13,7 @@ func TestEnsureDefaults_RestoresMissingSkill(t *testing.T) {
 	}
 
 	skillFile := filepath.Join(home, "chart-generation", "SKILL.md")
-	data, err := os.ReadFile(skillFile)
-	if err != nil {
-		t.Fatalf("expected chart-generation/SKILL.md to be restored: %v", err)
-	}
-
-	s, err := parseSkillBytes(skillFile, data)
+	s, err := ParseSkillFile(skillFile)
 	if err != nil {
 		t.Fatalf("restored SKILL.md is not parseable: %v", err)
 	}

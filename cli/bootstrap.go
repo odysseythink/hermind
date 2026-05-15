@@ -15,9 +15,9 @@ import (
 	"strings"
 
 	"github.com/odysseythink/hermind/config"
-	"github.com/odysseythink/hermind/provider"
-	"github.com/odysseythink/hermind/provider/factory"
+	"github.com/odysseythink/hermind/pantheonadapter"
 	"github.com/odysseythink/hermind/storage/sqlite"
+	"github.com/odysseythink/pantheon/core"
 )
 
 // errMissingAPIKey is returned by buildPrimaryProvider when the primary
@@ -25,8 +25,8 @@ import (
 // boots; the POST /messages handler surfaces 503 to the user.
 var errMissingAPIKey = errors.New("hermind: primary provider has no api_key")
 
-// ensureStorage opens the SQLite store on first use and runs migrations.
-func ensureStorage(app *App) error {
+// EnsureStorage opens the SQLite store on first use and runs migrations.
+func EnsureStorage(app *App) error {
 	if app.Storage != nil {
 		return nil
 	}
@@ -57,9 +57,9 @@ func ensureStorage(app *App) error {
 
 // buildPrimaryProvider constructs the primary provider from the config.
 // Parses cfg.Model (e.g. "anthropic/claude-opus-4-6") to extract the
-// provider name, looks it up in cfg.Providers, and calls factory.New.
+// provider name, looks it up in cfg.Providers, and calls pantheonadapter.BuildModel.
 // Falls back to ANTHROPIC_API_KEY env for anthropic when config is empty.
-func buildPrimaryProvider(cfg *config.Config) (provider.Provider, string, error) {
+func buildPrimaryProvider(ctx context.Context, cfg *config.Config) (core.LanguageModel, string, error) {
 	primaryName := cfg.Model
 	if idx := strings.Index(cfg.Model, "/"); idx >= 0 {
 		primaryName = cfg.Model[:idx]
@@ -87,7 +87,7 @@ func buildPrimaryProvider(cfg *config.Config) (provider.Provider, string, error)
 		pCfg.Model = defaultModelFromString(cfg.Model)
 	}
 
-	p, err := factory.New(pCfg)
+	p, err := pantheonadapter.BuildModel(ctx, pCfg)
 	if err != nil {
 		return nil, "", fmt.Errorf("hermind: create provider: %w", err)
 	}
@@ -103,7 +103,7 @@ func defaultModelFromString(s string) string {
 	return s
 }
 
-// stubProvider is a provider.Provider that fails every call with a
+// stubProvider is a core.LanguageModel that fails every call with a
 // helpful "configure a provider" message. BuildEngineDeps installs it
 // when no primary provider is configured so the web server can still
 // boot — POST /messages then surfaces a clear 503.
@@ -116,23 +116,20 @@ func newStubProvider(name string) *stubProvider {
 	return &stubProvider{name: name}
 }
 
-func (s *stubProvider) Name() string { return "stub" }
+func (s *stubProvider) Provider() string { return "stub" }
+func (s *stubProvider) Model() string    { return s.name }
 
-func (s *stubProvider) Complete(_ context.Context, _ *provider.Request) (*provider.Response, error) {
+func (s *stubProvider) Generate(_ context.Context, _ *core.Request) (*core.Response, error) {
 	return nil, s.notConfiguredErr()
 }
 
-func (s *stubProvider) Stream(_ context.Context, _ *provider.Request) (provider.Stream, error) {
+func (s *stubProvider) Stream(_ context.Context, _ *core.Request) (core.StreamResponse, error) {
 	return nil, s.notConfiguredErr()
 }
 
-func (s *stubProvider) ModelInfo(_ string) *provider.ModelInfo { return nil }
-
-func (s *stubProvider) EstimateTokens(_ string, text string) (int, error) {
-	return len(text) / 4, nil
+func (s *stubProvider) GenerateObject(_ context.Context, _ *core.ObjectRequest) (*core.ObjectResponse, error) {
+	return nil, s.notConfiguredErr()
 }
-
-func (s *stubProvider) Available() bool { return false }
 
 func (s *stubProvider) notConfiguredErr() error {
 	return fmt.Errorf("hermind: provider %q not configured — open the web UI Settings panel to add an api_key", s.name)

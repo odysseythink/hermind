@@ -1,7 +1,5 @@
 package descriptor
 
-import "github.com/odysseythink/hermind/provider/factory"
-
 // FallbackProviders mirrors config.Config.FallbackProviders ([]config.ProviderConfig).
 // Every element conforms to the same 4-field schema as the primary Providers
 // section (see providers.go) — the only structural difference is ordering:
@@ -19,7 +17,7 @@ func init() {
 				Label:    "Provider type",
 				Kind:     FieldEnum,
 				Required: true,
-				Enum:     factory.Types(),
+				Enum:     SupportedProviders,
 			},
 			{
 				Name:  "base_url",

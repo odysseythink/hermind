@@ -16,6 +16,7 @@ import (
 	"time"
 
 	"github.com/odysseythink/hermind/tool"
+	"github.com/odysseythink/pantheon/core"
 )
 
 // Client talks to /v1/audio/speech on the configured base URL.
@@ -120,20 +121,17 @@ func Register(reg *tool.Registry, c *Client) {
 		Toolset:     "audio",
 		Description: "Synthesize speech from text and save an MP3.",
 		Emoji:       "🔊",
-		Schema: tool.ToolDefinition{
-			Type: "function",
-			Function: tool.FunctionDef{
-				Name:        "speak",
-				Description: "Synthesize speech from text. Returns the path to the saved MP3.",
-				Parameters: json.RawMessage(`{
+		Schema: core.ToolDefinition{
+			Name:        "speak",
+			Description: "Synthesize speech from text. Returns the path to the saved MP3.",
+			Parameters: core.MustSchemaFromJSON([]byte(`{
   "type":"object",
   "properties":{
     "text":{"type":"string"},
     "voice":{"type":"string","description":"optional voice override"}
   },
   "required":["text"]
-}`),
-			},
+}`)),
 		},
 		Handler: func(ctx context.Context, raw json.RawMessage) (string, error) {
 			var args struct {

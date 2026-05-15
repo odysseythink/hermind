@@ -8,6 +8,7 @@ import (
 	"time"
 
 	"github.com/odysseythink/hermind/tool"
+	"github.com/odysseythink/pantheon/core"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 )
@@ -113,8 +114,8 @@ func TestBridgeHandlerReturnsServerError(t *testing.T) {
 }
 
 func TestNormalizeSchemaHandlesNull(t *testing.T) {
-	assert.Equal(t, json.RawMessage(`{"type":"object"}`), normalizeSchema(nil))
-	assert.Equal(t, json.RawMessage(`{"type":"object"}`), normalizeSchema(json.RawMessage("null")))
-	assert.Equal(t, json.RawMessage(`{"type":"object","properties":{"x":{"type":"string"}}}`),
+	assert.Equal(t, &core.Schema{Type: "object"}, normalizeSchema(nil))
+	assert.Equal(t, &core.Schema{Type: "object"}, normalizeSchema(json.RawMessage("null")))
+	assert.Equal(t, &core.Schema{Type: "object", Properties: map[string]*core.Schema{"x": {Type: "string"}}},
 		normalizeSchema(json.RawMessage(`{"type":"object","properties":{"x":{"type":"string"}}}`)))
 }

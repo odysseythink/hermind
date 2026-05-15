@@ -10,7 +10,7 @@ import (
 
 	"github.com/stretchr/testify/require"
 
-	"github.com/odysseythink/hermind/benchmark"
+	"github.com/odysseythink/pantheon/benchmark"
 )
 
 func setupReportDir(t *testing.T, mode Mode) string {

@@ -1,0 +1,386 @@
+
+<!DOCTYPE html>
+<html>
+	<head>
+		<meta http-equiv="Content-Type" content="text/html; charset=utf-8">
+		<title>pantheonadapter: Go Coverage Report</title>
+		<style>
+			body {
+				background: black;
+				color: rgb(80, 80, 80);
+			}
+			body, pre, #legend span {
+				font-family: Menlo, monospace;
+				font-weight: bold;
+			}
+			#topbar {
+				background: black;
+				position: fixed;
+				top: 0; left: 0; right: 0;
+				height: 42px;
+				border-bottom: 1px solid rgb(80, 80, 80);
+			}
+			#content {
+				margin-top: 50px;
+			}
+			#nav, #legend {
+				float: left;
+				margin-left: 10px;
+			}
+			#legend {
+				margin-top: 12px;
+			}
+			#nav {
+				margin-top: 10px;
+			}
+			#legend span {
+				margin: 0 5px;
+			}
+			.cov0 { color: rgb(192, 0, 0) }
+.cov1 { color: rgb(128, 128, 128) }
+.cov2 { color: rgb(116, 140, 131) }
+.cov3 { color: rgb(104, 152, 134) }
+.cov4 { color: rgb(92, 164, 137) }
+.cov5 { color: rgb(80, 176, 140) }
+.cov6 { color: rgb(68, 188, 143) }
+.cov7 { color: rgb(56, 200, 146) }
+.cov8 { color: rgb(44, 212, 149) }
+.cov9 { color: rgb(32, 224, 152) }
+.cov10 { color: rgb(20, 236, 155) }
+
+		</style>
+	</head>
+	<body>
+		<div id="topbar">
+			<div id="nav">
+				<select id="files">
+				
+				<option value="file0">github.com/odysseythink/hermind/pantheonadapter/builder.go (100.0%)</option>
+				
+				<option value="file1">github.com/odysseythink/hermind/pantheonadapter/modelinfo.go (94.7%)</option>
+				
+				</select>
+			</div>
+			<div id="legend">
+				<span>not tracked</span>
+			
+				<span class="cov0">not covered</span>
+				<span class="cov8">covered</span>
+			
+			</div>
+		</div>
+		<div id="content">
+		
+		<pre class="file" id="file0" style="display: none">package pantheonadapter
+
+import (
+        "context"
+        "fmt"
+        "strings"
+
+        "github.com/odysseythink/hermind/config"
+        "github.com/odysseythink/pantheon/core"
+        "github.com/odysseythink/pantheon/extensions/fallback"
+        "github.com/odysseythink/pantheon/extensions/retry"
+        "github.com/odysseythink/pantheon/providers/anthropic"
+        "github.com/odysseythink/pantheon/providers/openai"
+        "github.com/odysseythink/pantheon/providers/openaicompat"
+        "github.com/odysseythink/pantheon/providers/openrouter"
+)
+
+// compatProvider wraps an openaicompat.Client to implement core.Provider.
+type compatProvider struct {
+        name   string
+        client *openaicompat.Client
+}
+
+func (p *compatProvider) Name() string <span class="cov8" title="1">{ return p.name }</span>
+
+func (p *compatProvider) LanguageModel(ctx context.Context, modelID string) (core.LanguageModel, error) <span class="cov8" title="1">{
+        return &amp;compatModel{
+                provider: p,
+                client:   p.client,
+                model:    modelID,
+        }, nil
+}</span>
+
+// compatModel wraps an openaicompat.Client to implement core.LanguageModel.
+type compatModel struct {
+        provider *compatProvider
+        client   *openaicompat.Client
+        model    string
+}
+
+func (m *compatModel) Provider() string <span class="cov8" title="1">{ return m.provider.name }</span>
+func (m *compatModel) Model() string    <span class="cov8" title="1">{ return m.model }</span>
+
+func (m *compatModel) Generate(ctx context.Context, req *core.Request) (*core.Response, error) <span class="cov8" title="1">{
+        return m.client.ChatCompletion(ctx, m.model, req)
+}</span>
+
+func (m *compatModel) Stream(ctx context.Context, req *core.Request) (core.StreamResponse, error) <span class="cov8" title="1">{
+        return m.client.ChatCompletionStream(ctx, m.model, req), nil
+}</span>
+
+func (m *compatModel) GenerateObject(ctx context.Context, req *core.ObjectRequest) (*core.ObjectResponse, error) <span class="cov8" title="1">{
+        coreReq := &amp;core.Request{
+                Messages:        req.Messages,
+                SystemPrompt:    req.SystemPrompt,
+                MaxTokens:       req.MaxTokens,
+                Temperature:     req.Temperature,
+                ProviderOptions: req.ProviderOptions,
+        }
+        if req.Mode == core.ObjectModeAuto || req.Mode == core.ObjectModeJSON </span><span class="cov8" title="1">{
+                coreReq.ResponseFormat = &amp;core.ResponseFormat{
+                        Type:       core.ResponseFormatTypeJSONSchema,
+                        JSONSchema: req.Schema,
+                }
+        }</span> else<span class="cov8" title="1"> if req.Mode == core.ObjectModeTool </span><span class="cov8" title="1">{
+                coreReq.Tools = []core.ToolDefinition{{
+                        Name:        "generate_object",
+                        Description: "Generate the requested object",
+                        Parameters:  req.Schema,
+                }}
+                coreReq.ToolChoice = core.ToolChoice{Mode: core.ToolChoiceModeRequired, Name: "generate_object"}
+        }</span> else<span class="cov8" title="1"> if req.Mode == core.ObjectModeText </span><span class="cov8" title="1">{
+                coreReq.ResponseFormat = &amp;core.ResponseFormat{Type: core.ResponseFormatTypeText}
+        }</span>
+
+        <span class="cov8" title="1">resp, err := m.Generate(ctx, coreReq)
+        if err != nil </span><span class="cov8" title="1">{
+                return nil, err
+        }</span>
+        <span class="cov8" title="1">return openaicompat.ExtractObjectResponse(resp, m.model)</span>
+}
+
+// withBaseURL returns a slice containing the base URL option when url is non-empty.
+func withBaseURL[T any](setter func(string) T, url string) []T <span class="cov8" title="1">{
+        if url != "" </span><span class="cov8" title="1">{
+                return []T{setter(url)}
+        }</span>
+        <span class="cov8" title="1">return nil</span>
+}
+
+// buildProvider creates a pantheon core.Provider from a hermind ProviderConfig.
+func buildProvider(cfg config.ProviderConfig) (core.Provider, error) <span class="cov8" title="1">{
+        switch strings.ToLower(cfg.Provider) </span>{
+        case "openai":<span class="cov8" title="1">
+                return openai.New(cfg.APIKey, withBaseURL(openai.WithBaseURL, cfg.BaseURL)...)</span>
+        case "anthropic":<span class="cov8" title="1">
+                return anthropic.New(cfg.APIKey, withBaseURL(anthropic.WithBaseURL, cfg.BaseURL)...)</span>
+        case "openrouter":<span class="cov8" title="1">
+                return openrouter.New(cfg.APIKey, withBaseURL(openrouter.WithBaseURL, cfg.BaseURL)...)</span>
+        case "deepseek", "qwen", "zhipu", "kimi", "minimax", "wenxin", "moonshot", "glm", "ernie":<span class="cov8" title="1">
+                client := openaicompat.NewClient(cfg.BaseURL, cfg.APIKey)
+                return &amp;compatProvider{
+                        name:   cfg.Provider,
+                        client: client,
+                }, nil</span>
+        default:<span class="cov8" title="1">
+                return nil, fmt.Errorf("unknown provider: %s", cfg.Provider)</span>
+        }
+}
+
+// BuildModel builds a pantheon core.LanguageModel from a hermind ProviderConfig.
+func BuildModel(ctx context.Context, cfg config.ProviderConfig) (core.LanguageModel, error) <span class="cov8" title="1">{
+        provider, err := buildProvider(cfg)
+        if err != nil </span><span class="cov8" title="1">{
+                return nil, err
+        }</span>
+        <span class="cov8" title="1">return provider.LanguageModel(ctx, cfg.Model)</span>
+}
+
+// BuildPrimaryModel builds the primary language model with retry wrapping.
+func BuildPrimaryModel(ctx context.Context, cfg config.ProviderConfig) (core.LanguageModel, error) <span class="cov8" title="1">{
+        m, err := BuildModel(ctx, cfg)
+        if err != nil </span><span class="cov8" title="1">{
+                return nil, err
+        }</span>
+        <span class="cov8" title="1">return &amp;retry.Model{Inner: m, MaxRetries: 3}, nil</span>
+}
+
+// BuildFallbackModel builds a primary model with retry and optional fallback candidates.
+func BuildFallbackModel(ctx context.Context, primaryCfg config.ProviderConfig, fallbackCfgs []config.ProviderConfig) (core.LanguageModel, error) <span class="cov8" title="1">{
+        primary, err := BuildPrimaryModel(ctx, primaryCfg)
+        if err != nil </span><span class="cov8" title="1">{
+                return nil, err
+        }</span>
+
+        <span class="cov8" title="1">candidates := []core.LanguageModel{primary}
+        for _, cfg := range fallbackCfgs </span><span class="cov8" title="1">{
+                if cfg.APIKey == "" </span><span class="cov8" title="1">{
+                        continue</span>
+                }
+                <span class="cov8" title="1">m, err := BuildModel(ctx, cfg)
+                if err != nil </span><span class="cov8" title="1">{
+                        return nil, err
+                }</span>
+                <span class="cov8" title="1">candidates = append(candidates, m)</span>
+        }
+
+        <span class="cov8" title="1">if len(candidates) == 1 </span><span class="cov8" title="1">{
+                return primary, nil
+        }</span>
+        <span class="cov8" title="1">return &amp;fallback.Model{Candidates: candidates}, nil</span>
+}
+</pre>
+		
+		<pre class="file" id="file1" style="display: none">package pantheonadapter
+
+import (
+        "strings"
+
+        "github.com/odysseythink/hermind/provider"
+)
+
+var modelDB = map[string]provider.ModelInfo{
+        "gpt-4o": {
+                ContextLength:  128000,
+                MaxOutputTokens: 16384,
+                SupportsVision: true,
+                SupportsTools:  true,
+        },
+        "gpt-4o-mini": {
+                ContextLength:  128000,
+                MaxOutputTokens: 16384,
+                SupportsVision: true,
+                SupportsTools:  true,
+        },
+        "claude-opus-4": {
+                ContextLength:  200000,
+                MaxOutputTokens: 8192,
+                SupportsVision: true,
+                SupportsTools:  true,
+                SupportsCaching: true,
+        },
+        "claude-sonnet-4": {
+                ContextLength:  200000,
+                MaxOutputTokens: 8192,
+                SupportsVision: true,
+                SupportsTools:  true,
+                SupportsCaching: true,
+        },
+        "claude-3-5-sonnet": {
+                ContextLength:  200000,
+                MaxOutputTokens: 8192,
+                SupportsVision: true,
+                SupportsTools:  true,
+                SupportsCaching: true,
+        },
+        "deepseek-chat": {
+                ContextLength:  64000,
+                MaxOutputTokens: 8192,
+                SupportsTools:  true,
+        },
+        "deepseek-coder": {
+                ContextLength:  64000,
+                MaxOutputTokens: 8192,
+                SupportsTools:  true,
+        },
+        "qwen": {
+                ContextLength:  128000,
+                MaxOutputTokens: 8192,
+                SupportsTools:  true,
+        },
+}
+
+// ModelInfoResolver resolves model capabilities for Pantheon-hosted models.
+type ModelInfoResolver struct{}
+
+// NewModelInfoResolver creates a new ModelInfoResolver.
+func NewModelInfoResolver() *ModelInfoResolver <span class="cov8" title="1">{
+        return &amp;ModelInfoResolver{}
+}</span>
+
+// Lookup returns model information for the given modelID.
+// It performs substring matching against known model identifiers.
+// For unknown models, it returns conservative defaults.
+func (r *ModelInfoResolver) Lookup(modelID string) *provider.ModelInfo <span class="cov8" title="1">{
+        if modelID == "" </span><span class="cov0" title="0">{
+                return r.defaultModelInfo()
+        }</span>
+
+        // Check for exact match first.
+        <span class="cov8" title="1">if info, ok := modelDB[modelID]; ok </span><span class="cov8" title="1">{
+                return copyModelInfo(info)
+        }</span>
+
+        // Substring match: prefer the longest matching key to avoid
+        // short prefixes shadowing more specific ones.
+        <span class="cov8" title="1">var bestMatch *provider.ModelInfo
+        bestLen := 0
+        for key, info := range modelDB </span><span class="cov8" title="1">{
+                if strings.Contains(modelID, key) &amp;&amp; len(key) &gt; bestLen </span><span class="cov8" title="1">{
+                        bestMatch = copyModelInfo(info)
+                        bestLen = len(key)
+                }</span>
+        }
+
+        <span class="cov8" title="1">if bestMatch != nil </span><span class="cov8" title="1">{
+                return bestMatch
+        }</span>
+
+        <span class="cov8" title="1">return r.defaultModelInfo()</span>
+}
+
+func (r *ModelInfoResolver) defaultModelInfo() *provider.ModelInfo <span class="cov8" title="1">{
+        return &amp;provider.ModelInfo{
+                ContextLength:   128000,
+                MaxOutputTokens: 4096,
+                SupportsTools:   true,
+        }
+}</span>
+
+func copyModelInfo(info provider.ModelInfo) *provider.ModelInfo <span class="cov8" title="1">{
+        return &amp;provider.ModelInfo{
+                ContextLength:     info.ContextLength,
+                MaxOutputTokens:   info.MaxOutputTokens,
+                SupportsVision:    info.SupportsVision,
+                SupportsTools:     info.SupportsTools,
+                SupportsStreaming: info.SupportsStreaming,
+                SupportsCaching:   info.SupportsCaching,
+                SupportsReasoning: info.SupportsReasoning,
+        }
+}</span>
+
+// EstimateTokens returns a rough token estimate for the given text.
+// It uses a character-based heuristic: (len(text) + 3) / 4.
+// Returns 0 for an empty string.
+func (r *ModelInfoResolver) EstimateTokens(text string) int <span class="cov8" title="1">{
+        if text == "" </span><span class="cov8" title="1">{
+                return 0
+        }</span>
+        <span class="cov8" title="1">return (len(text) + 3) / 4</span>
+}
+</pre>
+		
+		</div>
+	</body>
+	<script>
+	(function() {
+		var files = document.getElementById('files');
+		var visible;
+		files.addEventListener('change', onChange, false);
+		function select(part) {
+			if (visible)
+				visible.style.display = 'none';
+			visible = document.getElementById(part);
+			if (!visible)
+				return;
+			files.value = part;
+			visible.style.display = 'block';
+			location.hash = part;
+		}
+		function onChange() {
+			select(files.value);
+			window.scrollTo(0, 0);
+		}
+		if (location.hash != "") {
+			select(location.hash.substr(1));
+		}
+		if (!visible) {
+			select("file0");
+		}
+	})();
+	</script>
+</html>

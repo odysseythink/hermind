@@ -6,16 +6,20 @@ import (
 	"net/http"
 	"os"
 	"os/signal"
+	"strings"
 	"syscall"
 	"time"
 
 	"github.com/google/uuid"
 	"github.com/odysseythink/hermind/agent"
+	"github.com/odysseythink/pantheon/agent/trajectory"
 	"github.com/odysseythink/hermind/config"
 	"github.com/odysseythink/hermind/cron"
 	"github.com/odysseythink/hermind/logging"
-	"github.com/odysseythink/hermind/metrics"
+	"github.com/odysseythink/pantheon/observability/metrics"
+	"github.com/odysseythink/hermind/pantheonadapter"
 	"github.com/odysseythink/hermind/provider"
+	"github.com/odysseythink/pantheon/core"
 	"github.com/spf13/cobra"
 )
 
@@ -30,12 +34,38 @@ func newCronCmd(app *App) *cobra.Command {
 }
 
 func runCron(ctx context.Context, app *App) error {
-	if err := ensureStorage(app); err != nil {
+	if err := EnsureStorage(app); err != nil {
 		return err
 	}
-	primary, _, err := buildPrimaryProvider(app.Config)
-	if err != nil {
-		return err
+
+	// Resolve primary provider config
+	primaryName := app.Config.Model
+	if idx := strings.Index(app.Config.Model, "/"); idx >= 0 {
+		primaryName = app.Config.Model[:idx]
+	}
+	primaryCfg, ok := app.Config.Providers[primaryName]
+	if !ok {
+		primaryCfg = config.ProviderConfig{Provider: primaryName}
+	}
+	if primaryCfg.Provider == "" {
+		primaryCfg.Provider = primaryName
+	}
+	if primaryName == "anthropic" && primaryCfg.APIKey == "" {
+		if envKey := os.Getenv("ANTHROPIC_API_KEY"); envKey != "" {
+			primaryCfg.APIKey = envKey
+		}
+	}
+	if primaryCfg.Model == "" {
+		primaryCfg.Model = defaultModelFromString(app.Config.Model)
+	}
+
+	var primary core.LanguageModel
+	if primaryCfg.APIKey != "" {
+		var err error
+		primary, err = pantheonadapter.BuildPrimaryModel(ctx, primaryCfg)
+		if err != nil {
+			return err
+		}
 	}
 
 	sched := cron.NewScheduler()
@@ -82,7 +112,7 @@ func runCron(ctx context.Context, app *App) error {
 	return sched.Start(runCtx)
 }
 
-func buildCronJob(jc config.CronJobConfig, sched cron.Schedule, prov provider.Provider, app *App) cron.Job {
+func buildCronJob(jc config.CronJobConfig, sched cron.Schedule, prov core.LanguageModel, app *App) cron.Job {
 	jobName := jc.Name
 	prompt := jc.Prompt
 	model := jc.Model
@@ -101,14 +131,14 @@ func buildCronJob(jc config.CronJobConfig, sched cron.Schedule, prov provider.Pr
 			// Each job gets its own trajectory file under <instance>/trajectories/.
 			root, err := config.InstancePath("trajectories")
 			if err == nil {
-				tw, twErr := agent.NewTrajectoryWriter(
+				tw, twErr := trajectory.New(
 					root,
 					fmt.Sprintf("cron-%s-%d", jobName, time.Now().Unix()),
 				)
 				if twErr == nil {
 					defer tw.Close()
 					eng.SetStreamDeltaCallback(func(d *provider.StreamDelta) {
-						_ = tw.Write(agent.TrajectoryEvent{
+						_ = tw.Write(trajectory.Event{
 							Kind:    "assistant",
 							Content: d.Content,
 						})

@@ -7,6 +7,7 @@ import (
 
 	"github.com/odysseythink/hermind/config"
 	"github.com/odysseythink/hermind/tool"
+	"github.com/odysseythink/pantheon/core"
 )
 
 // RetainDB is a Provider backed by the RetainDB cloud API.
@@ -87,17 +88,14 @@ func (r *RetainDB) RegisterTools(reg *tool.Registry) {
 		Toolset:     "memory",
 		Description: "Save a fact to RetainDB.",
 		Emoji:       "📥",
-		Schema: tool.ToolDefinition{
-			Type: "function",
-			Function: tool.FunctionDef{
-				Name:        "retaindb_save",
-				Description: "Store a fact in the RetainDB memory store.",
-				Parameters: json.RawMessage(`{
+		Schema: core.ToolDefinition{
+			Name:        "retaindb_save",
+			Description: "Store a fact in the RetainDB memory store.",
+			Parameters: core.MustSchemaFromJSON([]byte(`{
   "type":"object",
   "properties":{"content":{"type":"string"}},
   "required":["content"]
-}`),
-			},
+}`)),
 		},
 		Handler: func(ctx context.Context, raw json.RawMessage) (string, error) {
 			var args struct{ Content string `json:"content"` }
@@ -119,20 +117,17 @@ func (r *RetainDB) RegisterTools(reg *tool.Registry) {
 		Toolset:     "memory",
 		Description: "Search RetainDB memories.",
 		Emoji:       "🔍",
-		Schema: tool.ToolDefinition{
-			Type: "function",
-			Function: tool.FunctionDef{
-				Name:        "retaindb_search",
-				Description: "Search RetainDB memories by text query.",
-				Parameters: json.RawMessage(`{
+		Schema: core.ToolDefinition{
+			Name:        "retaindb_search",
+			Description: "Search RetainDB memories by text query.",
+			Parameters: core.MustSchemaFromJSON([]byte(`{
   "type":"object",
   "properties":{
     "query":{"type":"string"},
     "limit":{"type":"number"}
   },
   "required":["query"]
-}`),
-			},
+}`)),
 		},
 		Handler: func(ctx context.Context, raw json.RawMessage) (string, error) {
 			var args struct {

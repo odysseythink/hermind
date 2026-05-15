@@ -13,6 +13,7 @@ import (
 	"github.com/odysseythink/hermind/message"
 	"github.com/odysseythink/hermind/provider"
 	"github.com/odysseythink/hermind/tool/obsidian"
+	"github.com/odysseythink/pantheon/core"
 )
 
 func atoiDefault(s string, d int) int {
@@ -37,26 +38,48 @@ func stripProviderPrefix(s string) string {
 // storedContentToPlainText decodes a JSON-encoded message.Content string
 // (as persisted by storage.StoredMessage) into plain text for the frontend.
 func storedContentToPlainText(raw string) string {
-	if raw == "" {
+	if raw == "" || raw == "null" {
 		return ""
 	}
-	// Try to parse as JSON-encoded message.Content (string or array).
-	var content message.Content
-	if err := content.UnmarshalJSON([]byte(raw)); err == nil {
-		if content.IsText() {
-			return content.Text()
+	data := []byte(raw)
+
+	// JSON string → plain text (legacy format).
+	if data[0] == '"' {
+		var s string
+		if err := json.Unmarshal(data, &s); err == nil {
+			return s
 		}
-		// For block content, concatenate text blocks.
-		var parts []string
-		for _, b := range content.Blocks() {
-			if b.Type == "text" {
-				parts = append(parts, b.Text)
-			}
-		}
-		return strings.Join(parts, "\n")
+		return raw
 	}
-	// Fallback: if it's not valid JSON (legacy plain text), return as-is.
-	return raw
+
+	// Not an array → treat as raw text.
+	if data[0] != '[' {
+		return raw
+	}
+
+	// Try new pantheon parts format by unmarshalling through a message.HermindMessage wrapper.
+	wrapper := `{"role":"user","content":` + string(data) + `}`
+	var msg message.HermindMessage
+	if err := json.Unmarshal([]byte(wrapper), &msg); err == nil {
+		return msg.Text()
+	}
+
+	// Fallback: old ContentBlock array format.
+	var rawItems []json.RawMessage
+	if err := json.Unmarshal(data, &rawItems); err != nil {
+		return raw
+	}
+	var parts []string
+	for _, item := range rawItems {
+		var block struct {
+			Type string `json:"type"`
+			Text string `json:"text"`
+		}
+		if err := json.Unmarshal(item, &block); err == nil && block.Type == "text" {
+			parts = append(parts, block.Text)
+		}
+	}
+	return strings.Join(parts, "\n")
 }
 
 // handleConversationGet responds to GET /api/conversation with the
@@ -240,21 +263,21 @@ func wireEngineToHub(eng *agent.Engine, hub StreamHub) {
 			Data: map[string]any{"text": d.Content},
 		})
 	})
-	eng.SetToolStartCallback(func(call message.ContentBlock) {
+	eng.SetToolStartCallback(func(call core.ToolCallPart) {
 		hub.Publish(StreamEvent{
 			Type: EventTypeToolCall,
 			Data: map[string]any{
-				"id":    call.ToolUseID,
-				"name":  call.ToolUseName,
-				"input": call.ToolUseInput,
+				"id":    call.ID,
+				"name":  call.Name,
+				"input": call.Arguments,
 			},
 		})
 	})
-	eng.SetToolResultCallback(func(call message.ContentBlock, result string) {
+	eng.SetToolResultCallback(func(call core.ToolCallPart, result string) {
 		hub.Publish(StreamEvent{
 			Type: EventTypeToolResult,
 			Data: map[string]any{
-				"id":     call.ToolUseID,
+				"id":     call.ID,
 				"result": result,
 			},
 		})

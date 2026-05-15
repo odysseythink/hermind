@@ -11,6 +11,7 @@ import (
 
 	"github.com/odysseythink/hermind/storage"
 	"github.com/odysseythink/hermind/tool"
+	"github.com/odysseythink/pantheon/core"
 )
 
 // ClarifyRequest is emitted by the clarify tool when the model
@@ -22,17 +23,14 @@ func RegisterClarify(reg *tool.Registry) {
 		Toolset:     "meta",
 		Description: "Ask the user a clarification question.",
 		Emoji:       "❓",
-		Schema: tool.ToolDefinition{
-			Type: "function",
-			Function: tool.FunctionDef{
-				Name:        "clarify",
-				Description: "Pause and request user clarification. Use this instead of guessing when a requirement is ambiguous.",
-				Parameters: json.RawMessage(`{
+		Schema: core.ToolDefinition{
+			Name:        "clarify",
+			Description: "Pause and request user clarification. Use this instead of guessing when a requirement is ambiguous.",
+			Parameters: core.MustSchemaFromJSON([]byte(`{
   "type":"object",
   "properties":{"question":{"type":"string"}},
   "required":["question"]
-}`),
-			},
+}`)),
 		},
 		IsInteractive: true,
 		Handler: func(ctx context.Context, raw json.RawMessage) (string, error) {
@@ -60,20 +58,17 @@ func RegisterCheckpoint(reg *tool.Registry) {
 		Toolset:     "meta",
 		Description: "Save a named checkpoint of arbitrary JSON state.",
 		Emoji:       "💾",
-		Schema: tool.ToolDefinition{
-			Type: "function",
-			Function: tool.FunctionDef{
-				Name: "checkpoint_save",
-				Description: "Save a checkpoint. Name must be alphanumeric. State is stored as JSON under $HERMIND_HOME/checkpoints/<name>.json.",
-				Parameters: json.RawMessage(`{
+		Schema: core.ToolDefinition{
+			Name: "checkpoint_save",
+			Description: "Save a checkpoint. Name must be alphanumeric. State is stored as JSON under $HERMIND_HOME/checkpoints/<name>.json.",
+			Parameters: core.MustSchemaFromJSON([]byte(`{
   "type":"object",
   "properties":{
     "name":{"type":"string"},
     "state":{"type":"object"}
   },
   "required":["name","state"]
-}`),
-			},
+}`)),
 		},
 		Handler: func(ctx context.Context, raw json.RawMessage) (string, error) {
 			var args struct {
@@ -101,17 +96,14 @@ func RegisterCheckpoint(reg *tool.Registry) {
 		Toolset:     "meta",
 		Description: "Load a previously saved checkpoint.",
 		Emoji:       "♻️",
-		Schema: tool.ToolDefinition{
-			Type: "function",
-			Function: tool.FunctionDef{
-				Name: "checkpoint_restore",
-				Description: "Load a named checkpoint and return its JSON state.",
-				Parameters: json.RawMessage(`{
+		Schema: core.ToolDefinition{
+			Name: "checkpoint_restore",
+			Description: "Load a named checkpoint and return its JSON state.",
+			Parameters: core.MustSchemaFromJSON([]byte(`{
   "type":"object",
   "properties":{"name":{"type":"string"}},
   "required":["name"]
-}`),
-			},
+}`)),
 		},
 		Handler: func(ctx context.Context, raw json.RawMessage) (string, error) {
 			var args struct{ Name string `json:"name"` }
@@ -141,20 +133,17 @@ func RegisterSessionSearch(reg *tool.Registry, store storage.Storage) {
 		Toolset:     "meta",
 		Description: "Search prior session messages and memories.",
 		Emoji:       "🔎",
-		Schema: tool.ToolDefinition{
-			Type: "function",
-			Function: tool.FunctionDef{
-				Name: "session_search",
-				Description: "Full-text search across past session messages.",
-				Parameters: json.RawMessage(`{
+		Schema: core.ToolDefinition{
+			Name: "session_search",
+			Description: "Full-text search across past session messages.",
+			Parameters: core.MustSchemaFromJSON([]byte(`{
   "type":"object",
   "properties":{
     "query":{"type":"string"},
     "limit":{"type":"number"}
   },
   "required":["query"]
-}`),
-			},
+}`)),
 		},
 		Handler: func(ctx context.Context, raw json.RawMessage) (string, error) {
 			var args struct {
@@ -198,20 +187,17 @@ func RegisterApproval(reg *tool.Registry) {
 		Description: "Pause and ask the user to approve a destructive action.",
 		Emoji:       "🛑",
 		IsInteractive: true,
-		Schema: tool.ToolDefinition{
-			Type: "function",
-			Function: tool.FunctionDef{
-				Name: "approval_request",
-				Description: "Request human approval. The REPL should prompt the user and inject the answer before continuing.",
-				Parameters: json.RawMessage(`{
+		Schema: core.ToolDefinition{
+			Name: "approval_request",
+			Description: "Request human approval. The REPL should prompt the user and inject the answer before continuing.",
+			Parameters: core.MustSchemaFromJSON([]byte(`{
   "type":"object",
   "properties":{
     "action":{"type":"string"},
     "reason":{"type":"string"}
   },
   "required":["action"]
-}`),
-			},
+}`)),
 		},
 		Handler: func(ctx context.Context, raw json.RawMessage) (string, error) {
 			var args struct {
