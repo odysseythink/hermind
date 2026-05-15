@@ -231,7 +231,7 @@ void CodeHighlighter::highlightBlock(const QString &text)
         auto it = re.globalMatch(text);
         while (it.hasNext()) {
             auto m = it.next();
-            ranges.append({ m.capturedStart(), m.capturedLength(), m_commentFormat });
+            ranges.append({ static_cast<int>(m.capturedStart()), static_cast<int>(m.capturedLength()), m_commentFormat });
         }
     }
 
@@ -241,7 +241,7 @@ void CodeHighlighter::highlightBlock(const QString &text)
         auto it = re.globalMatch(text);
         while (it.hasNext()) {
             auto m = it.next();
-            ranges.append({ m.capturedStart(), m.capturedLength(), m_stringFormat });
+            ranges.append({ static_cast<int>(m.capturedStart()), static_cast<int>(m.capturedLength()), m_stringFormat });
         }
     }
 
@@ -252,7 +252,7 @@ void CodeHighlighter::highlightBlock(const QString &text)
         while (it.hasNext()) {
             auto m = it.next();
             if (!isOverlapping(m.capturedStart(), m.capturedLength(), ranges)) {
-                ranges.append({ m.capturedStart(), m.capturedLength(), m_keywordFormat });
+                ranges.append({ static_cast<int>(m.capturedStart()), static_cast<int>(m.capturedLength()), m_keywordFormat });
             }
         }
     }
@@ -264,7 +264,7 @@ void CodeHighlighter::highlightBlock(const QString &text)
         while (it.hasNext()) {
             auto m = it.next();
             if (!isOverlapping(m.capturedStart(), m.capturedLength(), ranges)) {
-                ranges.append({ m.capturedStart(), m.capturedLength(), m_numberFormat });
+                ranges.append({ static_cast<int>(m.capturedStart()), static_cast<int>(m.capturedLength()), m_numberFormat });
             }
         }
     }
