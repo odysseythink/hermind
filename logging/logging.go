@@ -1,20 +1,18 @@
-// Package logging wraps log/slog with a JSON handler and a small
-// per-request context helper. All gateway, cron, and platform code
-// should use slog.InfoContext/ErrorContext with a context that has
-// been enriched via WithRequestID so request IDs appear in logs.
+// Package logging wraps mlog with a small per-request context helper.
+// All gateway, cron, and platform code should use mlog.InfoContext/ErrorContext
+// with a context that has been enriched via WithRequestID so request IDs
+// appear in logs.
 //
-// The underlying sink is github.com/odysseythink/mlog — callers keep
-// writing structured log records via slog; this package flattens the
-// record's message + attrs into a single string and dispatches it to
-// mlog's severity-specific writers.
+// The package also installs an mlog-backed slog.Handler as the default logger
+// so that third-party code using log/slog or the standard "log" package is
+// captured and emitted through mlog's structured pipeline.
 package logging
 
 import (
 	"context"
 	"flag"
-	"fmt"
 	"log/slog"
-	"strings"
+	"time"
 
 	"github.com/google/uuid"
 	"github.com/odysseythink/mlog"
@@ -24,25 +22,33 @@ type ctxKey int
 
 const requestIDKey ctxKey = 1
 
-// Setup installs an mlog-backed slog handler as the default logger.
+func init() {
+	// Default to stderr so that test processes (which may not call Setup)
+	// do not trigger mlog's file-sink creation, which can collide when
+	// multiple severity levels are initialised within the same second.
+	_ = flag.Set("logtostderr", "true")
+}
+
+// Setup installs an mlog-backed slog handler as the default logger and
+// configures mlog for structured stderr output.
 // level is one of "debug", "info", "warn", "error" (default info).
-// mlog's default is to write log files under $TMPDIR; we flip the
-// -logtostderr flag so log output still goes to stderr, matching the
-// pre-mlog behavior callers expect.
 func Setup(level string) {
-	var lvl slog.Level
+	mlog.SetLogMode(mlog.LogModeStructured)
+	_ = flag.Set("logtostderr", "true")
+
+	var slogLvl slog.Level
 	switch level {
 	case "debug":
-		lvl = slog.LevelDebug
+		slogLvl = slog.LevelDebug
 	case "warn":
-		lvl = slog.LevelWarn
+		slogLvl = slog.LevelWarn
 	case "error":
-		lvl = slog.LevelError
+		slogLvl = slog.LevelError
 	default:
-		lvl = slog.LevelInfo
+		slogLvl = slog.LevelInfo
 	}
-	_ = flag.Set("logtostderr", "true")
-	h := &mlogHandler{level: lvl}
+
+	h := &mlogHandler{level: slogLvl}
 	slog.SetDefault(slog.New(&contextHandler{inner: h}))
 }
 
@@ -88,9 +94,8 @@ func (c *contextHandler) WithGroup(name string) slog.Handler {
 	return &contextHandler{inner: c.inner.WithGroup(name)}
 }
 
-// mlogHandler is a slog.Handler that forwards records to mlog. Attrs
-// are flattened into `key=value` pairs appended to the message, since
-// mlog is glog-style and does not take structured fields.
+// mlogHandler is a slog.Handler that forwards records to mlog. slog.Attrs
+// are converted to mlog.Field values so structured output is preserved.
 type mlogHandler struct {
 	level slog.Level
 	attrs []slog.Attr
@@ -102,25 +107,29 @@ func (h *mlogHandler) Enabled(_ context.Context, level slog.Level) bool {
 }
 
 func (h *mlogHandler) Handle(ctx context.Context, r slog.Record) error {
-	var sb strings.Builder
-	sb.WriteString(r.Message)
+	fields := make([]mlog.Field, 0, len(h.attrs)+r.NumAttrs()+1)
 	for _, a := range h.attrs {
-		writeAttr(&sb, h.group, a)
+		fields = append(fields, attrToField(h.group, a))
 	}
 	r.Attrs(func(a slog.Attr) bool {
-		writeAttr(&sb, h.group, a)
+		fields = append(fields, attrToField(h.group, a))
 		return true
 	})
-	msg := sb.String()
+
+	args := make([]any, 0, 1+len(fields))
+	args = append(args, r.Message)
+	for _, f := range fields {
+		args = append(args, f)
+	}
 	switch {
 	case r.Level >= slog.LevelError:
-		mlog.ErrorContext(ctx, msg)
+		mlog.ErrorContext(ctx, args...)
 	case r.Level >= slog.LevelWarn:
-		mlog.WarningContext(ctx, msg)
+		mlog.WarningContext(ctx, args...)
 	case r.Level >= slog.LevelInfo:
-		mlog.InfoContext(ctx, msg)
+		mlog.InfoContext(ctx, args...)
 	default:
-		mlog.DebugContext(ctx, msg)
+		mlog.DebugContext(ctx, args...)
 	}
 	return nil
 }
@@ -141,13 +150,27 @@ func (h *mlogHandler) WithGroup(name string) slog.Handler {
 	return &clone
 }
 
-func writeAttr(sb *strings.Builder, group string, a slog.Attr) {
-	sb.WriteByte(' ')
+func attrToField(group string, a slog.Attr) mlog.Field {
+	key := a.Key
 	if group != "" {
-		sb.WriteString(group)
-		sb.WriteByte('.')
+		key = group + "." + key
 	}
-	sb.WriteString(a.Key)
-	sb.WriteByte('=')
-	fmt.Fprintf(sb, "%v", a.Value.Any())
+	switch v := a.Value.Any().(type) {
+	case string:
+		return mlog.String(key, v)
+	case int:
+		return mlog.Int(key, v)
+	case int64:
+		return mlog.Int64(key, v)
+	case float64:
+		return mlog.Float64(key, v)
+	case bool:
+		return mlog.Bool(key, v)
+	case time.Duration:
+		return mlog.Duration(key, v)
+	case error:
+		return mlog.String(key, v.Error())
+	default:
+		return mlog.Any(key, v)
+	}
 }

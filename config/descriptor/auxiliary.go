@@ -1,7 +1,5 @@
 package descriptor
 
-import "github.com/odysseythink/hermind/provider/factory"
-
 // Auxiliary mirrors config.AuxiliaryConfig. All four fields are optional —
 // leaving every one blank is a valid state that means "reuse the main
 // provider" (see provider/auxiliary.go).
@@ -17,7 +15,7 @@ func init() {
 				Label: "Provider",
 				Help:  "Provider factory. Leave blank to reuse the main provider.",
 				Kind:  FieldEnum,
-				Enum:  factory.Types(),
+				Enum:  SupportedProviders,
 			},
 			{
 				Name:  "base_url",

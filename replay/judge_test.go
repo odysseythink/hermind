@@ -9,9 +9,8 @@ import (
 
 	"github.com/stretchr/testify/require"
 
-	"github.com/odysseythink/hermind/benchmark"
-	"github.com/odysseythink/hermind/message"
-	"github.com/odysseythink/hermind/provider"
+	"github.com/odysseythink/pantheon/benchmark"
+	"github.com/odysseythink/pantheon/core"
 )
 
 // stubAux returns canned JSON strings cycling through the provided list.
@@ -21,23 +20,30 @@ type stubAux struct {
 	calls     int
 }
 
-func (s *stubAux) Name() string { return "stub-aux" }
-func (s *stubAux) Complete(_ context.Context, _ *provider.Request) (*provider.Response, error) {
+func (s *stubAux) Provider() string { return "stub-aux" }
+func (s *stubAux) Model() string    { return "" }
+
+func (s *stubAux) Generate(_ context.Context, _ *core.Request) (*core.Response, error) {
 	resp := s.responses[s.idx%len(s.responses)]
 	s.idx++
 	s.calls++
-	return &provider.Response{
-		Message:      message.Message{Role: message.RoleAssistant, Content: message.TextContent(resp)},
+	return &core.Response{
+		Message: core.Message{
+			Role:    core.MESSAGE_ROLE_ASSISTANT,
+			Content: []core.ContentParter{core.TextPart{Text: resp}},
+		},
 		FinishReason: "stop",
-		Usage:        message.Usage{InputTokens: 10, OutputTokens: 20},
+		Usage:        core.Usage{PromptTokens: 10, CompletionTokens: 20},
 	}, nil
 }
-func (s *stubAux) Stream(_ context.Context, _ *provider.Request) (provider.Stream, error) {
+
+func (s *stubAux) Stream(_ context.Context, _ *core.Request) (core.StreamResponse, error) {
 	return nil, nil
 }
-func (s *stubAux) ModelInfo(_ string) *provider.ModelInfo                  { return nil }
-func (s *stubAux) EstimateTokens(_ string, _ string) (int, error)          { return 0, nil }
-func (s *stubAux) Available() bool                                          { return true }
+
+func (s *stubAux) GenerateObject(_ context.Context, _ *core.ObjectRequest) (*core.ObjectResponse, error) {
+	return nil, nil
+}
 
 func writeRunRecords(t *testing.T, dir, preset string, recs []benchmark.RunRecord) {
 	t.Helper()
@@ -146,8 +152,8 @@ func TestJudgeAll_RubricPairwiseProducesBothFiles(t *testing.T) {
 	})
 
 	aux := &stubAux{responses: []string{
-		`{"winner":"A","reason":"f"}`,                                                          // pairwise forward
-		`{"winner":"B","reason":"b"}`,                                                          // pairwise backward
+		`{"winner":"A","reason":"f"}`, // pairwise forward
+		`{"winner":"B","reason":"b"}`, // pairwise backward
 		`{"semantic_match":8,"style_match":7,"correctness_a":9,"helpfulness":8,"reason":"r"}`, // rubric
 	}}
 	require.NoError(t, JudgeAll(context.Background(), dir, ModeRubricPairwise, aux))

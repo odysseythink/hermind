@@ -5,9 +5,9 @@ import (
 	"strings"
 
 	"github.com/odysseythink/hermind/config"
-	"github.com/odysseythink/hermind/provider"
 	"github.com/odysseythink/hermind/storage"
 	"github.com/odysseythink/hermind/tool/embedding"
+	"github.com/odysseythink/pantheon/core"
 )
 
 // FactoryOption customizes how memprovider.New builds a Provider.
@@ -17,7 +17,7 @@ type FactoryOption func(*factoryOptions)
 
 type factoryOptions struct {
 	storage   storage.Storage
-	llm       provider.Provider
+	llm       core.LanguageModel
 	embedder  embedding.Embedder
 	skillsCfg *config.SkillsConfig
 }
@@ -30,7 +30,7 @@ func WithStorage(s storage.Storage) FactoryOption {
 }
 
 // WithLLM injects an LLM provider into the factory for MetaClaw.
-func WithLLM(p provider.Provider) FactoryOption {
+func WithLLM(p core.LanguageModel) FactoryOption {
 	return func(o *factoryOptions) { o.llm = p }
 }
 

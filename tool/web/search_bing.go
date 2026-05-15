@@ -6,7 +6,7 @@ import (
 	"encoding/base64"
 	"fmt"
 	"io"
-	"log"
+	"github.com/odysseythink/mlog"
 	"net/http"
 	"net/url"
 	"strings"
@@ -38,7 +38,7 @@ func (p *bingProvider) Search(ctx context.Context, q string, n int) ([]SearchRes
 	if endpoint == "" {
 		endpoint = bingDefaultURL
 	}
-	log.Printf("[Bing] Search start: query=%q num_results=%d endpoint=%s market=%q", q, n, endpoint, p.market)
+	mlog.Infof("[Bing] Search start: query=%q num_results=%d endpoint=%s market=%q", q, n, endpoint, p.market)
 
 	u, err := url.Parse(endpoint)
 	if err != nil {
@@ -57,16 +57,16 @@ func (p *bingProvider) Search(ctx context.Context, q string, n int) ([]SearchRes
 		return nil, fmt.Errorf("bing: request error: %w", err)
 	}
 	req.Header.Set("User-Agent", "Mozilla/5.0 (Windows NT 10.0; Win64; x64; rv:125.0) Gecko/20100101 Firefox/125.0")
-	log.Printf("[Bing] Request URL: %s", u.String())
+	mlog.Infof("[Bing] Request URL: %s", u.String())
 
 	resp, err := p.client.Do(req)
 	if err != nil {
-		log.Printf("[Bing] Request failed: %v", err)
+		mlog.Infof("[Bing] Request failed: %v", err)
 		return nil, fmt.Errorf("bing: %w", err)
 	}
 	defer resp.Body.Close()
 
-	log.Printf("[Bing] Response status: %d", resp.StatusCode)
+	mlog.Infof("[Bing] Response status: %d", resp.StatusCode)
 	if resp.StatusCode != http.StatusOK {
 		return nil, fmt.Errorf("bing: http %d", resp.StatusCode)
 	}
@@ -79,7 +79,7 @@ func (p *bingProvider) Search(ctx context.Context, q string, n int) ([]SearchRes
 	if len(preview) > 500 {
 		preview = preview[:500] + "..."
 	}
-	log.Printf("[Bing] Response body preview: %s", preview)
+	mlog.Infof("[Bing] Response body preview: %s", preview)
 
 	doc, err := goquery.NewDocumentFromReader(bytes.NewReader(bodyBytes))
 	if err != nil {
@@ -88,12 +88,12 @@ func (p *bingProvider) Search(ctx context.Context, q string, n int) ([]SearchRes
 
 	bodyText := doc.Text()
 	if strings.Contains(strings.ToLower(bodyText), "captcha") {
-		log.Printf("[Bing] CAPTCHA detected in response body")
+		mlog.Infof("[Bing] CAPTCHA detected in response body")
 		return nil, fmt.Errorf("bing: captcha challenge detected")
 	}
 
 	algoCount := doc.Find("li.b_algo").Length()
-	log.Printf("[Bing] Found %d li.b_algo elements in HTML", algoCount)
+	mlog.Infof("[Bing] Found %d li.b_algo elements in HTML", algoCount)
 
 	results := make([]SearchResult, 0, n)
 	doc.Find("li.b_algo").EachWithBreak(func(i int, s *goquery.Selection) bool {
@@ -116,12 +116,12 @@ func (p *bingProvider) Search(ctx context.Context, q string, n int) ([]SearchRes
 				Snippet: snippet,
 			})
 		} else {
-			log.Printf("[Bing] Skipping result %d: title_empty=%v href_empty=%v", i, title == "", href == "")
+			mlog.Infof("[Bing] Skipping result %d: title_empty=%v href_empty=%v", i, title == "", href == "")
 		}
 		return true
 	})
 
-	log.Printf("[Bing] Search complete: returned %d results", len(results))
+	mlog.Infof("[Bing] Search complete: returned %d results", len(results))
 	return results, nil
 }
 

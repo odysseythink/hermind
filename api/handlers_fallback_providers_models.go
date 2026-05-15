@@ -8,8 +8,7 @@ import (
 	"time"
 
 	"github.com/go-chi/chi/v5"
-	"github.com/odysseythink/hermind/provider"
-	"github.com/odysseythink/hermind/provider/factory"
+	"github.com/odysseythink/hermind/pantheonadapter"
 )
 
 // handleFallbackProvidersModels responds to POST /api/fallback_providers/{index}/models.
@@ -19,10 +18,9 @@ import (
 // Status codes:
 //
 //	200 - {"models": ["id", ...]}
-//	400 - index is not a non-negative integer, or factory.New rejected the stored config
+//	400 - index is not a non-negative integer, or BuildProvider rejected config
 //	404 - index is out of range for the current FallbackProviders slice
-//	501 - provider type exists but its constructor doesn't implement ModelLister
-//	502 - upstream provider errored (network, auth, rate-limit, ...)
+//	502 - upstream provider errored
 func (s *Server) handleFallbackProvidersModels(w http.ResponseWriter, r *http.Request) {
 	raw := chi.URLParam(r, "index")
 	idx, err := strconv.Atoi(raw)
@@ -36,26 +34,23 @@ func (s *Server) handleFallbackProvidersModels(w http.ResponseWriter, r *http.Re
 		return
 	}
 	cfg := list[idx]
-	p, err := factory.New(cfg)
+	p, err := pantheonadapter.BuildProvider(cfg)
 	if err != nil {
 		http.Error(w, err.Error(), http.StatusBadRequest)
 		return
 	}
-	lister, ok := p.(provider.ModelLister)
-	if !ok {
-		http.Error(w,
-			fmt.Sprintf("provider %q does not support model listing", cfg.Provider),
-			http.StatusNotImplemented)
-		return
-	}
 	ctx, cancel := context.WithTimeout(r.Context(), 10*time.Second)
 	defer cancel()
-	models, err := lister.ListModels(ctx)
+	models, err := p.Models(ctx)
 	if err != nil {
 		http.Error(w, err.Error(), http.StatusBadGateway)
 		return
 	}
+	ids := make([]string, len(models))
+	for i, m := range models {
+		ids[i] = m.ID
+	}
 	writeJSON(w, struct {
 		Models []string `json:"models"`
-	}{Models: models})
+	}{Models: ids})
 }

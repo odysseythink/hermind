@@ -2,11 +2,10 @@ package cli
 
 import (
 	"context"
-	"errors"
 	"fmt"
-	"log/slog"
 	"os"
 	"path/filepath"
+	"strings"
 	"time"
 
 	"github.com/google/uuid"
@@ -14,22 +13,24 @@ import (
 	"github.com/odysseythink/hermind/agent/presence"
 	"github.com/odysseythink/hermind/api"
 	"github.com/odysseythink/hermind/config"
+	"github.com/odysseythink/hermind/pantheonadapter"
 	"github.com/odysseythink/hermind/provider"
-	"github.com/odysseythink/hermind/provider/factory"
 	"github.com/odysseythink/hermind/skills"
 	"github.com/odysseythink/hermind/storage"
 	"github.com/odysseythink/hermind/tool"
 	"github.com/odysseythink/hermind/tool/browser"
-	"github.com/odysseythink/hermind/tool/delegate"
+	"github.com/odysseythink/pantheon/extensions/delegate"
 	"github.com/odysseythink/hermind/tool/embedding"
 	"github.com/odysseythink/hermind/tool/file"
 	"github.com/odysseythink/hermind/tool/mcp"
-	"github.com/odysseythink/hermind/tool/obsidian"
 	"github.com/odysseythink/hermind/tool/memory"
 	"github.com/odysseythink/hermind/tool/memory/memprovider"
+	"github.com/odysseythink/hermind/tool/obsidian"
 	"github.com/odysseythink/hermind/tool/terminal"
 	"github.com/odysseythink/hermind/tool/vision"
 	"github.com/odysseythink/hermind/tool/web"
+	"github.com/odysseythink/mlog"
+	"github.com/odysseythink/pantheon/core"
 )
 
 // attachSkillsTracker constructs a Tracker and runs one initial
@@ -43,7 +44,7 @@ func attachSkillsTracker(ctx context.Context, store storage.Storage, skillDir st
 	}
 	tr := skills.NewTracker(store, skillDir)
 	if _, err := tr.Refresh(ctx); err != nil {
-		slog.Warn("skills.tracker startup refresh failed", "err", err)
+		mlog.Warning("skills.tracker startup refresh failed", mlog.String("err", err.Error()))
 	}
 	return tr
 }
@@ -69,41 +70,52 @@ func BuildEngineDeps(ctx context.Context, app *App) (api.EngineDeps, func(), err
 		}
 	}
 
-	primaryProvider, primaryName, err := buildPrimaryProvider(app.Config)
-	if err != nil {
-		if errors.Is(err, errMissingAPIKey) {
-			fmt.Fprintf(os.Stderr, "%v\n", err)
-			fmt.Fprintln(os.Stderr, "hermind: starting in degraded mode. Chat will fail until you configure a provider.")
-			primaryProvider = newStubProvider(primaryName)
-		} else {
+	var p core.LanguageModel
+
+	// Resolve primary provider config
+	primaryName := app.Config.Model
+	if idx := strings.Index(app.Config.Model, "/"); idx >= 0 {
+		primaryName = app.Config.Model[:idx]
+	}
+	primaryCfg, ok := app.Config.Providers[primaryName]
+	if !ok {
+		primaryCfg = config.ProviderConfig{Provider: primaryName}
+	}
+	if primaryCfg.Provider == "" {
+		primaryCfg.Provider = primaryName
+	}
+	if primaryName == "anthropic" && primaryCfg.APIKey == "" {
+		if envKey := os.Getenv("ANTHROPIC_API_KEY"); envKey != "" {
+			primaryCfg.APIKey = envKey
+		}
+	}
+	if primaryCfg.Model == "" {
+		primaryCfg.Model = defaultModelFromString(app.Config.Model)
+	}
+
+	if primaryCfg.APIKey == "" {
+		fmt.Fprintf(os.Stderr, "%v: provider %q. Set api_key in <instance>/config.yaml or ANTHROPIC_API_KEY env var\n", errMissingAPIKey, primaryName)
+		fmt.Fprintln(os.Stderr, "hermind: starting in degraded mode. Chat will fail until you configure a provider.")
+		p = nil
+	} else {
+		primaryModel, err := pantheonadapter.BuildPrimaryModel(ctx, primaryCfg)
+		if err != nil {
 			return api.EngineDeps{}, cleanup, err
 		}
+		p = primaryModel
 	}
 
-	providers := []provider.Provider{primaryProvider}
-	for i, fbCfg := range app.Config.FallbackProviders {
-		if fbCfg.APIKey == "" {
-			fmt.Fprintf(os.Stderr, "hermind: warning: fallback_providers[%d] (%s) has no api_key — skipping\n", i, fbCfg.Provider)
-			continue
+	fallbackCfgs := app.Config.FallbackProviders
+	if p != nil && len(fallbackCfgs) > 0 {
+		fbModel, err := pantheonadapter.BuildFallbackModel(ctx, primaryCfg, fallbackCfgs)
+		if err == nil {
+			p = fbModel
 		}
-		fb, err := factory.New(fbCfg)
-		if err != nil {
-			fmt.Fprintf(os.Stderr, "hermind: warning: fallback_providers[%d] (%s): %v — skipping\n", i, fbCfg.Provider, err)
-			continue
-		}
-		providers = append(providers, fb)
-	}
-
-	var p provider.Provider
-	if len(providers) == 1 {
-		p = providers[0]
-	} else {
-		p = provider.NewFallbackChain(providers)
 	}
 
 	displayModel := defaultModelFromString(app.Config.Model)
 
-	var auxProvider provider.Provider
+	var auxModel core.LanguageModel
 	if app.Config.Auxiliary.APIKey != "" || app.Config.Auxiliary.Provider != "" {
 		auxCfg := config.ProviderConfig{
 			Provider: app.Config.Auxiliary.Provider,
@@ -114,15 +126,10 @@ func BuildEngineDeps(ctx context.Context, app *App) (api.EngineDeps, func(), err
 		if auxCfg.Provider == "" {
 			auxCfg.Provider = "anthropic"
 		}
-		if auxP, err := factory.New(auxCfg); err == nil {
-			auxProvider = auxP
-		}
+		auxModel, _ = pantheonadapter.BuildModel(ctx, auxCfg)
 	}
-	// Blank auxiliary reuses the main provider so compression, the LLM judge,
-	// and memory-side aux calls still work without a separate API key. The
-	// descriptor (config/descriptor/auxiliary.go) advertises this contract.
-	if auxProvider == nil {
-		auxProvider = p
+	if auxModel == nil {
+		auxModel = p
 	}
 
 	toolRegistry := tool.NewRegistry()
@@ -178,7 +185,7 @@ func BuildEngineDeps(ctx context.Context, app *App) (api.EngineDeps, func(), err
 	if visionModel == "" {
 		visionModel = displayModel
 	}
-	vision.Register(toolRegistry, auxProvider, visionModel)
+	vision.Register(toolRegistry, auxModel, visionModel)
 
 	// Use a stable session prefix for delegate sub-conversations spawned
 	// from web requests. Each sub-conversation gets its own UUID suffix.
@@ -187,7 +194,12 @@ func BuildEngineDeps(ctx context.Context, app *App) (api.EngineDeps, func(), err
 	// Set up embedder for skills retriever and memory provider
 	var emb embedding.Embedder
 	if p != nil {
-		emb = embedding.NewProviderEmbedder(p, "text-embedding-3-small")
+		if ec, ok := p.(provider.EmbedCapable); ok {
+			emb = embedding.NewProviderEmbedder(ec, "text-embedding-3-small")
+		}
+		// TODO: pantheon core.LanguageModel does not expose embedding yet;
+		// embedding-dependent features are disabled when the provider is not
+		// EmbedCapable.
 	}
 
 	// Set up skills evolver if auto-extract is enabled.
@@ -244,7 +256,7 @@ func BuildEngineDeps(ctx context.Context, app *App) (api.EngineDeps, func(), err
 		// Sub-agent runs are ephemeral — they should not write to the
 		// main conversation history.
 		subEngine := agent.NewEngineWithToolsAndAux(
-			p, auxProvider, nil, toolRegistry,
+			p, auxModel, nil, toolRegistry,
 			config.AgentConfig{
 				MaxTurns:    maxTurns,
 				Compression: app.Config.Agent.Compression,
@@ -291,9 +303,9 @@ func BuildEngineDeps(ctx context.Context, app *App) (api.EngineDeps, func(), err
 	// Resolve HTTP idle threshold with deprecation alias.
 	absentAfter := app.Config.Presence.HTTPIdleAbsentAfterSeconds
 	if absentAfter == 0 && app.Config.Memory.ConsolidateIdleAfterSeconds > 0 {
-		slog.Warn("config.deprecated_field",
-			"field", "memory.consolidate_idle_after_seconds",
-			"replacement", "presence.http_idle_absent_after_seconds")
+		mlog.Warning("config.deprecated_field",
+			mlog.String("field", "memory.consolidate_idle_after_seconds"),
+			mlog.String("replacement", "presence.http_idle_absent_after_seconds"))
 		absentAfter = app.Config.Memory.ConsolidateIdleAfterSeconds
 	}
 	if absentAfter == 0 {
@@ -313,7 +325,7 @@ func BuildEngineDeps(ctx context.Context, app *App) (api.EngineDeps, func(), err
 
 	return api.EngineDeps{
 		Provider:        p,
-		AuxProvider:     auxProvider,
+		AuxProvider:     auxModel,
 		Storage:         app.Storage,
 		ToolReg:         toolRegistry,
 		SkillsReg:       skillsReg,

@@ -12,6 +12,7 @@ import (
 
 	"github.com/odysseythink/hermind/storage"
 	sqlitestore "github.com/odysseythink/hermind/storage/sqlite"
+	"github.com/odysseythink/pantheon/core"
 )
 
 func newReplayTestStore(t *testing.T) storage.Storage {
@@ -85,8 +86,8 @@ func TestGenerate_ContextualMode(t *testing.T) {
 	var item2 ReplayItem
 	require.NoError(t, json.Unmarshal(lines[2], &item2))
 	require.Len(t, item2.History, 2)
-	require.Equal(t, "hi", item2.History[0].Content.Text())
-	require.Equal(t, "hello!", item2.History[1].Content.Text())
+	require.Equal(t, "hi", item2.History[0].Text())
+	require.Equal(t, "hello!", item2.History[1].Text())
 }
 
 func TestGenerate_SkipsOrphanUserMessage(t *testing.T) {
@@ -213,11 +214,18 @@ func TestGenerate_PreservesToolCallsInHistory(t *testing.T) {
 	// Find the assistant message with the tool_use in History.
 	foundToolCall := false
 	for _, m := range thanksItem.History {
-		if m.Role == "assistant" && len(m.ToolCalls) > 0 {
-			foundToolCall = true
-			require.Equal(t, "toolu_1", m.ToolCalls[0].ID, "ToolCall ID must round-trip")
-			require.Equal(t, "get_weather", m.ToolCalls[0].Function.Name, "ToolCall function name must round-trip")
-			break
+		if m.Role == "assistant" {
+			for _, p := range m.Content {
+				if tc, ok := p.(core.ToolCallPart); ok {
+					foundToolCall = true
+					require.Equal(t, "toolu_1", tc.ID, "ToolCall ID must round-trip")
+					require.Equal(t, "get_weather", tc.Name, "ToolCall function name must round-trip")
+					break
+				}
+			}
+			if foundToolCall {
+				break
+			}
 		}
 	}
 	require.True(t, foundToolCall, "assistant message with tool_calls must be preserved in history; got: %+v", thanksItem.History)

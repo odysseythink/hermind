@@ -7,6 +7,8 @@ import (
 	"net/http/httptest"
 	"testing"
 
+	_ "github.com/odysseythink/hermind/logging"
+
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 )

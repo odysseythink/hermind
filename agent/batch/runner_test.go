@@ -9,8 +9,7 @@ import (
 	"sync"
 	"testing"
 
-	"github.com/odysseythink/hermind/message"
-	"github.com/odysseythink/hermind/provider"
+	"github.com/odysseythink/pantheon/core"
 )
 
 // fakeProvider returns a canned response. Used so the runner tests
@@ -20,40 +19,38 @@ type fakeProvider struct {
 	calls int
 }
 
-func (f *fakeProvider) Name() string    { return "fake" }
-func (f *fakeProvider) Available() bool { return true }
+func (f *fakeProvider) Provider() string { return "fake" }
+func (f *fakeProvider) Model() string    { return "fake/model" }
 
-func (f *fakeProvider) ModelInfo(string) *provider.ModelInfo {
-	return &provider.ModelInfo{
-		ContextLength:     100_000,
-		MaxOutputTokens:   1024,
-		SupportsTools:     true,
-		SupportsStreaming: true,
-	}
-}
-
-func (f *fakeProvider) EstimateTokens(_, s string) (int, error) {
-	return len(s) / 4, nil
-}
-
-func (f *fakeProvider) Complete(ctx context.Context, req *provider.Request) (*provider.Response, error) {
+func (f *fakeProvider) Generate(ctx context.Context, req *core.Request) (*core.Response, error) {
 	f.mu.Lock()
 	f.calls++
 	f.mu.Unlock()
 	last := req.Messages[len(req.Messages)-1]
-	return &provider.Response{
-		Message: message.Message{
-			Role:    message.RoleAssistant,
-			Content: message.TextContent("ok: " + last.Content.Text()),
+	var prompt string
+	for _, part := range last.Content {
+		if p, ok := part.(core.TextPart); ok {
+			prompt = p.Text
+			break
+		}
+	}
+	return &core.Response{
+		Message: core.Message{
+			Role:    core.MESSAGE_ROLE_ASSISTANT,
+			Content: []core.ContentParter{core.TextPart{Text: "ok: " + prompt}},
 		},
 		FinishReason: "end_turn",
-		Model:        req.Model,
-		Usage:        message.Usage{InputTokens: 10, OutputTokens: 5},
+		Model:        "fake/model",
+		Usage:        core.Usage{PromptTokens: 10, CompletionTokens: 5},
 	}, nil
 }
 
-func (f *fakeProvider) Stream(context.Context, *provider.Request) (provider.Stream, error) {
+func (f *fakeProvider) Stream(context.Context, *core.Request) (core.StreamResponse, error) {
 	return nil, errors.New("fake: streaming not implemented")
+}
+
+func (f *fakeProvider) GenerateObject(context.Context, *core.ObjectRequest) (*core.ObjectResponse, error) {
+	return nil, errors.New("fake: GenerateObject not implemented")
 }
 
 func writeDataset(t *testing.T, dir string, ids ...string) string {

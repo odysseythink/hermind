@@ -4,6 +4,8 @@ import (
 	"encoding/json"
 	"strings"
 	"testing"
+
+	_ "github.com/odysseythink/hermind/logging"
 )
 
 func TestStatusResponse_JSONShape(t *testing.T) {

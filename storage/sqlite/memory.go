@@ -13,6 +13,7 @@ import (
 	"time"
 
 	"github.com/odysseythink/hermind/storage"
+	pembed "github.com/odysseythink/pantheon/extensions/embed"
 	"github.com/odysseythink/hermind/tool/embedding"
 )
 
@@ -194,7 +195,7 @@ func (s *Store) SearchMemories(ctx context.Context, query string, opts *storage.
 		if err != nil || len(v) == 0 {
 			continue
 		}
-		c.cosine = float64(embedding.CosineSimilarity(v, queryVec))
+		c.cosine = float64(pembed.Cosine(v, queryVec))
 	}
 
 	// Apply generation-decay weighting to the per-candidate reinforcement

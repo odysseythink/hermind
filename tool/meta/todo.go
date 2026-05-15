@@ -12,6 +12,7 @@ import (
 	"time"
 
 	"github.com/odysseythink/hermind/tool"
+	"github.com/odysseythink/pantheon/core"
 )
 
 // TodoItem is one entry in the in-session todo list.
@@ -82,17 +83,14 @@ func RegisterTodo(reg *tool.Registry, list *TodoList) {
 		Toolset:     "meta",
 		Description: "Add an item to the session todo list.",
 		Emoji:       "➕",
-		Schema: tool.ToolDefinition{
-			Type: "function",
-			Function: tool.FunctionDef{
-				Name: "todo_add",
-				Description: "Append a todo item.",
-				Parameters: json.RawMessage(`{
+		Schema: core.ToolDefinition{
+			Name: "todo_add",
+			Description: "Append a todo item.",
+			Parameters: core.MustSchemaFromJSON([]byte(`{
   "type":"object",
   "properties":{"text":{"type":"string"}},
   "required":["text"]
-}`),
-			},
+}`)),
 		},
 		Handler: func(ctx context.Context, raw json.RawMessage) (string, error) {
 			var args struct{ Text string `json:"text"` }
@@ -112,13 +110,10 @@ func RegisterTodo(reg *tool.Registry, list *TodoList) {
 		Toolset:     "meta",
 		Description: "List the current session todos.",
 		Emoji:       "📝",
-		Schema: tool.ToolDefinition{
-			Type: "function",
-			Function: tool.FunctionDef{
-				Name: "todo_list",
-				Description: "List todos.",
-				Parameters: json.RawMessage(`{"type":"object","properties":{}}`),
-			},
+		Schema: core.ToolDefinition{
+			Name: "todo_list",
+			Description: "List todos.",
+			Parameters: core.MustSchemaFromJSON([]byte(`{"type":"object","properties":{}}`)),
 		},
 		Handler: func(ctx context.Context, raw json.RawMessage) (string, error) {
 			return tool.ToolResult(map[string]any{"items": list.All()}), nil
@@ -130,17 +125,14 @@ func RegisterTodo(reg *tool.Registry, list *TodoList) {
 		Toolset:     "meta",
 		Description: "Mark a todo done.",
 		Emoji:       "✅",
-		Schema: tool.ToolDefinition{
-			Type: "function",
-			Function: tool.FunctionDef{
-				Name: "todo_done",
-				Description: "Mark the todo with the given id as done.",
-				Parameters: json.RawMessage(`{
+		Schema: core.ToolDefinition{
+			Name: "todo_done",
+			Description: "Mark the todo with the given id as done.",
+			Parameters: core.MustSchemaFromJSON([]byte(`{
   "type":"object",
   "properties":{"id":{"type":"number"}},
   "required":["id"]
-}`),
-			},
+}`)),
 		},
 		Handler: func(ctx context.Context, raw json.RawMessage) (string, error) {
 			var args struct{ ID int `json:"id"` }

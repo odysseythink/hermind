@@ -5,7 +5,6 @@ import (
 	"errors"
 	"fmt"
 	"io"
-	"log/slog"
 	"net"
 	"net/http"
 	"os"
@@ -18,6 +17,7 @@ import (
 	"github.com/odysseythink/hermind/agent/idle"
 	"github.com/odysseythink/hermind/api"
 	"github.com/odysseythink/hermind/config"
+	"github.com/odysseythink/mlog"
 )
 
 // webRunOptions parameterize runWeb. Shared by newWebCmd, newRunCmd,
@@ -34,7 +34,7 @@ type webRunOptions struct {
 // runWeb is the actual body of `hermind web`. Shared by newRunCmd and
 // the root command's default RunE.
 func runWeb(ctx context.Context, app *App, opts webRunOptions) error {
-	if err := ensureStorage(app); err != nil {
+	if err := EnsureStorage(app); err != nil {
 		return err
 	}
 
@@ -79,7 +79,7 @@ func runWeb(ctx context.Context, app *App, opts webRunOptions) error {
 			}
 			app.Config.Web.Addr = ln.Addr().String()
 			if serr := config.SaveToPath(app.ConfigPath, app.Config); serr != nil {
-				slog.Warn("web: failed to save config with fallback random port", "err", serr)
+				mlog.Warning("web: failed to save config with fallback random port", mlog.String("err", serr.Error()))
 			}
 		}
 	} else {
@@ -90,7 +90,7 @@ func runWeb(ctx context.Context, app *App, opts webRunOptions) error {
 		}
 		app.Config.Web.Addr = ln.Addr().String()
 		if serr := config.SaveToPath(app.ConfigPath, app.Config); serr != nil {
-			slog.Warn("web: failed to save config with new random port", "err", serr)
+			mlog.Warning("web: failed to save config with new random port", mlog.String("err", serr.Error()))
 		}
 	}
 	realAddr := "http://" + ln.Addr().String()

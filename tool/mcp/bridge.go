@@ -8,6 +8,7 @@ import (
 	"strings"
 
 	"github.com/odysseythink/hermind/tool"
+	"github.com/odysseythink/pantheon/core"
 )
 
 // Bridge registers an MCP client's tools into a hermes tool.Registry.
@@ -61,13 +62,10 @@ func (b *Bridge) registerOne(mcpTool Tool) string {
 		Toolset:     "mcp",
 		Description: mcpTool.Description,
 		Emoji:       "🔌",
-		Schema: tool.ToolDefinition{
-			Type: "function",
-			Function: tool.FunctionDef{
-				Name:        hermesName,
-				Description: mcpTool.Description,
-				Parameters:  normalizeSchema(mcpTool.InputSchema),
-			},
+		Schema: core.ToolDefinition{
+			Name:        hermesName,
+			Description: mcpTool.Description,
+			Parameters:  normalizeSchema(mcpTool.InputSchema),
 		},
 		Handler: b.makeHandler(mcpTool.Name),
 	}
@@ -78,11 +76,11 @@ func (b *Bridge) registerOne(mcpTool Tool) string {
 
 // normalizeSchema ensures the input schema is a valid JSON object.
 // Some MCP servers return an empty schema as null or empty string.
-func normalizeSchema(raw json.RawMessage) json.RawMessage {
+func normalizeSchema(raw json.RawMessage) *core.Schema {
 	if len(raw) == 0 || string(raw) == "null" {
-		return json.RawMessage(`{"type":"object"}`)
+		return core.MustSchemaFromJSON([]byte(`{"type":"object"}`))
 	}
-	return raw
+	return core.MustSchemaFromJSON(raw)
 }
 
 // makeHandler returns a tool.Handler that forwards the call to the MCP server.

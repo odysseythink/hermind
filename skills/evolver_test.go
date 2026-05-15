@@ -9,10 +9,10 @@ import (
 
 	"github.com/odysseythink/hermind/agent"
 	"github.com/odysseythink/hermind/message"
-	"github.com/odysseythink/hermind/provider"
 	"github.com/odysseythink/hermind/skills"
 	"github.com/odysseythink/hermind/storage"
 	sqlitestore "github.com/odysseythink/hermind/storage/sqlite"
+	"github.com/odysseythink/pantheon/core"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 )
@@ -29,7 +29,7 @@ func TestEvolverExtractUsesVerdict(t *testing.T) {
 			},
 		},
 	}
-	require.NoError(t, ev.Extract(context.Background(), []message.Message{}, verdict))
+	require.NoError(t, ev.Extract(context.Background(), []message.HermindMessage{}, verdict))
 
 	entries, err := os.ReadDir(dir)
 	require.NoError(t, err)
@@ -42,7 +42,7 @@ func TestEvolverExtractUsesVerdict(t *testing.T) {
 func TestEvolverExtractNilVerdictFallsBackToLegacy(t *testing.T) {
 	dir := t.TempDir()
 	ev := skills.NewEvolver(nil, dir) // nil llm → no-op legacy path
-	require.NoError(t, ev.Extract(context.Background(), []message.Message{}, nil))
+	require.NoError(t, ev.Extract(context.Background(), []message.HermindMessage{}, nil))
 	entries, err := os.ReadDir(dir)
 	require.NoError(t, err)
 	assert.Empty(t, entries, "no skill files when verdict nil and llm nil")
@@ -51,9 +51,9 @@ func TestEvolverExtractNilVerdictFallsBackToLegacy(t *testing.T) {
 func TestEvolverExtractNoLLM(t *testing.T) {
 	dir := t.TempDir()
 	evolver := skills.NewEvolver(nil, dir)
-	turns := []message.Message{
-		{Role: message.RoleUser, Content: message.TextContent("how do I reset git?")},
-		{Role: message.RoleAssistant, Content: message.TextContent("git reset --hard HEAD")},
+	turns := []message.HermindMessage{
+		{Role: core.MESSAGE_ROLE_USER, Content: core.NewTextContent("how do I reset git?")},
+		{Role: core.MESSAGE_ROLE_ASSISTANT, Content: core.NewTextContent("git reset --hard HEAD")},
 	}
 	if err := evolver.Extract(context.Background(), turns, nil); err != nil {
 		t.Fatalf("Extract without LLM: %v", err)
@@ -81,19 +81,14 @@ func TestEvolverExtractRefreshesTracker(t *testing.T) {
 	// Mock LLM that returns a non-empty skill markdown
 	mockLLM := &mockProvider{
 		name: "test",
-		resp: &provider.Response{
-			Message: message.Message{
-				Role:    message.RoleAssistant,
-				Content: message.TextContent("## Test Skill\n\n**When to use:** test\n\nDo this."),
-			},
-		},
+		resp: "## Test Skill\n\n**When to use:** test\n\nDo this.",
 	}
 
 	ev := skills.NewEvolver(mockLLM, skillDir).WithTracker(tracker)
 
 	// Pass a non-empty conversation to trigger the LLM path
-	turns := []message.Message{
-		{Role: message.RoleUser, Content: message.TextContent("hello")},
+	turns := []message.HermindMessage{
+		{Role: core.MESSAGE_ROLE_USER, Content: core.NewTextContent("hello")},
 	}
 	require.NoError(t, ev.Extract(context.Background(), turns, nil))
 
@@ -110,17 +105,12 @@ func TestEvolverExtractNoWriteNoBump(t *testing.T) {
 	// Mock LLM that returns empty string — no skill to write
 	mockLLM := &mockProvider{
 		name: "test",
-		resp: &provider.Response{
-			Message: message.Message{
-				Role:    message.RoleAssistant,
-				Content: message.TextContent(""),
-			},
-		},
+		resp: "",
 	}
 
 	ev := skills.NewEvolver(mockLLM, skillDir).WithTracker(tracker)
-	turns := []message.Message{
-		{Role: message.RoleUser, Content: message.TextContent("hello")},
+	turns := []message.HermindMessage{
+		{Role: core.MESSAGE_ROLE_USER, Content: core.NewTextContent("hello")},
 	}
 	require.NoError(t, ev.Extract(context.Background(), turns, nil))
 
@@ -129,28 +119,34 @@ func TestEvolverExtractNoWriteNoBump(t *testing.T) {
 	require.Equal(t, int64(0), gen.Seq, "Evolver.Extract must not trigger Tracker.Refresh on no-write")
 }
 
-// mockProvider is a test helper implementing provider.Provider
+// mockProvider is a test helper implementing core.LanguageModel
 type mockProvider struct {
 	name      string
 	err       error
-	resp      *provider.Response
+	resp      string
 	callCount int
 }
 
-func (m *mockProvider) Name() string { return m.name }
-func (m *mockProvider) Complete(ctx context.Context, req *provider.Request) (*provider.Response, error) {
+func (m *mockProvider) Provider() string { return m.name }
+func (m *mockProvider) Model() string    { return "test-model" }
+func (m *mockProvider) Generate(ctx context.Context, req *core.Request) (*core.Response, error) {
 	m.callCount++
 	if m.err != nil {
 		return nil, m.err
 	}
-	return m.resp, nil
+	return &core.Response{
+		Message: core.Message{
+			Role:    core.MESSAGE_ROLE_ASSISTANT,
+			Content: []core.ContentParter{core.TextPart{Text: m.resp}},
+		},
+	}, nil
 }
-func (m *mockProvider) Stream(ctx context.Context, req *provider.Request) (provider.Stream, error) {
+func (m *mockProvider) Stream(ctx context.Context, req *core.Request) (core.StreamResponse, error) {
 	return nil, errors.New("not implemented")
 }
-func (m *mockProvider) ModelInfo(string) *provider.ModelInfo                { return nil }
-func (m *mockProvider) EstimateTokens(string, string) (int, error) { return 0, nil }
-func (m *mockProvider) Available() bool                            { return true }
+func (m *mockProvider) GenerateObject(context.Context, *core.ObjectRequest) (*core.ObjectResponse, error) {
+	return nil, errors.New("not implemented")
+}
 
 // newSkillsTestStore creates a test-scoped storage store.
 func newSkillsTestStore(t *testing.T) storage.Storage {

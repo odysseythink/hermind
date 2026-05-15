@@ -11,8 +11,8 @@ import (
 	"strings"
 
 	"github.com/odysseythink/hermind/message"
-	"github.com/odysseythink/hermind/provider"
 	"github.com/odysseythink/hermind/tool"
+	"github.com/odysseythink/pantheon/core"
 )
 
 const visionSchema = `{
@@ -39,10 +39,10 @@ type Result struct {
 	Model       string `json:"model,omitempty"`
 }
 
-// newHandler builds the tool handler that calls prov.Complete with a
+// newHandler builds the tool handler that calls prov.Generate with a
 // multimodal request. defaultModel is the model name used when the
 // caller doesn't specify one.
-func newHandler(prov provider.Provider, defaultModel string) tool.Handler {
+func newHandler(prov core.LanguageModel, defaultModel string) tool.Handler {
 	return func(ctx context.Context, raw json.RawMessage) (string, error) {
 		var args Args
 		if err := json.Unmarshal(raw, &args); err != nil {
@@ -64,35 +64,31 @@ func newHandler(prov provider.Provider, defaultModel string) tool.Handler {
 			model = defaultModel
 		}
 
-		req := &provider.Request{
-			Model: model,
-			Messages: []message.Message{
-				{
-					Role: message.RoleUser,
-					Content: message.BlockContent([]message.ContentBlock{
-						{Type: "text", Text: prompt},
-						{Type: "image_url", ImageURL: &message.Image{
-							URL:    args.ImageURL,
-							Detail: detail,
-						}},
-					}),
+		msg := message.HermindMessage{
+			Role: core.MESSAGE_ROLE_USER,
+			Content: []core.ContentParter{
+				core.TextPart{Text: prompt},
+				core.ImagePart{
+					URL:    args.ImageURL,
+					Detail: detail,
 				},
 			},
 		}
+		req := &core.Request{
+			Messages: []core.Message{message.ToPantheon(msg)},
+		}
 
-		resp, err := prov.Complete(ctx, req)
+		resp, err := prov.Generate(ctx, req)
 		if err != nil {
 			return tool.ToolError(fmt.Sprintf("vision call: %v", err)), nil
 		}
 		if resp == nil {
 			return tool.ToolError("vision: empty response"), nil
 		}
-		text := resp.Message.Content.Text()
-		if text == "" {
-			for _, b := range resp.Message.Content.Blocks() {
-				if b.Type == "text" {
-					text += b.Text
-				}
+		text := ""
+		for _, part := range resp.Message.Content {
+			if p, ok := part.(core.TextPart); ok {
+				text += p.Text
 			}
 		}
 		return tool.ToolResult(Result{Description: text, Model: model}), nil
@@ -101,7 +97,7 @@ func newHandler(prov provider.Provider, defaultModel string) tool.Handler {
 
 // Register registers vision_analyze into reg with the given provider.
 // If prov is nil the tool is not registered.
-func Register(reg *tool.Registry, prov provider.Provider, defaultModel string) {
+func Register(reg *tool.Registry, prov core.LanguageModel, defaultModel string) {
 	if prov == nil {
 		return
 	}
@@ -111,13 +107,10 @@ func Register(reg *tool.Registry, prov provider.Provider, defaultModel string) {
 		Description: "Analyze an image URL using a vision-capable LLM.",
 		Emoji:       "👁",
 		Handler:     newHandler(prov, defaultModel),
-		Schema: tool.ToolDefinition{
-			Type: "function",
-			Function: tool.FunctionDef{
-				Name:        "vision_analyze",
-				Description: "Analyze an image. Supply a public image_url and an optional prompt.",
-				Parameters:  json.RawMessage(visionSchema),
-			},
+		Schema: core.ToolDefinition{
+			Name:        "vision_analyze",
+			Description: "Analyze an image. Supply a public image_url and an optional prompt.",
+			Parameters:  core.MustSchemaFromJSON([]byte(visionSchema)),
 		},
 	})
 }

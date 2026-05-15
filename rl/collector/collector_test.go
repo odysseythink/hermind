@@ -8,6 +8,7 @@ import (
 	"github.com/odysseythink/hermind/agent/batch"
 	"github.com/odysseythink/hermind/message"
 	"github.com/odysseythink/hermind/rl/trajectory"
+	"github.com/odysseythink/pantheon/core"
 )
 
 type recordingSink struct {
@@ -72,11 +73,11 @@ func TestCollector_OnTrajectory_UsesMessagesWhenPresent(t *testing.T) {
 	tr := &batch.Trajectory{
 		ID:    "item-2",
 		Model: "m",
-		Messages: []message.Message{
-			{Role: message.RoleUser, Content: message.TextContent("u")},
-			{Role: message.RoleAssistant, Content: message.TextContent("a")},
-			{Role: message.RoleTool, Content: message.TextContent("t"), ToolName: "search", ToolCallID: "c-1"},
-			{Role: message.RoleSystem, Content: message.TextContent("s")},
+		Messages: []message.HermindMessage{
+			{Role: core.MESSAGE_ROLE_USER, Content: core.NewTextContent("u")},
+			{Role: core.MESSAGE_ROLE_ASSISTANT, Content: core.NewTextContent("a")},
+			{Role: core.MESSAGE_ROLE_TOOL, Content: []core.ContentParter{core.ToolResultPart{ToolCallID: "c-1", Name: "search", Content: core.NewTextContent("t")}}, ToolCallID: "c-1"},
+			{Role: core.MESSAGE_ROLE_SYSTEM, Content: core.NewTextContent("s")},
 		},
 		Prompt:   "should-not-appear",
 		Response: "should-not-appear",

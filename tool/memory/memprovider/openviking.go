@@ -9,6 +9,7 @@ import (
 
 	"github.com/odysseythink/hermind/config"
 	"github.com/odysseythink/hermind/tool"
+	"github.com/odysseythink/pantheon/core"
 )
 
 // OpenViking is a Provider backed by an OpenViking server.
@@ -78,17 +79,14 @@ func (o *OpenViking) RegisterTools(reg *tool.Registry) {
 		Toolset:     "memory",
 		Description: "Append a message to the active OpenViking session.",
 		Emoji:       "📎",
-		Schema: tool.ToolDefinition{
-			Type: "function",
-			Function: tool.FunctionDef{
-				Name:        "openviking_append",
-				Description: "Record a note/message in the OpenViking session.",
-				Parameters: json.RawMessage(`{
+		Schema: core.ToolDefinition{
+			Name:        "openviking_append",
+			Description: "Record a note/message in the OpenViking session.",
+			Parameters: core.MustSchemaFromJSON([]byte(`{
   "type":"object",
   "properties":{"content":{"type":"string"}},
   "required":["content"]
-}`),
-			},
+}`)),
 		},
 		Handler: func(ctx context.Context, raw json.RawMessage) (string, error) {
 			var args struct{ Content string `json:"content"` }
@@ -110,20 +108,17 @@ func (o *OpenViking) RegisterTools(reg *tool.Registry) {
 		Toolset:     "memory",
 		Description: "Search OpenViking for relevant items.",
 		Emoji:       "🛶",
-		Schema: tool.ToolDefinition{
-			Type: "function",
-			Function: tool.FunctionDef{
-				Name:        "openviking_find",
-				Description: "Full-text search against OpenViking.",
-				Parameters: json.RawMessage(`{
+		Schema: core.ToolDefinition{
+			Name:        "openviking_find",
+			Description: "Full-text search against OpenViking.",
+			Parameters: core.MustSchemaFromJSON([]byte(`{
   "type":"object",
   "properties":{
     "query":{"type":"string"},
     "limit":{"type":"number"}
   },
   "required":["query"]
-}`),
-			},
+}`)),
 		},
 		Handler: func(ctx context.Context, raw json.RawMessage) (string, error) {
 			var args struct {

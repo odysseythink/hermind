@@ -3,10 +3,10 @@ package gateway
 import (
 	"context"
 	"fmt"
-	"log/slog"
 	"sync"
 
 	"github.com/odysseythink/hermind/config"
+	"github.com/odysseythink/mlog"
 )
 
 // Runner is implemented by the API server; Pump calls it to process
@@ -55,12 +55,12 @@ func NewPump(cfg config.GatewayConfig, runner Runner) (*Pump, error) {
 
 	for name, pcfg := range cfg.Platforms {
 		if !pcfg.Enabled {
-			slog.Info("gateway: platform disabled, skipping", "name", name, "type", pcfg.Type)
+			mlog.Info("gateway: platform disabled, skipping", mlog.String("name", name), mlog.String("type", pcfg.Type))
 			continue
 		}
 		build, ok := builders[pcfg.Type]
 		if !ok {
-			slog.Warn("gateway: unknown platform type", "name", name, "type", pcfg.Type)
+			mlog.Warning("gateway: unknown platform type", mlog.String("name", name), mlog.String("type", pcfg.Type))
 			continue
 		}
 		pl, err := build(name, pcfg.Options)
@@ -68,7 +68,7 @@ func NewPump(cfg config.GatewayConfig, runner Runner) (*Pump, error) {
 			return nil, fmt.Errorf("gateway: build %s (%s): %w", name, pcfg.Type, err)
 		}
 		p.platforms[name] = pl
-		slog.Info("gateway: registered platform", "name", name, "type", pcfg.Type)
+		mlog.Info("gateway: registered platform", mlog.String("name", name), mlog.String("type", pcfg.Type))
 	}
 
 	return p, nil
@@ -80,7 +80,7 @@ func (p *Pump) HasPlatforms() bool { return len(p.platforms) > 0 }
 // Start runs all platforms concurrently. Blocks until ctx is cancelled.
 func (p *Pump) Start(ctx context.Context) {
 	if !p.HasPlatforms() {
-		slog.Info("gateway: no enabled platforms")
+		mlog.Info("gateway: no enabled platforms")
 		return
 	}
 	var wg sync.WaitGroup
@@ -88,11 +88,11 @@ func (p *Pump) Start(ctx context.Context) {
 		wg.Add(1)
 		go func(name string, pl Platform) {
 			defer wg.Done()
-			slog.Info("gateway: platform starting", "name", name)
+			mlog.Info("gateway: platform starting", mlog.String("name", name))
 			if err := pl.Run(ctx, p.handle); err != nil && ctx.Err() == nil {
-				slog.Error("gateway: platform stopped with error", "name", name, "err", err)
+				mlog.Error("gateway: platform stopped with error", mlog.String("name", name), mlog.String("err", err.Error()))
 			} else {
-				slog.Info("gateway: platform stopped", "name", name)
+				mlog.Info("gateway: platform stopped", mlog.String("name", name))
 			}
 		}(name, pl)
 	}
@@ -103,28 +103,28 @@ func (p *Pump) handle(ctx context.Context, in IncomingMessage) (*OutgoingMessage
 	if in.MessageID != "" {
 		key := in.Platform + ":" + in.MessageID
 		if p.dedup.Seen(key) {
-			slog.InfoContext(ctx, "gateway: duplicate message skipped",
-				"platform", in.Platform, "msg_id", in.MessageID)
+			mlog.InfoContext(ctx, "gateway: duplicate message skipped",
+				mlog.String("platform", in.Platform), mlog.String("msg_id", in.MessageID))
 			return nil, nil
 		}
 	}
-	slog.InfoContext(ctx, "gateway: incoming message",
-		"platform", in.Platform,
-		"user_id", in.UserID,
-		"chat_id", in.ChatID,
-		"text_len", len(in.Text),
+	mlog.InfoContext(ctx, "gateway: incoming message",
+		mlog.String("platform", in.Platform),
+		mlog.String("user_id", in.UserID),
+		mlog.String("chat_id", in.ChatID),
+		mlog.Int("text_len", len(in.Text)),
 	)
 
 	reply, err := p.runner.RunTurn(ctx, in.Text)
 	if err != nil {
-		slog.ErrorContext(ctx, "gateway: RunTurn failed",
-			"platform", in.Platform, "err", err)
+		mlog.ErrorContext(ctx, "gateway: RunTurn failed",
+			mlog.String("platform", in.Platform), mlog.String("err", err.Error()))
 		return nil, err
 	}
 
-	slog.InfoContext(ctx, "gateway: reply ready",
-		"platform", in.Platform,
-		"reply_len", len(reply),
+	mlog.InfoContext(ctx, "gateway: reply ready",
+		mlog.String("platform", in.Platform),
+		mlog.Int("reply_len", len(reply)),
 	)
 	return &OutgoingMessage{
 		UserID: in.UserID,

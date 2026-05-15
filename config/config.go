@@ -2,6 +2,7 @@ package config
 
 import (
 	"github.com/odysseythink/hermind/agent/presence"
+	"github.com/odysseythink/pantheon/agent/compression"
 )
 
 // YAML tags mirror the existing Python hermes config.yaml format.
@@ -36,9 +37,9 @@ type Config struct {
 // Firecrawl (used by web_extract) continues to read FIRECRAWL_API_KEY
 // directly and is not represented here.
 type WebConfig struct {
-	Addr             string       `yaml:"addr,omitempty"`
-	Search           SearchConfig `yaml:"search,omitempty"`
-	DisableWebFetch  bool         `yaml:"disable_web_fetch,omitempty"`
+	Addr            string       `yaml:"addr,omitempty"`
+	Search          SearchConfig `yaml:"search,omitempty"`
+	DisableWebFetch bool         `yaml:"disable_web_fetch,omitempty"`
 }
 
 // BenchmarkConfig parameterizes `hermind bench` subcommands.
@@ -63,8 +64,8 @@ type ReplayConfig struct {
 // Provider selects the active backend; empty string enables auto-selection
 // by priority (tavily > brave > exa > searxng > bing > DuckDuckGo).
 type SearchConfig struct {
-	Provider          string                `yaml:"provider,omitempty"`
-	Providers         SearchProvidersConfig `yaml:"providers,omitempty"`
+	Provider  string                `yaml:"provider,omitempty"`
+	Providers SearchProvidersConfig `yaml:"providers,omitempty"`
 	// DefaultNumResults is the fallback when the LLM omits num_results. 0 = 5.
 	DefaultNumResults int `yaml:"default_num_results,omitempty"`
 	// MaxNumResults caps results per search. 0 = 20.
@@ -347,22 +348,6 @@ type ProviderConfig struct {
 	Model    string `yaml:"model"`
 }
 
-// CompressionConfig controls context compression behavior.
-// When the conversation history exceeds Threshold * model context length,
-// the Engine summarizes middle messages via the auxiliary provider.
-type CompressionConfig struct {
-	Enabled     bool    `yaml:"enabled"`      // default true
-	Threshold   float64 `yaml:"threshold"`    // default 0.5 (50% of context)
-	TargetRatio float64 `yaml:"target_ratio"` // default 0.2 (compress to 20%)
-	ProtectLast int     `yaml:"protect_last"` // default 20 messages
-	MaxPasses   int     `yaml:"max_passes"`   // default 3
-	// PerMessageMaxTokens is the per-message ceiling above which a single
-	// message in head/tail is replaced with an aux-LLM summary even when the
-	// surrounding messages are compact. Defends against single 200KB+ pastes
-	// landing in the protected tail. Default 8000 if 0; set negative to disable.
-	PerMessageMaxTokens int `yaml:"per_message_max_tokens,omitempty"`
-}
-
 // AuxiliaryConfig holds the auxiliary provider used for compression,
 // vision summarization, and other secondary tasks.
 // If unset, the main provider is used.
@@ -375,10 +360,10 @@ type AuxiliaryConfig struct {
 
 // AgentConfig holds engine-level settings.
 type AgentConfig struct {
-	MaxTurns            int               `yaml:"max_turns"`
-	GatewayTimeout      int               `yaml:"gateway_timeout,omitempty"`
-	Compression         CompressionConfig `yaml:"compression,omitempty"`
-	DefaultSystemPrompt string            `yaml:"default_system_prompt,omitempty"`
+	MaxTurns            int                           `yaml:"max_turns"`
+	GatewayTimeout      int                           `yaml:"gateway_timeout,omitempty"`
+	Compression         compression.CompressionConfig `yaml:"compression,omitempty"`
+	DefaultSystemPrompt string                        `yaml:"default_system_prompt,omitempty"`
 	// MaxTokens caps the output tokens per LLM turn. 0 uses the default (4096).
 	MaxTokens int `yaml:"max_tokens,omitempty"`
 	// DynamicToolSelection filters the tool list sent to the LLM based on the
@@ -468,7 +453,7 @@ func Default() *Config {
 		Agent: AgentConfig{
 			MaxTurns:       15,
 			GatewayTimeout: 1800,
-			Compression: CompressionConfig{
+			Compression: compression.CompressionConfig{
 				Enabled:             true,
 				Threshold:           0.5,
 				TargetRatio:         0.2,

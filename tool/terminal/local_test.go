@@ -87,7 +87,7 @@ func TestShellExecuteToolRegisters(t *testing.T) {
 
 	defs := reg.Definitions(nil)
 	require.Len(t, defs, 1)
-	assert.Equal(t, "shell_execute", defs[0].Function.Name)
+	assert.Equal(t, "shell_execute", defs[0].Name)
 }
 
 func TestShellExecuteToolDispatch(t *testing.T) {

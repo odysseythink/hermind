@@ -11,10 +11,10 @@ import (
 
 	"github.com/stretchr/testify/require"
 
-	"github.com/odysseythink/hermind/benchmark"
 	"github.com/odysseythink/hermind/replay"
 	"github.com/odysseythink/hermind/storage"
 	sqlitestore "github.com/odysseythink/hermind/storage/sqlite"
+	"github.com/odysseythink/pantheon/benchmark"
 )
 
 func TestReplayLifecycle_Smoke(t *testing.T) {

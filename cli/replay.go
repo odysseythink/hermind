@@ -3,15 +3,16 @@ package cli
 import (
 	"context"
 	"fmt"
-	"log"
+
 	"os"
 	"path/filepath"
 
 	"github.com/spf13/cobra"
 
-	"github.com/odysseythink/hermind/benchmark"
 	"github.com/odysseythink/hermind/replay"
 	"github.com/odysseythink/hermind/storage/sqlite"
+	"github.com/odysseythink/mlog"
+	"github.com/odysseythink/pantheon/benchmark"
 )
 
 func newBenchReplayCmd(app *App) *cobra.Command {
@@ -68,7 +69,7 @@ func newBenchReplayGenerateCmd(app *App) *cobra.Command {
 			if err := replay.Generate(context.Background(), store, cfg); err != nil {
 				return err
 			}
-			log.Printf("replay: dataset written to %s", outPath)
+			mlog.Infof("replay: dataset written to %s", outPath)
 			return nil
 		},
 	}
@@ -95,7 +96,7 @@ func newBenchReplayRunCmd(app *App) *cobra.Command {
 			if outDir == "" {
 				outDir = ".hermind/replay/runs"
 			}
-			log.Printf("hermind bench replay run: stub — preset runners require app-level wiring. See replay.LoadDataset and benchmark.Run usage in tests.")
+			mlog.Infof("hermind bench replay run: stub — preset runners require app-level wiring. See replay.LoadDataset and benchmark.Run usage in tests.")
 			return benchmark.Run(context.Background(), benchmark.RunConfig{
 				DatasetPath: dataset,
 				OutDir:      outDir,
@@ -124,7 +125,7 @@ func newBenchReplayJudgeCmd(app *App) *cobra.Command {
 			if mode == "" {
 				mode = "none"
 			}
-			log.Printf("hermind bench replay judge: stub — aux provider requires app-level wiring.")
+			mlog.Infof("hermind bench replay judge: stub — aux provider requires app-level wiring.")
 			return replay.JudgeAll(context.Background(), runDir, replay.Mode(mode), nil)
 		},
 	}

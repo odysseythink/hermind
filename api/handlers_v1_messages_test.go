@@ -13,32 +13,32 @@ import (
 	"github.com/stretchr/testify/require"
 
 	"github.com/odysseythink/hermind/config"
-	"github.com/odysseythink/hermind/message"
-	"github.com/odysseythink/hermind/provider"
+	"github.com/odysseythink/pantheon/core"
 )
 
-// stubProvider returns a canned response from Complete.
+// stubProvider returns a canned response from Generate.
 type stubProvider struct {
-	resp *provider.Response
+	resp *core.Response
 	err  error
 }
 
-func (s *stubProvider) Name() string { return "stub" }
-func (s *stubProvider) Complete(ctx context.Context, req *provider.Request) (*provider.Response, error) {
+func (s *stubProvider) Provider() string { return "stub" }
+func (s *stubProvider) Model() string    { return "stub-model" }
+func (s *stubProvider) Generate(ctx context.Context, req *core.Request) (*core.Response, error) {
 	if s.err != nil {
 		return nil, s.err
 	}
 	return s.resp, nil
 }
-func (s *stubProvider) Stream(ctx context.Context, req *provider.Request) (provider.Stream, error) {
+func (s *stubProvider) Stream(ctx context.Context, req *core.Request) (core.StreamResponse, error) {
 	return nil, errors.New("not implemented")
 }
-func (s *stubProvider) ModelInfo(model string) *provider.ModelInfo  { return nil }
-func (s *stubProvider) EstimateTokens(model, text string) (int, error) { return 0, nil }
-func (s *stubProvider) Available() bool                                 { return true }
+func (s *stubProvider) GenerateObject(ctx context.Context, req *core.ObjectRequest) (*core.ObjectResponse, error) {
+	return nil, errors.New("not implemented")
+}
 
 // newProxyTestServer assembles a minimal Server with proxy enabled.
-func newProxyTestServer(t *testing.T, p provider.Provider) *Server {
+func newProxyTestServer(t *testing.T, p core.LanguageModel) *Server {
 	t.Helper()
 	cfg := &config.Config{}
 	cfg.Proxy.Enabled = true
@@ -51,13 +51,13 @@ func newProxyTestServer(t *testing.T, p provider.Provider) *Server {
 }
 
 func TestV1Messages_NonStreamingHappyPath(t *testing.T) {
-	stub := &stubProvider{resp: &provider.Response{
-		Message: message.Message{
-			Role:    message.RoleAssistant,
-			Content: message.TextContent("hello"),
+	stub := &stubProvider{resp: &core.Response{
+		Message: core.Message{
+			Role:    core.MESSAGE_ROLE_ASSISTANT,
+			Content: []core.ContentParter{core.TextPart{Text: "hello"}},
 		},
 		FinishReason: "stop",
-		Usage:        message.Usage{InputTokens: 10, OutputTokens: 1},
+		Usage:        core.Usage{PromptTokens: 10, CompletionTokens: 1},
 		Model:        "actual-model",
 	}}
 	srv := newProxyTestServer(t, stub)
@@ -131,38 +131,27 @@ type streamingStubProvider struct {
 	stub *stubProvider
 }
 
-func (p *streamingStubProvider) Name() string { return "streaming-stub" }
-func (p *streamingStubProvider) Complete(ctx context.Context, req *provider.Request) (*provider.Response, error) {
-	return p.stub.Complete(ctx, req)
+func (p *streamingStubProvider) Provider() string { return "streaming-stub" }
+func (p *streamingStubProvider) Model() string    { return "streaming-stub-model" }
+func (p *streamingStubProvider) Generate(ctx context.Context, req *core.Request) (*core.Response, error) {
+	return p.stub.Generate(ctx, req)
 }
-func (p *streamingStubProvider) Stream(ctx context.Context, req *provider.Request) (provider.Stream, error) {
-	return &fakeProviderStream{events: []provider.StreamEvent{
-		{Type: provider.EventDelta, Delta: &provider.StreamDelta{Content: "stream-hi"}},
-		{Type: provider.EventDone, Response: &provider.Response{
-			FinishReason: "stop",
-			Usage:        message.Usage{InputTokens: 5, OutputTokens: 1},
-			Model:        "actual-model",
-		}},
-	}}, nil
+func (p *streamingStubProvider) Stream(ctx context.Context, req *core.Request) (core.StreamResponse, error) {
+	return func(yield func(*core.StreamPart, error) bool) {
+		if !yield(&core.StreamPart{Type: core.StreamPartTypeTextDelta, TextDelta: "stream-hi"}, nil) {
+			return
+		}
+		if !yield(&core.StreamPart{Type: core.StreamPartTypeUsage, Usage: &core.Usage{PromptTokens: 5, CompletionTokens: 1}}, nil) {
+			return
+		}
+		if !yield(&core.StreamPart{Type: core.StreamPartTypeFinish, FinishReason: "stop"}, nil) {
+			return
+		}
+	}, nil
 }
-func (p *streamingStubProvider) ModelInfo(model string) *provider.ModelInfo  { return nil }
-func (p *streamingStubProvider) EstimateTokens(model, text string) (int, error) { return 0, nil }
-func (p *streamingStubProvider) Available() bool                                { return true }
-
-type fakeProviderStream struct {
-	events []provider.StreamEvent
-	idx    int
+func (p *streamingStubProvider) GenerateObject(ctx context.Context, req *core.ObjectRequest) (*core.ObjectResponse, error) {
+	return nil, errors.New("not implemented")
 }
-
-func (f *fakeProviderStream) Recv() (*provider.StreamEvent, error) {
-	if f.idx >= len(f.events) {
-		return nil, errors.New("exhausted")
-	}
-	ev := f.events[f.idx]
-	f.idx++
-	return &ev, nil
-}
-func (f *fakeProviderStream) Close() error { return nil }
 
 func TestV1Messages_StreamingHappyPath(t *testing.T) {
 	prov := &streamingStubProvider{stub: &stubProvider{}}
@@ -191,8 +180,11 @@ func TestV1Messages_MountedBeforeUIWildcard(t *testing.T) {
 	// /v1/messages route must take precedence over /ui/*. We verify by
 	// hitting /v1/messages and asserting we don't get the static handler's
 	// response (which would typically be a 404 for an unknown UI path).
-	stub := &stubProvider{resp: &provider.Response{
-		Message: message.Message{Role: message.RoleAssistant, Content: message.TextContent("ok")},
+	stub := &stubProvider{resp: &core.Response{
+		Message: core.Message{
+			Role:    core.MESSAGE_ROLE_ASSISTANT,
+			Content: []core.ContentParter{core.TextPart{Text: "ok"}},
+		},
 		FinishReason: "stop",
 	}}
 	srv := newProxyTestServer(t, stub)
@@ -211,19 +203,20 @@ func TestV1Messages_MountedBeforeUIWildcard(t *testing.T) {
 // errProviderRateLimit is a sentinel test-only error.
 var errProviderRateLimit = errors.New("provider: rate limited (429)")
 
-// stubProviderErr returns a fixed error from Complete.
+// stubProviderErr returns a fixed error from Generate.
 type stubProviderErr struct{ err error }
 
-func (p *stubProviderErr) Name() string { return "stub-err" }
-func (p *stubProviderErr) Complete(ctx context.Context, req *provider.Request) (*provider.Response, error) {
+func (p *stubProviderErr) Provider() string { return "stub-err" }
+func (p *stubProviderErr) Model() string    { return "stub-err-model" }
+func (p *stubProviderErr) Generate(ctx context.Context, req *core.Request) (*core.Response, error) {
 	return nil, p.err
 }
-func (p *stubProviderErr) Stream(ctx context.Context, req *provider.Request) (provider.Stream, error) {
+func (p *stubProviderErr) Stream(ctx context.Context, req *core.Request) (core.StreamResponse, error) {
 	return nil, p.err
 }
-func (p *stubProviderErr) ModelInfo(model string) *provider.ModelInfo { return nil }
-func (p *stubProviderErr) EstimateTokens(model, text string) (int, error) { return 0, nil }
-func (p *stubProviderErr) Available() bool                                { return true }
+func (p *stubProviderErr) GenerateObject(ctx context.Context, req *core.ObjectRequest) (*core.ObjectResponse, error) {
+	return nil, p.err
+}
 
 func TestV1Messages_ProviderRateLimitMapsTo429(t *testing.T) {
 	prov := &stubProviderErr{err: errProviderRateLimit}
@@ -253,32 +246,25 @@ func TestV1Messages_ProviderGenericErrorMapsTo502(t *testing.T) {
 	require.Equal(t, http.StatusBadGateway, rr.Code)
 }
 
-// blockingStream blocks Recv() until ctx is cancelled, then returns the
-// context error. Verifies that StreamOutbound + handleV1Messages clean
+// blockingProvider yields a context error when the context is cancelled.
+// Verifies that StreamOutbound + handleV1Messages clean
 // up properly when the client disconnects.
-type blockingStream struct {
-	ctx    context.Context
-	closed bool
-}
-
-func (b *blockingStream) Recv() (*provider.StreamEvent, error) {
-	<-b.ctx.Done()
-	return nil, b.ctx.Err()
-}
-func (b *blockingStream) Close() error { b.closed = true; return nil }
-
 type blockingProvider struct{}
 
-func (b *blockingProvider) Name() string { return "blocking" }
-func (b *blockingProvider) Complete(ctx context.Context, req *provider.Request) (*provider.Response, error) {
+func (b *blockingProvider) Provider() string { return "blocking" }
+func (b *blockingProvider) Model() string    { return "blocking-model" }
+func (b *blockingProvider) Generate(ctx context.Context, req *core.Request) (*core.Response, error) {
 	return nil, errors.New("not used")
 }
-func (b *blockingProvider) Stream(ctx context.Context, req *provider.Request) (provider.Stream, error) {
-	return &blockingStream{ctx: ctx}, nil
+func (b *blockingProvider) Stream(ctx context.Context, req *core.Request) (core.StreamResponse, error) {
+	return func(yield func(*core.StreamPart, error) bool) {
+		<-ctx.Done()
+		yield(nil, ctx.Err())
+	}, nil
 }
-func (b *blockingProvider) ModelInfo(model string) *provider.ModelInfo { return nil }
-func (b *blockingProvider) EstimateTokens(model, text string) (int, error) { return 0, nil }
-func (b *blockingProvider) Available() bool                                { return true }
+func (b *blockingProvider) GenerateObject(ctx context.Context, req *core.ObjectRequest) (*core.ObjectResponse, error) {
+	return nil, errors.New("not implemented")
+}
 
 func TestV1Messages_StreamCancellationCleanup(t *testing.T) {
 	srv := newProxyTestServer(t, &blockingProvider{})

@@ -7,11 +7,8 @@ BUILDDATE := $(shell date -u +%Y-%m-%dT%H:%M:%SZ)
 LDFLAGS   := -X main.Version=$(VERSION) -X main.Commit=$(COMMIT) -X main.BuildDate=$(BUILDDATE)
 
 build:
-	go build -ldflags "$(LDFLAGS)" -o bin/hermind ./cmd/hermind
+	go build -buildvcs=false -ldflags "$(LDFLAGS)" -o bin/hermind ./cmd/hermind
 
-# Full-stack build: frontend (pnpm build → api/webroot/) then backend.
-# Use this after editing anything under web/. If you only touched Go code,
-# `make build` alone is enough because api/webroot/ is a committed artifact.
 all: web build
 
 test:
@@ -59,9 +56,6 @@ web-test: web-install
 web-lint: web-install
 	cd web && pnpm lint
 
-# web-check is the composite gate CI runs: install deps, type-check,
-# unit tests, lint, build + sync, assert api/webroot/ is up to date.
-# Run locally before pushing to avoid the CI round-trip.
 web-check: web-install
 	cd web && pnpm type-check
 	cd web && pnpm test
@@ -72,3 +66,4 @@ web-check: web-install
 	  git diff --stat api/webroot/; \
 	  exit 1; \
 	fi
+

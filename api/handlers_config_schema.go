@@ -2,12 +2,12 @@ package api
 
 import (
 	"context"
-	"log/slog"
 	"net/http"
 	"sort"
 
 	"github.com/odysseythink/hermind/config/descriptor"
 	"github.com/odysseythink/hermind/skills"
+	"github.com/odysseythink/mlog"
 )
 
 // handleConfigSchema responds to GET /api/config/schema with every
@@ -85,7 +85,7 @@ func discoveredSkillNames(ctx context.Context) []string {
 	l := skills.NewLoader(skills.DefaultHome())
 	all, errs := l.Load()
 	for _, e := range errs {
-		slog.WarnContext(ctx, "skills: failed to parse skill file", "path", e.Path, "err", e.Err)
+		mlog.WarningContext(ctx, "skills: failed to parse skill file", mlog.String("path", e.Path), mlog.String("err", e.Err.Error()))
 	}
 	if len(all) == 0 {
 		return nil

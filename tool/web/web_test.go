@@ -10,6 +10,7 @@ import (
 	"testing"
 
 	"github.com/odysseythink/hermind/tool"
+	"github.com/odysseythink/pantheon/core"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 )
@@ -26,7 +27,7 @@ func TestWebFetchHappyPath(t *testing.T) {
 	reg.Register(&tool.Entry{
 		Name:    "web_fetch",
 		Handler: webFetchHandler,
-		Schema:  tool.ToolDefinition{Type: "function", Function: tool.FunctionDef{Name: "web_fetch", Parameters: json.RawMessage(webFetchSchema)}},
+		Schema:  core.ToolDefinition{Name: "web_fetch", Parameters: core.MustSchemaFromJSON([]byte(webFetchSchema))},
 	})
 
 	args := json.RawMessage(`{"url":"` + srv.URL + `"}`)
@@ -44,7 +45,7 @@ func TestWebFetchRejectsMissingURL(t *testing.T) {
 	reg.Register(&tool.Entry{
 		Name:    "web_fetch",
 		Handler: webFetchHandler,
-		Schema:  tool.ToolDefinition{Type: "function", Function: tool.FunctionDef{Name: "web_fetch"}},
+		Schema:  core.ToolDefinition{Name: "web_fetch"},
 	})
 	out, err := reg.Dispatch(context.Background(), "web_fetch", json.RawMessage(`{}`))
 	require.NoError(t, err)
@@ -63,7 +64,7 @@ func TestWebFetchHandlesNon200(t *testing.T) {
 	reg.Register(&tool.Entry{
 		Name:    "web_fetch",
 		Handler: webFetchHandler,
-		Schema:  tool.ToolDefinition{Type: "function", Function: tool.FunctionDef{Name: "web_fetch"}},
+		Schema:  core.ToolDefinition{Name: "web_fetch"},
 	})
 	args := json.RawMessage(`{"url":"` + srv.URL + `"}`)
 	out, err := reg.Dispatch(context.Background(), "web_fetch", args)
@@ -91,7 +92,7 @@ func TestWebFetchTruncatesLargeResponses(t *testing.T) {
 	reg.Register(&tool.Entry{
 		Name:    "web_fetch",
 		Handler: webFetchHandler,
-		Schema:  tool.ToolDefinition{Type: "function", Function: tool.FunctionDef{Name: "web_fetch"}},
+		Schema:  core.ToolDefinition{Name: "web_fetch"},
 	})
 	args := json.RawMessage(`{"url":"` + srv.URL + `"}`)
 	out, err := reg.Dispatch(context.Background(), "web_fetch", args)

@@ -66,7 +66,7 @@ func checkConfig(ctx context.Context, app *App) error {
 }
 
 func checkPrimaryProvider(ctx context.Context, app *App) error {
-	_, _, err := buildPrimaryProvider(app.Config)
+	_, _, err := buildPrimaryProvider(ctx, app.Config)
 	return err
 }
 

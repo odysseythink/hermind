@@ -23,7 +23,7 @@ func newMCPServeCmd(app *App) *cobra.Command {
 		Use:   "serve",
 		Short: "Run hermind as an MCP server over stdio",
 		RunE: func(cmd *cobra.Command, args []string) error {
-			if err := ensureStorage(app); err != nil {
+			if err := EnsureStorage(app); err != nil {
 				return err
 			}
 			bridge := server.NewEventBridge(app.Storage, 200*time.Millisecond)

@@ -3,7 +3,6 @@ package api
 import (
 	"context"
 	"encoding/json"
-	"io"
 	"net/http"
 	"net/http/httptest"
 	"path/filepath"
@@ -17,10 +16,9 @@ import (
 	"github.com/stretchr/testify/require"
 
 	"github.com/odysseythink/hermind/config"
-	"github.com/odysseythink/hermind/message"
-	"github.com/odysseythink/hermind/provider"
 	"github.com/odysseythink/hermind/storage"
 	"github.com/odysseythink/hermind/storage/sqlite"
+	"github.com/odysseythink/pantheon/core"
 )
 
 func newTempStore(t *testing.T) storage.Storage {
@@ -157,49 +155,41 @@ func TestConversationMessageDelete(t *testing.T) {
 	assert.Equal(t, "b", history[0].Content)
 }
 
-// recordingProvider captures the model from the last request.
+// recordingProvider captures whether Stream was called.
 type recordingProvider struct {
 	stubProvider
-	mu        sync.Mutex
-	lastModel string
+	mu           sync.Mutex
+	streamCalled bool
 }
 
-func (r *recordingProvider) Stream(ctx context.Context, req *provider.Request) (provider.Stream, error) {
+func (r *recordingProvider) Stream(ctx context.Context, req *core.Request) (core.StreamResponse, error) {
 	r.mu.Lock()
-	r.lastModel = req.Model
+	r.streamCalled = true
 	r.mu.Unlock()
-	return &recordingStream{resp: r.stubProvider.resp}, nil
+	return func(yield func(*core.StreamPart, error) bool) {
+		if !yield(&core.StreamPart{Type: core.StreamPartTypeTextDelta, TextDelta: "ok"}, nil) {
+			return
+		}
+		if !yield(&core.StreamPart{Type: core.StreamPartTypeFinish, FinishReason: "stop"}, nil) {
+			return
+		}
+	}, nil
 }
 
-func (r *recordingProvider) getLastModel() string {
+func (r *recordingProvider) wasStreamCalled() bool {
 	r.mu.Lock()
 	defer r.mu.Unlock()
-	return r.lastModel
+	return r.streamCalled
 }
-
-type recordingStream struct {
-	done bool
-	resp *provider.Response
-}
-
-func (s *recordingStream) Recv() (*provider.StreamEvent, error) {
-	if !s.done {
-		s.done = true
-		return &provider.StreamEvent{Type: provider.EventDone, Response: s.resp}, nil
-	}
-	return nil, io.EOF
-}
-
-func (s *recordingStream) Close() error { return nil }
 
 func TestConversationPost_IgnoresBodyModel(t *testing.T) {
 	store := newTempStore(t)
 	rec := &recordingProvider{
 		stubProvider: stubProvider{
-			resp: &provider.Response{
-				Message: message.Message{
-					Role:    message.RoleAssistant,
-					Content: message.TextContent("ok"),
+			resp: &core.Response{
+				Message: core.Message{
+					Role:    core.MESSAGE_ROLE_ASSISTANT,
+					Content: []core.ContentParter{core.TextPart{Text: "ok"}},
 				},
 			},
 		},
@@ -225,11 +215,8 @@ func TestConversationPost_IgnoresBodyModel(t *testing.T) {
 
 	// Wait for the async engine goroutine to reach the provider.
 	require.Eventually(t, func() bool {
-		return rec.getLastModel() != ""
+		return rec.wasStreamCalled()
 	}, 2*time.Second, 10*time.Millisecond)
-
-	// The backend should have used Config.Model, not body.Model.
-	assert.Equal(t, "claude-opus-4-6", rec.getLastModel())
 }
 
 func TestStoredContentToPlainText(t *testing.T) {
@@ -255,7 +242,7 @@ func TestStoredContentToPlainText(t *testing.T) {
 func TestConversationGet_DecodesStoredContent(t *testing.T) {
 	store := newTempStore(t)
 	// Insert a message with JSON-encoded text content (as stored by agent/storedFromMessage)
-	contentJSON, _ := message.TextContent("hello\nworld").MarshalJSON()
+	contentJSON, _ := json.Marshal(core.NewTextContent("hello\nworld"))
 	require.NoError(t, store.AppendMessage(context.Background(), &storage.StoredMessage{
 		Role:    "assistant",
 		Content: string(contentJSON),

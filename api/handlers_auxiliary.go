@@ -9,9 +9,8 @@ import (
 	"time"
 
 	"github.com/odysseythink/hermind/config"
-	"github.com/odysseythink/hermind/message"
-	"github.com/odysseythink/hermind/provider"
-	"github.com/odysseythink/hermind/provider/factory"
+	"github.com/odysseythink/hermind/pantheonadapter"
+	"github.com/odysseythink/pantheon/core"
 )
 
 // resolveAuxiliaryConfig returns the ProviderConfig used to instantiate the
@@ -57,13 +56,12 @@ func resolveAuxiliaryConfig(c *config.Config) (config.ProviderConfig, error) {
 
 // handleAuxiliaryModels responds to POST /api/auxiliary/models.
 // Resolves the effective auxiliary provider config (with main-provider fallback),
-// builds the provider via factory.New, and calls ListModels with a 10s timeout.
+// builds the provider via pantheonadapter.BuildProvider, and calls Models with a 10s timeout.
 //
 // Status codes:
 //
 //	200 - {"models": ["id", ...]}
-//	400 - resolution failed (no aux + no usable main) or factory rejected config
-//	501 - provider type exists but its constructor doesn't implement ModelLister
+//	400 - resolution failed or BuildProvider rejected config
 //	502 - upstream provider errored
 func (s *Server) handleAuxiliaryModels(w http.ResponseWriter, r *http.Request) {
 	cfg, err := resolveAuxiliaryConfig(s.opts.Config)
@@ -71,28 +69,25 @@ func (s *Server) handleAuxiliaryModels(w http.ResponseWriter, r *http.Request) {
 		http.Error(w, err.Error(), http.StatusBadRequest)
 		return
 	}
-	p, err := factory.New(cfg)
+	p, err := pantheonadapter.BuildProvider(cfg)
 	if err != nil {
 		http.Error(w, err.Error(), http.StatusBadRequest)
 		return
 	}
-	lister, ok := p.(provider.ModelLister)
-	if !ok {
-		http.Error(w,
-			fmt.Sprintf("provider %q does not support model listing", cfg.Provider),
-			http.StatusNotImplemented)
-		return
-	}
 	ctx, cancel := context.WithTimeout(r.Context(), 10*time.Second)
 	defer cancel()
-	models, err := lister.ListModels(ctx)
+	models, err := p.Models(ctx)
 	if err != nil {
 		http.Error(w, err.Error(), http.StatusBadGateway)
 		return
 	}
+	ids := make([]string, len(models))
+	for i, m := range models {
+		ids[i] = m.ID
+	}
 	writeJSON(w, struct {
 		Models []string `json:"models"`
-	}{Models: models})
+	}{Models: ids})
 }
 
 // handleAuxiliaryTest responds to POST /api/auxiliary/test. Sends a tiny
@@ -103,15 +98,15 @@ func (s *Server) handleAuxiliaryModels(w http.ResponseWriter, r *http.Request) {
 // Status codes:
 //
 //	200 - {"ok": true, "latency_ms": N}
-//	400 - resolution failed or factory rejected config
-//	502 - upstream provider errored on Complete
+//	400 - resolution failed or BuildModel rejected config
+//	502 - upstream provider errored on Generate
 func (s *Server) handleAuxiliaryTest(w http.ResponseWriter, r *http.Request) {
 	cfg, err := resolveAuxiliaryConfig(s.opts.Config)
 	if err != nil {
 		http.Error(w, err.Error(), http.StatusBadRequest)
 		return
 	}
-	p, err := factory.New(cfg)
+	p, err := pantheonadapter.BuildModel(r.Context(), cfg)
 	if err != nil {
 		http.Error(w, err.Error(), http.StatusBadRequest)
 		return
@@ -122,18 +117,21 @@ func (s *Server) handleAuxiliaryTest(w http.ResponseWriter, r *http.Request) {
 // runProviderPing performs the 1-token completion ping and writes the JSON
 // response. Shared between the auxiliary and per-provider test endpoints so
 // both share latency reporting and timeout behavior.
-func runProviderPing(w http.ResponseWriter, r *http.Request, p provider.Provider, model string) {
+func runProviderPing(w http.ResponseWriter, r *http.Request, p core.LanguageModel, model string) {
 	ctx, cancel := context.WithTimeout(r.Context(), 30*time.Second)
 	defer cancel()
-	req := &provider.Request{
-		Model: model,
-		Messages: []message.Message{
-			{Role: message.RoleUser, Content: message.TextContent("ping")},
+	maxTokens := 1
+	req := &core.Request{
+		Messages: []core.Message{
+			{
+				Role:    core.MESSAGE_ROLE_USER,
+				Content: []core.ContentParter{core.TextPart{Text: "ping"}},
+			},
 		},
-		MaxTokens: 1,
+		MaxTokens: &maxTokens,
 	}
 	start := time.Now()
-	if _, err := p.Complete(ctx, req); err != nil {
+	if _, err := p.Generate(ctx, req); err != nil {
 		http.Error(w, err.Error(), http.StatusBadGateway)
 		return
 	}

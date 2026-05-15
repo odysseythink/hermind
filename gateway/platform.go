@@ -5,7 +5,8 @@ package gateway
 
 import (
 	"context"
-	"log/slog"
+
+	"github.com/odysseythink/mlog"
 )
 
 // IncomingMessage is the platform-agnostic shape every adapter emits.
@@ -45,13 +46,13 @@ type Platform interface {
 func DispatchAndReply(ctx context.Context, p Platform, handler MessageHandler, in IncomingMessage) {
 	out, err := handler(ctx, in)
 	if err != nil {
-		slog.ErrorContext(ctx, "gateway: handler error", "platform", p.Name(), "err", err)
+		mlog.ErrorContext(ctx, "gateway: handler error", mlog.String("platform", p.Name()), mlog.String("err", err.Error()))
 		return
 	}
 	if out == nil {
 		return
 	}
 	if err := p.SendReply(ctx, *out); err != nil {
-		slog.ErrorContext(ctx, "gateway: send reply error", "platform", p.Name(), "err", err)
+		mlog.ErrorContext(ctx, "gateway: send reply error", mlog.String("platform", p.Name()), mlog.String("err", err.Error()))
 	}
 }

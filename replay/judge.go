@@ -8,9 +8,8 @@ import (
 	"path/filepath"
 	"strings"
 
-	"github.com/odysseythink/hermind/benchmark"
-	"github.com/odysseythink/hermind/message"
-	"github.com/odysseythink/hermind/provider"
+	"github.com/odysseythink/pantheon/benchmark"
+	"github.com/odysseythink/pantheon/core"
 )
 
 // JudgeAll runs the configured judge mode over the records in runDir.
@@ -22,7 +21,7 @@ import (
 //   - pairwise.jsonl when mode == "pairwise" or "rubric+pairwise"
 //   - rubric.jsonl   when mode == "rubric+pairwise"
 //   - none mode is a no-op (the report stage handles side-by-side rendering)
-func JudgeAll(ctx context.Context, runDir string, mode Mode, aux provider.Provider) error {
+func JudgeAll(ctx context.Context, runDir string, mode Mode, aux core.LanguageModel) error {
 	switch mode {
 	case ModeNone:
 		return nil
@@ -38,7 +37,7 @@ func JudgeAll(ctx context.Context, runDir string, mode Mode, aux provider.Provid
 	}
 }
 
-func judgePairwise(ctx context.Context, runDir string, aux provider.Provider) error {
+func judgePairwise(ctx context.Context, runDir string, aux core.LanguageModel) error {
 	items, err := LoadDataset(filepath.Join(runDir, "dataset.jsonl"))
 	if err != nil {
 		return err
@@ -75,7 +74,7 @@ func judgePairwise(ctx context.Context, runDir string, aux provider.Provider) er
 	return nil
 }
 
-func pairwiseOnce(ctx context.Context, aux provider.Provider, ri ReplayItem, rec benchmark.RunRecord, presetName string) ReplayPairwiseVerdict {
+func pairwiseOnce(ctx context.Context, aux core.LanguageModel, ri ReplayItem, rec benchmark.RunRecord, presetName string) ReplayPairwiseVerdict {
 	v := ReplayPairwiseVerdict{
 		PresetName: presetName,
 		InputID:    rec.InputID,
@@ -121,23 +120,29 @@ func pairwiseOnce(ctx context.Context, aux provider.Provider, ri ReplayItem, rec
 	return v
 }
 
-func callPairwiseAux(ctx context.Context, aux provider.Provider, ri ReplayItem, replyA, replyB string) (winner, reason string, err error) {
+func callPairwiseAux(ctx context.Context, aux core.LanguageModel, ri ReplayItem, replyA, replyB string) (winner, reason string, err error) {
 	systemPrompt := "You are a regression judge. Given the user message and two candidate replies, pick which better answers the user.\n\nOutput JSON only: {\"winner\": \"A\" | \"B\" | \"tie\", \"reason\": \"...\"}"
 	userPrompt := fmt.Sprintf(
 		"User message: %s\n\nReply A: %s\n\nReply B: %s",
 		ri.Message, replyA, replyB,
 	)
-	resp, err := aux.Complete(ctx, &provider.Request{
+	resp, err := aux.Generate(ctx, &core.Request{
 		SystemPrompt: systemPrompt,
-		Messages: []message.Message{
-			{Role: message.RoleUser, Content: message.TextContent(userPrompt)},
+		Messages: []core.Message{
+			{Role: core.MESSAGE_ROLE_USER, Content: []core.ContentParter{core.TextPart{Text: userPrompt}}},
 		},
-		MaxTokens: 256,
+		MaxTokens: intPtr(256),
 	})
 	if err != nil {
 		return "", "", err
 	}
-	raw := strings.TrimSpace(resp.Message.Content.Text())
+	var raw string
+	for _, part := range resp.Message.Content {
+		if p, ok := part.(core.TextPart); ok {
+			raw += p.Text
+		}
+	}
+	raw = strings.TrimSpace(raw)
 	var v struct {
 		Winner string `json:"winner"`
 		Reason string `json:"reason"`
@@ -148,7 +153,7 @@ func callPairwiseAux(ctx context.Context, aux provider.Provider, ri ReplayItem, 
 	return v.Winner, v.Reason, nil
 }
 
-func judgeRubric(ctx context.Context, runDir string, aux provider.Provider) error {
+func judgeRubric(ctx context.Context, runDir string, aux core.LanguageModel) error {
 	items, err := LoadDataset(filepath.Join(runDir, "dataset.jsonl"))
 	if err != nil {
 		return err
@@ -185,7 +190,7 @@ func judgeRubric(ctx context.Context, runDir string, aux provider.Provider) erro
 	return nil
 }
 
-func rubricOnce(ctx context.Context, aux provider.Provider, ri ReplayItem, rec benchmark.RunRecord, presetName string) ReplayRubricScore {
+func rubricOnce(ctx context.Context, aux core.LanguageModel, ri ReplayItem, rec benchmark.RunRecord, presetName string) ReplayRubricScore {
 	score := ReplayRubricScore{
 		PresetName: presetName,
 		InputID:    rec.InputID,
@@ -195,18 +200,24 @@ func rubricOnce(ctx context.Context, aux provider.Provider, ri ReplayItem, rec b
 		"User message: %s\n\nReply A (current): %s\n\nReply B (baseline): %s",
 		ri.Message, rec.Reply, ri.Baseline,
 	)
-	resp, err := aux.Complete(ctx, &provider.Request{
+	resp, err := aux.Generate(ctx, &core.Request{
 		SystemPrompt: systemPrompt,
-		Messages: []message.Message{
-			{Role: message.RoleUser, Content: message.TextContent(userPrompt)},
+		Messages: []core.Message{
+			{Role: core.MESSAGE_ROLE_USER, Content: []core.ContentParter{core.TextPart{Text: userPrompt}}},
 		},
-		MaxTokens: 256,
+		MaxTokens: intPtr(256),
 	})
 	if err != nil {
 		score.Error = err.Error()
 		return score
 	}
-	raw := strings.TrimSpace(resp.Message.Content.Text())
+	var raw string
+	for _, part := range resp.Message.Content {
+		if p, ok := part.(core.TextPart); ok {
+			raw += p.Text
+		}
+	}
+	raw = strings.TrimSpace(raw)
 	var parsed struct {
 		SemanticMatch int    `json:"semantic_match"`
 		StyleMatch    int    `json:"style_match"`
@@ -253,4 +264,8 @@ func loadAllRecords(runDir string) (map[string][]benchmark.RunRecord, error) {
 		out[e.Name()] = recs
 	}
 	return out, nil
+}
+
+func intPtr(n int) *int {
+	return &n
 }

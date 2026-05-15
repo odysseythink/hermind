@@ -2,6 +2,8 @@ package cron
 
 import (
 	"testing"
+
+	_ "github.com/odysseythink/hermind/logging"
 	"time"
 )
 

@@ -4,7 +4,7 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
-	"log"
+	"github.com/odysseythink/mlog"
 	"strings"
 	"sync"
 	"time"
@@ -166,13 +166,13 @@ type webSearchPayload struct {
 // normalize → cache.Set.
 func (d *searchDispatcher) Handler() tool.Handler {
 	return func(ctx context.Context, raw json.RawMessage) (string, error) {
-		log.Printf("[web_search] Handler invoked")
+		mlog.Infof("[web_search] Handler invoked")
 		var args searchArgs
 		if err := json.Unmarshal(raw, &args); err != nil {
-			log.Printf("[web_search] Invalid arguments: %v", err)
+			mlog.Infof("[web_search] Invalid arguments: %v", err)
 			return tool.ToolError("invalid arguments: " + err.Error()), nil
 		}
-		log.Printf("[web_search] Parsed args: query=%q num_results=%d", args.Query, args.NumResults)
+		mlog.Infof("[web_search] Parsed args: query=%q num_results=%d", args.Query, args.NumResults)
 		if args.Query == "" {
 			return tool.ToolError("query is required"), nil
 		}
@@ -186,32 +186,32 @@ func (d *searchDispatcher) Handler() tool.Handler {
 
 		provider, err := d.resolveProvider()
 		if err != nil {
-			log.Printf("[web_search] resolve err=%v", err)
+			mlog.Infof("[web_search] resolve err=%v", err)
 			return tool.ToolError(err.Error()), nil
 		}
-		log.Printf("[web_search] Resolved provider: %s (explicit=%q)", provider.ID(), d.explicit)
+		mlog.Infof("[web_search] Resolved provider: %s (explicit=%q)", provider.ID(), d.explicit)
 
 		cacheKey := fmt.Sprintf("%s|%s|%d", provider.ID(), strings.ToLower(args.Query), n)
 		if cached, ok := d.cache.Get(cacheKey); ok {
-			log.Printf("[web_search] Cache hit for key=%s", cacheKey)
+			mlog.Infof("[web_search] Cache hit for key=%s", cacheKey)
 			return tool.ToolResult(webSearchPayload{
 				Query:    args.Query,
 				Provider: provider.ID(),
 				Results:  cached,
 			}), nil
 		}
-		log.Printf("[web_search] Cache miss, calling provider.Search")
+		mlog.Infof("[web_search] Cache miss, calling provider.Search")
 
 		results, err := provider.Search(ctx, args.Query, n)
 		if err != nil {
 			if ctxErr := ctx.Err(); ctxErr != nil {
 				return "", ctxErr
 			}
-			log.Printf("[web_search] provider=%s err=%v", provider.ID(), err)
+			mlog.Infof("[web_search] provider=%s err=%v", provider.ID(), err)
 			return tool.ToolError(provider.ID() + ": " + err.Error()), nil
 		}
 
-		log.Printf("[web_search] provider=%s returned %d results", provider.ID(), len(results))
+		mlog.Infof("[web_search] provider=%s returned %d results", provider.ID(), len(results))
 		d.cache.Set(cacheKey, results)
 		return tool.ToolResult(webSearchPayload{
 			Query:    args.Query,

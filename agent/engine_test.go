@@ -5,13 +5,13 @@ import (
 	"context"
 	"encoding/json"
 	"errors"
-	"io"
 	"testing"
 
 	"github.com/odysseythink/hermind/config"
 	"github.com/odysseythink/hermind/message"
 	"github.com/odysseythink/hermind/provider"
 	"github.com/odysseythink/hermind/tool"
+	"github.com/odysseythink/pantheon/core"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 )
@@ -21,64 +21,70 @@ type fakeProvider struct {
 	name      string
 	response  *provider.Response
 	err       error
-	streamFn  func() (provider.Stream, error)
+	streamFn  func() (core.StreamResponse, error)
 	lastModel string
 }
 
-func (f *fakeProvider) Name() string { return f.name }
-func (f *fakeProvider) Complete(ctx context.Context, req *provider.Request) (*provider.Response, error) {
+func (f *fakeProvider) Provider() string { return f.name }
+func (f *fakeProvider) Model() string    { return f.lastModel }
+func (f *fakeProvider) Generate(ctx context.Context, req *core.Request) (*core.Response, error) {
 	if f.err != nil {
 		return nil, f.err
 	}
-	return f.response, nil
+	return &core.Response{
+		Message:      message.ToPantheon(f.response.Message),
+		FinishReason: f.response.FinishReason,
+		Usage:        core.Usage{PromptTokens: f.response.Usage.PromptTokens, CompletionTokens: f.response.Usage.CompletionTokens},
+	}, nil
 }
-func (f *fakeProvider) Stream(ctx context.Context, req *provider.Request) (provider.Stream, error) {
-	f.lastModel = req.Model
+func (f *fakeProvider) Stream(ctx context.Context, req *core.Request) (core.StreamResponse, error) {
+	f.lastModel = ""
 	if f.streamFn != nil {
 		return f.streamFn()
 	}
 	return nil, errors.New("not implemented")
 }
-func (f *fakeProvider) ModelInfo(string) *provider.ModelInfo       { return nil }
-func (f *fakeProvider) EstimateTokens(string, string) (int, error) { return 0, nil }
-func (f *fakeProvider) Available() bool                            { return true }
-
-// fakeStream returns a single delta then Done.
-type fakeStream struct {
-	events []*provider.StreamEvent
-	idx    int
+func (f *fakeProvider) GenerateObject(ctx context.Context, req *core.ObjectRequest) (*core.ObjectResponse, error) {
+	return nil, errors.New("not implemented")
 }
 
-func (s *fakeStream) Recv() (*provider.StreamEvent, error) {
-	if s.idx >= len(s.events) {
-		return nil, io.EOF
+// responseToStream converts a hermind provider.Response into a pantheon StreamResponse iterator.
+func responseToStream(resp *provider.Response) core.StreamResponse {
+	return func(yield func(*core.StreamPart, error) bool) {
+		for _, p := range resp.Message.Content {
+			switch pt := p.(type) {
+			case core.TextPart:
+				if !yield(&core.StreamPart{Type: core.StreamPartTypeTextDelta, TextDelta: pt.Text}, nil) {
+					return
+				}
+			case core.ToolCallPart:
+				tcp := pt
+				if !yield(&core.StreamPart{
+					Type:     core.StreamPartTypeToolCall,
+					ToolCall: &tcp,
+				}, nil) {
+					return
+				}
+			}
+		}
+		if !yield(&core.StreamPart{Type: core.StreamPartTypeFinish, FinishReason: resp.FinishReason}, nil) {
+			return
+		}
 	}
-	ev := s.events[s.idx]
-	s.idx++
-	return ev, nil
 }
-func (s *fakeStream) Close() error { return nil }
 
 func newFakeStreamingProvider(text string) *fakeProvider {
 	return &fakeProvider{
 		name: "fake",
-		streamFn: func() (provider.Stream, error) {
-			return &fakeStream{
-				events: []*provider.StreamEvent{
-					{Type: provider.EventDelta, Delta: &provider.StreamDelta{Content: text}},
-					{
-						Type: provider.EventDone,
-						Response: &provider.Response{
-							Message: message.Message{
-								Role:    message.RoleAssistant,
-								Content: message.TextContent(text),
-							},
-							FinishReason: "end_turn",
-							Usage:        message.Usage{InputTokens: 5, OutputTokens: 3},
-						},
-					},
+		streamFn: func() (core.StreamResponse, error) {
+			return responseToStream(&provider.Response{
+				Message: message.HermindMessage{
+					Role:    core.MESSAGE_ROLE_ASSISTANT,
+					Content: core.NewTextContent(text),
 				},
-			}, nil
+				FinishReason: "end_turn",
+				Usage:        core.Usage{PromptTokens: 5, CompletionTokens: 3},
+			}), nil
 		},
 	}
 }
@@ -91,11 +97,11 @@ func TestEngineSingleTurn(t *testing.T) {
 		UserMessage: "hi",
 	})
 	require.NoError(t, err)
-	assert.Equal(t, "Hello back!", result.Response.Content.Text())
+	assert.Equal(t, "Hello back!", result.Response.Text())
 	assert.Equal(t, 1, result.Iterations)
 	require.Len(t, result.Messages, 2)
-	assert.Equal(t, message.RoleUser, result.Messages[0].Role)
-	assert.Equal(t, message.RoleAssistant, result.Messages[1].Role)
+	assert.Equal(t, core.MESSAGE_ROLE_USER, result.Messages[0].Role)
+	assert.Equal(t, core.MESSAGE_ROLE_ASSISTANT, result.Messages[1].Role)
 }
 
 func TestEngineRespectsContextCancellation(t *testing.T) {
@@ -115,17 +121,13 @@ func newFakeProviderForScript(responses []*provider.Response) *fakeProvider {
 	idx := 0
 	return &fakeProvider{
 		name: "fake",
-		streamFn: func() (provider.Stream, error) {
+		streamFn: func() (core.StreamResponse, error) {
 			if idx >= len(responses) {
 				return nil, errors.New("unexpected extra stream call")
 			}
 			resp := responses[idx]
 			idx++
-			return &fakeStream{
-				events: []*provider.StreamEvent{
-					{Type: provider.EventDone, Response: resp},
-				},
-			}, nil
+			return responseToStream(resp), nil
 		},
 	}
 }
@@ -137,39 +139,29 @@ func TestEngineToolLoopSingleToolCall(t *testing.T) {
 		Handler: func(ctx context.Context, args json.RawMessage) (string, error) {
 			return `{"echoed":true}`, nil
 		},
-		Schema: tool.ToolDefinition{
-			Type: "function",
-			Function: tool.FunctionDef{
-				Name:        "echo_args",
-				Description: "Echo the arguments back",
-				Parameters:  json.RawMessage(`{"type":"object"}`),
-			},
+		Schema: core.ToolDefinition{
+			Name:        "echo_args",
+			Description: "Echo the arguments back",
+			Parameters:  core.MustSchemaFromJSON([]byte(`{"type":"object"}`)),
 		},
 	})
 
 	responses := []*provider.Response{
 		{
-			Message: message.Message{
-				Role: message.RoleAssistant,
-				Content: message.BlockContent([]message.ContentBlock{
-					{
-						Type:         "tool_use",
-						ToolUseID:    "t1",
-						ToolUseName:  "echo_args",
-						ToolUseInput: json.RawMessage(`{}`),
-					},
-				}),
+			Message: message.HermindMessage{
+				Role:    core.MESSAGE_ROLE_ASSISTANT,
+				Content: []core.ContentParter{core.ToolCallPart{ID: "t1", Name: "echo_args", Arguments: "{}"}},
 			},
 			FinishReason: "tool_use",
-			Usage:        message.Usage{InputTokens: 10, OutputTokens: 5},
+			Usage:        core.Usage{PromptTokens: 10, CompletionTokens: 5},
 		},
 		{
-			Message: message.Message{
-				Role:    message.RoleAssistant,
-				Content: message.TextContent("Done. Got echoed=true."),
+			Message: message.HermindMessage{
+				Role:    core.MESSAGE_ROLE_ASSISTANT,
+				Content: core.NewTextContent("Done. Got echoed=true."),
 			},
 			FinishReason: "end_turn",
-			Usage:        message.Usage{InputTokens: 15, OutputTokens: 8},
+			Usage:        core.Usage{PromptTokens: 15, CompletionTokens: 8},
 		},
 	}
 
@@ -180,27 +172,54 @@ func TestEngineToolLoopSingleToolCall(t *testing.T) {
 		UserMessage: "run echo",
 	})
 	require.NoError(t, err)
-	assert.Equal(t, "Done. Got echoed=true.", result.Response.Content.Text())
+	assert.Equal(t, "Done. Got echoed=true.", result.Response.Text())
 	assert.Equal(t, 2, result.Iterations)
 
 	require.Len(t, result.Messages, 4)
-	assert.Equal(t, message.RoleUser, result.Messages[0].Role)
-	assert.Equal(t, message.RoleAssistant, result.Messages[1].Role)
-	assert.Equal(t, message.RoleUser, result.Messages[2].Role)
-	assert.Equal(t, message.RoleAssistant, result.Messages[3].Role)
+	assert.Equal(t, core.MESSAGE_ROLE_USER, result.Messages[0].Role)
+	assert.Equal(t, core.MESSAGE_ROLE_ASSISTANT, result.Messages[1].Role)
+	assert.Equal(t, core.MESSAGE_ROLE_TOOL, result.Messages[2].Role)
+	assert.Equal(t, core.MESSAGE_ROLE_ASSISTANT, result.Messages[3].Role)
 
-	require.False(t, result.Messages[2].Content.IsText())
-	blocks := result.Messages[2].Content.Blocks()
-	require.Len(t, blocks, 1)
-	assert.Equal(t, "tool_result", blocks[0].Type)
-	assert.Equal(t, "t1", blocks[0].ToolUseID)
-	assert.Contains(t, blocks[0].ToolResult, "echoed")
+	require.False(t, result.Messages[2].IsTextOnly())
+	require.Len(t, result.Messages[2].Content, 1)
+	tr, ok := result.Messages[2].Content[0].(core.ToolResultPart)
+	require.True(t, ok, "expected Content[0] to be ToolResultPart")
+	assert.Equal(t, "t1", tr.ToolCallID)
+	assert.Contains(t, message.HermindMessage{Content: tr.Content}.Text(), "echoed")
+}
+
+// fakeFallbackLM tries a list of language models in order until one succeeds.
+type fakeFallbackLM struct {
+	providers []core.LanguageModel
+}
+
+func (f *fakeFallbackLM) Provider() string { return "fallback" }
+func (f *fakeFallbackLM) Model() string    { return "" }
+func (f *fakeFallbackLM) Generate(ctx context.Context, req *core.Request) (*core.Response, error) {
+	for _, p := range f.providers {
+		if resp, err := p.Generate(ctx, req); err == nil {
+			return resp, nil
+		}
+	}
+	return nil, errors.New("all providers failed")
+}
+func (f *fakeFallbackLM) Stream(ctx context.Context, req *core.Request) (core.StreamResponse, error) {
+	for _, p := range f.providers {
+		if resp, err := p.Stream(ctx, req); err == nil {
+			return resp, nil
+		}
+	}
+	return nil, errors.New("all providers failed")
+}
+func (f *fakeFallbackLM) GenerateObject(ctx context.Context, req *core.ObjectRequest) (*core.ObjectResponse, error) {
+	return nil, errors.New("not implemented")
 }
 
 func TestEngineUsesFallbackChainOnRetryableError(t *testing.T) {
 	failing := &fakeProvider{
 		name: "failing",
-		streamFn: func() (provider.Stream, error) {
+		streamFn: func() (core.StreamResponse, error) {
 			return nil, &provider.Error{Kind: provider.ErrRateLimit, Provider: "failing", Message: "rate limited"}
 		},
 	}
@@ -208,14 +227,14 @@ func TestEngineUsesFallbackChainOnRetryableError(t *testing.T) {
 	succeeding := newFakeStreamingProvider("fallback response")
 	succeeding.name = "succeeding"
 
-	chain := provider.NewFallbackChain([]provider.Provider{failing, succeeding})
+	chain := &fakeFallbackLM{providers: []core.LanguageModel{failing, succeeding}}
 	e := NewEngine(chain, nil, config.AgentConfig{MaxTurns: 10}, "cli")
 
 	result, err := e.RunConversation(context.Background(), &RunOptions{
 		UserMessage: "hello",
 	})
 	require.NoError(t, err)
-	assert.Equal(t, "fallback response", result.Response.Content.Text())
+	assert.Equal(t, "fallback response", result.Response.Text())
 	assert.Equal(t, 1, result.Iterations)
 }
 
@@ -226,21 +245,16 @@ func TestEngineBudgetExhaustion(t *testing.T) {
 		Handler: func(ctx context.Context, args json.RawMessage) (string, error) {
 			return `{"ok":true}`, nil
 		},
-		Schema: tool.ToolDefinition{
-			Type: "function",
-			Function: tool.FunctionDef{
-				Name:       "loop_tool",
-				Parameters: json.RawMessage(`{"type":"object"}`),
-			},
+		Schema: core.ToolDefinition{
+			Name:       "loop_tool",
+			Parameters: core.MustSchemaFromJSON([]byte(`{"type":"object"}`)),
 		},
 	})
 
 	toolUseResp := &provider.Response{
-		Message: message.Message{
-			Role: message.RoleAssistant,
-			Content: message.BlockContent([]message.ContentBlock{
-				{Type: "tool_use", ToolUseID: "t1", ToolUseName: "loop_tool", ToolUseInput: json.RawMessage(`{}`)},
-			}),
+		Message: message.HermindMessage{
+			Role:    core.MESSAGE_ROLE_ASSISTANT,
+			Content: []core.ContentParter{core.ToolCallPart{ID: "t1", Name: "loop_tool", Arguments: "{}"}},
 		},
 		FinishReason: "tool_use",
 	}

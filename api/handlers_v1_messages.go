@@ -7,13 +7,15 @@ import (
 	"encoding/json"
 	"errors"
 	"io"
-	"log/slog"
 	"net/http"
 	"strings"
 	"time"
 
+	"github.com/odysseythink/hermind/message"
 	"github.com/odysseythink/hermind/provider"
 	"github.com/odysseythink/hermind/provider/anthropic"
+	"github.com/odysseythink/mlog"
+	"github.com/odysseythink/pantheon/core"
 )
 
 const v1MessagesMaxBodyBytes = 10 << 20 // 10 MB
@@ -50,38 +52,41 @@ func (s *Server) handleV1Messages(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	resp, err := prov.Complete(r.Context(), req)
+	pantheonReq := providerRequestToPantheon(req)
+	resp, err := prov.Generate(r.Context(), pantheonReq)
 	if err != nil {
 		s.writeProviderError(w, err)
 		return
 	}
 
-	bytesOut, err := anthropic.Outbound(resp, requestModel, anthropic.NewMsgID())
+	providerResp := pantheonResponseToProvider(resp)
+	bytesOut, err := anthropic.Outbound(providerResp, requestModel, anthropic.NewMsgID())
 	if err != nil {
 		writeAnthropicError(w, http.StatusInternalServerError, "api_error", err.Error())
 		return
 	}
 	w.Header().Set("Content-Type", "application/json")
-	w.Header().Set("x-hermind-actual-model", resp.Model)
+	w.Header().Set("x-hermind-actual-model", providerResp.Model)
 	w.WriteHeader(http.StatusOK)
 	_, _ = w.Write(bytesOut)
 
-	slog.Info("v1.messages.request",
-		"request_model", requestModel,
-		"actual_model", resp.Model,
-		"stream", false,
-		"input_tokens", resp.Usage.InputTokens,
-		"output_tokens", resp.Usage.OutputTokens,
-		"duration_ms", time.Since(start).Milliseconds(),
-		"status", http.StatusOK)
+	mlog.Info("v1.messages.request",
+		mlog.String("request_model", requestModel),
+		mlog.String("actual_model", providerResp.Model),
+		mlog.Bool("stream", false),
+		mlog.Int("input_tokens", providerResp.Usage.PromptTokens),
+		mlog.Int("output_tokens", providerResp.Usage.CompletionTokens),
+		mlog.Int64("duration_ms", time.Since(start).Milliseconds()),
+		mlog.Int("status", http.StatusOK))
 }
 
 // serveV1MessagesStream is the streaming branch (Task 7).
 func (s *Server) serveV1MessagesStream(
 	w http.ResponseWriter, r *http.Request,
-	p provider.Provider, req *provider.Request, requestModel string, start time.Time,
+	p core.LanguageModel, req *provider.Request, requestModel string, start time.Time,
 ) {
-	stream, err := p.Stream(r.Context(), req)
+	pantheonReq := providerRequestToPantheon(req)
+	stream, err := p.Stream(r.Context(), pantheonReq)
 	if err != nil {
 		s.writeProviderError(w, err)
 		return
@@ -96,13 +101,60 @@ func (s *Server) serveV1MessagesStream(
 	w.Header().Set("x-hermind-actual-model", req.Model)
 	if err := anthropic.StreamOutbound(r.Context(), w, stream, requestModel, msgID, keepAlive); err != nil {
 		// At this point headers are already written; just log.
-		slog.Warn("v1.messages.stream_error", "err", err)
+		mlog.Warning("v1.messages.stream_error", mlog.String("err", err.Error()))
 	}
-	slog.Info("v1.messages.request",
-		"request_model", requestModel,
-		"stream", true,
-		"duration_ms", time.Since(start).Milliseconds(),
-		"status", http.StatusOK)
+	mlog.Info("v1.messages.request",
+		mlog.String("request_model", requestModel),
+		mlog.Bool("stream", true),
+		mlog.Int64("duration_ms", time.Since(start).Milliseconds()),
+		mlog.Int("status", http.StatusOK))
+}
+
+func providerRequestToPantheon(req *provider.Request) *core.Request {
+	if req == nil {
+		return nil
+	}
+	msgs := make([]core.Message, len(req.Messages))
+	for i, m := range req.Messages {
+		msgs[i] = message.ToPantheon(m)
+	}
+	pReq := &core.Request{
+		Messages:     msgs,
+		SystemPrompt: req.SystemPrompt,
+		Tools:        req.Tools,
+	}
+	if req.MaxTokens > 0 {
+		pReq.MaxTokens = &req.MaxTokens
+	}
+	if req.Temperature != nil {
+		pReq.Temperature = req.Temperature
+	}
+	if req.TopP != nil {
+		pReq.TopP = req.TopP
+	}
+	if len(req.StopSequences) > 0 {
+		pReq.StopSequences = req.StopSequences
+	}
+	if len(req.Tools) > 0 {
+		pReq.ToolChoice = core.ToolChoice{Mode: core.ToolChoiceModeAuto}
+	}
+	return pReq
+}
+
+func pantheonResponseToProvider(resp *core.Response) *provider.Response {
+	if resp == nil {
+		return nil
+	}
+	msg := message.MessageFromPantheon(resp.Message)
+	return &provider.Response{
+		Message:      msg,
+		FinishReason: resp.FinishReason,
+		Usage: core.Usage{
+			PromptTokens:     resp.Usage.PromptTokens,
+			CompletionTokens: resp.Usage.CompletionTokens,
+		},
+		Model: resp.Model,
+	}
 }
 
 // writeAnthropicError writes an Anthropic-format error envelope.
@@ -127,7 +179,7 @@ func (errProviderNoStreaming) Error() string { return "provider does not support
 
 // writeProviderError handles upstream provider failures.
 func (s *Server) writeProviderError(w http.ResponseWriter, err error) {
-	slog.Warn("v1.messages.provider_error", "err", err)
+	mlog.Warning("v1.messages.provider_error", mlog.String("err", err.Error()))
 	msg := err.Error()
 
 	if errors.Is(err, errProviderNoStreaming{}) {

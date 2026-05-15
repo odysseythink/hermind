@@ -8,6 +8,7 @@ import (
 
 	"github.com/odysseythink/hermind/config"
 	"github.com/odysseythink/hermind/tool"
+	"github.com/odysseythink/pantheon/core"
 )
 
 // Supermemory is a Provider backed by the Supermemory cloud API.
@@ -80,17 +81,14 @@ func (s *Supermemory) RegisterTools(reg *tool.Registry) {
 		Toolset:     "memory",
 		Description: "Store a fact in Supermemory (external memory provider).",
 		Emoji:       "🧠",
-		Schema: tool.ToolDefinition{
-			Type: "function",
-			Function: tool.FunctionDef{
-				Name:        "supermemory_remember",
-				Description: "Store a fact in Supermemory for future recall.",
-				Parameters: json.RawMessage(`{
+		Schema: core.ToolDefinition{
+			Name:        "supermemory_remember",
+			Description: "Store a fact in Supermemory for future recall.",
+			Parameters: core.MustSchemaFromJSON([]byte(`{
   "type":"object",
   "properties":{"content":{"type":"string","description":"Text to remember"}},
   "required":["content"]
-}`),
-			},
+}`)),
 		},
 		Handler: func(ctx context.Context, raw json.RawMessage) (string, error) {
 			var args struct {
@@ -114,20 +112,17 @@ func (s *Supermemory) RegisterTools(reg *tool.Registry) {
 		Toolset:     "memory",
 		Description: "Recall memories from Supermemory by query.",
 		Emoji:       "🔭",
-		Schema: tool.ToolDefinition{
-			Type: "function",
-			Function: tool.FunctionDef{
-				Name:        "supermemory_recall",
-				Description: "Search Supermemory and return matching content.",
-				Parameters: json.RawMessage(`{
+		Schema: core.ToolDefinition{
+			Name:        "supermemory_recall",
+			Description: "Search Supermemory and return matching content.",
+			Parameters: core.MustSchemaFromJSON([]byte(`{
   "type":"object",
   "properties":{
     "query":{"type":"string","description":"Search query"},
     "limit":{"type":"number","description":"Max results (default 5)"}
   },
   "required":["query"]
-}`),
-			},
+}`)),
 		},
 		Handler: func(ctx context.Context, raw json.RawMessage) (string, error) {
 			var args struct {

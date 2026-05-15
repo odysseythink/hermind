@@ -2,9 +2,8 @@
 package web
 
 import (
-	"encoding/json"
-
 	"github.com/odysseythink/hermind/tool"
+	"github.com/odysseythink/pantheon/core"
 )
 
 // RegisterAll wires the web toolset into reg according to opts.
@@ -23,13 +22,10 @@ func RegisterAll(reg *tool.Registry, opts Options) {
 			Description: "Fetch a URL and return status + headers + body (max 2 MiB).",
 			Emoji:       "🌐",
 			Handler:     webFetchHandler,
-			Schema: tool.ToolDefinition{
-				Type: "function",
-				Function: tool.FunctionDef{
-					Name:        "web_fetch",
-					Description: "Perform an HTTP GET/POST to a URL and return the response.",
-					Parameters:  json.RawMessage(webFetchSchema),
-				},
+			Schema: core.ToolDefinition{
+				Name:        "web_fetch",
+				Description: "Perform an HTTP GET/POST to a URL and return the response.",
+				Parameters:  core.MustSchemaFromJSON([]byte(webFetchSchema)),
 			},
 		})
 	}
@@ -41,13 +37,10 @@ func RegisterAll(reg *tool.Registry, opts Options) {
 		Description: "Search the web via a configured provider (Tavily, Brave, Exa, SearXNG, Bing, or DuckDuckGo).",
 		Emoji:       "🔎",
 		Handler:     dispatcher.Handler(),
-		Schema: tool.ToolDefinition{
-			Type: "function",
-			Function: tool.FunctionDef{
-				Name:        "web_search",
-				Description: "Search the web and return a list of results.",
-				Parameters:  json.RawMessage(webSearchSchema),
-			},
+		Schema: core.ToolDefinition{
+			Name:        "web_search",
+			Description: "Search the web and return a list of results.",
+			Parameters:  core.MustSchemaFromJSON([]byte(webSearchSchema)),
 		},
 	})
 
@@ -58,13 +51,10 @@ func RegisterAll(reg *tool.Registry, opts Options) {
 			Description: "Extract page content as markdown/html/text via Firecrawl.",
 			Emoji:       "📰",
 			Handler:     newWebExtractHandler(opts.FirecrawlAPIKey, ""),
-			Schema: tool.ToolDefinition{
-				Type: "function",
-				Function: tool.FunctionDef{
-					Name:        "web_extract",
-					Description: "Extract the main content of a web page.",
-					Parameters:  json.RawMessage(webExtractSchema),
-				},
+			Schema: core.ToolDefinition{
+				Name:        "web_extract",
+				Description: "Extract the main content of a web page.",
+				Parameters:  core.MustSchemaFromJSON([]byte(webExtractSchema)),
 			},
 		})
 	}

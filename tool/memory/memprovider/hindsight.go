@@ -7,6 +7,7 @@ import (
 
 	"github.com/odysseythink/hermind/config"
 	"github.com/odysseythink/hermind/tool"
+	"github.com/odysseythink/pantheon/core"
 )
 
 // Hindsight is a Provider backed by the Hindsight cloud API.
@@ -93,20 +94,17 @@ func (h *Hindsight) RegisterTools(reg *tool.Registry) {
 		Toolset:     "memory",
 		Description: "Store information in Hindsight long-term memory.",
 		Emoji:       "🗂",
-		Schema: tool.ToolDefinition{
-			Type: "function",
-			Function: tool.FunctionDef{
-				Name:        "hindsight_retain",
-				Description: "Store info to long-term memory with optional context label.",
-				Parameters: json.RawMessage(`{
+		Schema: core.ToolDefinition{
+			Name:        "hindsight_retain",
+			Description: "Store info to long-term memory with optional context label.",
+			Parameters: core.MustSchemaFromJSON([]byte(`{
   "type":"object",
   "properties":{
     "content":{"type":"string","description":"Text to remember"},
     "context":{"type":"string","description":"Short label"}
   },
   "required":["content"]
-}`),
-			},
+}`)),
 		},
 		Handler: func(ctx context.Context, raw json.RawMessage) (string, error) {
 			var args struct {
@@ -131,17 +129,14 @@ func (h *Hindsight) RegisterTools(reg *tool.Registry) {
 		Toolset:     "memory",
 		Description: "Search Hindsight long-term memory.",
 		Emoji:       "🧭",
-		Schema: tool.ToolDefinition{
-			Type: "function",
-			Function: tool.FunctionDef{
-				Name:        "hindsight_recall",
-				Description: "Search long-term memory for relevant stored facts.",
-				Parameters: json.RawMessage(`{
+		Schema: core.ToolDefinition{
+			Name:        "hindsight_recall",
+			Description: "Search long-term memory for relevant stored facts.",
+			Parameters: core.MustSchemaFromJSON([]byte(`{
   "type":"object",
   "properties":{"query":{"type":"string"}},
   "required":["query"]
-}`),
-			},
+}`)),
 		},
 		Handler: func(ctx context.Context, raw json.RawMessage) (string, error) {
 			var args struct {
@@ -163,17 +158,14 @@ func (h *Hindsight) RegisterTools(reg *tool.Registry) {
 		Toolset:     "memory",
 		Description: "Synthesize a reasoned answer from Hindsight memories.",
 		Emoji:       "💭",
-		Schema: tool.ToolDefinition{
-			Type: "function",
-			Function: tool.FunctionDef{
-				Name:        "hindsight_reflect",
-				Description: "Reason across stored memories to produce a coherent answer.",
-				Parameters: json.RawMessage(`{
+		Schema: core.ToolDefinition{
+			Name:        "hindsight_reflect",
+			Description: "Reason across stored memories to produce a coherent answer.",
+			Parameters: core.MustSchemaFromJSON([]byte(`{
   "type":"object",
   "properties":{"query":{"type":"string"}},
   "required":["query"]
-}`),
-			},
+}`)),
 		},
 		Handler: func(ctx context.Context, raw json.RawMessage) (string, error) {
 			var args struct {

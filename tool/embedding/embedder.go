@@ -19,26 +19,23 @@ type Embedder interface {
 	Embed(ctx context.Context, text string) ([]float32, error)
 }
 
-// ProviderEmbedder wraps a provider.Provider. If the provider also
-// implements provider.EmbedCapable, Embed delegates to it. Otherwise
-// Embed returns ErrNotSupported.
+// ProviderEmbedder wraps a provider.EmbedCapable.
 type ProviderEmbedder struct {
-	p     provider.Provider
+	p     provider.EmbedCapable
 	model string // embedding model, e.g. "text-embedding-3-small"
 }
 
 // NewProviderEmbedder constructs a ProviderEmbedder.
 // model is the embedding model name (provider-specific).
-func NewProviderEmbedder(p provider.Provider, model string) *ProviderEmbedder {
+func NewProviderEmbedder(p provider.EmbedCapable, model string) *ProviderEmbedder {
 	return &ProviderEmbedder{p: p, model: model}
 }
 
 func (pe *ProviderEmbedder) Embed(ctx context.Context, text string) ([]float32, error) {
-	ec, ok := pe.p.(provider.EmbedCapable)
-	if !ok {
+	if pe.p == nil {
 		return nil, ErrNotSupported
 	}
-	return ec.Embed(ctx, pe.model, text)
+	return pe.p.Embed(ctx, pe.model, text)
 }
 
 // EncodeVector gob-encodes a []float32 into bytes for SQLite BLOB storage.

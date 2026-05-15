@@ -6,12 +6,12 @@ import (
 	"encoding/json"
 	"fmt"
 	"io"
-	"log/slog"
 	"net/http"
 	"net/url"
 	"strconv"
 	"time"
 
+	"github.com/odysseythink/mlog"
 	"golang.org/x/net/proxy"
 )
 
@@ -19,10 +19,10 @@ func init() {
 	RegisterBuilder("telegram", func(name string, opts map[string]string) (Platform, error) {
 		token := opts["bot_token"]
 		proxyURL := opts["proxy_url"]
-		slog.Info("gateway: building telegram adapter",
-			"name", name,
-			"has_token", token != "",
-			"has_proxy", proxyURL != "",
+		mlog.Info("gateway: building telegram adapter",
+			mlog.String("name", name),
+			mlog.Bool("has_token", token != ""),
+			mlog.Bool("has_proxy", proxyURL != ""),
 		)
 		return NewTelegram(name, token, proxyURL)
 	})
@@ -119,7 +119,7 @@ func (t *Telegram) Run(ctx context.Context, handler MessageHandler) error {
 	if t.token == "" {
 		return fmt.Errorf("telegram[%s]: empty bot_token", t.name)
 	}
-	slog.InfoContext(ctx, "telegram: starting long-poll loop", "name", t.name)
+	mlog.InfoContext(ctx, "telegram: starting long-poll loop", mlog.String("name", t.name))
 	for {
 		if err := ctx.Err(); err != nil {
 			return nil
@@ -129,8 +129,8 @@ func (t *Telegram) Run(ctx context.Context, handler MessageHandler) error {
 			if ctx.Err() != nil {
 				return nil
 			}
-			slog.WarnContext(ctx, "telegram: getUpdates error, retrying in 2s",
-				"name", t.name, "err", err)
+			mlog.WarningContext(ctx, "telegram: getUpdates error, retrying in 2s",
+				mlog.String("name", t.name), mlog.String("err", err.Error()))
 			select {
 			case <-ctx.Done():
 				return nil
@@ -138,8 +138,8 @@ func (t *Telegram) Run(ctx context.Context, handler MessageHandler) error {
 			}
 			continue
 		}
-		slog.DebugContext(ctx, "telegram: polled updates",
-			"name", t.name, "count", len(updates))
+		mlog.DebugContext(ctx, "telegram: polled updates",
+			mlog.String("name", t.name), mlog.Int("count", len(updates)))
 		for _, u := range updates {
 			t.offset = u.UpdateID + 1
 			if u.Message == nil || u.Message.Text == "" {
@@ -152,7 +152,7 @@ func (t *Telegram) Run(ctx context.Context, handler MessageHandler) error {
 				Text:      u.Message.Text,
 				MessageID: strconv.Itoa(u.Message.MessageID),
 			}
-			slog.InfoContext(ctx, "telegram: dispatching message",
+			mlog.InfoContext(ctx, "telegram: dispatching message",
 				"name", t.name,
 				"from", u.Message.From.Username,
 				"chat_id", in.ChatID,
@@ -207,7 +207,7 @@ func (t *Telegram) SendReply(ctx context.Context, out OutgoingMessage) error {
 		body, _ := io.ReadAll(io.LimitReader(resp.Body, 512))
 		return fmt.Errorf("telegram[%s]: send status %d: %s", t.name, resp.StatusCode, string(body))
 	}
-	slog.InfoContext(ctx, "telegram: reply sent", "name", t.name, "chat_id", out.ChatID)
+	mlog.InfoContext(ctx, "telegram: reply sent", mlog.String("name", t.name), mlog.String("chat_id", out.ChatID))
 	return nil
 }
 

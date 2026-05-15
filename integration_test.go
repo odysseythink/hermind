@@ -7,6 +7,8 @@ import (
 	"path/filepath"
 	"testing"
 
+	_ "github.com/odysseythink/hermind/logging"
+
 	"github.com/stretchr/testify/require"
 
 	"github.com/odysseythink/hermind/skills"

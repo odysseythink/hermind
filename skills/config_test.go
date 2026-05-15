@@ -5,6 +5,8 @@ import (
 	"sort"
 	"testing"
 
+	_ "github.com/odysseythink/hermind/logging"
+
 	"github.com/odysseythink/hermind/config"
 )
 

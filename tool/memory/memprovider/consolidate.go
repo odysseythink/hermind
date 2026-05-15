@@ -8,6 +8,7 @@ import (
 	"time"
 
 	"github.com/odysseythink/hermind/storage"
+	pembed "github.com/odysseythink/pantheon/extensions/embed"
 	"github.com/odysseythink/hermind/tool/embedding"
 )
 
@@ -148,7 +149,7 @@ func isDuplicate(a, b *storage.Memory, va, vb []float32, opts *ConsolidateOption
 		return true
 	}
 	if len(va) > 0 && len(vb) > 0 {
-		if float64(embedding.CosineSimilarity(va, vb)) >= opts.CosineThreshold {
+		if float64(pembed.Cosine(va, vb)) >= opts.CosineThreshold {
 			return true
 		}
 	}

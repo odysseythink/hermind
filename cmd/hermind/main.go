@@ -9,6 +9,7 @@ import (
 	"syscall"
 
 	"github.com/odysseythink/hermind/cli"
+	"github.com/odysseythink/mlog"
 )
 
 // Injected at build time via ldflags.
@@ -22,7 +23,9 @@ func main() {
 	cli.Version = Version
 	cli.Commit = Commit
 	cli.BuildDate = BuildDate
-
+	mlog.SetLogDir("logs")
+	mlog.SetLevel(0)
+	defer mlog.Flush()
 	app, err := cli.NewApp()
 	if err != nil {
 		fmt.Fprintf(os.Stderr, "hermind: init: %v\n", err)

@@ -7,11 +7,11 @@ import (
 	"strings"
 	"testing"
 
-	"github.com/odysseythink/hermind/config"
 	"github.com/odysseythink/hermind/message"
-	"github.com/odysseythink/hermind/provider"
 	"github.com/odysseythink/hermind/tool"
 	"github.com/odysseythink/hermind/tool/memory/memprovider"
+	"github.com/odysseythink/pantheon/agent/compression"
+	"github.com/odysseythink/pantheon/core"
 )
 
 // recordingMemProvider counts SyncTurn / Shutdown calls and can be
@@ -54,13 +54,13 @@ func TestMemoryManager_NoProvidersEmptyDigest(t *testing.T) {
 
 func TestMemoryManager_BuiltinDigestsRecentTurns(t *testing.T) {
 	mm := NewMemoryManager(nil)
-	mm.ObserveTurn(message.Message{
-		Role:    message.RoleUser,
-		Content: message.TextContent("my name is Alice"),
+	mm.ObserveTurn(message.HermindMessage{
+		Role:    core.MESSAGE_ROLE_USER,
+		Content: core.NewTextContent("my name is Alice"),
 	})
-	mm.ObserveTurn(message.Message{
-		Role:    message.RoleAssistant,
-		Content: message.TextContent("nice to meet you Alice"),
+	mm.ObserveTurn(message.HermindMessage{
+		Role:    core.MESSAGE_ROLE_ASSISTANT,
+		Content: core.NewTextContent("nice to meet you Alice"),
 	})
 
 	digest := mm.BuiltinDigest()
@@ -75,9 +75,9 @@ func TestMemoryManager_BuiltinDigestsRecentTurns(t *testing.T) {
 func TestMemoryManager_ObserveTurnRingLimit(t *testing.T) {
 	mm := NewMemoryManager(nil)
 	for i := 0; i < 50; i++ {
-		mm.ObserveTurn(message.Message{
-			Role:    message.RoleUser,
-			Content: message.TextContent("msg"),
+		mm.ObserveTurn(message.HermindMessage{
+			Role:    core.MESSAGE_ROLE_USER,
+			Content: core.NewTextContent("msg"),
 		})
 	}
 	// The ring is capped at 20; digest should contain at most 20 lines.
@@ -135,21 +135,7 @@ func TestMemoryManager_ShutdownClosesAllProviders(t *testing.T) {
 	}
 }
 
-func TestMemoryManager_SummarizeUsesAux(t *testing.T) {
-	stub := &stubAuxProvider{response: "brief summary"}
-	ac := provider.NewAuxClient([]provider.Provider{stub})
-	mm := NewMemoryManager(nil)
-	mm.SetAuxClient(ac)
-	out, err := mm.Summarize(context.Background(), "lots of text to summarize "+strings.Repeat("x", 200))
-	if err != nil {
-		t.Fatalf("Summarize: %v", err)
-	}
-	if out != "brief summary" {
-		t.Errorf("expected aux response, got %q", out)
-	}
-}
-
-func TestMemoryManager_SummarizeReturnsInputWithoutAux(t *testing.T) {
+func TestMemoryManager_SummarizeReturnsInput(t *testing.T) {
 	mm := NewMemoryManager(nil)
 	out, err := mm.Summarize(context.Background(), "hello")
 	if err != nil {
@@ -160,27 +146,10 @@ func TestMemoryManager_SummarizeReturnsInputWithoutAux(t *testing.T) {
 	}
 }
 
-func TestMemoryManager_RetrieveUsesDigestAndAux(t *testing.T) {
-	stub := &stubAuxProvider{response: "Alice-related line"}
-	ac := provider.NewAuxClient([]provider.Provider{stub})
+func TestMemoryManager_RetrieveReturnsDigest(t *testing.T) {
 	mm := NewMemoryManager(nil)
-	mm.SetAuxClient(ac)
-	mm.ObserveTurn(message.Message{
-		Role: message.RoleUser, Content: message.TextContent("my name is Alice"),
-	})
-	out, err := mm.Retrieve(context.Background(), "what is the user's name?")
-	if err != nil {
-		t.Fatalf("Retrieve: %v", err)
-	}
-	if !strings.Contains(out, "Alice") {
-		t.Errorf("expected re-ranked digest to mention Alice, got %q", out)
-	}
-}
-
-func TestMemoryManager_RetrieveReturnsDigestWhenNoAux(t *testing.T) {
-	mm := NewMemoryManager(nil)
-	mm.ObserveTurn(message.Message{
-		Role: message.RoleUser, Content: message.TextContent("fact"),
+	mm.ObserveTurn(message.HermindMessage{
+		Role: core.MESSAGE_ROLE_USER, Content: core.NewTextContent("fact"),
 	})
 	out, err := mm.Retrieve(context.Background(), "query")
 	if err != nil {
@@ -191,9 +160,33 @@ func TestMemoryManager_RetrieveReturnsDigestWhenNoAux(t *testing.T) {
 	}
 }
 
+// mockCompressorModel is a test double for core.LanguageModel used by
+// compression tests.
+type mockCompressorModel struct{}
+
+func (m *mockCompressorModel) Generate(ctx context.Context, req *core.Request) (*core.Response, error) {
+	return &core.Response{
+		Message: core.Message{
+			Role:    core.MESSAGE_ROLE_ASSISTANT,
+			Content: core.NewTextContent("compressed summary"),
+		},
+	}, nil
+}
+
+func (m *mockCompressorModel) Stream(ctx context.Context, req *core.Request) (core.StreamResponse, error) {
+	return func(yield func(*core.StreamPart, error) bool) {}, nil
+}
+
+func (m *mockCompressorModel) GenerateObject(ctx context.Context, req *core.ObjectRequest) (*core.ObjectResponse, error) {
+	return nil, nil
+}
+
+func (m *mockCompressorModel) Provider() string { return "mock" }
+func (m *mockCompressorModel) Model() string    { return "mock-model" }
+
 func TestMemoryManager_CompressUsesAttachedCompressor(t *testing.T) {
-	aux := &stubAuxProvider{response: "compressed summary"}
-	c := NewCompressor(config.CompressionConfig{
+	aux := &mockCompressorModel{}
+	c := compression.NewCompressor(compression.CompressionConfig{
 		Enabled:     true,
 		ProtectLast: 2,
 		MaxPasses:   1,
@@ -201,11 +194,11 @@ func TestMemoryManager_CompressUsesAttachedCompressor(t *testing.T) {
 	mm := NewMemoryManager(nil)
 	mm.SetCompressor(c)
 
-	hist := make([]message.Message, 0, 10)
+	hist := make([]message.HermindMessage, 0, 10)
 	for i := 0; i < 10; i++ {
-		hist = append(hist, message.Message{
-			Role:    message.RoleUser,
-			Content: message.TextContent("msg"),
+		hist = append(hist, message.HermindMessage{
+			Role:    core.MESSAGE_ROLE_USER,
+			Content: core.NewTextContent("msg"),
 		})
 	}
 	out, passes, err := mm.Compress(context.Background(), hist, 100)
@@ -222,8 +215,8 @@ func TestMemoryManager_CompressUsesAttachedCompressor(t *testing.T) {
 
 func TestMemoryManager_CompressNoOpWithoutCompressor(t *testing.T) {
 	mm := NewMemoryManager(nil)
-	hist := []message.Message{
-		{Role: message.RoleUser, Content: message.TextContent("hi")},
+	hist := []message.HermindMessage{
+		{Role: core.MESSAGE_ROLE_USER, Content: core.NewTextContent("hi")},
 	}
 	out, passes, err := mm.Compress(context.Background(), hist, 4000)
 	if err != nil {

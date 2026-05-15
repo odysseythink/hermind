@@ -6,18 +6,19 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
-	"io"
-	"log/slog"
 	"strings"
 	"time"
 
-	"github.com/odysseythink/hermind/config"
 	"github.com/odysseythink/hermind/message"
+	"github.com/odysseythink/hermind/pantheonadapter"
 	"github.com/odysseythink/hermind/provider"
 	"github.com/odysseythink/hermind/storage"
-	"github.com/odysseythink/hermind/tool"
 	"github.com/odysseythink/hermind/tool/memory/memprovider"
 	"github.com/odysseythink/hermind/tool/memory/memprovider/citesink"
+	"github.com/odysseythink/mlog"
+	"github.com/odysseythink/pantheon/agent/budget"
+	"github.com/odysseythink/pantheon/agent/compression"
+	"github.com/odysseythink/pantheon/core"
 )
 
 // RunConversation runs one or more turns of the conversation until:
@@ -31,15 +32,17 @@ import (
 // and persists each new message. For ephemeral runs (Ephemeral=true),
 // history is read only from opts.History and nothing is persisted.
 func (e *Engine) RunConversation(ctx context.Context, opts *RunOptions) (*ConversationResult, error) {
+	mlog.Debug(opts)
 	if err := ctx.Err(); err != nil {
+		mlog.Error(err)
 		return nil, err
 	}
 
 	model := opts.Model
 
-	var history []message.Message
+	var history []message.HermindMessage
 	if opts.Ephemeral {
-		history = append([]message.Message{}, opts.History...)
+		history = append([]message.HermindMessage{}, opts.History...)
 	} else if e.storage != nil {
 		limit := e.config.HistoryLimit
 		if limit <= 0 {
@@ -61,13 +64,13 @@ func (e *Engine) RunConversation(ctx context.Context, opts *RunOptions) (*Conver
 	// Log history size for debugging context-overflow issues.
 	historyChars := 0
 	for _, m := range history {
-		historyChars += len(m.Content.Text())
+		historyChars += len(m.Text())
 	}
-	slog.Info("conversation history loaded", "messages", len(history), "chars", historyChars)
+	mlog.Info("conversation history loaded", mlog.Int("messages", len(history)), mlog.Int("chars", historyChars))
 
-	userMsg := message.Message{
-		Role:    message.RoleUser,
-		Content: message.TextContent(opts.UserMessage),
+	userMsg := message.HermindMessage{
+		Role:    core.MESSAGE_ROLE_USER,
+		Content: core.NewTextContent(opts.UserMessage),
 	}
 	history = append(history, userMsg)
 	if e.memory != nil {
@@ -106,33 +109,33 @@ func (e *Engine) RunConversation(ctx context.Context, opts *RunOptions) (*Conver
 	var cited []string
 	ctx = citesink.WithSink(ctx, func(id string) { cited = append(cited, id) })
 
-	var toolDefs []tool.ToolDefinition
+	var toolDefs []core.ToolDefinition
 	if e.tools != nil {
 		if e.toolSelector != nil {
 			toolDefs = e.toolSelector.Select(opts.UserMessage, history, e.tools)
-			slog.Info("dynamic tool selection", "selected", len(toolDefs), "total", len(e.tools.Entries(nil)))
+			mlog.Info("dynamic tool selection", mlog.Int("selected", len(toolDefs)), mlog.Int("total", len(e.tools.Entries(nil))))
 		} else {
 			toolDefs = e.tools.Definitions(nil)
 		}
 	}
 
-	budget := NewBudget(e.config.MaxTurns)
-	totalUsage := message.Usage{}
+	b := budget.New(e.config.MaxTurns)
+	totalUsage := core.Usage{}
 	iterations := 0
 	emptyRetries := 0
 	stripTools := false // set true when retrying after empty response
-	var lastResponse message.Message
+	var lastResponse message.HermindMessage
 
 	for {
 		if err := ctx.Err(); err != nil {
 			return nil, err
 		}
-		if !budget.Consume() {
+		if !b.Consume() {
 			break
 		}
 		iterations++
 
-		if !opts.Ephemeral && e.compressor != nil && shouldCompress(history, e.config.Compression, e.provider, model) {
+		if !opts.Ephemeral && e.compressor != nil && shouldCompress(history, e.config.Compression, e.modelInfo, model) {
 			if newHistory, err := e.compressor.Compress(ctx, history); err == nil {
 				history = newHistory
 			}
@@ -162,8 +165,8 @@ func (e *Engine) RunConversation(ctx context.Context, opts *RunOptions) (*Conver
 		if e.memory != nil {
 			e.memory.ObserveTurn(resp.Message)
 		}
-		totalUsage.InputTokens += resp.Usage.InputTokens
-		totalUsage.OutputTokens += resp.Usage.OutputTokens
+		totalUsage.PromptTokens += resp.Usage.PromptTokens
+		totalUsage.CompletionTokens += resp.Usage.CompletionTokens
 		totalUsage.CacheReadTokens += resp.Usage.CacheReadTokens
 		totalUsage.CacheWriteTokens += resp.Usage.CacheWriteTokens
 
@@ -175,8 +178,8 @@ func (e *Engine) RunConversation(ctx context.Context, opts *RunOptions) (*Conver
 					return err
 				}
 				return tx.UpdateUsage(ctx, &storage.UsageUpdate{
-					InputTokens:      respCopy.Usage.InputTokens,
-					OutputTokens:     respCopy.Usage.OutputTokens,
+					InputTokens:      respCopy.Usage.PromptTokens,
+					OutputTokens:     respCopy.Usage.CompletionTokens,
 					CacheReadTokens:  respCopy.Usage.CacheReadTokens,
 					CacheWriteTokens: respCopy.Usage.CacheWriteTokens,
 				})
@@ -186,22 +189,22 @@ func (e *Engine) RunConversation(ctx context.Context, opts *RunOptions) (*Conver
 			}
 		}
 
-		toolCalls := extractToolCalls(resp.Message.Content)
+		toolCalls := resp.Message.ExtractToolCalls()
 		if len(toolCalls) == 0 {
 			// If the model produced only whitespace after tool calls,
 			// it likely failed to summarize the results. Inject a
 			// follow-up message to give it another chance (up to 2
 			// retries). This is common with smaller local models that
 			// struggle with multi-turn tool calling.
-			reply := resp.Message.Content.Text()
+			reply := resp.Message.Text()
 			if strings.TrimSpace(reply) == "" && iterations > 1 {
 				emptyRetries++
 				if emptyRetries <= 2 {
-					slog.Warn("model returned empty response after tool calls, retrying",
-						"iteration", iterations, "empty_retry", emptyRetries)
-					nudge := message.Message{
-						Role:    message.RoleUser,
-						Content: message.TextContent("Please provide your answer based on the search results above. Do not call any more tools."),
+					mlog.Warning("model returned empty response after tool calls, retrying",
+						mlog.Int("iteration", iterations), mlog.Int("empty_retry", emptyRetries))
+					nudge := message.HermindMessage{
+						Role:    core.MESSAGE_ROLE_USER,
+						Content: core.NewTextContent("Please provide your answer based on the search results above. Do not call any more tools."),
 					}
 					history = append(history, nudge)
 					if !opts.Ephemeral && e.storage != nil {
@@ -212,21 +215,21 @@ func (e *Engine) RunConversation(ctx context.Context, opts *RunOptions) (*Conver
 					stripTools = true
 					continue
 				}
-				slog.Warn("model returned empty response after tool calls, giving up",
-					"iteration", iterations, "empty_retries", emptyRetries)
+				mlog.Warning("model returned empty response after tool calls, giving up",
+					mlog.Int("iteration", iterations), mlog.Int("empty_retries", emptyRetries))
 			}
 			break
 		}
 
 		if e.bufferEvery > 0 && iterations%e.bufferEvery == 0 &&
 			e.memory != nil && len(e.memory.Providers()) > 0 {
-			_ = e.memory.SyncTurn(ctx, opts.UserMessage, resp.Message.Content.Text())
+			_ = e.memory.SyncTurn(ctx, opts.UserMessage, resp.Message.Text())
 		}
 
 		toolResults := e.executeToolCalls(ctx, toolCalls)
-		toolResultMsg := message.Message{
-			Role:    message.RoleUser,
-			Content: message.BlockContent(toolResults),
+		toolResultMsg := message.HermindMessage{
+			Role:    core.MESSAGE_ROLE_TOOL,
+			Content: toolResults,
 		}
 		history = append(history, toolResultMsg)
 
@@ -237,13 +240,17 @@ func (e *Engine) RunConversation(ctx context.Context, opts *RunOptions) (*Conver
 		}
 	}
 
-	assistantReply := lastResponse.Content.Text()
+	assistantReply := lastResponse.Text()
 
 	var verdict *Verdict
 	if e.conversationJudge != nil {
+		injectedMems := make([]InjectedMemory, len(conversationInjectedMems))
+		for i, m := range conversationInjectedMems {
+			injectedMems[i] = InjectedMemory{ID: m.ID, Content: m.Content}
+		}
 		v, _ := e.conversationJudge.Run(ctx, JudgeInput{
 			History:          history,
-			InjectedMemories: conversationInjectedMems,
+			InjectedMemories: injectedMems,
 			InjectedSkills:   activeSkills,
 			Platform:         e.platform,
 		})
@@ -263,12 +270,12 @@ func (e *Engine) RunConversation(ctx context.Context, opts *RunOptions) (*Conver
 	}
 
 	if verdict != nil {
-		slog.Info("conversation.judged",
-			"outcome", verdict.Outcome,
-			"memories_hit", len(verdict.MemoriesUsed),
-			"memories_injected", len(conversationInjectedMems),
-			"skills_extracted", len(verdict.SkillsToExtract),
-			"reasoning", verdict.Reasoning,
+		mlog.Info("conversation.judged",
+			mlog.String("outcome", verdict.Outcome),
+			mlog.Int("memories_hit", len(verdict.MemoriesUsed)),
+			mlog.Int("memories_injected", len(conversationInjectedMems)),
+			mlog.Int("skills_extracted", len(verdict.SkillsToExtract)),
+			mlog.String("reasoning", verdict.Reasoning),
 		)
 		if e.storage != nil {
 			data, _ := json.Marshal(map[string]any{
@@ -289,62 +296,115 @@ func (e *Engine) RunConversation(ctx context.Context, opts *RunOptions) (*Conver
 	}, nil
 }
 
-// streamOnce runs a single provider stream and collects the full response.
 func (e *Engine) streamOnce(ctx context.Context, req *provider.Request) (*provider.Response, error) {
-	if e.provider == nil {
-		return nil, errors.New("engine: no LLM provider configured — set one under Settings → Models → Providers")
+	if e.model == nil {
+		return nil, errors.New("engine: no LLM model configured — set one under Settings → Models → Providers")
 	}
-	stream, err := e.provider.Stream(ctx, req)
+
+	maxTokens := req.MaxTokens
+	pReq := &core.Request{
+		Messages:     messagesToPantheon(req.Messages),
+		SystemPrompt: req.SystemPrompt,
+		Tools:        req.Tools,
+		MaxTokens:    &maxTokens,
+	}
+	if req.Temperature != nil {
+		pReq.Temperature = req.Temperature
+	}
+	if req.TopP != nil {
+		pReq.TopP = req.TopP
+	}
+	if len(req.StopSequences) > 0 {
+		pReq.StopSequences = req.StopSequences
+	}
+	if len(req.Tools) > 0 {
+		pReq.ToolChoice = core.ToolChoice{Mode: core.ToolChoiceModeAuto}
+	}
+
+	mlog.Info("streamOnce: starting", mlog.String("model", req.Model), mlog.Int("messages", len(req.Messages)), mlog.Int("tools", len(req.Tools)))
+	seq, err := e.model.Stream(ctx, pReq)
 	if err != nil {
+		mlog.Error("streamOnce: start stream failed", mlog.Err(err))
 		return nil, fmt.Errorf("engine: start stream: %w", err)
 	}
-	defer stream.Close()
+	mlog.Info("streamOnce: stream started")
 
-	for {
-		if err := ctx.Err(); err != nil {
-			return nil, err
+	var contentParts []core.ContentParter
+	var reasoning string
+	var usage core.Usage
+	var finishReason string
+	var textBuf string
+	partCount := 0
+
+	for part, err := range seq {
+		partCount++
+		if err != nil {
+			mlog.Error("streamOnce: stream recv error", mlog.Err(err), mlog.Int("parts_received", partCount))
+			return nil, fmt.Errorf("engine: stream recv: %w", err)
 		}
-		ev, recvErr := stream.Recv()
-		if recvErr != nil {
-			if errors.Is(recvErr, io.EOF) {
-				return nil, errors.New("engine: stream ended without a done event")
+		mlog.Debug("streamOnce: part received", mlog.String("type", string(part.Type)), mlog.Int("part_num", partCount))
+		switch part.Type {
+		case core.StreamPartTypeTextDelta:
+			textBuf += part.TextDelta
+			if e.onStreamDelta != nil {
+				e.onStreamDelta(&provider.StreamDelta{Content: part.TextDelta})
 			}
-			return nil, fmt.Errorf("engine: stream recv: %w", recvErr)
-		}
-		if ev == nil {
-			continue
-		}
-		switch ev.Type {
-		case provider.EventDelta:
-			if e.onStreamDelta != nil && ev.Delta != nil {
-				e.onStreamDelta(ev.Delta)
+		case core.StreamPartTypeReasoningDelta:
+			reasoning += part.ReasoningDelta
+		case core.StreamPartTypeToolCall:
+			contentParts = append(contentParts, core.ToolCallPart{
+				ID:        part.ToolCall.ID,
+				Name:      part.ToolCall.Name,
+				Arguments: part.ToolCall.Arguments,
+			})
+		case core.StreamPartTypeUsage:
+			if part.Usage != nil {
+				usage.PromptTokens = part.Usage.PromptTokens
+				usage.CompletionTokens = part.Usage.CompletionTokens
 			}
-		case provider.EventDone:
-			if ev.Response == nil {
-				return nil, errors.New("engine: done event has nil response")
-			}
-			return ev.Response, nil
-		case provider.EventError:
-			return nil, ev.Err
+		case core.StreamPartTypeFinish:
+			finishReason = part.FinishReason
 		}
 	}
+	mlog.Info("streamOnce: stream done", mlog.Int("parts_total", partCount), mlog.String("finish_reason", finishReason), mlog.Int("text_len", len(textBuf)))
+
+	if textBuf != "" {
+		contentParts = append([]core.ContentParter{core.TextPart{Text: textBuf}}, contentParts...)
+	}
+	if finishReason == "" {
+		finishReason = "stop"
+	}
+
+	msg := message.MessageFromPantheon(core.Message{
+		Role:    core.MESSAGE_ROLE_ASSISTANT,
+		Content: contentParts,
+	})
+	if reasoning != "" {
+		msg.Content = append(msg.Content, core.ReasoningPart{Text: reasoning})
+	}
+
+	return &provider.Response{
+		Message:      msg,
+		FinishReason: finishReason,
+		Usage:        usage,
+	}, nil
 }
 
-func extractToolCalls(c message.Content) []message.ContentBlock {
-	if c.IsText() {
-		return nil
-	}
-	var calls []message.ContentBlock
-	for _, b := range c.Blocks() {
-		if b.Type == "tool_use" {
-			calls = append(calls, b)
+func messagesToPantheon(msgs []message.HermindMessage) []core.Message {
+	out := make([]core.Message, len(msgs))
+	for i, m := range msgs {
+		out[i] = message.ToPantheon(m)
+		roleStr := string(out[i].Role)
+		mlog.Debug("messagesToPantheon", mlog.Int("idx", i), mlog.String("role", roleStr), mlog.Int("parts", len(out[i].Content)))
+		for j, p := range out[i].Content {
+			mlog.Debug("messagesToPantheon part", mlog.Int("msg_idx", i), mlog.Int("part_idx", j), mlog.String("type", fmt.Sprintf("%T", p)))
 		}
 	}
-	return calls
+	return out
 }
 
-func (e *Engine) executeToolCalls(ctx context.Context, calls []message.ContentBlock) []message.ContentBlock {
-	results := make([]message.ContentBlock, 0, len(calls))
+func (e *Engine) executeToolCalls(ctx context.Context, calls []core.ToolCallPart) []core.ContentParter {
+	results := make([]core.ContentParter, 0, len(calls))
 	for _, call := range calls {
 		if e.onToolStart != nil {
 			e.onToolStart(call)
@@ -354,7 +414,7 @@ func (e *Engine) executeToolCalls(ctx context.Context, calls []message.ContentBl
 		if e.tools == nil {
 			result = `{"error":"no tool registry configured"}`
 		} else {
-			out, err := e.tools.Dispatch(ctx, call.ToolUseName, call.ToolUseInput)
+			out, err := e.tools.Dispatch(ctx, call.Name, json.RawMessage(call.Arguments))
 			if err != nil {
 				result = fmt.Sprintf(`{"error":"dispatch failed: %s"}`, err.Error())
 			} else {
@@ -366,17 +426,16 @@ func (e *Engine) executeToolCalls(ctx context.Context, calls []message.ContentBl
 			e.onToolResult(call, result)
 		}
 
-		results = append(results, message.ContentBlock{
-			Type:        "tool_result",
-			ToolUseID:   call.ToolUseID,
-			ToolUseName: call.ToolUseName,
-			ToolResult:  result,
+		results = append(results, core.ToolResultPart{
+			ToolCallID: call.ID,
+			Name:       call.Name,
+			Content:    core.NewTextContent(result),
 		})
 	}
 	return results
 }
 
-func (e *Engine) persistMessage(ctx context.Context, m *message.Message) error {
+func (e *Engine) persistMessage(ctx context.Context, m *message.HermindMessage) error {
 	stored, err := storedFromMessage(m)
 	if err != nil {
 		return err
@@ -384,7 +443,7 @@ func (e *Engine) persistMessage(ctx context.Context, m *message.Message) error {
 	return e.storage.AppendMessage(ctx, stored)
 }
 
-func (e *Engine) persistMessageTx(ctx context.Context, tx storage.Tx, m *message.Message) error {
+func (e *Engine) persistMessageTx(ctx context.Context, tx storage.Tx, m *message.HermindMessage) error {
 	stored, err := storedFromMessage(m)
 	if err != nil {
 		return err
@@ -392,111 +451,187 @@ func (e *Engine) persistMessageTx(ctx context.Context, tx storage.Tx, m *message
 	return tx.AppendMessage(ctx, stored)
 }
 
-// shouldCompress decides whether to invoke the Compressor for this turn.
-// Two triggers, OR-ed together:
-//
-//  1. Message-count trigger (legacy): len(history) > 3*ProtectLast.
-//     Cheap, doesn't need a tokenizer — kept as a safety net.
-//  2. Token-budget trigger: estimated history tokens >= Threshold *
-//     ContextLength of the active model. Catches the "few messages, but
-//     one of them is a 700KB paste" case that the count trigger misses.
-//
-// The token trigger is best-effort: it silently no-ops when the provider
-// or model info is unavailable, leaving the count trigger as the floor.
-func shouldCompress(history []message.Message, cfg config.CompressionConfig, p provider.Provider, model string) bool {
-	if !cfg.Enabled {
-		return false
-	}
-	if cfg.ProtectLast <= 0 {
+func shouldCompress(history []message.HermindMessage, cfg compression.CompressionConfig, r *pantheonadapter.ModelInfoResolver, model string) bool {
+	if !cfg.Enabled || cfg.ProtectLast <= 0 {
 		return false
 	}
 	if len(history) > 3*cfg.ProtectLast {
 		return true
 	}
-	if p == nil || cfg.Threshold <= 0 {
+	if r == nil || cfg.Threshold <= 0 {
 		return false
 	}
-	info := p.ModelInfo(model)
-	if info == nil || info.ContextLength <= 0 {
+	info := r.Lookup(model)
+	if info.ContextLength <= 0 {
 		return false
 	}
 	budget := int(float64(info.ContextLength) * cfg.Threshold)
 	if budget <= 0 {
 		return false
 	}
-	return estimateHistoryTokens(p, model, history) >= budget
+	return estimateHistoryTokens(r, history) >= budget
 }
 
-// estimateHistoryTokens sums the provider's per-block token estimate for
-// every message. Returns 0 when the provider can't estimate.
-func estimateHistoryTokens(p provider.Provider, model string, history []message.Message) int {
-	if p == nil {
+func estimateHistoryTokens(r *pantheonadapter.ModelInfoResolver, history []message.HermindMessage) int {
+	if r == nil {
 		return 0
 	}
 	total := 0
 	for _, m := range history {
-		total += estimateMessageTokens(p, model, m)
+		total += estimateMessageTokens(r, m)
 	}
 	return total
 }
 
-// estimateMessageTokens counts the rendered text of every block. tool_use
-// inputs and tool_result payloads are included because they ride the wire
-// alongside chat text.
-func estimateMessageTokens(p provider.Provider, model string, m message.Message) int {
-	if p == nil {
+func estimateMessageTokens(r *pantheonadapter.ModelInfoResolver, m message.HermindMessage) int {
+	if r == nil {
 		return 0
 	}
-	if m.Content.IsText() {
-		n, _ := p.EstimateTokens(model, m.Content.Text())
-		return n
-	}
 	total := 0
-	for _, b := range m.Content.Blocks() {
-		switch b.Type {
-		case "text":
-			n, _ := p.EstimateTokens(model, b.Text)
-			total += n
-		case "tool_use":
-			n, _ := p.EstimateTokens(model, b.ToolUseName+string(b.ToolUseInput))
-			total += n
-		case "tool_result":
-			n, _ := p.EstimateTokens(model, b.ToolResult)
-			total += n
+	for _, p := range m.Content {
+		switch part := p.(type) {
+		case core.TextPart:
+			total += r.EstimateTokens(part.Text)
+		case core.ToolCallPart:
+			total += r.EstimateTokens(part.Name + part.Arguments)
+		case core.ToolResultPart:
+			total += r.EstimateTokens(message.HermindMessage{Content: part.Content}.Text())
 		}
 	}
 	return total
 }
 
-func storedFromMessage(m *message.Message) (*storage.StoredMessage, error) {
-	contentJSON, err := m.Content.MarshalJSON()
+func storedFromMessage(m *message.HermindMessage) (*storage.StoredMessage, error) {
+	contentJSON, err := json.Marshal(m.Content)
 	if err != nil {
 		return nil, fmt.Errorf("engine: marshal content: %w", err)
 	}
 	return &storage.StoredMessage{
-		Role:         string(m.Role),
-		Content:      string(contentJSON),
-		ToolCallID:   m.ToolCallID,
-		ToolName:     m.ToolName,
-		Timestamp:    time.Now().UTC(),
-		FinishReason: m.FinishReason,
-		Reasoning:    m.Reasoning,
+		Role:       string(m.Role),
+		Content:    string(contentJSON),
+		ToolCallID: m.ToolCallID,
+		Timestamp:  time.Now().UTC(),
+		Reasoning:  (*m).ExtractReasoning(),
 	}, nil
 }
 
-// messageFromStored rebuilds a message.Message from a StoredMessage
+// messageFromStored rebuilds a message.HermindMessage from a StoredMessage
 // pulled out of storage.GetHistory.
-func messageFromStored(row *storage.StoredMessage) (message.Message, error) {
-	var content message.Content
-	if err := content.UnmarshalJSON([]byte(row.Content)); err != nil {
-		return message.Message{}, fmt.Errorf("engine: decode stored content: %w", err)
+func messageFromStored(row *storage.StoredMessage) (message.HermindMessage, error) {
+	content, err := parseContentJSON([]byte(row.Content))
+	if err != nil {
+		return message.HermindMessage{}, fmt.Errorf("engine: decode stored content: %w", err)
 	}
-	return message.Message{
-		Role:         message.Role(row.Role),
-		Content:      content,
-		ToolCallID:   row.ToolCallID,
-		ToolName:     row.ToolName,
-		FinishReason: row.FinishReason,
-		Reasoning:    row.Reasoning,
+	if row.Reasoning != "" {
+		content = append([]core.ContentParter{core.ReasoningPart{Text: row.Reasoning}}, content...)
+	}
+	return message.HermindMessage{
+		Role:       core.MessageRoleType(row.Role),
+		Content:    content,
+		ToolCallID: row.ToolCallID,
 	}, nil
+}
+
+// parseContentJSON parses stored content JSON handling both the old
+// hermind Content/ContentBlock formats and the new pantheon parts format.
+func parseContentJSON(data []byte) ([]core.ContentParter, error) {
+	if len(data) == 0 {
+		return nil, nil
+	}
+	if string(data) == "null" {
+		return nil, nil
+	}
+
+	// JSON string → text part
+	if data[0] == '"' {
+		var s string
+		if err := json.Unmarshal(data, &s); err != nil {
+			return nil, err
+		}
+		return core.NewTextContent(s), nil
+	}
+
+	// Must be an array
+	if data[0] != '[' {
+		return nil, fmt.Errorf("content must be string or array, got %q", data[:1])
+	}
+
+	// Try new format first (core.Message unmarshal handles ContentParter array)
+	wrapper := fmt.Sprintf(`{"role":"user","content":%s}`, string(data))
+	var msg core.Message
+	if err := json.Unmarshal([]byte(wrapper), &msg); err == nil {
+		return msg.Content, nil
+	}
+
+	// Fallback: old ContentBlock array format
+	var rawItems []json.RawMessage
+	if err := json.Unmarshal(data, &rawItems); err != nil {
+		return nil, err
+	}
+
+	var parts []core.ContentParter
+	for _, raw := range rawItems {
+		var typ struct {
+			Type string `json:"type"`
+		}
+		if err := json.Unmarshal(raw, &typ); err != nil {
+			return nil, err
+		}
+
+		switch typ.Type {
+		case "text":
+			var p core.TextPart
+			if err := json.Unmarshal(raw, &p); err != nil {
+				return nil, err
+			}
+			parts = append(parts, p)
+		case "image_url":
+			var old struct {
+				ImageURL struct {
+					URL    string `json:"url"`
+					Detail string `json:"detail,omitempty"`
+				} `json:"image_url"`
+			}
+			if err := json.Unmarshal(raw, &old); err != nil {
+				return nil, err
+			}
+			parts = append(parts, core.ImagePart{
+				URL:    old.ImageURL.URL,
+				Detail: old.ImageURL.Detail,
+			})
+		case "tool_use":
+			var old struct {
+				ID    string          `json:"id"`
+				Name  string          `json:"name"`
+				Input json.RawMessage `json:"input"`
+			}
+			if err := json.Unmarshal(raw, &old); err != nil {
+				return nil, err
+			}
+			args := string(old.Input)
+			if args == "" {
+				args = "{}"
+			}
+			parts = append(parts, core.ToolCallPart{
+				ID:        old.ID,
+				Name:      old.Name,
+				Arguments: args,
+			})
+		case "tool_result":
+			var old struct {
+				ID      string `json:"id"`
+				Content string `json:"content"`
+			}
+			if err := json.Unmarshal(raw, &old); err != nil {
+				return nil, err
+			}
+			parts = append(parts, core.ToolResultPart{
+				ToolCallID: old.ID,
+				Content:    core.NewTextContent(old.Content),
+			})
+		default:
+			return nil, fmt.Errorf("unknown old content block type: %q", typ.Type)
+		}
+	}
+	return parts, nil
 }

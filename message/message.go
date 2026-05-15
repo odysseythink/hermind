@@ -1,45 +1,56 @@
 package message
 
-// Role identifies who produced a message in the conversation (user, assistant, tool, system).
-type Role string
+import (
+	"fmt"
 
-const (
-	RoleUser      Role = "user"
-	RoleAssistant Role = "assistant"
-	RoleTool      Role = "tool"
-	RoleSystem    Role = "system"
+	"github.com/odysseythink/pantheon/core"
 )
 
-// Message represents a single turn in a conversation.
-// Content is a typed union — see content.go for the Content type.
-type Message struct {
-	Role         Role       `json:"role"`
-	Content      Content    `json:"content"`
-	ToolCalls    []ToolCall `json:"tool_calls,omitempty"`
-	ToolCallID   string     `json:"tool_call_id,omitempty"`
-	ToolName     string     `json:"tool_name,omitempty"`
-	Reasoning    string     `json:"reasoning,omitempty"`
-	FinishReason string     `json:"finish_reason,omitempty"`
+// Type aliases — hermind Message is now exactly pantheon core.Message.
+type (
+	HermindMessage = core.Message
+)
+
+// ---- content helpers ----
+
+// ---- adapter (legacy compatibility) ----
+
+// ToPantheon converts a hermind Message to a pantheon core.Message.
+// Since the types are identical this is almost a no-op, but it preserves
+// the legacy compatibility fix that rewrites core.MESSAGE_ROLE_USER → core.MESSAGE_ROLE_TOOL when the
+// message carries tool results.
+func ToPantheon(m HermindMessage) core.Message {
+	role := m.Role
+	origRole := role
+
+	if role == core.MESSAGE_ROLE_USER && hasToolResultPart(m.Content) {
+		role = core.MESSAGE_ROLE_TOOL
+	}
+	if origRole != role {
+		fmt.Printf("[ToPantheon] CONVERTED role %s -> %s parts=%d\n", origRole, role, len(m.Content))
+		for i, p := range m.Content {
+			fmt.Printf("[ToPantheon]   part[%d] type=%T\n", i, p)
+		}
+	}
+
+	return core.Message{
+		Role:       core.MessageRoleType(role),
+		Content:    m.Content,
+		Name:       m.Name,
+		ToolCallID: m.ToolCallID,
+	}
 }
 
-// ToolCall represents a single tool invocation requested by the assistant.
-type ToolCall struct {
-	ID       string           `json:"id"`
-	Type     string           `json:"type"` // always "function"
-	Function ToolCallFunction `json:"function"`
+func hasToolResultPart(parts []core.ContentParter) bool {
+	for _, p := range parts {
+		if _, ok := p.(core.ToolResultPart); ok {
+			return true
+		}
+	}
+	return false
 }
 
-// ToolCallFunction holds the function name and JSON-encoded arguments of a tool call.
-type ToolCallFunction struct {
-	Name      string `json:"name"`
-	Arguments string `json:"arguments"` // JSON-encoded argument string
-}
-
-// Usage tracks token accounting for a single API call.
-type Usage struct {
-	InputTokens      int `json:"input_tokens"`
-	OutputTokens     int `json:"output_tokens"`
-	CacheReadTokens  int `json:"cache_read_tokens,omitempty"`
-	CacheWriteTokens int `json:"cache_write_tokens,omitempty"`
-	ReasoningTokens  int `json:"reasoning_tokens,omitempty"`
+// MessageFromPantheon converts a pantheon core.Message to a hermind Message.
+func MessageFromPantheon(m core.Message) HermindMessage {
+	return HermindMessage(m)
 }

@@ -7,6 +7,7 @@ import (
 
 	rlpkg "github.com/odysseythink/hermind/rl"
 	"github.com/odysseythink/hermind/tool"
+	"github.com/odysseythink/pantheon/core"
 )
 
 // RegisterAll registers all RL training tools into the given registry.
@@ -21,13 +22,9 @@ func RegisterAll(reg *tool.Registry, manager *rlpkg.Manager) {
 			data, _ := json.MarshalIndent(cfg, "", "  ")
 			return string(data), nil
 		},
-		Schema: tool.ToolDefinition{
-			Type: "function",
-			Function: tool.FunctionDef{
-				Name:        "rl_get_current_config",
-				Description: "Get the current RL training configuration.",
-				Parameters:  json.RawMessage(`{"type":"object","properties":{}}`),
-			},
+		Schema: core.ToolDefinition{
+			Name:        "rl_get_current_config",
+			Description: "Get the current RL training configuration.",
 		},
 	})
 
@@ -53,13 +50,10 @@ func RegisterAll(reg *tool.Registry, manager *rlpkg.Manager) {
 			}
 			return fmt.Sprintf(`{"run_id":"%s","status":"started"}`, id), nil
 		},
-		Schema: tool.ToolDefinition{
-			Type: "function",
-			Function: tool.FunctionDef{
-				Name:        "rl_start_training",
-				Description: "Start a new RL training run.",
-				Parameters:  json.RawMessage(`{"type":"object","properties":{"command":{"type":"string"},"args":{"type":"array","items":{"type":"string"}}},"required":["command"]}`),
-			},
+		Schema: core.ToolDefinition{
+			Name:        "rl_start_training",
+			Description: "Start a new RL training run.",
+			Parameters:  core.MustSchemaFromJSON([]byte(`{"type":"object","properties":{"command":{"type":"string"},"args":{"type":"array","items":{"type":"string"}}},"required":["command"]}`)),
 		},
 	})
 
@@ -79,13 +73,10 @@ func RegisterAll(reg *tool.Registry, manager *rlpkg.Manager) {
 			data, _ := json.MarshalIndent(status, "", "  ")
 			return string(data), nil
 		},
-		Schema: tool.ToolDefinition{
-			Type: "function",
-			Function: tool.FunctionDef{
-				Name:        "rl_check_status",
-				Description: "Check the status of a training run.",
-				Parameters:  json.RawMessage(`{"type":"object","properties":{"run_id":{"type":"string"}},"required":["run_id"]}`),
-			},
+		Schema: core.ToolDefinition{
+			Name:        "rl_check_status",
+			Description: "Check the status of a training run.",
+			Parameters:  core.MustSchemaFromJSON([]byte(`{"type":"object","properties":{"run_id":{"type":"string"}},"required":["run_id"]}`)),
 		},
 	})
 
@@ -106,13 +97,10 @@ func RegisterAll(reg *tool.Registry, manager *rlpkg.Manager) {
 			}
 			return fmt.Sprintf(`{"run_id":"%s","status":"stopped"}`, params.RunID), nil
 		},
-		Schema: tool.ToolDefinition{
-			Type: "function",
-			Function: tool.FunctionDef{
-				Name:        "rl_stop_training",
-				Description: "Stop an active training run.",
-				Parameters:  json.RawMessage(`{"type":"object","properties":{"run_id":{"type":"string"}},"required":["run_id"]}`),
-			},
+		Schema: core.ToolDefinition{
+			Name:        "rl_stop_training",
+			Description: "Stop an active training run.",
+			Parameters:  core.MustSchemaFromJSON([]byte(`{"type":"object","properties":{"run_id":{"type":"string"}},"required":["run_id"]}`)),
 		},
 	})
 }

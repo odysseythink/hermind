@@ -7,6 +7,7 @@ import (
 
 	"github.com/odysseythink/hermind/config"
 	"github.com/odysseythink/hermind/tool"
+	"github.com/odysseythink/pantheon/core"
 )
 
 // Mem0 is a Provider backed by the Mem0 cloud memory service.
@@ -87,17 +88,14 @@ func (m *Mem0) RegisterTools(reg *tool.Registry) {
 		Toolset:     "memory",
 		Description: "Store a fact in Mem0 (external memory provider).",
 		Emoji:       "💾",
-		Schema: tool.ToolDefinition{
-			Type: "function",
-			Function: tool.FunctionDef{
-				Name:        "mem0_remember",
-				Description: "Store a fact in the Mem0 memory store.",
-				Parameters: json.RawMessage(`{
+		Schema: core.ToolDefinition{
+			Name:        "mem0_remember",
+			Description: "Store a fact in the Mem0 memory store.",
+			Parameters: core.MustSchemaFromJSON([]byte(`{
   "type":"object",
   "properties":{"content":{"type":"string","description":"Text to remember"}},
   "required":["content"]
-}`),
-			},
+}`)),
 		},
 		Handler: func(ctx context.Context, raw json.RawMessage) (string, error) {
 			var args struct {
@@ -121,20 +119,17 @@ func (m *Mem0) RegisterTools(reg *tool.Registry) {
 		Toolset:     "memory",
 		Description: "Recall memories from Mem0 by semantic query.",
 		Emoji:       "🧩",
-		Schema: tool.ToolDefinition{
-			Type: "function",
-			Function: tool.FunctionDef{
-				Name:        "mem0_recall",
-				Description: "Search Mem0 memories and return matching content.",
-				Parameters: json.RawMessage(`{
+		Schema: core.ToolDefinition{
+			Name:        "mem0_recall",
+			Description: "Search Mem0 memories and return matching content.",
+			Parameters: core.MustSchemaFromJSON([]byte(`{
   "type":"object",
   "properties":{
     "query":{"type":"string","description":"Search query"},
     "limit":{"type":"number","description":"Max results (default 5)"}
   },
   "required":["query"]
-}`),
-			},
+}`)),
 		},
 		Handler: func(ctx context.Context, raw json.RawMessage) (string, error) {
 			var args struct {

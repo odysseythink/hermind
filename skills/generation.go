@@ -9,7 +9,6 @@ import (
 	"encoding/hex"
 	"encoding/json"
 	"fmt"
-	"log/slog"
 	"os"
 	"path/filepath"
 	"sort"
@@ -17,6 +16,7 @@ import (
 	"time"
 
 	"github.com/odysseythink/hermind/storage"
+	"github.com/odysseythink/mlog"
 )
 
 // computeLibraryHash returns the SHA-256 of the sorted (filename,
@@ -112,11 +112,11 @@ func (t *Tracker) Refresh(ctx context.Context) (bool, error) {
 	})
 	_ = t.store.AppendMemoryEvent(ctx, time.Now().UTC(), "skills.generation_bumped", data)
 
-	slog.Info("skills.generation_bumped",
-		"old_seq", oldSeq,
-		"new_seq", newSeq,
-		"old_hash", shortHash(oldHash),
-		"new_hash", shortHash(h),
+	mlog.Info("skills.generation_bumped",
+		mlog.Int64("old_seq", oldSeq),
+		mlog.Int64("new_seq", newSeq),
+		mlog.String("old_hash", shortHash(oldHash)),
+		mlog.String("new_hash", shortHash(h)),
 	)
 	return true, nil
 }

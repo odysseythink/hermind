@@ -331,7 +331,14 @@ func TestRegisterChart(t *testing.T) {
 	RegisterChart(reg)
 
 	// Verify the tool is registered
-	if _, ok := reg.entries["chart"]; !ok {
+	found := false
+	for _, e := range reg.Entries(nil) {
+		if e.Name == "chart" {
+			found = true
+			break
+		}
+	}
+	if !found {
 		t.Error("chart tool not registered")
 	}
 }

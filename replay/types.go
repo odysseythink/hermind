@@ -10,24 +10,24 @@
 package replay
 
 import (
-	"github.com/odysseythink/hermind/benchmark"
 	"github.com/odysseythink/hermind/message"
+	"github.com/odysseythink/pantheon/benchmark"
 )
 
 // ReplayItem is one row of a replay dataset. It implements
 // benchmark.Item so it flows through benchmark.Run unchanged.
 type ReplayItem struct {
-	ID       string             `json:"id"`
-	Category string             `json:"category,omitempty"`
-	Message  string             `json:"message"`
+	ID       string `json:"id"`
+	Category string `json:"category,omitempty"`
+	Message  string `json:"message"`
 	// History is the conversation context preceding the target turn.
 	// Empty for "cold" mode (target message replayed in isolation);
 	// non-empty for "contextual" mode (target turn replayed with full
 	// preceding history).
-	History  []message.Message  `json:"history,omitempty"`
+	History []message.HermindMessage `json:"history,omitempty"`
 	// Baseline is the historical assistant reply that immediately
 	// followed Message in state.db. Required for replay items.
-	Baseline string             `json:"baseline"`
+	Baseline string `json:"baseline"`
 }
 
 // Compile-time interface satisfaction.
@@ -46,7 +46,7 @@ func (r ReplayItem) GetCategory() string { return r.Category }
 func (r ReplayItem) GetBaseline() string { return r.Baseline }
 
 // GetHistory implements benchmark.Item.
-func (r ReplayItem) GetHistory() []message.Message { return r.History }
+func (r ReplayItem) GetHistory() []message.HermindMessage { return r.History }
 
 // Mode selects the replay judge strategy.
 type Mode string

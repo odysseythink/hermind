@@ -63,7 +63,7 @@ func TestProvidersProviderEnumPopulatedFromFactory(t *testing.T) {
 		t.Fatal("provider field not found")
 	}
 	if len(provider.Enum) == 0 {
-		t.Fatal("provider.Enum is empty — did providers.go import provider/factory correctly?")
+		t.Fatal("provider.Enum is empty — did providers.go set SupportedProviders?")
 	}
 	has := map[string]bool{}
 	for _, v := range provider.Enum {

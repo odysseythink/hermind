@@ -2,6 +2,8 @@ package gateway
 
 import (
 	"testing"
+
+	_ "github.com/odysseythink/hermind/logging"
 )
 
 func TestDedup_NewDedup_DefaultCapacity(t *testing.T) {

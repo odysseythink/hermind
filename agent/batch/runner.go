@@ -13,7 +13,7 @@ import (
 	"golang.org/x/sync/errgroup"
 
 	"github.com/odysseythink/hermind/message"
-	"github.com/odysseythink/hermind/provider"
+	"github.com/odysseythink/pantheon/core"
 )
 
 // Trajectory is the structured result produced for a single dataset
@@ -21,15 +21,15 @@ import (
 // consumer (e.g. the RL trajectory bridge). Fields are flat by design
 // so serialization stays cheap.
 type Trajectory struct {
-	ID          string            `json:"id"`
-	Model       string            `json:"model"`
-	Environment string            `json:"environment,omitempty"`
-	Prompt      string            `json:"prompt"`
-	Response    string            `json:"response"`
-	Messages    []message.Message `json:"messages,omitempty"`
-	Usage       message.Usage     `json:"usage,omitempty"`
-	StartedAt   time.Time         `json:"started_at"`
-	FinishedAt  time.Time         `json:"finished_at"`
+	ID          string                   `json:"id"`
+	Model       string                   `json:"model"`
+	Environment string                   `json:"environment,omitempty"`
+	Prompt      string                   `json:"prompt"`
+	Response    string                   `json:"response"`
+	Messages    []message.HermindMessage `json:"messages,omitempty"`
+	Usage       core.Usage               `json:"usage,omitempty"`
+	StartedAt   time.Time                `json:"started_at"`
+	FinishedAt  time.Time                `json:"finished_at"`
 	// Raw echoes the original dataset line so downstream consumers can
 	// recover fields the runner does not understand (e.g. ground-truth
 	// answers used by an offline reward model).
@@ -65,17 +65,17 @@ func (f TrajectorySinkFunc) OnTrajectory(ctx context.Context, tr *Trajectory) er
 // Runner drives a batch data-generation run. It is safe for a single
 // Run(ctx) invocation; construct a fresh Runner per run.
 type Runner struct {
-	cfg      *Config
-	provider provider.Provider
-	sink     TrajectorySink
+	cfg   *Config
+	model core.LanguageModel
+	sink  TrajectorySink
 
 	done int64 // atomic count of completed items (used by logging)
 }
 
-// NewRunner constructs a Runner. The provider must be ready to serve
-// requests (factory.New should already have been called by the caller).
-func NewRunner(cfg *Config, p provider.Provider) *Runner {
-	return &Runner{cfg: cfg, provider: p}
+// NewRunner constructs a Runner. The model must be ready to serve
+// requests (pantheonadapter.BuildModel should already have been called by the caller).
+func NewRunner(cfg *Config, m core.LanguageModel) *Runner {
+	return &Runner{cfg: cfg, model: m}
 }
 
 // WithSink attaches a TrajectorySink. Pass nil to clear. Returns the
@@ -150,38 +150,51 @@ func (r *Runner) Run(ctx context.Context) error {
 	return nil
 }
 
-// processOne runs a single prompt through the provider and writes a
+// processOne runs a single prompt through the model and writes a
 // trajectory JSONL file. MVP: no tool use, no multi-turn — we send
 // the prompt, capture the response, and record the pair. A future
 // plan can wire in the full agent.Engine loop when the batch runner
 // grows tool support (see Config.MaxTurns, currently reserved).
 func (r *Runner) processOne(ctx context.Context, item Item) (*Trajectory, error) {
-	req := &provider.Request{
-		Model:        r.cfg.Model,
+	maxTokens := r.cfg.MaxTokens
+	req := &core.Request{
 		SystemPrompt: r.cfg.EphemeralSystemPrompt,
-		Messages: []message.Message{
-			{Role: message.RoleUser, Content: message.TextContent(item.Prompt)},
+		Messages: []core.Message{
+			{
+				Role:    core.MESSAGE_ROLE_USER,
+				Content: []core.ContentParter{core.TextPart{Text: item.Prompt}},
+			},
 		},
-		MaxTokens: r.cfg.MaxTokens,
+		MaxTokens: &maxTokens,
 	}
 	startedAt := time.Now().UTC()
-	resp, err := r.provider.Complete(ctx, req)
+	resp, err := r.model.Generate(ctx, req)
 	if err != nil {
 		return nil, err
 	}
 	finishedAt := time.Now().UTC()
+
+	var responseText string
+	for _, part := range resp.Message.Content {
+		if p, ok := part.(core.TextPart); ok {
+			responseText += p.Text
+		}
+	}
 
 	tr := &Trajectory{
 		ID:          item.ID,
 		Model:       r.cfg.Model,
 		Environment: r.cfg.Environment,
 		Prompt:      item.Prompt,
-		Response:    resp.Message.Content.Text(),
-		Messages: []message.Message{
-			{Role: message.RoleUser, Content: message.TextContent(item.Prompt)},
-			resp.Message,
+		Response:    responseText,
+		Messages: []message.HermindMessage{
+			{Role: core.MESSAGE_ROLE_USER, Content: core.NewTextContent(item.Prompt)},
+			{Role: core.MESSAGE_ROLE_ASSISTANT, Content: core.NewTextContent(responseText)},
 		},
-		Usage:      resp.Usage,
+		Usage: core.Usage{
+			PromptTokens:     resp.Usage.PromptTokens,
+			CompletionTokens: resp.Usage.CompletionTokens,
+		},
 		StartedAt:  startedAt,
 		FinishedAt: finishedAt,
 		Raw:        item.Raw,

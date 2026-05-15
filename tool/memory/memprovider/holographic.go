@@ -9,6 +9,7 @@ import (
 
 	"github.com/odysseythink/hermind/storage"
 	"github.com/odysseythink/hermind/tool"
+	"github.com/odysseythink/pantheon/core"
 )
 
 // Holographic is a Provider that layers a distinct tool surface
@@ -75,20 +76,17 @@ func (h *Holographic) RegisterTools(reg *tool.Registry) {
 		Toolset:     "memory",
 		Description: "Store a fact in the local Holographic memory store.",
 		Emoji:       "🌀",
-		Schema: tool.ToolDefinition{
-			Type: "function",
-			Function: tool.FunctionDef{
-				Name:        "holographic_remember",
-				Description: "Store a fact in the local Holographic (SQLite) memory store.",
-				Parameters: json.RawMessage(`{
+		Schema: core.ToolDefinition{
+			Name:        "holographic_remember",
+			Description: "Store a fact in the local Holographic (SQLite) memory store.",
+			Parameters: core.MustSchemaFromJSON([]byte(`{
   "type":"object",
   "properties":{
     "content":{"type":"string"},
     "category":{"type":"string"}
   },
   "required":["content"]
-}`),
-			},
+}`)),
 		},
 		Handler: func(ctx context.Context, raw json.RawMessage) (string, error) {
 			var args struct {
@@ -113,20 +111,17 @@ func (h *Holographic) RegisterTools(reg *tool.Registry) {
 		Toolset:     "memory",
 		Description: "Recall items from the local Holographic memory store.",
 		Emoji:       "🪩",
-		Schema: tool.ToolDefinition{
-			Type: "function",
-			Function: tool.FunctionDef{
-				Name:        "holographic_recall",
-				Description: "Search local Holographic memories by full-text query.",
-				Parameters: json.RawMessage(`{
+		Schema: core.ToolDefinition{
+			Name:        "holographic_recall",
+			Description: "Search local Holographic memories by full-text query.",
+			Parameters: core.MustSchemaFromJSON([]byte(`{
   "type":"object",
   "properties":{
     "query":{"type":"string"},
     "limit":{"type":"number"}
   },
   "required":["query"]
-}`),
-			},
+}`)),
 		},
 		Handler: func(ctx context.Context, raw json.RawMessage) (string, error) {
 			var args struct {

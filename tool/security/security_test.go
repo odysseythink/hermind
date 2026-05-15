@@ -10,6 +10,7 @@ import (
 	"testing"
 
 	"github.com/odysseythink/hermind/tool"
+	"github.com/odysseythink/pantheon/security/osv"
 )
 
 func TestOSVQuery(t *testing.T) {
@@ -21,7 +22,7 @@ func TestOSVQuery(t *testing.T) {
 		_, _ = w.Write([]byte(`{"vulns":[{"id":"CVE-2020-1","summary":"issue"}]}`))
 	}))
 	defer srv.Close()
-	c := NewOSVClient(srv.URL)
+	c := osv.New(srv.URL)
 	reg := tool.NewRegistry()
 	RegisterOSV(reg, c)
 	args, _ := json.Marshal(map[string]string{"ecosystem": "npm", "name": "lodash", "version": "4.17.15"})
@@ -64,26 +65,49 @@ func TestURLCheckAllowlist(t *testing.T) {
 	}
 }
 
-func TestMCPOAuthFetchToken(t *testing.T) {
+func TestOSVNoVulns(t *testing.T) {
 	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		if err := r.ParseForm(); err != nil {
-			t.Fatal(err)
-		}
-		if r.Form.Get("grant_type") != "client_credentials" {
-			t.Errorf("grant_type = %q", r.Form.Get("grant_type"))
-		}
-		if r.Form.Get("client_id") != "app" {
-			t.Errorf("client_id = %q", r.Form.Get("client_id"))
-		}
-		_, _ = w.Write([]byte(`{"access_token":"at_123","token_type":"Bearer","expires_in":3600}`))
+		_, _ = w.Write([]byte(`{"vulns":[]}`))
 	}))
 	defer srv.Close()
-	c := NewMCPOAuthClient(srv.URL, "app", "secret", "read")
-	tok, err := c.FetchToken(context.Background())
+	c := osv.New(srv.URL)
+	vulns, err := c.Query(context.Background(), "npm", "safe-pkg", "1.0.0")
 	if err != nil {
-		t.Fatal(err)
+		t.Fatalf("query: %v", err)
 	}
-	if tok != "at_123" {
-		t.Errorf("token = %q", tok)
+	if len(vulns) != 0 {
+		t.Errorf("expected no vulns, got %v", vulns)
+	}
+}
+
+func TestOSVInvalidArgs(t *testing.T) {
+	c := osv.New("")
+	reg := tool.NewRegistry()
+	RegisterOSV(reg, c)
+	out, _ := reg.Dispatch(context.Background(), "osv_check", json.RawMessage(`{}`))
+	if !strings.Contains(out, "ecosystem and name are required") {
+		t.Errorf("expected validation error, got %s", out)
+	}
+}
+
+func TestURLCheckInvalidURL(t *testing.T) {
+	us := NewURLSafety(nil, nil)
+	safe, reason := us.Check("://not-a-url")
+	if safe {
+		t.Error("invalid URL should not be safe")
+	}
+	if !strings.Contains(reason, "invalid") {
+		t.Errorf("reason = %q", reason)
+	}
+}
+
+func TestURLCheckMissingHost(t *testing.T) {
+	us := NewURLSafety(nil, nil)
+	safe, reason := us.Check("file:///no-host")
+	if safe {
+		t.Error("URL without host should not be safe")
+	}
+	if !strings.Contains(reason, "missing host") {
+		t.Errorf("reason = %q", reason)
 	}
 }

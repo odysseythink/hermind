@@ -12,37 +12,24 @@ import (
 
 	"github.com/stretchr/testify/require"
 
-	"github.com/odysseythink/hermind/message"
-	"github.com/odysseythink/hermind/provider"
+	"github.com/odysseythink/pantheon/core"
 )
 
-// fakeStream implements provider.Stream against a queued slice.
-type fakeStream struct {
-	events []provider.StreamEvent
-	idx    int
-	closed bool
-}
-
-func (f *fakeStream) Recv() (*provider.StreamEvent, error) {
-	if f.idx >= len(f.events) {
-		return nil, errors.New("fakeStream: exhausted")
-	}
-	ev := f.events[f.idx]
-	f.idx++
-	return &ev, nil
-}
-
-func (f *fakeStream) Close() error { f.closed = true; return nil }
-
 func TestStreamOutbound_TextOnly(t *testing.T) {
-	stream := &fakeStream{events: []provider.StreamEvent{
-		{Type: provider.EventDelta, Delta: &provider.StreamDelta{Content: "hel"}},
-		{Type: provider.EventDelta, Delta: &provider.StreamDelta{Content: "lo"}},
-		{Type: provider.EventDone, Response: &provider.Response{
-			FinishReason: "stop",
-			Usage:        message.Usage{InputTokens: 5, OutputTokens: 2},
-		}},
-	}}
+	stream := func(yield func(*core.StreamPart, error) bool) {
+		if !yield(&core.StreamPart{Type: core.StreamPartTypeTextDelta, TextDelta: "hel"}, nil) {
+			return
+		}
+		if !yield(&core.StreamPart{Type: core.StreamPartTypeTextDelta, TextDelta: "lo"}, nil) {
+			return
+		}
+		if !yield(&core.StreamPart{Type: core.StreamPartTypeUsage, Usage: &core.Usage{PromptTokens: 5, CompletionTokens: 2}}, nil) {
+			return
+		}
+		if !yield(&core.StreamPart{Type: core.StreamPartTypeFinish, FinishReason: "stop"}, nil) {
+			return
+		}
+	}
 	rr := httptest.NewRecorder()
 	err := StreamOutbound(context.Background(), rr, stream, "claude-sonnet-4-6", "msg_x", time.Hour)
 	require.NoError(t, err)
@@ -70,17 +57,22 @@ func TestStreamOutbound_TextOnly(t *testing.T) {
 }
 
 func TestStreamOutbound_TextThenToolUse(t *testing.T) {
-	stream := &fakeStream{events: []provider.StreamEvent{
-		{Type: provider.EventDelta, Delta: &provider.StreamDelta{Content: "calling"}},
-		{Type: provider.EventDelta, Delta: &provider.StreamDelta{ToolCalls: []message.ToolCall{{
-			ID: "toolu_1", Type: "function",
-			Function: message.ToolCallFunction{Name: "get_weather", Arguments: `{"city":"SF"}`},
-		}}}},
-		{Type: provider.EventDone, Response: &provider.Response{
-			FinishReason: "tool_calls",
-			Usage:        message.Usage{InputTokens: 8, OutputTokens: 4},
-		}},
-	}}
+	stream := func(yield func(*core.StreamPart, error) bool) {
+		if !yield(&core.StreamPart{Type: core.StreamPartTypeTextDelta, TextDelta: "calling"}, nil) {
+			return
+		}
+		if !yield(&core.StreamPart{Type: core.StreamPartTypeToolCall, ToolCall: &core.ToolCallPart{
+			ID: "toolu_1", Name: "get_weather", Arguments: `{"city":"SF"}`,
+		}}, nil) {
+			return
+		}
+		if !yield(&core.StreamPart{Type: core.StreamPartTypeUsage, Usage: &core.Usage{PromptTokens: 8, CompletionTokens: 4}}, nil) {
+			return
+		}
+		if !yield(&core.StreamPart{Type: core.StreamPartTypeFinish, FinishReason: "tool_calls"}, nil) {
+			return
+		}
+	}
 	rr := httptest.NewRecorder()
 	err := StreamOutbound(context.Background(), rr, stream, "x", "msg_y", time.Hour)
 	require.NoError(t, err)
@@ -103,10 +95,12 @@ func TestStreamOutbound_TextThenToolUse(t *testing.T) {
 }
 
 func TestStreamOutbound_ErrorEvent(t *testing.T) {
-	stream := &fakeStream{events: []provider.StreamEvent{
-		{Type: provider.EventDelta, Delta: &provider.StreamDelta{Content: "partial"}},
-		{Type: provider.EventError, Err: errors.New("upstream blew up")},
-	}}
+	stream := func(yield func(*core.StreamPart, error) bool) {
+		if !yield(&core.StreamPart{Type: core.StreamPartTypeTextDelta, TextDelta: "partial"}, nil) {
+			return
+		}
+		yield(nil, errors.New("upstream blew up"))
+	}
 	rr := httptest.NewRecorder()
 	err := StreamOutbound(context.Background(), rr, stream, "x", "msg_z", time.Hour)
 	require.NoError(t, err, "stream errors are written as SSE events, not propagated")
@@ -128,35 +122,15 @@ func TestStreamOutbound_KeepAlivePings(t *testing.T) {
 	require.GreaterOrEqual(t, count, 1)
 }
 
-// delayedFakeStream emits a single text delta then EventDone after `delay`.
-type delayedFakeStream struct {
-	delay time.Duration
-	step  int
-}
-
-func newDelayedFakeStream(delay time.Duration) *delayedFakeStream {
-	return &delayedFakeStream{delay: delay}
-}
-
-func (d *delayedFakeStream) Recv() (*provider.StreamEvent, error) {
-	switch d.step {
-	case 0:
-		d.step++
-		// Block to simulate a slow upstream so the keep-alive timer fires.
-		time.Sleep(d.delay)
-		return &provider.StreamEvent{Type: provider.EventDelta, Delta: &provider.StreamDelta{Content: "x"}}, nil
-	case 1:
-		d.step++
-		return &provider.StreamEvent{
-			Type:     provider.EventDone,
-			Response: &provider.Response{FinishReason: "stop"},
-		}, nil
-	default:
-		return nil, errors.New("delayedFakeStream: exhausted")
+// delayedFakeStream emits a single text delta then finishes after `delay`.
+func newDelayedFakeStream(delay time.Duration) core.StreamResponse {
+	return func(yield func(*core.StreamPart, error) bool) {
+		time.Sleep(delay)
+		if !yield(&core.StreamPart{Type: core.StreamPartTypeTextDelta, TextDelta: "x"}, nil) {
+			return
+		}
 	}
 }
-
-func (d *delayedFakeStream) Close() error { return nil }
 
 // Quick parser for SSE event names used by other tests.
 func parseSSEEvents(body string) []string {

@@ -7,7 +7,6 @@ import (
 	"errors"
 	"fmt"
 	"io/fs"
-	"log/slog"
 	"net/http"
 	"sync"
 	"time"
@@ -20,11 +19,12 @@ import (
 	"github.com/odysseythink/hermind/config"
 	"github.com/odysseythink/hermind/gateway"
 	"github.com/odysseythink/hermind/message"
-	"github.com/odysseythink/hermind/provider"
 	"github.com/odysseythink/hermind/skills"
 	"github.com/odysseythink/hermind/storage"
 	"github.com/odysseythink/hermind/tool"
 	"github.com/odysseythink/hermind/tool/memory/memprovider"
+	"github.com/odysseythink/mlog"
+	"github.com/odysseythink/pantheon/core"
 )
 
 //go:embed webroot/*
@@ -34,8 +34,8 @@ var webroot embed.FS
 // single-conversation engine needs. cli/engine_deps.go builds this and
 // passes it to ServerOpts.
 type EngineDeps struct {
-	Provider    provider.Provider
-	AuxProvider provider.Provider
+	Provider    core.LanguageModel
+	AuxProvider core.LanguageModel
 	Storage     storage.Storage
 	ToolReg     *tool.Registry
 	SkillsReg   *skills.Registry
@@ -43,7 +43,7 @@ type EngineDeps struct {
 	Platform    string
 	// SkillsEvolver, if non-nil, extracts skills after each conversation.
 	SkillsEvolver interface {
-		Extract(ctx context.Context, turns []message.Message, verdict *agent.Verdict) error
+		Extract(ctx context.Context, turns []message.HermindMessage, verdict *agent.Verdict) error
 	}
 	// SkillsRetriever, if non-nil, retrieves relevant skills per turn.
 	SkillsRetriever interface {
@@ -107,7 +107,7 @@ type Server struct {
 	streams  StreamHub
 
 	// runMu serializes conversation turns — at most one in flight at a time.
-	runMu    sync.Mutex
+	runMu     sync.Mutex
 	runCancel context.CancelFunc
 
 	idle *idle.IdleConsolidator
@@ -339,7 +339,7 @@ func (s *Server) RunTurn(ctx context.Context, userMessage string) (string, error
 		return "", err
 	}
 	s.streams.Publish(StreamEvent{Type: EventTypeDone})
-	return result.Response.Content.Text(), nil
+	return result.Response.Text(), nil
 }
 
 // StartGateway starts the gateway pump in the background if any platforms
@@ -347,15 +347,15 @@ func (s *Server) RunTurn(ctx context.Context, userMessage string) (string, error
 func (s *Server) StartGateway(ctx context.Context) {
 	pump, err := gateway.NewPump(s.opts.Config.Gateway, s)
 	if err != nil {
-		slog.Error("gateway: startup failed", "err", err)
+		mlog.Error("gateway: startup failed", mlog.String("err", err.Error()))
 		return
 	}
 	if !pump.HasPlatforms() {
-		slog.Info("gateway: no enabled platforms, not starting")
+		mlog.Info("gateway: no enabled platforms, not starting")
 		return
 	}
 	go pump.Start(ctx)
-	slog.Info("gateway: pump started")
+	mlog.Info("gateway: pump started")
 }
 
 // snippetsToActiveSkills converts a list of skill snippets to ActiveSkill structs.

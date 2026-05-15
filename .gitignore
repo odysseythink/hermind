@@ -17,7 +17,8 @@ web/.env.local
 .worktrees/
 
 # AI tooling / local docs — not tracked by git
-docs/
+docs/*
+!docs/superpowers/
 CLAUDE.md
 DESIGN.md
 TODOS.md
@@ -25,3 +26,5 @@ TODOS.md
 # Runtime instance data and local Claude config
 .hermind/
 .claude/
+logs/
+docs/

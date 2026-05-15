@@ -43,7 +43,6 @@
         "enum": [
           "anthropic",
           "bedrock",
-          "copilot",
           "deepseek",
           "kimi",
           "minimax",
@@ -293,7 +292,6 @@
         "enum": [
           "anthropic",
           "bedrock",
-          "copilot",
           "deepseek",
           "kimi",
           "minimax",
@@ -902,7 +900,6 @@
         "enum": [
           "anthropic",
           "bedrock",
-          "copilot",
           "deepseek",
           "kimi",
           "minimax",

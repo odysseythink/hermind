@@ -2,12 +2,12 @@ package api
 
 import (
 	"context"
-	"log/slog"
 	"net/http"
 	"path/filepath"
 	"sort"
 
 	"github.com/odysseythink/hermind/skills"
+	"github.com/odysseythink/mlog"
 )
 
 // handleSkillsList responds to GET /api/skills. Walks <InstanceRoot>/skills/
@@ -54,7 +54,7 @@ func loadSkillsForList(ctx context.Context, home string) []*skills.Skill {
 	l := skills.NewLoader(home)
 	loaded, errs := l.Load()
 	for _, e := range errs {
-		slog.WarnContext(ctx, "skills: failed to parse skill file", "path", e.Path, "err", e.Err)
+		mlog.WarningContext(ctx, "skills: failed to parse skill file", mlog.String("path", e.Path), mlog.String("err", e.Err.Error()))
 	}
 	return loaded
 }

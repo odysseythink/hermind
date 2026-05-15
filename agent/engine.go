@@ -6,32 +6,36 @@ import (
 
 	"github.com/odysseythink/hermind/config"
 	"github.com/odysseythink/hermind/message"
+	"github.com/odysseythink/hermind/pantheonadapter"
 	"github.com/odysseythink/hermind/provider"
 	"github.com/odysseythink/hermind/storage"
 	"github.com/odysseythink/hermind/tool"
 	"github.com/odysseythink/hermind/tool/memory/memprovider"
+	"github.com/odysseythink/pantheon/agent/compression"
+	"github.com/odysseythink/pantheon/core"
+	"github.com/odysseythink/pantheon/extensions/toolselector"
 )
 
 // Engine is single-use per conversation turn. NOT thread-safe.
 // Callers construct a fresh Engine per incoming user message.
 type Engine struct {
-	provider    provider.Provider
-	auxProvider provider.Provider  // optional, used by Compressor
-	storage     storage.Storage
-	tools       *tool.Registry     // may be nil if no tools are available
-	config      config.AgentConfig // value, not pointer — immutable snapshot
-	platform    string
-	prompt      *PromptBuilder
-	compressor  *Compressor // optional, nil means compression disabled
+	model      core.LanguageModel
+	auxModel   core.LanguageModel // optional, used by Compressor
+	storage    storage.Storage
+	tools      *tool.Registry     // may be nil if no tools are available
+	config     config.AgentConfig // value, not pointer — immutable snapshot
+	platform   string
+	prompt     *PromptBuilder
+	compressor *compression.Compressor // optional, nil means compression disabled
 
-	aux          *provider.AuxClient
+	modelInfo    *pantheonadapter.ModelInfoResolver
 	memory       *MemoryManager
-	toolSelector *ToolSelector // nil when dynamic tool selection is disabled
+	toolSelector *toolselector.ToolSelector // nil when dynamic tool selection is disabled
 
 	// Callbacks — optional. Nil means no-op.
 	onStreamDelta func(delta *provider.StreamDelta)
-	onToolStart   func(call message.ContentBlock)
-	onToolResult  func(call message.ContentBlock, result string)
+	onToolStart   func(call core.ToolCallPart)
+	onToolResult  func(call core.ToolCallPart, result string)
 
 	// activeSkills returns the skills whose bodies should be prepended to
 	// the system prompt. Called once per turn.
@@ -44,7 +48,7 @@ type Engine struct {
 	// skillsEvolver extracts skills after each conversation.
 	// If nil, skill extraction is disabled.
 	skillsEvolver interface {
-		Extract(ctx context.Context, turns []message.Message, verdict *Verdict) error
+		Extract(ctx context.Context, turns []message.HermindMessage, verdict *Verdict) error
 	}
 
 	// conversationJudge scores the conversation at its end. Nil disables.
@@ -74,70 +78,49 @@ type SynergyBudget struct {
 }
 
 // NewEngine constructs an Engine without tools.
-func NewEngine(p provider.Provider, s storage.Storage, cfg config.AgentConfig, platform string) *Engine {
+func NewEngine(p core.LanguageModel, s storage.Storage, cfg config.AgentConfig, platform string) *Engine {
 	return NewEngineWithTools(p, s, nil, cfg, platform)
 }
 
-// NewEngineWithTools constructs an Engine with tools and no auxiliary provider.
-func NewEngineWithTools(p provider.Provider, s storage.Storage, tools *tool.Registry, cfg config.AgentConfig, platform string) *Engine {
+// NewEngineWithTools constructs an Engine with tools and no auxiliary model.
+func NewEngineWithTools(p core.LanguageModel, s storage.Storage, tools *tool.Registry, cfg config.AgentConfig, platform string) *Engine {
 	return NewEngineWithToolsAndAux(p, nil, s, tools, cfg, platform)
 }
 
 // NewEngineWithToolsAndAux constructs an Engine with tools and an auxiliary
-// provider for compression. If aux is nil, compression is disabled.
-func NewEngineWithToolsAndAux(p, aux provider.Provider, s storage.Storage, tools *tool.Registry, cfg config.AgentConfig, platform string) *Engine {
+// model for compression. If aux is nil, compression is disabled.
+func NewEngineWithToolsAndAux(p, aux core.LanguageModel, s storage.Storage, tools *tool.Registry, cfg config.AgentConfig, platform string) *Engine {
 	e := &Engine{
-		provider:    p,
-		auxProvider: aux,
-		storage:     s,
-		tools:       tools,
-		config:      cfg,
-		platform:    platform,
-		prompt:      NewPromptBuilder(platform, cfg.DefaultSystemPrompt),
+		model:     p,
+		auxModel:  aux,
+		storage:   s,
+		tools:     tools,
+		config:    cfg,
+		platform:  platform,
+		prompt:    NewPromptBuilder(platform, cfg.DefaultSystemPrompt),
+		modelInfo: pantheonadapter.NewModelInfoResolver(),
 	}
 	if cfg.Compression.Enabled && aux != nil {
-		e.compressor = NewCompressor(cfg.Compression, aux)
-	}
-	if aux != nil {
-		e.aux = provider.NewAuxClient([]provider.Provider{aux, p})
+		e.compressor = compression.NewCompressor(cfg.Compression, aux)
 	}
 	e.memory = NewMemoryManager(nil)
-	if e.aux != nil {
-		e.memory.SetAuxClient(e.aux)
-	}
 	if e.compressor != nil {
 		e.memory.SetCompressor(e.compressor)
 	}
 	if cfg.DynamicToolSelection && tools != nil {
-		e.toolSelector = NewToolSelector()
+		e.toolSelector = toolselector.NewToolSelector()
 	}
 	return e
 }
 
-// Aux returns the engine's auxiliary client, or nil.
-func (e *Engine) Aux() *provider.AuxClient { return e.aux }
-
 // Memory returns the engine's memory manager. Always non-nil.
 func (e *Engine) Memory() *MemoryManager { return e.memory }
-
-// SetAuxClient overrides the engine's auxiliary client.
-func (e *Engine) SetAuxClient(ac *provider.AuxClient) {
-	e.aux = ac
-	if e.memory != nil {
-		e.memory.SetAuxClient(ac)
-	}
-}
 
 // SetMemoryManager overrides the engine's memory manager.
 func (e *Engine) SetMemoryManager(mm *MemoryManager) {
 	e.memory = mm
-	if mm != nil {
-		if e.aux != nil {
-			mm.SetAuxClient(e.aux)
-		}
-		if e.compressor != nil {
-			mm.SetCompressor(e.compressor)
-		}
+	if mm != nil && e.compressor != nil {
+		mm.SetCompressor(e.compressor)
 	}
 }
 
@@ -147,12 +130,12 @@ func (e *Engine) SetStreamDeltaCallback(fn func(delta *provider.StreamDelta)) {
 }
 
 // SetToolStartCallback registers a callback invoked before each tool execution.
-func (e *Engine) SetToolStartCallback(fn func(call message.ContentBlock)) {
+func (e *Engine) SetToolStartCallback(fn func(call core.ToolCallPart)) {
 	e.onToolStart = fn
 }
 
 // SetToolResultCallback registers a callback invoked after each tool execution.
-func (e *Engine) SetToolResultCallback(fn func(call message.ContentBlock, result string)) {
+func (e *Engine) SetToolResultCallback(fn func(call core.ToolCallPart, result string)) {
 	e.onToolResult = fn
 }
 
@@ -186,7 +169,7 @@ func (e *Engine) SetSynergyBudget(b SynergyBudget) {
 // SetSkillsEvolver wires a skill evolver that runs after each conversation.
 // Pass nil to disable.
 func (e *Engine) SetSkillsEvolver(ev interface {
-	Extract(ctx context.Context, turns []message.Message, verdict *Verdict) error
+	Extract(ctx context.Context, turns []message.HermindMessage, verdict *Verdict) error
 }) {
 	e.skillsEvolver = ev
 }
@@ -217,7 +200,7 @@ type RunOptions struct {
 
 	// History is consulted only when Ephemeral=true. Non-ephemeral runs
 	// load history from storage.
-	History []message.Message
+	History []message.HermindMessage
 	// ObsidianCtx carries vault/note context when the request originates
 	// from the Obsidian plugin. Injected into the system prompt.
 	ObsidianCtx *ObsidianContext
@@ -225,8 +208,8 @@ type RunOptions struct {
 
 // ConversationResult is returned by RunConversation.
 type ConversationResult struct {
-	Response   message.Message
-	Messages   []message.Message // full history after the run
-	Usage      message.Usage
+	Response   message.HermindMessage
+	Messages   []message.HermindMessage // full history after the run
+	Usage      core.Usage
 	Iterations int
 }

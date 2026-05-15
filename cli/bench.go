@@ -3,11 +3,11 @@ package cli
 import (
 	"context"
 	"fmt"
-	"log"
 
 	"github.com/spf13/cobra"
 
-	"github.com/odysseythink/hermind/benchmark"
+	"github.com/odysseythink/mlog"
+	"github.com/odysseythink/pantheon/benchmark"
 )
 
 // newBenchCmd returns the `hermind bench` cobra subcommand. The three
@@ -55,11 +55,11 @@ func newBenchRunCmd(app *App) *cobra.Command {
 		Use:   "run",
 		Short: "Run presets against the dataset (stub — wire PresetRunners in code)",
 		RunE: func(cmd *cobra.Command, args []string) error {
-			log.Printf("hermind bench run: stub — preset runners require app-level wiring. See benchmark.Run usage in tests.")
+			mlog.Infof("hermind bench run: stub — preset runners require app-level wiring. See benchmark.Run usage in tests.")
 			return benchmark.Run(context.Background(), benchmark.RunConfig{
 				DatasetPath: datasetPath,
 				OutDir:      outDir,
-				Presets: map[string]benchmark.PresetRunner{
+				Presets:     map[string]benchmark.PresetRunner{
 					// Placeholder: callers wire actual preset runners here.
 					// Each runner: func(ctx context.Context, item benchmark.Item) (*benchmark.RunRecord, error)
 				},
@@ -80,7 +80,7 @@ func newBenchJudgeCmd(app *App) *cobra.Command {
 		Use:   "judge",
 		Short: "Score an existing run dir (stub — providers must be wired)",
 		RunE: func(cmd *cobra.Command, args []string) error {
-			log.Printf("hermind bench judge: stub — providers require app-level wiring.")
+			mlog.Infof("hermind bench judge: stub — providers require app-level wiring.")
 			if err := benchmark.JudgeAll(context.Background(), benchmark.JudgeConfig{
 				RunDir: runDir,
 			}); err != nil {

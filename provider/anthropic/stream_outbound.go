@@ -10,6 +10,8 @@ import (
 	"time"
 
 	"github.com/odysseythink/hermind/provider"
+	"github.com/odysseythink/pantheon/core"
+	"github.com/odysseythink/pantheon/types"
 )
 
 // StreamOutbound consumes events from the provider stream and writes
@@ -21,7 +23,7 @@ import (
 func StreamOutbound(
 	ctx context.Context,
 	w http.ResponseWriter,
-	stream provider.Stream,
+	stream core.StreamResponse,
 	requestModel, msgID string,
 	keepAlive time.Duration,
 ) error {
@@ -38,8 +40,6 @@ func StreamOutbound(
 	w.Header().Set("Cache-Control", "no-cache")
 	w.Header().Set("Connection", "keep-alive")
 
-	defer stream.Close()
-
 	state := &sseWriter{
 		w:            w,
 		flusher:      flusher,
@@ -53,22 +53,26 @@ func StreamOutbound(
 	// Pump events from the stream into a channel so we can multiplex
 	// against context cancellation and the keep-alive ticker.
 	type recvResult struct {
-		ev  *provider.StreamEvent
-		err error
+		part *core.StreamPart
+		err  error
+		done bool
 	}
 	recvCh := make(chan recvResult, 1)
 	go func() {
-		for {
-			ev, err := stream.Recv()
-			recvCh <- recvResult{ev: ev, err: err}
-			if err != nil || ev == nil || ev.Type == provider.EventDone || ev.Type == provider.EventError {
+		for part, err := range stream {
+			recvCh <- recvResult{part: part, err: err}
+			if err != nil {
 				return
 			}
 		}
+		recvCh <- recvResult{done: true}
 	}()
 
 	ticker := time.NewTicker(keepAlive)
 	defer ticker.Stop()
+
+	var usage core.Usage
+	var finishReason string
 
 	for {
 		select {
@@ -81,19 +85,35 @@ func StreamOutbound(
 				state.writeError(r.err)
 				return nil
 			}
-			ev := r.ev
-			if ev == nil {
+			if r.done {
+				state.finish(&provider.Response{
+					FinishReason: finishReason,
+					Usage:        usage,
+				})
 				return nil
 			}
-			switch ev.Type {
-			case provider.EventDelta:
-				state.handleDelta(ev.Delta)
-			case provider.EventDone:
-				state.finish(ev.Response)
-				return nil
-			case provider.EventError:
-				state.writeError(ev.Err)
-				return nil
+			part := r.part
+			switch part.Type {
+			case core.StreamPartTypeTextDelta:
+				state.handleDelta(&provider.StreamDelta{Content: part.TextDelta})
+			case core.StreamPartTypeToolCall:
+				state.handleDelta(&provider.StreamDelta{
+					ToolCalls: []types.ToolCall{{
+						ID:   part.ToolCall.ID,
+						Type: "function",
+						Function: types.ToolCallFunction{
+							Name:      part.ToolCall.Name,
+							Arguments: part.ToolCall.Arguments,
+						},
+					}},
+				})
+			case core.StreamPartTypeUsage:
+				if part.Usage != nil {
+					usage.PromptTokens = part.Usage.PromptTokens
+					usage.CompletionTokens = part.Usage.CompletionTokens
+				}
+			case core.StreamPartTypeFinish:
+				finishReason = part.FinishReason
 			}
 			// Reset the keep-alive ticker on any real event.
 			ticker.Reset(keepAlive)
@@ -223,7 +243,7 @@ func (s *sseWriter) finish(resp *provider.Response) {
 	usage := map[string]any{"output_tokens": 0}
 	stopReason := "end_turn"
 	if resp != nil {
-		usage["output_tokens"] = resp.Usage.OutputTokens
+		usage["output_tokens"] = resp.Usage.CompletionTokens
 		stopReason = mapFinishReason(resp.FinishReason)
 	}
 	s.writeEvent("message_delta", map[string]any{
