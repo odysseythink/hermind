@@ -1,11 +1,14 @@
 #include "chatwidget.h"
 #include "promptinput.h"
 #include "messagebubble.h"
+#include "conversationheader.h"
+#include "emptystatewidget.h"
 #include "httplib.h"
 #include "sseparser.h"
 
 #include <QScrollArea>
 #include <QVBoxLayout>
+#include <QStackedWidget>
 #include <QNetworkReply>
 #include <QJsonDocument>
 #include <QJsonObject>
@@ -19,9 +22,13 @@
 ChatWidget::ChatWidget(QWidget *parent)
     : QWidget(parent),
       m_client(nullptr),
-      m_scrollArea(new QScrollArea(this)),
-      m_messagesContainer(new QWidget(this)),
+      m_header(new ConversationHeader(this)),
+      m_stack(new QStackedWidget(this)),
+      m_messagesPage(new QWidget(this)),
+      m_scrollArea(new QScrollArea(m_messagesPage)),
+      m_messagesContainer(new QWidget(m_messagesPage)),
       m_messagesLayout(new QVBoxLayout(m_messagesContainer)),
+      m_emptyState(new EmptyStateWidget(this)),
       m_promptInput(new PromptInput(this)),
       m_currentBubble(nullptr),
       m_sseParser(new SSEParser(this)),
@@ -30,21 +37,36 @@ ChatWidget::ChatWidget(QWidget *parent)
       m_renderGeneration(0),
       m_isStreaming(false)
 {
-    m_messagesLayout->setContentsMargins(8, 8, 8, 8);
-    m_messagesLayout->setSpacing(8);
+    // Message list page
+    m_messagesLayout->setContentsMargins(16, 16, 16, 16);
+    m_messagesLayout->setSpacing(16);
     m_messagesLayout->addStretch(1);
 
     m_scrollArea->setWidget(m_messagesContainer);
     m_scrollArea->setWidgetResizable(true);
     m_scrollArea->setFrameStyle(QFrame::NoFrame);
 
+    QVBoxLayout *msgPageLayout = new QVBoxLayout(m_messagesPage);
+    msgPageLayout->setContentsMargins(0, 0, 0, 0);
+    msgPageLayout->setSpacing(0);
+    msgPageLayout->addWidget(m_scrollArea, 1);
+
+    m_stack->addWidget(m_emptyState);
+    m_stack->addWidget(m_messagesPage);
+    m_stack->setCurrentIndex(0);
+
+    // Main layout
     QVBoxLayout *layout = new QVBoxLayout(this);
     layout->setContentsMargins(0, 0, 0, 0);
     layout->setSpacing(0);
-    layout->addWidget(m_scrollArea, 1);
+    layout->addWidget(m_header);
+    layout->addWidget(m_stack, 1);
     layout->addWidget(m_promptInput);
 
     connect(m_promptInput, &PromptInput::sendClicked,
+            this, [this]() { sendMessage(m_promptInput->text()); });
+
+    connect(m_emptyState, &EmptyStateWidget::suggestionClicked,
             this, &ChatWidget::sendMessage);
 
     connect(m_sseParser, &SSEParser::eventReceived,
@@ -105,14 +127,16 @@ HermindClient* ChatWidget::client() const
 
 void ChatWidget::sendMessage(const QString &text)
 {
-    if (!m_client)
+    if (!m_client || text.isEmpty())
         return;
 
-    MessageBubble *userBubble = new MessageBubble("user", this);
+    setEmptyState(false);
+
+    MessageBubble *userBubble = new MessageBubble(true, this);
     userBubble->setHtmlContent(text.toHtmlEscaped());
     addMessageBubble(userBubble);
 
-    m_currentBubble = new MessageBubble("assistant", this);
+    m_currentBubble = new MessageBubble(false, this);
     addMessageBubble(m_currentBubble);
     m_pendingMarkdown.clear();
     m_renderGeneration = 0;
@@ -186,6 +210,27 @@ void ChatWidget::addMessageBubble(MessageBubble *bubble)
     m_messagesLayout->insertWidget(m_messagesLayout->count() - 1, bubble);
 }
 
+void ChatWidget::setEmptyState(bool empty)
+{
+    m_stack->setCurrentIndex(empty ? 0 : 1);
+}
+
+void ChatWidget::appendToCurrentBubble(const QString &text)
+{
+    if (m_currentBubble) {
+        m_currentBubble->appendMarkdown(text);
+    }
+}
+
+void ChatWidget::finalizeCurrentBubble()
+{
+    m_isStreaming = false;
+    m_renderTimer->stop();
+    if (!m_pendingMarkdown.isEmpty()) {
+        onRenderTimer();
+    }
+}
+
 void ChatWidget::loadSession(const QString &sessionId)
 {
     Q_UNUSED(sessionId)
@@ -234,4 +279,6 @@ void ChatWidget::startNewSession()
         m_streamReply->deleteLater();
         m_streamReply = nullptr;
     }
+    setEmptyState(true);
+    m_header->setTitle("New Conversation");
 }

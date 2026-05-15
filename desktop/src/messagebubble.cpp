@@ -6,44 +6,65 @@
 #include <QVBoxLayout>
 #include <QScrollBar>
 
-MessageBubble::MessageBubble(const QString &role, QWidget *parent)
+MessageBubble::MessageBubble(bool isUser, QWidget *parent)
     : QWidget(parent),
-      m_role(role),
-      m_avatarLabel(new QLabel(this)),
-      m_textEdit(new QTextEdit(this))
+      m_isUser(isUser),
+      m_roleTag(new QLabel(this)),
+      m_content(new QTextEdit(this))
 {
-    m_avatarLabel->setFixedSize(32, 32);
-    m_avatarLabel->setText(role == "user" ? "U" : "A");
-    m_avatarLabel->setAlignment(Qt::AlignCenter);
-    m_avatarLabel->setStyleSheet(
-        "background-color: #666; color: white; border-radius: 16px;"
+    setupUI();
+}
+
+void MessageBubble::setupUI()
+{
+    m_roleTag->setText(m_isUser ? "YOU" : "HERMIND");
+    m_roleTag->setStyleSheet(
+        QString("font-family: monospace; font-size: 10px; font-weight: 600; "
+                "text-transform: uppercase; color: %1;")
+            .arg(m_isUser ? "#FFB800" : "#8a8680")
     );
 
-    m_textEdit->setReadOnly(true);
-    m_textEdit->setFrameStyle(QFrame::NoFrame);
-    m_textEdit->setHorizontalScrollBarPolicy(Qt::ScrollBarAlwaysOff);
-    m_textEdit->setVerticalScrollBarPolicy(Qt::ScrollBarAlwaysOff);
-    m_textEdit->setSizePolicy(QSizePolicy::Expanding, QSizePolicy::Minimum);
-    m_textEdit->document()->setDocumentMargin(8);
+    m_content->setReadOnly(true);
+    m_content->setFrameStyle(QFrame::NoFrame);
+    m_content->setHorizontalScrollBarPolicy(Qt::ScrollBarAlwaysOff);
+    m_content->setVerticalScrollBarPolicy(Qt::ScrollBarAlwaysOff);
+    m_content->setSizePolicy(QSizePolicy::Expanding, QSizePolicy::Minimum);
+    m_content->document()->setDocumentMargin(12);
 
-    QHBoxLayout *layout = new QHBoxLayout(this);
-    layout->setContentsMargins(8, 4, 8, 4);
-    layout->setSpacing(8);
+    QVBoxLayout *bubbleLayout = new QVBoxLayout;
+    bubbleLayout->setContentsMargins(12, 10, 12, 10);
+    bubbleLayout->setSpacing(4);
+    bubbleLayout->addWidget(m_content);
 
-    if (role == "user") {
-        layout->addStretch(1);
-        layout->addWidget(m_textEdit, 0, Qt::AlignTop);
-        layout->addWidget(m_avatarLabel, 0, Qt::AlignTop);
-        m_textEdit->setStyleSheet(
-            "background-color: #2b5278; color: white; border-radius: 12px;"
-        );
+    QWidget *bubbleWrapper = new QWidget(this);
+    bubbleWrapper->setLayout(bubbleLayout);
+    bubbleWrapper->setStyleSheet(
+        QString("background: %1; border: 1px solid %2; border-radius: 4px;")
+            .arg(m_isUser ? "transparent" : "#14161a")
+            .arg(m_isUser ? "#FFB800" : "#2a2e36")
+    );
+    bubbleWrapper->setMaximumWidth(700);
+
+    QVBoxLayout *outer = new QVBoxLayout(this);
+    outer->setContentsMargins(0, 0, 0, 0);
+    outer->setSpacing(2);
+
+    if (m_isUser) {
+        m_roleTag->setAlignment(Qt::AlignRight);
+        outer->addWidget(m_roleTag, 0, Qt::AlignRight);
+
+        QHBoxLayout *row = new QHBoxLayout;
+        row->addStretch(1);
+        row->addWidget(bubbleWrapper, 0, Qt::AlignTop);
+        outer->addLayout(row);
     } else {
-        layout->addWidget(m_avatarLabel, 0, Qt::AlignTop);
-        layout->addWidget(m_textEdit, 0, Qt::AlignTop);
-        layout->addStretch(1);
-        m_textEdit->setStyleSheet(
-            "background-color: #3a3a3a; color: #eee; border-radius: 12px;"
-        );
+        m_roleTag->setAlignment(Qt::AlignLeft);
+        outer->addWidget(m_roleTag, 0, Qt::AlignLeft);
+
+        QHBoxLayout *row = new QHBoxLayout;
+        row->addWidget(bubbleWrapper, 0, Qt::AlignTop);
+        row->addStretch(1);
+        outer->addLayout(row);
     }
 }
 
@@ -59,10 +80,9 @@ QString MessageBubble::markdownBuffer() const
 
 void MessageBubble::setHtmlContent(const QString &html)
 {
-    m_textEdit->setHtml(html);
-    // Resize to content
-    m_textEdit->document()->setTextWidth(m_textEdit->viewport()->width());
-    int height = static_cast<int>(m_textEdit->document()->size().height());
-    m_textEdit->setMinimumHeight(height + 8);
-    m_textEdit->setMaximumHeight(height + 8);
+    m_content->setHtml(html);
+    m_content->document()->setTextWidth(m_content->viewport()->width());
+    int height = static_cast<int>(m_content->document()->size().height());
+    m_content->setMinimumHeight(height + 8);
+    m_content->setMaximumHeight(height + 8);
 }

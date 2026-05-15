@@ -1,5 +1,6 @@
 #include <QApplication>
 #include <QFile>
+#include <QFont>
 #include "appwindow.h"
 #include "hermindprocess.h"
 #include "httplib.h"
@@ -11,6 +12,17 @@ int main(int argc, char *argv[])
     QApplication app(argc, argv);
     app.setApplicationName("hermind");
     app.setOrganizationName("hermind");
+
+    QFont appFont;
+#ifdef Q_OS_MAC
+    appFont = QFont("-apple-system");
+#elif defined(Q_OS_WIN)
+    appFont = QFont("Segoe UI");
+#else
+    appFont = QFont("system-ui");
+#endif
+    appFont.setPointSize(10);
+    QApplication::setFont(appFont);
 
     QFile styleFile(":/styles.qss");
     if (styleFile.open(QFile::ReadOnly)) {

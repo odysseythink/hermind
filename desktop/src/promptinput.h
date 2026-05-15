@@ -11,9 +11,12 @@ class PromptInput : public QWidget
     Q_OBJECT
 public:
     explicit PromptInput(QWidget *parent = nullptr);
+    QString text() const;
+    void clear();
+    void setEnabled(bool enabled);
 
 signals:
-    void sendClicked(QString text);
+    void sendClicked();
     void attachClicked();
 
 private slots:
@@ -21,8 +24,8 @@ private slots:
 
 private:
     QTextEdit *m_textEdit;
-    QPushButton *m_sendButton;
-    QPushButton *m_attachButton;
+    QPushButton *m_sendBtn;
+    QPushButton *m_attachBtn;
 };
 
 #endif
