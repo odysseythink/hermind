@@ -1,6 +1,10 @@
 package cli
 
 import (
+	"os"
+	"path/filepath"
+	"runtime"
+
 	"github.com/spf13/cobra"
 )
 
@@ -13,6 +17,8 @@ func newDesktopCmd(app *App) *cobra.Command {
 		Short: "Start backend server for desktop client",
 		RunE: func(cmd *cobra.Command, args []string) error {
 			opts.NoBrowser = true
+			opts.PrintReadySignal = true
+			opts.FileLogPath = desktopLogPath()
 			opts.Out = cmd.OutOrStdout()
 			return runWeb(cmd.Context(), app, opts)
 		},
@@ -22,4 +28,21 @@ func newDesktopCmd(app *App) *cobra.Command {
 	c.Flags().DurationVar(&opts.ExitAfter, "exit-after", 0,
 		"exit after the given duration (0 = run until Ctrl-C)")
 	return c
+}
+
+func desktopLogPath() string {
+	switch runtime.GOOS {
+	case "darwin":
+		home, _ := os.UserHomeDir()
+		return filepath.Join(home, "Library", "Logs", "hermind", "hermind-desktop.log")
+	case "windows":
+		localAppData := os.Getenv("LOCALAPPDATA")
+		if localAppData == "" {
+			localAppData = os.Getenv("USERPROFILE")
+		}
+		return filepath.Join(localAppData, "hermind", "logs", "hermind-desktop.log")
+	default:
+		home, _ := os.UserHomeDir()
+		return filepath.Join(home, ".hermind", "logs", "hermind-desktop.log")
+	}
 }
