@@ -136,8 +136,8 @@ func (e *Engine) RunConversation(ctx context.Context, opts *RunOptions) (*Conver
 		iterations++
 
 		if !opts.Ephemeral && e.compressor != nil && shouldCompress(history, e.config.Compression, e.modelInfo, model) {
-			if newHistory, err := e.compressor.Compress(ctx, history); err == nil {
-				history = newHistory
+			if compressed, err := e.compressor.Compress(ctx, history); err == nil {
+				history = compressed
 			}
 		}
 
@@ -145,10 +145,15 @@ func (e *Engine) RunConversation(ctx context.Context, opts *RunOptions) (*Conver
 		if maxTokens == 0 {
 			maxTokens = 4096
 		}
+		legacyMsgs := make([]message.Message, len(history))
+		for i, m := range history {
+			legacyMsgs[i] = message.HermindMessageToLegacy(m)
+		}
+
 		req := &provider.Request{
 			Model:        model,
 			SystemPrompt: systemPrompt,
-			Messages:     history,
+			Messages:     legacyMsgs,
 			MaxTokens:    maxTokens,
 		}
 		if !stripTools {
@@ -160,28 +165,28 @@ func (e *Engine) RunConversation(ctx context.Context, opts *RunOptions) (*Conver
 			return nil, err
 		}
 
-		history = append(history, resp.Message)
-		lastResponse = resp.Message
+		respMsg := message.LegacyToHermindMessage(resp.Message)
+		history = append(history, respMsg)
+		lastResponse = respMsg
 		if e.memory != nil {
-			e.memory.ObserveTurn(resp.Message)
+			e.memory.ObserveTurn(respMsg)
 		}
-		totalUsage.PromptTokens += resp.Usage.PromptTokens
-		totalUsage.CompletionTokens += resp.Usage.CompletionTokens
+		totalUsage.PromptTokens += resp.Usage.InputTokens
+		totalUsage.CompletionTokens += resp.Usage.OutputTokens
 		totalUsage.CacheReadTokens += resp.Usage.CacheReadTokens
 		totalUsage.CacheWriteTokens += resp.Usage.CacheWriteTokens
 
 		if !opts.Ephemeral && e.storage != nil {
-			respCopy := resp
 			txErr := e.storage.WithTx(ctx, func(tx storage.Tx) error {
 				m := &history[len(history)-1]
 				if err := e.persistMessageTx(ctx, tx, m); err != nil {
 					return err
 				}
 				return tx.UpdateUsage(ctx, &storage.UsageUpdate{
-					InputTokens:      respCopy.Usage.PromptTokens,
-					OutputTokens:     respCopy.Usage.CompletionTokens,
-					CacheReadTokens:  respCopy.Usage.CacheReadTokens,
-					CacheWriteTokens: respCopy.Usage.CacheWriteTokens,
+					InputTokens:      resp.Usage.InputTokens,
+					OutputTokens:     resp.Usage.OutputTokens,
+					CacheReadTokens:  resp.Usage.CacheReadTokens,
+					CacheWriteTokens: resp.Usage.CacheWriteTokens,
 				})
 			})
 			if txErr != nil {
@@ -384,16 +389,23 @@ func (e *Engine) streamOnce(ctx context.Context, req *provider.Request) (*provid
 	}
 
 	return &provider.Response{
-		Message:      msg,
+		Message:      message.HermindMessageToLegacy(msg),
 		FinishReason: finishReason,
-		Usage:        usage,
+		Usage: message.Usage{
+			InputTokens:      usage.PromptTokens,
+			OutputTokens:     usage.CompletionTokens,
+			PromptTokens:     usage.PromptTokens,
+			CompletionTokens: usage.CompletionTokens,
+			CacheReadTokens:  usage.CacheReadTokens,
+			CacheWriteTokens: usage.CacheWriteTokens,
+		},
 	}, nil
 }
 
-func messagesToPantheon(msgs []message.HermindMessage) []core.Message {
+func messagesToPantheon(msgs []message.Message) []core.Message {
 	out := make([]core.Message, len(msgs))
 	for i, m := range msgs {
-		out[i] = message.ToPantheon(m)
+		out[i] = message.ToPantheon(message.LegacyToHermindMessage(m))
 		roleStr := string(out[i].Role)
 		mlog.Debug("messagesToPantheon", mlog.Int("idx", i), mlog.String("role", roleStr), mlog.Int("parts", len(out[i].Content)))
 		for j, p := range out[i].Content {

@@ -7,17 +7,17 @@ import (
 	"strings"
 
 	"github.com/odysseythink/hermind/message"
-	"github.com/odysseythink/hermind/provider"
+	"github.com/odysseythink/pantheon/core"
 )
 
 // LLMJudge is the default ConversationJudge backed by an aux LLM call.
 type LLMJudge struct {
-	llm provider.Provider
+	llm core.LanguageModel
 }
 
-// NewLLMJudge constructs an LLMJudge backed by the given provider.
-// A nil provider yields a judge that always returns Verdict{Outcome: "unknown"}.
-func NewLLMJudge(llm provider.Provider) *LLMJudge {
+// NewLLMJudge constructs an LLMJudge backed by the given core.LanguageModel.
+// A nil model yields a judge that always returns Verdict{Outcome: "unknown"}.
+func NewLLMJudge(llm core.LanguageModel) *LLMJudge {
 	return &LLMJudge{llm: llm}
 }
 
@@ -28,17 +28,22 @@ func (j *LLMJudge) Run(ctx context.Context, in JudgeInput) (*Verdict, error) {
 		return &Verdict{Outcome: "unknown"}, nil
 	}
 	prompt := buildJudgePrompt(in)
-	resp, err := j.llm.Complete(ctx, &provider.Request{
+
+	msgs := make([]core.Message, len(in.History))
+	for i, m := range in.History {
+		msgs[i] = message.ToPantheon(m)
+	}
+	msgs = append(msgs, core.NewTextMessage(core.MESSAGE_ROLE_USER, prompt))
+
+	resp, err := j.llm.Generate(ctx, &core.Request{
 		SystemPrompt: judgeSystemPrompt,
-		Messages: []message.Message{
-			{Role: message.RoleUser, Content: message.TextContent(prompt)},
-		},
+		Messages:     msgs,
 	})
 	if err != nil {
 		return &Verdict{Outcome: "unknown"}, nil
 	}
 
-	raw := strings.TrimSpace(resp.Message.Content.Text())
+	raw := strings.TrimSpace(resp.Message.Text())
 	raw = strings.TrimPrefix(raw, "```json")
 	raw = strings.TrimPrefix(raw, "```")
 	raw = strings.TrimSuffix(raw, "```")
@@ -77,7 +82,7 @@ func buildJudgePrompt(in JudgeInput) string {
 	var b strings.Builder
 	b.WriteString("# Transcript\n")
 	for _, m := range in.History {
-		text := m.Content.Text()
+		text := m.Text()
 		if len(text) > 2000 {
 			text = text[:2000] + "…"
 		}

@@ -5,6 +5,7 @@ import (
 
 	"github.com/odysseythink/hermind/message"
 	"github.com/odysseythink/hermind/tool"
+	"github.com/odysseythink/pantheon/core"
 )
 
 // defaultToolsetKeywords maps each toolset to the keywords that trigger its
@@ -43,7 +44,7 @@ func NewToolSelector() *ToolSelector {
 // current turn. It always includes core toolsets, adds toolsets matched by the
 // latest user message, and preserves toolsets that were used in previous turns
 // (so multi-turn tool chains do not break).
-func (s *ToolSelector) Select(userQuery string, history []message.Message, reg *tool.Registry) []tool.ToolDefinition {
+func (s *ToolSelector) Select(userQuery string, history []message.Message, reg *tool.Registry) []core.ToolDefinition {
 	selected := make(map[string]struct{})
 
 	// 1. Core toolsets are always available.

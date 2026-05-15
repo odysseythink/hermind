@@ -4,37 +4,23 @@ import (
 	"context"
 
 	"github.com/odysseythink/hermind/message"
-	"github.com/odysseythink/hermind/tool/memory/memprovider"
+	"github.com/odysseythink/pantheon/extensions/judge"
 )
 
-// Verdict summarizes a completed conversation for end-of-conversation
-// consumers (memory reinforcement, skill extraction, telemetry).
-type Verdict struct {
-	// Outcome is one of "success", "struggle", "failure", or "unknown".
-	Outcome string
-	// MemoriesUsed lists the IDs of injected memories that materially
-	// influenced the assistant reply, as judged by the aux LLM.
-	MemoriesUsed []string
-	// SkillsToExtract contains reusable patterns the judge recommends
-	// persisting. Populated only when Outcome != "success".
-	SkillsToExtract []SkillDraft
-	// Reasoning is a terse natural-language note, for telemetry only.
-	Reasoning string
-}
-
-// SkillDraft is a minimal description of a skill worth saving. The
-// evolver writes it as a Markdown file under the skills directory.
-type SkillDraft struct {
-	Name        string
-	Description string
-	Body        string
-}
+// Re-exports of pantheon/extensions/judge types so existing call sites
+// in hermind continue to compile.
+type (
+	Verdict           = judge.Verdict
+	SkillDraft        = judge.SkillDraft
+	InjectedMemory    = judge.InjectedMemory
+	ActiveSkill       = judge.ActiveSkill
+)
 
 // JudgeInput bundles everything a ConversationJudge implementation needs
 // to score a completed conversation.
 type JudgeInput struct {
-	History          []message.Message
-	InjectedMemories []memprovider.InjectedMemory
+	History          []message.HermindMessage
+	InjectedMemories []InjectedMemory
 	InjectedSkills   []ActiveSkill
 	Platform         string
 }

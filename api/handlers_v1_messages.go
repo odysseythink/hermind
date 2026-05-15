@@ -116,7 +116,7 @@ func providerRequestToPantheon(req *provider.Request) *core.Request {
 	}
 	msgs := make([]core.Message, len(req.Messages))
 	for i, m := range req.Messages {
-		msgs[i] = message.ToPantheon(m)
+		msgs[i] = message.ToPantheon(message.LegacyToHermindMessage(m))
 	}
 	pReq := &core.Request{
 		Messages:     msgs,
@@ -145,11 +145,13 @@ func pantheonResponseToProvider(resp *core.Response) *provider.Response {
 	if resp == nil {
 		return nil
 	}
-	msg := message.MessageFromPantheon(resp.Message)
+	msg := message.HermindMessageToLegacy(message.MessageFromPantheon(resp.Message))
 	return &provider.Response{
 		Message:      msg,
 		FinishReason: resp.FinishReason,
-		Usage: core.Usage{
+		Usage: message.Usage{
+			InputTokens:      resp.Usage.PromptTokens,
+			OutputTokens:     resp.Usage.CompletionTokens,
 			PromptTokens:     resp.Usage.PromptTokens,
 			CompletionTokens: resp.Usage.CompletionTokens,
 		},

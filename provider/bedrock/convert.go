@@ -51,12 +51,13 @@ func buildConverseInput(req *provider.Request) *bedrockruntime.ConverseInput {
 	if len(req.Tools) > 0 {
 		tools := make([]types.Tool, 0, len(req.Tools))
 		for _, t := range req.Tools {
+			params, _ := json.Marshal(t.Parameters)
 			tools = append(tools, &types.ToolMemberToolSpec{
 				Value: types.ToolSpecification{
-					Name:        aws.String(t.Function.Name),
-					Description: aws.String(t.Function.Description),
+					Name:        aws.String(t.Name),
+					Description: aws.String(t.Description),
 					InputSchema: &types.ToolInputSchemaMemberJson{
-						Value: jsonToDoc(t.Function.Parameters),
+						Value: jsonToDoc(params),
 					},
 				},
 			})

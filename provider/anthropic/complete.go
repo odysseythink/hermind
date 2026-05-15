@@ -11,6 +11,7 @@ import (
 
 	"github.com/odysseythink/hermind/message"
 	"github.com/odysseythink/hermind/provider"
+	"github.com/odysseythink/pantheon/core"
 )
 
 // Complete sends a non-streaming request to /v1/messages.
@@ -77,9 +78,9 @@ func (a *Anthropic) buildRequest(req *provider.Request, stream bool) *messagesRe
 		apiReq.Tools = make([]anthropicTool, 0, len(req.Tools))
 		for _, t := range req.Tools {
 			apiReq.Tools = append(apiReq.Tools, anthropicTool{
-				Name:        t.Function.Name,
-				Description: t.Function.Description,
-				InputSchema: t.Function.Parameters,
+				Name:        t.Name,
+				Description: t.Description,
+				InputSchema: schemaToRaw(t.Parameters),
 			})
 		}
 	}
@@ -181,4 +182,17 @@ func (a *Anthropic) convertResponse(apiResp *messagesResponse) *provider.Respons
 		},
 		Model: apiResp.Model,
 	}
+}
+
+// schemaToRaw marshals a pantheon core.Schema to json.RawMessage.
+// Returns nil if schema is nil.
+func schemaToRaw(schema *core.Schema) json.RawMessage {
+	if schema == nil {
+		return nil
+	}
+	b, err := json.Marshal(schema)
+	if err != nil {
+		return nil
+	}
+	return b
 }

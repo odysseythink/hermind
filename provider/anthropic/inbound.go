@@ -86,10 +86,15 @@ func Inbound(body []byte) (req *provider.Request, requestModel string, stream bo
 		})
 	}
 
+	legacyMsgs := make([]message.Message, len(internalMsgs))
+	for i, m := range internalMsgs {
+		legacyMsgs[i] = message.HermindMessageToLegacy(m)
+	}
+
 	out := &provider.Request{
 		Model:         raw.Model,
 		SystemPrompt:  systemPrompt,
-		Messages:      internalMsgs,
+		Messages:      legacyMsgs,
 		Tools:         tools,
 		MaxTokens:     raw.MaxTokens,
 		Temperature:   raw.Temperature,
