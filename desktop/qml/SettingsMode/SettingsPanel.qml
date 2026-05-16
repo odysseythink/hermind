@@ -1,3 +1,87 @@
 import QtQuick
+import QtQuick.Layouts
+import QtQuick.Controls
+import ".."
 
-Rectangle { color: "#0a0b0d" }
+Rectangle {
+    color: Theme.bg
+
+    Loader {
+        anchors.fill: parent
+        anchors.margins: 24
+        sourceComponent: {
+            if (!appState.activeSubKey && !appState.activeGroup) return emptyState
+            const sections = appState.configSections
+            const section = sections.find(s => s.key === appState.activeGroup)
+            if (section) {
+                if (section.shape === "scalar") return scalarEditor
+                return configSectionComp
+            }
+            if (appState.activeGroup === "models") return providerEditor
+            if (appState.activeSubKey && appState.activeSubKey.startsWith("fallback:")) return fallbackEditor
+            if (appState.activeSubKey && appState.activeSubKey.startsWith("mcp:")) return keyedEditor
+            if (appState.activeSubKey && appState.activeSubKey.startsWith("gateway:")) return keyedEditor
+            if (appState.activeSubKey && appState.activeSubKey.startsWith("cron:")) return listEditor
+            return emptyState
+        }
+    }
+
+    Component {
+        id: emptyState
+        Text {
+            text: "Select an item from the sidebar"
+            color: Theme.textSecondary
+            font.pixelSize: 14
+            anchors.centerIn: parent
+        }
+    }
+
+    Component {
+        id: configSectionComp
+        ConfigSection {
+            section: appState.configSections.find(s => s.key === appState.activeGroup)
+            value: appState.config[appState.activeGroup] || {}
+            originalValue: appState.originalConfig[appState.activeGroup] || {}
+            config: appState.config
+            onFieldChanged: (name, v) => appState.setConfigField(appState.activeGroup, name, v)
+        }
+    }
+
+    Component {
+        id: scalarEditor
+        ConfigSection {
+            section: appState.configSections.find(s => s.key === appState.activeGroup)
+            value: { var o = {}; o[section.fields[0].name] = appState.config[appState.activeGroup]; return o; }
+            originalValue: { var o = {}; o[section.fields[0].name] = appState.originalConfig[appState.activeGroup]; return o; }
+            onFieldChanged: (name, v) => appState.setConfigScalar(appState.activeGroup, v)
+        }
+    }
+
+    Component {
+        id: providerEditor
+        ProviderEditor {
+            instanceKey: appState.activeSubKey
+        }
+    }
+
+    Component {
+        id: fallbackEditor
+        FallbackProviderEditor {
+            index: parseInt(appState.activeSubKey.slice("fallback:".length))
+        }
+    }
+
+    Component {
+        id: keyedEditor
+        KeyedInstanceEditor {
+            subKey: appState.activeSubKey
+        }
+    }
+
+    Component {
+        id: listEditor
+        ListElementEditor {
+            subKey: appState.activeSubKey
+        }
+    }
+}

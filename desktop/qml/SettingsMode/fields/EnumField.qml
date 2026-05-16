@@ -1,3 +1,13 @@
 import QtQuick
+import QtQuick.Controls
+import "../.."
 
-Rectangle { color: "#0a0b0d" }
+ComboBox {
+    property var field
+    property string value
+    signal changed(string value)
+
+    model: field.enum || []
+    currentIndex: model.indexOf(value)
+    onActivated: changed(model[index])
+}
