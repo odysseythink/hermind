@@ -9,103 +9,77 @@ HermindClient::HermindClient(const QString &baseUrl, QObject *parent)
 {
 }
 
-void HermindClient::get(const QString &path, QJSValue callback)
+// ===== C++ API (std::function) =====
+
+void HermindClient::get(const QString &path, Callback callback)
 {
     QNetworkRequest req(QUrl(m_baseUrl + path));
     req.setHeader(QNetworkRequest::ContentTypeHeader, "application/json");
     QNetworkReply *reply = m_manager->get(req);
 
-    connect(reply, &QNetworkReply::finished, [reply, callback]() mutable {
-        QJsonObject resp;
-        QString error;
+    connect(reply, &QNetworkReply::finished, [reply, callback]() {
         if (reply->error() != QNetworkReply::NoError) {
-            error = reply->errorString();
+            callback(QJsonObject(), reply->errorString());
         } else {
             QByteArray data = reply->readAll();
             QJsonDocument doc = QJsonDocument::fromJson(data);
-            resp = doc.object();
-        }
-        if (callback.isCallable()) {
-            callback.call(QJSValueList()
-                << QJSValue(QString(QJsonDocument(resp).toJson(QJsonDocument::Compact)))
-                << error);
+            callback(doc.object(), QString());
         }
         reply->deleteLater();
     });
 }
 
-void HermindClient::post(const QString &path, QJsonObject body, QJSValue callback)
+void HermindClient::post(const QString &path, const QJsonObject &body, Callback callback)
 {
     QNetworkRequest req(QUrl(m_baseUrl + path));
     req.setHeader(QNetworkRequest::ContentTypeHeader, "application/json");
     QByteArray payload = QJsonDocument(body).toJson();
     QNetworkReply *reply = m_manager->post(req, payload);
 
-    connect(reply, &QNetworkReply::finished, [reply, callback]() mutable {
-        QJsonObject resp;
-        QString error;
+    connect(reply, &QNetworkReply::finished, [reply, callback]() {
         if (reply->error() != QNetworkReply::NoError) {
-            error = reply->errorString();
+            callback(QJsonObject(), reply->errorString());
         } else {
             QByteArray data = reply->readAll();
             QJsonDocument doc = QJsonDocument::fromJson(data);
-            resp = doc.object();
-        }
-        if (callback.isCallable()) {
-            callback.call(QJSValueList()
-                << QJSValue(QString(QJsonDocument(resp).toJson(QJsonDocument::Compact)))
-                << error);
+            callback(doc.object(), QString());
         }
         reply->deleteLater();
     });
 }
 
-void HermindClient::put(const QString &path, QJsonObject body, QJSValue callback)
+void HermindClient::put(const QString &path, const QJsonObject &body, Callback callback)
 {
     QNetworkRequest req(QUrl(m_baseUrl + path));
     req.setHeader(QNetworkRequest::ContentTypeHeader, "application/json");
     QByteArray payload = QJsonDocument(body).toJson();
     QNetworkReply *reply = m_manager->put(req, payload);
 
-    connect(reply, &QNetworkReply::finished, [reply, callback]() mutable {
-        QJsonObject resp;
-        QString error;
+    connect(reply, &QNetworkReply::finished, [reply, callback]() {
         if (reply->error() != QNetworkReply::NoError) {
-            error = reply->errorString();
+            callback(QJsonObject(), reply->errorString());
         } else {
             QByteArray data = reply->readAll();
             QJsonDocument doc = QJsonDocument::fromJson(data);
-            resp = doc.object();
-        }
-        if (callback.isCallable()) {
-            callback.call(QJSValueList()
-                << QJSValue(QString(QJsonDocument(resp).toJson(QJsonDocument::Compact)))
-                << error);
+            callback(doc.object(), QString());
         }
         reply->deleteLater();
     });
 }
 
-void HermindClient::delete_(const QString &path, QJSValue callback)
+void HermindClient::delete_(const QString &path, Callback callback)
 {
     QNetworkRequest req(QUrl(m_baseUrl + path));
     req.setHeader(QNetworkRequest::ContentTypeHeader, "application/json");
     QNetworkReply *reply = m_manager->deleteResource(req);
 
-    connect(reply, &QNetworkReply::finished, [reply, callback]() mutable {
-        QJsonObject resp;
-        QString error;
+    connect(reply, &QNetworkReply::finished, [reply, callback]() {
         if (reply->error() != QNetworkReply::NoError) {
-            error = reply->errorString();
+            callback(QJsonObject(), reply->errorString());
         } else {
             QByteArray data = reply->readAll();
             QJsonDocument doc = QJsonDocument::fromJson(data);
-            resp = doc.object();
-        }
-        if (callback.isCallable()) {
-            callback.call(QJSValueList()
-                << QJSValue(QString(QJsonDocument(resp).toJson(QJsonDocument::Compact)))
-                << error);
+            callback(doc.object(), QString());
         }
         reply->deleteLater();
     });
@@ -113,7 +87,7 @@ void HermindClient::delete_(const QString &path, QJSValue callback)
 
 void HermindClient::upload(const QString &path, const QByteArray &data,
                            const QString &fileName, const QString &mimeType,
-                           QJSValue callback)
+                           Callback callback)
 {
     QString boundary = QString("----HermindBoundary%1").arg(QRandomGenerator::global()->generate(), 0, 16);
     QByteArray payload;
@@ -127,20 +101,13 @@ void HermindClient::upload(const QString &path, const QByteArray &data,
     req.setHeader(QNetworkRequest::ContentTypeHeader, QString("multipart/form-data; boundary=%1").arg(boundary));
     QNetworkReply *reply = m_manager->post(req, payload);
 
-    connect(reply, &QNetworkReply::finished, [reply, callback]() mutable {
-        QJsonObject resp;
-        QString error;
+    connect(reply, &QNetworkReply::finished, [reply, callback]() {
         if (reply->error() != QNetworkReply::NoError) {
-            error = reply->errorString();
+            callback(QJsonObject(), reply->errorString());
         } else {
             QByteArray data = reply->readAll();
             QJsonDocument doc = QJsonDocument::fromJson(data);
-            resp = doc.object();
-        }
-        if (callback.isCallable()) {
-            callback.call(QJSValueList()
-                << QJSValue(QString(QJsonDocument(resp).toJson(QJsonDocument::Compact)))
-                << error);
+            callback(doc.object(), QString());
         }
         reply->deleteLater();
     });
@@ -152,6 +119,65 @@ QNetworkReply* HermindClient::getStream(const QString &path)
     req.setHeader(QNetworkRequest::ContentTypeHeader, "application/json");
     req.setRawHeader("Accept", "text/event-stream");
     return m_manager->get(req);
+}
+
+// ===== QML API (QJSValue wrappers) =====
+
+void HermindClient::get(const QString &path, QJSValue jsCallback)
+{
+    get(path, [jsCallback](const QJsonObject &resp, const QString &error) mutable {
+        if (jsCallback.isCallable()) {
+            jsCallback.call(QJSValueList()
+                << QJSValue(QString(QJsonDocument(resp).toJson(QJsonDocument::Compact)))
+                << error);
+        }
+    });
+}
+
+void HermindClient::post(const QString &path, QJsonObject body, QJSValue jsCallback)
+{
+    post(path, body, [jsCallback](const QJsonObject &resp, const QString &error) mutable {
+        if (jsCallback.isCallable()) {
+            jsCallback.call(QJSValueList()
+                << QJSValue(QString(QJsonDocument(resp).toJson(QJsonDocument::Compact)))
+                << error);
+        }
+    });
+}
+
+void HermindClient::put(const QString &path, QJsonObject body, QJSValue jsCallback)
+{
+    put(path, body, [jsCallback](const QJsonObject &resp, const QString &error) mutable {
+        if (jsCallback.isCallable()) {
+            jsCallback.call(QJSValueList()
+                << QJSValue(QString(QJsonDocument(resp).toJson(QJsonDocument::Compact)))
+                << error);
+        }
+    });
+}
+
+void HermindClient::delete_(const QString &path, QJSValue jsCallback)
+{
+    delete_(path, [jsCallback](const QJsonObject &resp, const QString &error) mutable {
+        if (jsCallback.isCallable()) {
+            jsCallback.call(QJSValueList()
+                << QJSValue(QString(QJsonDocument(resp).toJson(QJsonDocument::Compact)))
+                << error);
+        }
+    });
+}
+
+void HermindClient::upload(const QString &path, const QByteArray &data,
+                           const QString &fileName, const QString &mimeType,
+                           QJSValue jsCallback)
+{
+    upload(path, data, fileName, mimeType, [jsCallback](const QJsonObject &resp, const QString &error) mutable {
+        if (jsCallback.isCallable()) {
+            jsCallback.call(QJSValueList()
+                << QJSValue(QString(QJsonDocument(resp).toJson(QJsonDocument::Compact)))
+                << error);
+        }
+    });
 }
 
 QString HermindClient::baseUrl() const
