@@ -1,16 +1,17 @@
-#include <QApplication>
+#include <QGuiApplication>
+#include <QQmlApplicationEngine>
 #include <QFont>
-#include "appwindow.h"
-#include "hermindprocess.h"
+#include <QQmlContext>
+#include <QQuickStyle>
+#include "HermindProcess.h"
 #include "HermindClient.h"
-#include "shortcutmanager.h"
-#include "trayicon.h"
-#include "thememanager.h"
-#include "i18nmanager.h"
+#include "AppState.h"
+#include "TrayIcon.h"
+#include "ShortcutManager.h"
 
 int main(int argc, char *argv[])
 {
-    QApplication app(argc, argv);
+    QGuiApplication app(argc, argv);
     app.setApplicationName("hermind");
     app.setOrganizationName("hermind");
 
@@ -23,52 +24,58 @@ int main(int argc, char *argv[])
     appFont = QFont("system-ui");
 #endif
     appFont.setPointSize(10);
-    QApplication::setFont(appFont);
+    QGuiApplication::setFont(appFont);
 
-    ThemeManager themeManager;
-    I18nManager i18nManager;
+    QQuickStyle::setStyle("Basic");
 
-    AppWindow window;
     HermindProcess backend;
     HermindClient *client = nullptr;
+    AppState *appState = nullptr;
 
-    ShortcutManager shortcuts(&window);
-    shortcuts.registerToggle(QKeySequence("Ctrl+Shift+H"));
-    QObject::connect(&shortcuts, &ShortcutManager::toggleRequested, &window, [&window]() {
-        if (window.isVisible()) {
-            window.hide();
-        } else {
-            window.show();
-            window.raise();
-            window.activateWindow();
-        }
+    QQmlApplicationEngine engine;
+
+    QObject::connect(&backend, &HermindProcess::backendReady,
+                     &app, [&engine, &client, &appState](const QHostAddress&, int port) {
+        client = new HermindClient(QStringLiteral("http://127.0.0.1:%1").arg(port), &engine);
+        appState = new AppState(client, &engine);
+        engine.rootContext()->setContextProperty("appState", appState);
+        engine.rootContext()->setContextProperty("hermindClient", client);
+        appState->boot();
+    });
+
+    QObject::connect(&backend, &HermindProcess::backendError,
+                     &app, [](const QString &msg) {
+        qWarning() << "Backend error:" << msg;
     });
 
     TrayIcon tray;
     tray.show();
-    QObject::connect(&tray, &TrayIcon::showWindowRequested, &window, [&window]() {
-        window.show();
-        window.raise();
-        window.activateWindow();
+    QObject::connect(&tray, &TrayIcon::showWindowRequested, &app, [&engine]() {
+        for (QObject *obj : engine.rootObjects()) {
+            if (QWindow *w = qobject_cast<QWindow*>(obj)) {
+                w->show();
+                w->raise();
+                w->requestActivate();
+            }
+        }
     });
-    QObject::connect(&tray, &TrayIcon::quitRequested, &app, &QApplication::quit);
+    QObject::connect(&tray, &TrayIcon::quitRequested, &app, &QGuiApplication::quit);
 
-    window.setThemeManager(&themeManager);
-    window.setI18nManager(&i18nManager);
-
-    QObject::connect(&backend, &HermindProcess::backendReady,
-                     &window, [&window, &client](const QHostAddress&, int port) {
-        client = new HermindClient(QStringLiteral("http://127.0.0.1:%1").arg(port), &window);
-        window.setClient(client);
+    ShortcutManager shortcuts;
+    shortcuts.registerToggle(QKeySequence("Ctrl+Shift+H"));
+    QObject::connect(&shortcuts, &ShortcutManager::toggleRequested, &app, [&engine]() {
+        for (QObject *obj : engine.rootObjects()) {
+            if (QWindow *w = qobject_cast<QWindow*>(obj)) {
+                if (w->isVisible()) w->hide();
+                else { w->show(); w->raise(); w->requestActivate(); }
+            }
+        }
     });
 
-    QObject::connect(&backend, &HermindProcess::backendError,
-                     &window, [](const QString &msg) {
-        qWarning() << "Backend error:" << msg;
-    });
+    engine.load(QUrl(QStringLiteral("qrc:/Hermind/qml/main.qml")));
+    if (engine.rootObjects().isEmpty()) return -1;
 
     backend.start();
-    window.show();
 
     int ret = app.exec();
     backend.shutdown();
