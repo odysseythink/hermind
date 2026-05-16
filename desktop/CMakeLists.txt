@@ -28,7 +28,7 @@ set(CPP_HEADERS
     src/ShortcutManager.h
 )
 
-qt_add_executable(hermind-desktop ${CPP_SOURCES} ${CPP_HEADERS} translations/translations.qrc)
+qt_add_executable(hermind-desktop ${CPP_SOURCES} ${CPP_HEADERS} translations/translations.qrc qml/theme.qrc)
 
 qt_add_qml_module(hermind-desktop
     URI Hermind
@@ -37,7 +37,6 @@ qt_add_qml_module(hermind-desktop
     QML_FILES
         qml/main.qml
         qml/AppWindow.qml
-        qml/Theme.qml
         qml/ChatMode/ChatWorkspace.qml
         qml/ChatMode/MessageList.qml
         qml/ChatMode/MessageBubble.qml

@@ -1,0 +1,5 @@
+<RCC>
+    <qresource prefix="/Hermind/qml">
+        <file>Theme.qml</file>
+    </qresource>
+</RCC>
