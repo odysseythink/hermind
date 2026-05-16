@@ -1,3 +1,13 @@
 import QtQuick
+import QtQuick.Controls
+import "../.."
 
-Rectangle { color: "#0a0b0d" }
+TextField {
+    property var field
+    property string value
+    signal changed(string value)
+
+    text: value
+    validator: DoubleValidator { bottom: field.min ?? -Infinity; top: field.max ?? Infinity }
+    onTextChanged: if (acceptableInput) changed(text)
+}
