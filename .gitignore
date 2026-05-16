@@ -37,3 +37,4 @@ desktop/resources/*.exe
 
 # IDE temp files
 desktop/.qtcreator/CMakeLists.txt.user.bak
+desktop/.qtcreator/CMakeLists.txt.user*
