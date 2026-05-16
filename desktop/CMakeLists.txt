@@ -86,7 +86,7 @@ set_target_properties(hermind-desktop PROPERTIES
 )
 
 add_executable(test_httplib tests/test_httplib.cpp src/HermindClient.cpp)
-target_link_libraries(test_httplib PRIVATE Qt6::Core Qt6::Network Qt6::Test)
+target_link_libraries(test_httplib PRIVATE Qt6::Core Qt6::Network Qt6::Test Qt6::Qml)
 add_test(NAME test_httplib COMMAND test_httplib)
 
 add_executable(test_sseparser tests/test_sseparser.cpp src/SSEParser.cpp)

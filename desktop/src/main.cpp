@@ -2,7 +2,7 @@
 #include <QFont>
 #include "appwindow.h"
 #include "hermindprocess.h"
-#include "httplib.h"
+#include "HermindClient.h"
 #include "shortcutmanager.h"
 #include "trayicon.h"
 #include "thememanager.h"

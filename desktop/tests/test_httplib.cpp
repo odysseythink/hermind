@@ -4,7 +4,8 @@
 #include <QTcpSocket>
 #include <QHostAddress>
 #include <QCoreApplication>
-#include "../src/httplib.h"
+#include <QJSEngine>
+#include "../src/HermindClient.h"
 
 class TestHttpLib : public QObject
 {
@@ -29,7 +30,8 @@ void TestHttpLib::testPut()
     QVERIFY(manager);
     QSignalSpy spy(manager, &QNetworkAccessManager::finished);
 
-    client.put("/test", QJsonObject{{"key", "value"}}, [](const QJsonObject &, const QString &){});
+    QJSEngine engine;
+    client.put("/test", QJsonObject{{"key", "value"}}, engine.evaluate("(function(){ })"));
 
     QVERIFY(spy.wait(5000));
     QNetworkReply *reply = qvariant_cast<QNetworkReply*>(spy.at(0).at(0));
@@ -45,7 +47,8 @@ void TestHttpLib::testDelete()
     QVERIFY(manager);
     QSignalSpy spy(manager, &QNetworkAccessManager::finished);
 
-    client.delete_("/test", [](const QJsonObject &, const QString &){});
+    QJSEngine engine;
+    client.delete_("/test", engine.evaluate("(function(){ })"));
 
     QVERIFY(spy.wait(5000));
     QNetworkReply *reply = qvariant_cast<QNetworkReply*>(spy.at(0).at(0));
@@ -66,8 +69,9 @@ void TestHttpLib::testUpload()
     QSignalSpy finishedSpy(manager, &QNetworkAccessManager::finished);
     QSignalSpy connSpy(&server, &QTcpServer::newConnection);
 
+    QJSEngine engine;
     client.upload("/upload", QByteArray("hello"), "test.txt", "text/plain",
-                  [](const QJsonObject &, const QString &){});
+                  engine.evaluate("(function(){ })"));
 
     QVERIFY(connSpy.wait(5000));
     QTcpSocket *socket = server.nextPendingConnection();
