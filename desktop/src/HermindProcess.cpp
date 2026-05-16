@@ -3,6 +3,7 @@
 #include <QRegularExpression>
 #include <QDebug>
 #include <QFileInfo>
+#include <QDir>
 
 #ifdef Q_OS_WIN
 #include <windows.h>
@@ -21,28 +22,24 @@ HermindProcess::HermindProcess(QObject *parent)
 
 void HermindProcess::start()
 {
-    QStringList candidates;
-    QString appDir = QCoreApplication::applicationDirPath();
-    candidates << appDir + "/hermind";
-    candidates << appDir + "/hermind.exe";
-    candidates << appDir + "/../hermind";
-    candidates << appDir + "/../hermind.exe";
-    candidates << appDir + "/../bin/hermind";
-    candidates << appDir + "/../bin/hermind.exe";
-    candidates << appDir + "/../../bin/hermind";
-    candidates << appDir + "/../../bin/hermind.exe";
-
     QString goBinary;
-    for (const QString &c : candidates) {
-        QString canonical = QFileInfo(c).canonicalFilePath();
-        if (!canonical.isEmpty() && QFileInfo::exists(canonical)) {
-            goBinary = canonical;
+    QDir dir(QCoreApplication::applicationDirPath());
+
+    for (int i = 0; i < 6; ++i) {
+        QString candidate = dir.filePath("bin/hermind");
+#ifdef Q_OS_WIN
+        candidate += ".exe";
+#endif
+        QFileInfo fi(candidate);
+        if (fi.exists() && fi.isFile() && fi.isExecutable()) {
+            goBinary = fi.canonicalFilePath();
             break;
         }
+        if (!dir.cdUp()) break;
     }
 
     if (goBinary.isEmpty()) {
-        emit backendError("Backend binary not found. Searched: " + candidates.join(", "));
+        emit backendError("Backend binary not found. Searched up to 6 parent dirs for bin/hermind.exe");
         return;
     }
 
