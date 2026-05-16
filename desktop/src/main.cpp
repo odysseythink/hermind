@@ -33,24 +33,24 @@ int main(int argc, char *argv[])
 
     HermindProcess backend;
     HermindClient *client = nullptr;
-    AppState *appState = nullptr;
+    AppState appState(nullptr, &app);
     QTranslator translator;
 
     QQmlApplicationEngine engine;
+    engine.rootContext()->setContextProperty("appState", &appState);
 
     QObject::connect(&backend, &HermindProcess::backendReady,
                      &app, [&engine, &client, &appState, &app, &translator](const QHostAddress&, int port) {
         client = new HermindClient(QStringLiteral("http://127.0.0.1:%1").arg(port), &engine);
-        appState = new AppState(client, &engine);
-        engine.rootContext()->setContextProperty("appState", appState);
+        appState.setClient(client);
         engine.rootContext()->setContextProperty("hermindClient", client);
-        QObject::connect(appState, &AppState::languageChanged, &app, [&app, &translator](const QString &lang) {
+        QObject::connect(&appState, &AppState::languageChanged, &app, [&app, &translator](const QString &lang) {
             app.removeTranslator(&translator);
             if (translator.load(QStringLiteral(":/i18n/hermind_%1").arg(lang))) {
                 app.installTranslator(&translator);
             }
         });
-        appState->boot();
+        appState.boot();
     });
 
     QObject::connect(&backend, &HermindProcess::backendError,

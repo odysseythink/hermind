@@ -339,6 +339,11 @@ void AppState::fetchAuxiliaryModels()
     });
 }
 
+void AppState::setClient(HermindClient *client)
+{
+    m_client = client;
+}
+
 void AppState::setLanguage(const QString &lang)
 {
     emit languageChanged(lang);

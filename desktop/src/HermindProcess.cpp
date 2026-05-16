@@ -2,6 +2,7 @@
 #include <QCoreApplication>
 #include <QRegularExpression>
 #include <QDebug>
+#include <QFileInfo>
 
 #ifdef Q_OS_WIN
 #include <windows.h>
@@ -20,10 +21,30 @@ HermindProcess::HermindProcess(QObject *parent)
 
 void HermindProcess::start()
 {
-    QString goBinary = QCoreApplication::applicationDirPath() + "/hermind-desktop-backend";
-#ifdef Q_OS_WIN
-    goBinary += ".exe";
-#endif
+    QStringList candidates;
+    QString appDir = QCoreApplication::applicationDirPath();
+    candidates << appDir + "/hermind";
+    candidates << appDir + "/hermind.exe";
+    candidates << appDir + "/../hermind";
+    candidates << appDir + "/../hermind.exe";
+    candidates << appDir + "/../bin/hermind";
+    candidates << appDir + "/../bin/hermind.exe";
+    candidates << appDir + "/../../bin/hermind";
+    candidates << appDir + "/../../bin/hermind.exe";
+
+    QString goBinary;
+    for (const QString &c : candidates) {
+        QString canonical = QFileInfo(c).canonicalFilePath();
+        if (!canonical.isEmpty() && QFileInfo::exists(canonical)) {
+            goBinary = canonical;
+            break;
+        }
+    }
+
+    if (goBinary.isEmpty()) {
+        emit backendError("Backend binary not found. Searched: " + candidates.join(", "));
+        return;
+    }
 
     m_process->setProgram(goBinary);
     m_process->setArguments(QStringList() << "desktop");
