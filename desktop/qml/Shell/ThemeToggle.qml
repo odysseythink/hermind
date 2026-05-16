@@ -1,3 +1,9 @@
 import QtQuick
+import QtQuick.Controls
+import ".."
 
-Rectangle { color: "#0a0b0d" }
+Button {
+    text: Theme.isDark ? "🌙" : "☀️"
+    flat: true
+    onClicked: Theme.isDark = !Theme.isDark
+}
