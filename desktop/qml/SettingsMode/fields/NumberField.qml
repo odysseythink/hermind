@@ -2,13 +2,15 @@ import QtQuick
 import QtQuick.Controls
 import Hermind
 
-SpinBox {
+TextField {
     property var field
     property string value
     signal changed(string value)
 
-    from: field.min ?? -2147483648
-    to: field.max ?? 2147483647
-    value: parseInt(value) || 0
-    onValueModified: changed(String(value))
+    text: value
+    placeholderText: field.help || ""
+    color: Theme.textPrimary
+    background: Rectangle { color: Theme.bg; border.color: Theme.border; radius: 4 }
+    validator: IntValidator { bottom: field.min ?? -2147483647; top: field.max ?? 2147483647 }
+    onTextChanged: if (acceptableInput) changed(text)
 }
