@@ -6,6 +6,7 @@
 #include <QWindow>
 #include <QKeySequence>
 #include <QTranslator>
+#include <QQmlComponent>
 #include "HermindProcess.h"
 #include "HermindClient.h"
 #include "AppState.h"
@@ -33,10 +34,20 @@ int main(int argc, char *argv[])
 
     HermindProcess backend;
     HermindClient *client = nullptr;
-    AppState appState(nullptr, &app);
     QTranslator translator;
 
     QQmlApplicationEngine engine;
+
+    // Instantiate Theme.qml as a singleton-like context property
+    QQmlComponent themeComp(&engine, QUrl(QStringLiteral("qrc:/Hermind/qml/Theme.qml")));
+    QObject *theme = themeComp.create();
+    if (theme) {
+        engine.rootContext()->setContextProperty(QStringLiteral("Theme"), theme);
+    } else {
+        qWarning() << "Failed to load Theme.qml:" << themeComp.errorString();
+    }
+
+    AppState appState(nullptr, &app);
     engine.rootContext()->setContextProperty("appState", &appState);
 
     QObject::connect(&backend, &HermindProcess::backendReady,
