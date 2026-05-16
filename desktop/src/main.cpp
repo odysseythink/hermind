@@ -1,4 +1,4 @@
-#include <QGuiApplication>
+#include <QApplication>
 #include <QQmlApplicationEngine>
 #include <QFont>
 #include <QQmlContext>
@@ -14,7 +14,7 @@
 
 int main(int argc, char *argv[])
 {
-    QGuiApplication app(argc, argv);
+    QApplication app(argc, argv);
     app.setApplicationName("hermind");
     app.setOrganizationName("hermind");
 
@@ -27,7 +27,7 @@ int main(int argc, char *argv[])
     appFont = QFont("system-ui");
 #endif
     appFont.setPointSize(10);
-    QGuiApplication::setFont(appFont);
+    QApplication::setFont(appFont);
 
     QQuickStyle::setStyle("Basic");
 
