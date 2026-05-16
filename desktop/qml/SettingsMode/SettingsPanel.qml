@@ -10,19 +10,25 @@ Rectangle {
         anchors.fill: parent
         anchors.margins: 24
         sourceComponent: {
-            if (!appState.activeSubKey && !appState.activeGroup) return emptyState
-            const sections = appState.configSections
-            const section = sections.find(s => s.key === appState.activeGroup)
-            if (section) {
-                if (section.shape === "scalar") return scalarEditor
-                return configSectionComp
+            if (!appState.activeGroup) return emptyState
+
+            // Route to specific editor when a sub-item is selected
+            if (appState.activeSubKey) {
+                if (appState.activeGroup === "providers")
+                    return providerEditor
+                if (appState.activeGroup === "fallback_providers")
+                    return fallbackEditor
+                if (appState.activeGroup === "mcp" || appState.activeGroup === "gateway")
+                    return keyedEditor
+                if (appState.activeGroup === "cron")
+                    return listEditor
             }
-            if (appState.activeGroup === "models") return providerEditor
-            if (appState.activeSubKey && appState.activeSubKey.startsWith("fallback:")) return fallbackEditor
-            if (appState.activeSubKey && appState.activeSubKey.startsWith("mcp:")) return keyedEditor
-            if (appState.activeSubKey && appState.activeSubKey.startsWith("gateway:")) return keyedEditor
-            if (appState.activeSubKey && appState.activeSubKey.startsWith("cron:")) return listEditor
-            return emptyState
+
+            // No subkey — route by section shape
+            const section = appState.configSections.find(s => s.key === appState.activeGroup)
+            if (!section) return emptyState
+            if (section.shape === "scalar") return scalarEditor
+            return configSectionComp
         }
     }
 
@@ -67,7 +73,7 @@ Rectangle {
     Component {
         id: fallbackEditor
         FallbackProviderEditor {
-            index: parseInt(appState.activeSubKey.slice("fallback:".length))
+            index: parseInt(appState.activeSubKey)
         }
     }
 
@@ -81,7 +87,7 @@ Rectangle {
     Component {
         id: listEditor
         ListElementEditor {
-            subKey: appState.activeSubKey
+            index: parseInt(appState.activeSubKey)
         }
     }
 }

@@ -1,4 +1,4 @@
-#include "sseparser.h"
+#include "SSEParser.h"
 
 SSEParser::SSEParser(QObject *parent) : QObject(parent) {}
 

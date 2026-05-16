@@ -1,4 +1,4 @@
-#include "hermindprocess.h"
+#include "HermindProcess.h"
 #include <QCoreApplication>
 #include <QRegularExpression>
 #include <QDebug>

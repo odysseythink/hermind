@@ -18,7 +18,14 @@ AppState::AppState(HermindClient *client, QObject *parent)
         QString type = obj.value("type").toString();
         if (type == "message_chunk") {
             QJsonObject payload = obj.value("data").toObject();
-            emit streamChunk(payload.value("text").toString());
+            QString text = payload.value("text").toString();
+            if (!m_messages.isEmpty()) {
+                QJsonObject last = m_messages.last().toObject();
+                last["content"] = last.value("content").toString() + text;
+                m_messages[m_messages.size() - 1] = last;
+                emit messagesChanged();
+            }
+            emit streamChunk(text);
         } else if (type == "done") {
             m_isStreaming = false;
             emit isStreamingChanged();
@@ -231,6 +238,12 @@ void AppState::sendMessage(const QString &text)
 void AppState::startStream()
 {
     if (!m_client) return;
+    QJsonObject assistantMsg;
+    assistantMsg["role"] = "assistant";
+    assistantMsg["content"] = "";
+    m_messages.append(assistantMsg);
+    emit messagesChanged();
+
     m_isStreaming = true;
     emit isStreamingChanged();
     m_streamReply = m_client->getStream("/api/sse");
