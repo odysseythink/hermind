@@ -28,7 +28,7 @@ set(CPP_HEADERS
     src/ShortcutManager.h
 )
 
-qt_add_executable(hermind-desktop ${CPP_SOURCES} ${CPP_HEADERS})
+qt_add_executable(hermind-desktop ${CPP_SOURCES} ${CPP_HEADERS} translations/translations.qrc)
 
 qt_add_qml_module(hermind-desktop
     URI Hermind

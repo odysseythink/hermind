@@ -7,6 +7,7 @@ Rectangle {
     property bool isUser: false
     property string markdownText: ""
     property var toolCalls: []
+    property bool isStreaming: false
 
     color: isUser ? "transparent" : Theme.surface
     border.color: isUser ? Theme.accent : Theme.border
@@ -19,23 +20,33 @@ Rectangle {
         spacing: 8
 
         Text {
-            text: isUser ? "YOU" : "HERMIND"
+            text: isUser ? qsTr("YOU") : qsTr("HERMIND")
             font.family: "monospace"
             font.pixelSize: 10
             font.weight: Font.Bold
             color: isUser ? Theme.accent : Theme.textSecondary
         }
 
-        TextEdit {
-            id: contentEdit
-            text: markdownText
-            readOnly: true
-            selectByMouse: true
-            textFormat: TextEdit.MarkdownText
-            wrapMode: TextEdit.Wrap
-            color: Theme.textPrimary
-            font.pixelSize: 13
+        RowLayout {
             Layout.fillWidth: true
+            spacing: 4
+
+            TextEdit {
+                id: contentEdit
+                text: markdownText
+                readOnly: true
+                selectByMouse: true
+                textFormat: TextEdit.MarkdownText
+                wrapMode: TextEdit.Wrap
+                color: Theme.textPrimary
+                font.pixelSize: 13
+                Layout.fillWidth: true
+            }
+
+            StreamingCursor {
+                visible: isStreaming
+                Layout.alignment: Qt.AlignBottom
+            }
         }
 
         ColumnLayout {
@@ -56,18 +67,20 @@ Rectangle {
             Layout.alignment: Qt.AlignRight
 
             Button {
-                text: "Copy"
+                text: qsTr("Copy")
                 flat: true
                 onClicked: {
-                    // clipboard access in QML
+                    const text = contentEdit.selectedText.length > 0 ? contentEdit.selectedText : contentEdit.text
+                    Qt.application.clipboard.setText(text)
+                    appState.toast("Copied to clipboard")
                 }
             }
             Button {
-                text: "Regenerate"
+                text: qsTr("Regenerate")
                 flat: true
             }
             Button {
-                text: "Delete"
+                text: qsTr("Delete")
                 flat: true
             }
         }

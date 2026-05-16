@@ -11,7 +11,7 @@ Rectangle {
         spacing: 20
 
         Text {
-            text: "How can I help you today?"
+            text: qsTr("How can I help you today?")
             font.pixelSize: 28
             font.weight: Font.Bold
             color: Theme.textPrimary
@@ -23,7 +23,7 @@ Rectangle {
             Layout.alignment: Qt.AlignHCenter
 
             Repeater {
-                model: ["Explain a concept", "Write some code", "Debug an error"]
+                model: [qsTr("Explain a concept"), qsTr("Write some code"), qsTr("Debug an error")]
                 delegate: Button {
                     text: modelData
                     onClicked: appState.sendMessage(text)

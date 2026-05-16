@@ -4,7 +4,7 @@ import QtQuick.Controls
 import ".."
 
 Rectangle {
-    color: "#0f1012"
+    color: Theme.surface
 
     RowLayout {
         anchors.fill: parent
@@ -13,7 +13,7 @@ Rectangle {
         spacing: 12
 
         Text {
-            text: "◈ HERMIND"
+            text: qsTr("◈ HERMIND")
             font.family: "monospace"
             font.pixelSize: 14
             font.weight: Font.Bold
@@ -23,13 +23,7 @@ Rectangle {
 
         Item { Layout.fillWidth: true }
 
-        ComboBox {
-            model: ListModel {
-                ListElement { text: "EN"; code: "en" }
-                ListElement { text: "中"; code: "zh_CN" }
-            }
-            textRole: "text"
-            currentIndex: 0
+        LanguageToggle {
             Layout.preferredWidth: 60
             Layout.preferredHeight: 28
         }
@@ -47,7 +41,7 @@ Rectangle {
         }
 
         Button {
-            text: "Chat"
+            text: qsTr("Chat")
             checkable: true
             checked: appState.activeGroup === ""
             ButtonGroup.group: modeGroup
@@ -58,7 +52,7 @@ Rectangle {
         }
 
         Button {
-            text: "Set"
+            text: qsTr("Set")
             checkable: true
             checked: appState.activeGroup !== ""
             ButtonGroup.group: modeGroup
@@ -83,7 +77,7 @@ Rectangle {
         }
 
         Button {
-            text: "Save"
+            text: qsTr("Save")
             enabled: appState.dirtyCount > 0
             onClicked: appState.saveConfig()
         }

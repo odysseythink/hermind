@@ -5,6 +5,7 @@
 #include <QQuickStyle>
 #include <QWindow>
 #include <QKeySequence>
+#include <QTranslator>
 #include "HermindProcess.h"
 #include "HermindClient.h"
 #include "AppState.h"
@@ -33,15 +34,22 @@ int main(int argc, char *argv[])
     HermindProcess backend;
     HermindClient *client = nullptr;
     AppState *appState = nullptr;
+    QTranslator translator;
 
     QQmlApplicationEngine engine;
 
     QObject::connect(&backend, &HermindProcess::backendReady,
-                     &app, [&engine, &client, &appState](const QHostAddress&, int port) {
+                     &app, [&engine, &client, &appState, &app, &translator](const QHostAddress&, int port) {
         client = new HermindClient(QStringLiteral("http://127.0.0.1:%1").arg(port), &engine);
         appState = new AppState(client, &engine);
         engine.rootContext()->setContextProperty("appState", appState);
         engine.rootContext()->setContextProperty("hermindClient", client);
+        QObject::connect(appState, &AppState::languageChanged, &app, [&app, &translator](const QString &lang) {
+            app.removeTranslator(&translator);
+            if (translator.load(QStringLiteral(":/i18n/hermind_%1").arg(lang))) {
+                app.installTranslator(&translator);
+            }
+        });
         appState->boot();
     });
 

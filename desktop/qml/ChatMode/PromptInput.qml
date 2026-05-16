@@ -17,7 +17,7 @@ Rectangle {
             id: inputArea
             Layout.fillWidth: true
             Layout.fillHeight: true
-            placeholderText: "Type a message..."
+            placeholderText: qsTr("Type a message...")
             wrapMode: TextEdit.Wrap
             color: Theme.textPrimary
             background: Rectangle { color: "transparent" }
@@ -37,11 +37,15 @@ Rectangle {
             Button {
                 id: sendButton
                 text: "Send"
-                enabled: inputArea.text.trim().length > 0 && !appState.isStreaming
+                visible: !appState.isStreaming
+                enabled: inputArea.text.trim().length > 0
                 onClicked: {
                     appState.sendMessage(inputArea.text.trim())
                     inputArea.clear()
                 }
+            }
+            StopButton {
+                visible: appState.isStreaming
             }
             Button {
                 text: "Attach"

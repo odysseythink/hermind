@@ -1,3 +1,19 @@
 import QtQuick
+import QtQuick.Controls
+import ".."
 
-Rectangle { color: "#0a0b0d" }
+Button {
+    text: "▼"
+    flat: true
+    background: Rectangle {
+        color: Theme.surface
+        border.color: Theme.border
+        radius: 16
+    }
+    contentItem: Text {
+        text: parent.text
+        color: Theme.textPrimary
+        horizontalAlignment: Text.AlignHCenter
+        verticalAlignment: Text.AlignVCenter
+    }
+}

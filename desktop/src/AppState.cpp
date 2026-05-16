@@ -339,6 +339,11 @@ void AppState::fetchAuxiliaryModels()
     });
 }
 
+void AppState::setLanguage(const QString &lang)
+{
+    emit languageChanged(lang);
+}
+
 void AppState::fetchFallbackModels(int index)
 {
     if (!m_client) return;
@@ -354,13 +359,40 @@ void AppState::fetchFallbackModels(int index)
     });
 }
 
+static int countLeafDifferences(const QJsonValue &a, const QJsonValue &b)
+{
+    if (a.type() != b.type()) return 1;
+    if (a.isObject()) {
+        QJsonObject oa = a.toObject();
+        QJsonObject ob = b.toObject();
+        QSet<QString> keys;
+        for (const QString &k : oa.keys()) keys.insert(k);
+        for (const QString &k : ob.keys()) keys.insert(k);
+        int count = 0;
+        for (const QString &k : keys) {
+            count += countLeafDifferences(oa.value(k), ob.value(k));
+        }
+        return count;
+    }
+    if (a.isArray()) {
+        QJsonArray aa = a.toArray();
+        QJsonArray ab = b.toArray();
+        int maxLen = qMax(aa.size(), ab.size());
+        int count = 0;
+        for (int i = 0; i < maxLen; ++i) {
+            count += countLeafDifferences(
+                i < aa.size() ? aa.at(i) : QJsonValue(),
+                i < ab.size() ? ab.at(i) : QJsonValue()
+            );
+        }
+        return count;
+    }
+    return (a != b) ? 1 : 0;
+}
+
 void AppState::updateDirtyCount()
 {
-    int count = 0;
-    const QStringList keys = m_config.keys();
-    for (const QString &k : keys) {
-        if (m_config.value(k) != m_originalConfig.value(k)) count++;
-    }
+    int count = countLeafDifferences(m_config, m_originalConfig);
     if (m_dirtyCount != count) {
         m_dirtyCount = count;
         emit dirtyCountChanged();
