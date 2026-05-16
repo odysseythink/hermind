@@ -1,6 +1,6 @@
 import QtQuick
 import QtQuick.Controls
-import ".."
+import Hermind
 
 Rectangle {
     color: Theme.bg

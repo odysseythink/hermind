@@ -1,7 +1,7 @@
 import QtQuick
 import QtQuick.Layouts
 import QtQuick.Controls
-import "../.."
+import Hermind
 
 Flow {
     property var field

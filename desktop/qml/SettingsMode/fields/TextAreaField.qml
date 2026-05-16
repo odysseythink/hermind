@@ -1,6 +1,6 @@
 import QtQuick
 import QtQuick.Controls
-import "../.."
+import Hermind
 
 TextArea {
     property var field
