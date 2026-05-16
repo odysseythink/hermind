@@ -4,12 +4,12 @@ import QtQuick.Controls
 import "../.."
 
 ColumnLayout {
-    property string subKey
+    property int index
 
     spacing: 16
 
     Text {
-        text: subKey
+        text: "Item #" + (index + 1)
         font.pixelSize: 20
         font.weight: Font.Bold
         color: Theme.textPrimary
@@ -19,47 +19,24 @@ ColumnLayout {
         spacing: 12
         Button {
             text: "↑"
-            onClicked: {
-                const section = appState.activeGroup
-                const idx = parseInt(subKey.slice(subKey.indexOf(":") + 1))
-                appState.moveListInstance(section, "jobs", idx, "up")
-            }
+            enabled: index > 0
+            onClicked: appState.moveListInstance(appState.activeGroup, "jobs", index, "up")
         }
         Button {
             text: "↓"
-            onClicked: {
-                const section = appState.activeGroup
-                const idx = parseInt(subKey.slice(subKey.indexOf(":") + 1))
-                appState.moveListInstance(section, "jobs", idx, "down")
-            }
+            onClicked: appState.moveListInstance(appState.activeGroup, "jobs", index, "down")
         }
         Button {
             text: "Delete"
-            onClicked: {
-                const section = appState.activeGroup
-                const idx = parseInt(subKey.slice(subKey.indexOf(":") + 1))
-                appState.deleteListInstance(section, "jobs", idx)
-            }
+            onClicked: appState.deleteListInstance(appState.activeGroup, "jobs", index)
         }
     }
 
     ConfigSection {
         section: appState.configSections.find(s => s.key === appState.activeGroup)
-        value: {
-            const section = appState.activeGroup
-            const idx = parseInt(subKey.slice(subKey.indexOf(":") + 1))
-            return appState.config[section]?.jobs?.[idx] || {}
-        }
-        originalValue: {
-            const section = appState.activeGroup
-            const idx = parseInt(subKey.slice(subKey.indexOf(":") + 1))
-            return appState.originalConfig[section]?.jobs?.[idx] || {}
-        }
+        value: appState.config[appState.activeGroup]?.jobs?.[index] || {}
+        originalValue: appState.originalConfig[appState.activeGroup]?.jobs?.[index] || {}
         config: appState.config
-        onFieldChanged: (name, v) => {
-            const section = appState.activeGroup
-            const idx = parseInt(subKey.slice(subKey.indexOf(":") + 1))
-            appState.setListField(section, "jobs", idx, name, v)
-        }
+        onFieldChanged: (name, v) => appState.setListField(appState.activeGroup, "jobs", index, name, v)
     }
 }
