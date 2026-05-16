@@ -65,6 +65,7 @@ public:
     Q_INVOKABLE void fetchAuxiliaryModels();
     Q_INVOKABLE void fetchFallbackModels(int index);
     Q_INVOKABLE void setLanguage(const QString &lang);
+    void setClient(HermindClient *client);
 
 signals:
     void configChanged();
