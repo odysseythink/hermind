@@ -64,6 +64,7 @@ public:
     Q_INVOKABLE void testAuxiliary();
     Q_INVOKABLE void fetchAuxiliaryModels();
     Q_INVOKABLE void fetchFallbackModels(int index);
+    Q_INVOKABLE void setLanguage(const QString &lang);
 
 signals:
     void configChanged();
@@ -81,6 +82,7 @@ signals:
     void streamDone();
     void streamError(const QString &error);
     void toast(const QString &message);
+    void languageChanged(const QString &lang);
 
 private:
     void startStream();

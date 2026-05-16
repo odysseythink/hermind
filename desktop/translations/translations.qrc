@@ -1,0 +1,6 @@
+<RCC>
+    <qresource prefix="/i18n">
+        <file>hermind_en.qm</file>
+        <file>hermind_zh_CN.qm</file>
+    </qresource>
+</RCC>

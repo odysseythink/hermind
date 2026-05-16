@@ -1,3 +1,11 @@
 import QtQuick
+import QtQuick.Controls
+import ".."
 
-Rectangle { color: "#0a0b0d" }
+Button {
+    text: "⏹"
+    flat: true
+    ToolTip.text: "Stop generation"
+    ToolTip.visible: hovered
+    onClicked: appState.cancelGeneration()
+}

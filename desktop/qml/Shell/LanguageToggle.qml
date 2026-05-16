@@ -10,6 +10,7 @@ ComboBox {
     textRole: "text"
     currentIndex: 0
     onActivated: {
-        // TODO: switch Qt translator
+        const code = model.get(currentIndex).code
+        appState.setLanguage(code)
     }
 }

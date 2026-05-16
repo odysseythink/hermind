@@ -1,5 +1,5 @@
 #include <QTest>
-#include "../src/sseparser.h"
+#include "../src/SSEParser.h"
 #include <QSignalSpy>
 
 class TestSSEParser : public QObject

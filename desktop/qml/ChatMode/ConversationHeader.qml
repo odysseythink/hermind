@@ -7,7 +7,7 @@ Rectangle {
 
     Text {
         anchors.centerIn: parent
-        text: "New Conversation"
+        text: qsTr("New Conversation")
         color: Theme.textSecondary
         font.pixelSize: 13
     }
