@@ -1,7 +1,7 @@
 import QtQuick
 import QtQuick.Layouts
 import QtQuick.Controls
-import ".."
+import Hermind
 
 Rectangle {
     color: Theme.surface
