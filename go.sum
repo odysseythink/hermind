@@ -68,7 +68,7 @@ github.com/ncruces/go-strftime v1.0.0 h1:HMFp8mLCTPp341M/ZnA4qaf7ZlsbTc+miZjCLOF
 github.com/ncruces/go-strftime v1.0.0/go.mod h1:Fwc5htZGVVkseilnfgOVb9mKy6w1naJmn9CehxcKcls=
 github.com/niemeyer/pretty v0.0.0-20200227124842-a10e7caefd8e h1:fD57ERR4JtEqsWbfPhv4DMiApHyliiK5xCTNVSPiaAs=
 github.com/niemeyer/pretty v0.0.0-20200227124842-a10e7caefd8e/go.mod h1:zD1mROLANZcx1PVRCS0qkT7pwLkGfwJo4zjcN/Tysno=
-github.com/odysseythink/mlog v0.2.3 h1:/npbozWQAz1JnKEVdUuUPDUfawijlB1uiK2VIJNvsok=
+github.com/odysseythink/mlog v0.2.3 h1:x191ER7wJ5Tq9tuwKrrBiVwlL5Ykd4XLxss42DsiztM=
 github.com/odysseythink/mlog v0.2.3/go.mod h1:Yuupx49eqCo2iFNbQgJyx8gBVw/FTVF7uHWj3w/vS/s=
 github.com/odysseythink/pantheon v0.0.7 h1:qjKgqrL4hsfl6NMNJ8v5FXO1xtDaISohZ5QapYt7nco=
 github.com/odysseythink/pantheon v0.0.7/go.mod h1:g33VMoMjHqWd4NArRd1TqV/0XzgBstcjSX1fM/zisMA=
