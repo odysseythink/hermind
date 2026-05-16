@@ -1,4 +1,4 @@
-#include "shortcutmanager.h"
+#include "ShortcutManager.h"
 #include <QShortcut>
 #include <QWidget>
 

@@ -3,6 +3,8 @@
 #include <QFont>
 #include <QQmlContext>
 #include <QQuickStyle>
+#include <QWindow>
+#include <QKeySequence>
 #include "HermindProcess.h"
 #include "HermindClient.h"
 #include "AppState.h"

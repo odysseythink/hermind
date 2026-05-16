@@ -7,13 +7,14 @@ set(CMAKE_AUTOMOC ON)
 set(CMAKE_AUTORCC ON)
 
 enable_testing()
-find_package(Qt6 REQUIRED COMPONENTS Core Quick QuickControls2 Network Test)
+find_package(Qt6 REQUIRED COMPONENTS Core Quick QuickControls2 Network Widgets Test)
 
 set(CPP_SOURCES
     src/main.cpp
     src/HermindProcess.cpp
     src/HermindClient.cpp
     src/AppState.cpp
+    src/SSEParser.cpp
     src/TrayIcon.cpp
     src/ShortcutManager.cpp
 )
@@ -22,6 +23,7 @@ set(CPP_HEADERS
     src/HermindProcess.h
     src/HermindClient.h
     src/AppState.h
+    src/SSEParser.h
     src/TrayIcon.h
     src/ShortcutManager.h
 )
@@ -77,6 +79,7 @@ target_link_libraries(hermind-desktop PRIVATE
     Qt6::Quick
     Qt6::QuickControls2
     Qt6::Network
+    Qt6::Widgets
 )
 
 set_target_properties(hermind-desktop PROPERTIES
