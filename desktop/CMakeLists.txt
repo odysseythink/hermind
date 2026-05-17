@@ -30,38 +30,29 @@ set(CPP_HEADERS
 )
 
 # ===== Go desktop interface static library =====
-set(GO_INTERFACE_DIR ${CMAKE_SOURCE_DIR}/../cmd/go-desktop-interface)
-file(GLOB_RECURSE GO_INTERFACE_SOURCES ${GO_INTERFACE_DIR}/*.go)
-set(GO_INTERFACE_A ${CMAKE_BINARY_DIR}/libgo-desktop-interface.a)
-set(GO_INTERFACE_H ${CMAKE_BINARY_DIR}/libgo-desktop-interface.h)
+# The Go static library must be built separately before running CMake.
+# See desktop/build-go.bat (Windows) or desktop/build-go.sh (Unix) for the build command.
+set(GO_INTERFACE_A ${CMAKE_SOURCE_DIR}/build/libgo-desktop-interface.a)
+set(GO_INTERFACE_H ${CMAKE_SOURCE_DIR}/build/libgo-desktop-interface.h)
 
-# Go executable path (hardcoded for Qt Creator build environment)
-set(GO_EXECUTABLE "D:/go_work/go/bin/go.exe")
-
-# WORKING_DIRECTORY is intentionally avoided because MinGW make uses sh,
-# which doesn't understand Windows "cd /d" syntax. We use cmake -E chdir instead.
-set(GO_BUILD_DIR ${CMAKE_SOURCE_DIR}/..)
-
-add_custom_command(
-    OUTPUT ${GO_INTERFACE_A} ${GO_INTERFACE_H}
-    COMMAND ${CMAKE_COMMAND} -E chdir ${GO_BUILD_DIR}
-        ${CMAKE_COMMAND} -E env
-            CGO_ENABLED=1
-            CC=${CMAKE_C_COMPILER}
-            "PATH=D:/go_work/go/bin;$ENV{PATH}"
-            ${GO_EXECUTABLE} build -buildmode=c-archive
-                -o ${GO_INTERFACE_A}
-                ${GO_INTERFACE_DIR}
-    DEPENDS ${GO_INTERFACE_SOURCES}
-    COMMENT "Building go-desktop-interface static library..."
-    VERBATIM
-)
-
-add_custom_target(go-desktop-interface DEPENDS ${GO_INTERFACE_A} ${GO_INTERFACE_H})
+# Verify the prebuilt library exists
+if(NOT EXISTS ${GO_INTERFACE_A})
+    message(FATAL_ERROR "Go static library not found: ${GO_INTERFACE_A}\n"
+        "Please build it first:\n"
+        "  Windows: desktop/build-go.bat\n"
+        "  Unix:    desktop/build-go.sh")
+endif()
+if(NOT EXISTS ${GO_INTERFACE_H})
+    message(FATAL_ERROR "Go C header not found: ${GO_INTERFACE_H}\n"
+        "Please build it first:\n"
+        "  Windows: desktop/build-go.bat\n"
+        "  Unix:    desktop/build-go.sh")
+endif()
 
 qt_add_executable(hermind-desktop ${CPP_SOURCES} ${CPP_HEADERS} translations/translations.qrc)
 
-target_include_directories(hermind-desktop PRIVATE ${CMAKE_BINARY_DIR})
+# Include the directory containing the prebuilt header
+target_include_directories(hermind-desktop PRIVATE ${CMAKE_SOURCE_DIR}/build)
 
 qt_add_qml_module(hermind-desktop
     URI Hermind
@@ -141,7 +132,6 @@ else()
     )
 endif()
 
-add_dependencies(hermind-desktop go-desktop-interface)
 
 set_target_properties(hermind-desktop PROPERTIES
     WIN32_EXECUTABLE TRUE
