@@ -38,17 +38,21 @@ set(GO_INTERFACE_H ${CMAKE_BINARY_DIR}/libgo-desktop-interface.h)
 # Go executable path (hardcoded for Qt Creator build environment)
 set(GO_EXECUTABLE "D:/go_work/go/bin/go.exe")
 
+# WORKING_DIRECTORY is intentionally avoided because MinGW make uses sh,
+# which doesn't understand Windows "cd /d" syntax. We use cmake -E chdir instead.
+set(GO_BUILD_DIR ${CMAKE_SOURCE_DIR}/..)
+
 add_custom_command(
     OUTPUT ${GO_INTERFACE_A} ${GO_INTERFACE_H}
-    COMMAND ${CMAKE_COMMAND} -E env
-        CGO_ENABLED=1
-        CC=${CMAKE_C_COMPILER}
-        "PATH=D:/go_work/go/bin;$ENV{PATH}"
-        ${GO_EXECUTABLE} build -buildmode=c-archive
-            -o ${GO_INTERFACE_A}
-            ${GO_INTERFACE_DIR}
+    COMMAND ${CMAKE_COMMAND} -E chdir ${GO_BUILD_DIR}
+        ${CMAKE_COMMAND} -E env
+            CGO_ENABLED=1
+            CC=${CMAKE_C_COMPILER}
+            "PATH=D:/go_work/go/bin;$ENV{PATH}"
+            ${GO_EXECUTABLE} build -buildmode=c-archive
+                -o ${GO_INTERFACE_A}
+                ${GO_INTERFACE_DIR}
     DEPENDS ${GO_INTERFACE_SOURCES}
-    WORKING_DIRECTORY ${CMAKE_SOURCE_DIR}/..
     COMMENT "Building go-desktop-interface static library..."
     VERBATIM
 )
