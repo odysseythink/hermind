@@ -4,13 +4,27 @@ import { createMainWindow, showMainWindow, toggleMainWindow, getMainWindow } fro
 import { createTray, destroyTray } from './tray'
 import { registerShortcuts, registerToggleShortcut, unregisterAllShortcuts } from './shortcuts'
 import { registerIPCHandlers } from './ipc'
+import * as fs from 'fs'
+import * as path from 'path'
+
+const logPath = path.join(app.getPath('userData'), 'electron-startup.log')
+function log(msg: string) {
+  const line = `[${new Date().toISOString()}] ${msg}\n`
+  console.log(line.trim())
+  try { fs.appendFileSync(logPath, line) } catch {}
+}
+
+log('=== Main process starting ===')
+log('appPath: ' + app.getAppPath())
+log('resourcesPath: ' + process.resourcesPath)
 
 let goManager = createGoProcessManager()
 
 app.whenReady().then(async () => {
+  log('app.whenReady fired')
   try {
     const port = await goManager.start()
-    console.log(`[Main] Go backend ready on port ${port}`)
+    log(`Go backend ready on port ${port}`)
 
     const mainWindow = createMainWindow(port)
     registerIPCHandlers(mainWindow)
@@ -42,15 +56,21 @@ app.whenReady().then(async () => {
     })
 
   } catch (err) {
+    log('FAILED TO START: ' + (err as Error).message)
     console.error('[Main] Failed to start:', err)
     app.quit()
   }
 })
 
 app.on('will-quit', () => {
+  log('will-quit')
   unregisterAllShortcuts()
   destroyTray()
   goManager.stop()
+})
+
+app.on('window-all-closed', () => {
+  log('window-all-closed')
 })
 
 const gotTheLock = app.requestSingleInstanceLock()

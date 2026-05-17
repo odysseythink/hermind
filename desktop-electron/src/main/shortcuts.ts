@@ -1,4 +1,4 @@
-import { globalShortcut, ipcMain, BrowserWindow } from 'electron'
+import { app, globalShortcut, ipcMain, BrowserWindow } from 'electron'
 
 const registered = new Set<string>()
 
@@ -36,6 +36,7 @@ export function registerToggleShortcut(
 }
 
 export function unregisterAllShortcuts() {
+  if (!app.isReady()) return
   globalShortcut.unregisterAll()
   registered.clear()
 }
