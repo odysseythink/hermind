@@ -11,8 +11,6 @@ find_package(Qt6 REQUIRED COMPONENTS Core Quick QuickControls2 Network Widgets T
 
 set(CPP_SOURCES
     src/main.cpp
-    src/HermindProcess.cpp
-    src/HermindClient.cpp
     src/HermindCGOClient.cpp
     src/CGOStreamReply.cpp
     src/go_callbacks.cpp
@@ -24,8 +22,6 @@ set(CPP_SOURCES
 )
 
 set(CPP_HEADERS
-    src/HermindProcess.h
-    src/HermindClient.h
     src/AppState.h
     src/SSEParser.h
     src/TrayIcon.h
