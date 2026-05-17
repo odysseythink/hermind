@@ -1,0 +1,18 @@
+appId: com.odysseythink.hermind
+productName: Hermind
+directories:
+  output: dist
+files:
+  - out/**/*
+  - resources/**/*
+extraResources:
+  - from: resources/hermind-desktop.exe
+    to: hermind-desktop.exe
+win:
+  target: nsis
+  icon: resources/icon.ico
+nsis:
+  oneClick: false
+  allowToChangeInstallationDirectory: true
+  createDesktopShortcut: true
+  createStartMenuShortcut: true
