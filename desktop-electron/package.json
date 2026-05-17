@@ -38,12 +38,8 @@
       }
     ],
     "win": {
-      "target": "nsis",
+      "target": "portable",
       "icon": "resources/icon.ico"
-    },
-    "nsis": {
-      "oneClick": false,
-      "allowToChangeInstallationDirectory": true
     }
   }
 }
