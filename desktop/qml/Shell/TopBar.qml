@@ -64,7 +64,7 @@ Rectangle {
         Rectangle {
             width: 8; height: 8
             radius: 4
-            color: appState.status === "ready" ? "#7ee787" : "#ce9178"
+            color: appState.status === "ready" ? Theme.success : Theme.error
             Layout.alignment: Qt.AlignVCenter
         }
 

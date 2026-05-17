@@ -35,7 +35,7 @@ set(CPP_HEADERS
 set(GO_INTERFACE_DIR ${CMAKE_SOURCE_DIR}/../cmd/go-desktop-interface)
 file(GLOB_RECURSE GO_INTERFACE_SOURCES ${GO_INTERFACE_DIR}/*.go)
 set(GO_INTERFACE_A ${CMAKE_BINARY_DIR}/libgo-desktop-interface.a)
-set(GO_INTERFACE_H ${CMAKE_BINARY_DIR}/go-desktop-interface.h)
+set(GO_INTERFACE_H ${CMAKE_BINARY_DIR}/libgo-desktop-interface.h)
 
 add_custom_command(
     OUTPUT ${GO_INTERFACE_A} ${GO_INTERFACE_H}

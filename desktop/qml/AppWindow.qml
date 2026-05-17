@@ -4,7 +4,7 @@ import QtQuick.Controls
 import Hermind
 
 Rectangle {
-    color: "#0a0b0d"
+    color: Theme.bg
 
     ColumnLayout {
         anchors.fill: parent

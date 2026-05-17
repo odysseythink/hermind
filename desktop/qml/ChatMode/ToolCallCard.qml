@@ -7,7 +7,7 @@ Rectangle {
     property string name: ""
     property string status: ""
 
-    color: Theme.isDark ? "#1a1c20" : "#f0f0f0"
+    color: Theme.surfaceHover
     border.color: Theme.border
     border.width: 1
     radius: 4

@@ -4,7 +4,7 @@ import QtQuick.Controls
 import Hermind
 
 Rectangle {
-    color: "#0f1012"
+    color: Theme.surface
 
     ListView {
         anchors.fill: parent

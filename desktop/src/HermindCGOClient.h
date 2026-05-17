@@ -34,8 +34,6 @@ public:
     Q_INVOKABLE void upload(const QString &path, const QByteArray &data,
                             const QString &fileName, const QString &mimeType,
                             QJSValue callback);
-    Q_INVOKABLE QNetworkReply* getStream(const QString &path);
-
     QString baseUrl() const { return QStringLiteral("cgo://internal"); }
 
 private:
