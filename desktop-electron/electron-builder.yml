@@ -9,10 +9,5 @@ extraResources:
   - from: resources/hermind-desktop.exe
     to: hermind-desktop.exe
 win:
-  target: nsis
+  target: portable
   icon: resources/icon.ico
-nsis:
-  oneClick: false
-  allowToChangeInstallationDirectory: true
-  createDesktopShortcut: true
-  createStartMenuShortcut: true
