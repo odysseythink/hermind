@@ -96,6 +96,7 @@ qt_add_qml_module(hermind-desktop
         qml/Shell/LanguageToggle.qml
         qml/components/ScrollToBottomButton.qml
         qml/components/Toast.qml
+        qml/components/GlassPanel.qml
 )
 
 if(WIN32)

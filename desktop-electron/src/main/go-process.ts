@@ -53,12 +53,12 @@ export function createGoProcessManager(): GoProcessManager {
       return { command: exePath, args: ['desktop'], cwd: process.cwd() }
     }
 
-    const devExePath = path.join(app.getAppPath(), '..', '..', 'hermind-desktop.exe')
+    const devExePath = path.join(__dirname, '..', '..', 'resources', 'hermind-desktop.exe')
     if (fs.existsSync(devExePath)) {
       return { command: devExePath, args: ['desktop'], cwd: process.cwd() }
     }
 
-    const goCwd = path.join(app.getAppPath(), '..', '..')
+    const goCwd = path.join(__dirname, '..', '..', '..')
     return { command: 'go', args: ['run', './cmd/hermind', 'desktop'], cwd: goCwd }
   }
 

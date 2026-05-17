@@ -4,7 +4,10 @@ import QtQuick.Controls
 import Hermind
 
 Rectangle {
-    color: Theme.bg
+    gradient: Gradient {
+        GradientStop { position: 0.0; color: Theme.bgGradientCenter }
+        GradientStop { position: 1.0; color: Theme.bgGradientEdge }
+    }
 
     ColumnLayout {
         anchors.fill: parent
@@ -12,7 +15,7 @@ Rectangle {
 
         TopBar {
             Layout.fillWidth: true
-            Layout.preferredHeight: 48
+            Layout.preferredHeight: 44
         }
 
         StackLayout {
@@ -32,7 +35,7 @@ Rectangle {
                 spacing: 0
 
                 SettingsSidebar {
-                    Layout.preferredWidth: 260
+                    Layout.preferredWidth: 220
                     Layout.fillHeight: true
                 }
 
@@ -42,10 +45,14 @@ Rectangle {
                 }
             }
         }
+    }
 
-        Footer {
-            Layout.fillWidth: true
-            Layout.preferredHeight: 28
-        }
+    // Toast notification
+    Toast {
+        id: toast
+        anchors.horizontalCenter: parent.horizontalCenter
+        anchors.bottom: parent.bottom
+        anchors.bottomMargin: 24
+        message: appState.flashMessage
     }
 }

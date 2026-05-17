@@ -3,61 +3,162 @@ import QtQuick.Layouts
 import QtQuick.Controls
 import Hermind
 
-ColumnLayout {
+GlassPanel {
     property var section
     property var value
     property var originalValue
     property var config
     signal fieldChanged(string name, var value)
 
-    spacing: 16
+    baseColor: Theme.glassCard
+    highlightStrength: 0.1
 
-    Text {
-        text: section.label || section.key
-        font.pixelSize: 18
-        font.weight: Font.Bold
-        color: Theme.textPrimary
-        visible: section.label !== undefined
-    }
+    ColumnLayout {
+        anchors.fill: parent
+        anchors.margins: 20
+        spacing: 14
 
-    Text {
-        text: section.summary || ""
-        font.pixelSize: 13
-        color: Theme.textSecondary
-        wrapMode: Text.Wrap
-        Layout.fillWidth: true
-        visible: section.summary !== undefined
-    }
+        Text {
+            text: section.label || section.key
+            font.pixelSize: 22
+            font.weight: Font.Bold
+            color: Theme.textPrimary
+            visible: section.label !== undefined
+        }
 
-    Repeater {
-        model: section.fields || []
-        delegate: Loader {
-            id: fieldLoader
+        Text {
+            text: section.summary || ""
+            font.pixelSize: 13
+            color: Theme.textSecondary
+            wrapMode: Text.Wrap
             Layout.fillWidth: true
-            active: isVisible(modelData, value)
+            visible: section.summary !== undefined && section.summary.length > 0
+        }
 
-            sourceComponent: {
-                switch (modelData.kind) {
-                    case "multiselect": return multiSelectComp
-                    case "int": return numberComp
-                    case "float": return floatComp
-                    case "bool": return boolComp
-                    case "enum": return enumComp
-                    case "secret": return secretComp
-                    case "text": return textAreaComp
-                    case "string":
-                    default: return stringComp
+        Rectangle {
+            Layout.fillWidth: true
+            height: 1
+            color: Theme.glassBorder
+            visible: section.summary !== undefined && section.summary.length > 0
+        }
+
+        Repeater {
+            model: section.fields || []
+            delegate: Loader {
+                id: fieldLoader
+                Layout.fillWidth: true
+                active: isVisible(modelData, value)
+
+                sourceComponent: {
+                    switch (modelData.kind) {
+                        case "multiselect": return multiSelectComp
+                        case "int": return numberComp
+                        case "float": return floatComp
+                        case "bool": return boolComp
+                        case "enum": return enumComp
+                        case "secret": return secretComp
+                        case "text": return textAreaComp
+                        case "string":
+                        default: return stringComp
+                    }
+                }
+
+                Component {
+                    id: stringComp
+                    ColumnLayout {
+                        spacing: 8
+                        Text { text: modelData.label || modelData.name; color: Theme.textPrimary; font.pixelSize: 13 }
+                        StringField {
+                            field: modelData
+                            value: getFieldValue(value, modelData.name)
+                            onChanged: function(v) { fieldChanged(modelData.name, v) }
+                        }
+                    }
+                }
+                Component {
+                    id: numberComp
+                    ColumnLayout {
+                        spacing: 8
+                        Text { text: modelData.label || modelData.name; color: Theme.textPrimary; font.pixelSize: 13 }
+                        NumberField {
+                            field: modelData
+                            fieldValue: getFieldValue(value, modelData.name)
+                            onChanged: function(v) { fieldChanged(modelData.name, parseInt(v)) }
+                        }
+                    }
+                }
+                Component {
+                    id: floatComp
+                    ColumnLayout {
+                        spacing: 8
+                        Text { text: modelData.label || modelData.name; color: Theme.textPrimary; font.pixelSize: 13 }
+                        FloatField {
+                            field: modelData
+                            value: getFieldValue(value, modelData.name)
+                            onChanged: function(v) { fieldChanged(modelData.name, parseFloat(v)) }
+                        }
+                    }
+                }
+                Component {
+                    id: boolComp
+                    RowLayout {
+                        BoolField {
+                            field: modelData
+                            value: getFieldValue(value, modelData.name)
+                            onChanged: function(v) { fieldChanged(modelData.name, v === "true") }
+                        }
+                        Text { text: modelData.label || modelData.name; color: Theme.textPrimary; font.pixelSize: 13 }
+                    }
+                }
+                Component {
+                    id: enumComp
+                    ColumnLayout {
+                        spacing: 8
+                        Text { text: modelData.label || modelData.name; color: Theme.textPrimary; font.pixelSize: 13 }
+                        EnumField {
+                            field: modelData
+                            value: getFieldValue(value, modelData.name)
+                            onChanged: function(v) { fieldChanged(modelData.name, v) }
+                        }
+                    }
+                }
+                Component {
+                    id: secretComp
+                    ColumnLayout {
+                        spacing: 8
+                        Text { text: modelData.label || modelData.name; color: Theme.textPrimary; font.pixelSize: 13 }
+                        SecretField {
+                            field: modelData
+                            value: getFieldValue(value, modelData.name)
+                            onChanged: function(v) { fieldChanged(modelData.name, v) }
+                        }
+                    }
+                }
+                Component {
+                    id: textAreaComp
+                    ColumnLayout {
+                        spacing: 8
+                        Text { text: modelData.label || modelData.name; color: Theme.textPrimary; font.pixelSize: 13 }
+                        TextAreaField {
+                            field: modelData
+                            value: getFieldValue(value, modelData.name)
+                            onChanged: function(v) { fieldChanged(modelData.name, v) }
+                        }
+                    }
+                }
+                Component {
+                    id: multiSelectComp
+                    ColumnLayout {
+                        spacing: 8
+                        Text { text: modelData.label || modelData.name; color: Theme.textPrimary; font.pixelSize: 13 }
+                        MultiSelectField {
+                            field: modelData
+                            value: getFieldValueArray(value, modelData.name)
+                            onChanged: function(v) { fieldChanged(modelData.name, v) }
+                        }
+                    }
                 }
             }
-
-            Component { id: stringComp; ColumnLayout { spacing: 4; Text { text: modelData.label || modelData.name; color: Theme.textPrimary; font.pixelSize: 12 } StringField { field: modelData; value: getFieldValue(value, modelData.name); onChanged: (v) => fieldChanged(modelData.name, v) } } }
-            Component { id: numberComp; ColumnLayout { spacing: 4; Text { text: modelData.label || modelData.name; color: Theme.textPrimary; font.pixelSize: 12 } NumberField { field: modelData; value: getFieldValue(value, modelData.name); onChanged: (v) => fieldChanged(modelData.name, parseInt(v)) } } }
-            Component { id: floatComp; ColumnLayout { spacing: 4; Text { text: modelData.label || modelData.name; color: Theme.textPrimary; font.pixelSize: 12 } FloatField { field: modelData; value: getFieldValue(value, modelData.name); onChanged: (v) => fieldChanged(modelData.name, parseFloat(v)) } } }
-            Component { id: boolComp; RowLayout { BoolField { field: modelData; value: getFieldValue(value, modelData.name); onChanged: (v) => fieldChanged(modelData.name, v === "true") } Text { text: modelData.label || modelData.name; color: Theme.textPrimary; font.pixelSize: 12 } } }
-            Component { id: enumComp; ColumnLayout { spacing: 4; Text { text: modelData.label || modelData.name; color: Theme.textPrimary; font.pixelSize: 12 } EnumField { field: modelData; value: getFieldValue(value, modelData.name); onChanged: (v) => fieldChanged(modelData.name, v) } } }
-            Component { id: secretComp; ColumnLayout { spacing: 4; Text { text: modelData.label || modelData.name; color: Theme.textPrimary; font.pixelSize: 12 } SecretField { field: modelData; value: getFieldValue(value, modelData.name); onChanged: (v) => fieldChanged(modelData.name, v) } } }
-            Component { id: textAreaComp; ColumnLayout { spacing: 4; Text { text: modelData.label || modelData.name; color: Theme.textPrimary; font.pixelSize: 12 } TextAreaField { field: modelData; value: getFieldValue(value, modelData.name); onChanged: (v) => fieldChanged(modelData.name, v) } } }
-            Component { id: multiSelectComp; ColumnLayout { spacing: 4; Text { text: modelData.label || modelData.name; color: Theme.textPrimary; font.pixelSize: 12 } MultiSelectField { field: modelData; value: getFieldValueArray(value, modelData.name); onChanged: (v) => fieldChanged(modelData.name, v) } } }
         }
     }
 

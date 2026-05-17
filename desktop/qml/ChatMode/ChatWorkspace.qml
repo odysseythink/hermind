@@ -4,7 +4,7 @@ import QtQuick.Controls
 import Hermind
 
 Rectangle {
-    color: Theme.bg
+    color: "transparent"
 
     ColumnLayout {
         anchors.fill: parent
@@ -12,7 +12,7 @@ Rectangle {
 
         ConversationHeader {
             Layout.fillWidth: true
-            Layout.preferredHeight: 40
+            Layout.preferredHeight: 32
         }
 
         StackLayout {
@@ -33,7 +33,7 @@ Rectangle {
 
         PromptInput {
             Layout.fillWidth: true
-            Layout.preferredHeight: 80
+            Layout.preferredHeight: 64
         }
     }
 }

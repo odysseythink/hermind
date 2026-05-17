@@ -9,8 +9,14 @@ TextArea {
 
     text: value
     placeholderText: field.help || ""
-    wrapMode: TextEdit.Wrap
     color: Theme.textPrimary
-    background: Rectangle { color: Theme.bg; border.color: Theme.border; radius: 4 }
+    font.pixelSize: 13
+    wrapMode: TextEdit.Wrap
+    background: Rectangle {
+        color: Theme.glassInput
+        border.color: parent.activeFocus ? Theme.accent : Theme.glassBorder
+        border.width: parent.activeFocus ? 2 : 1
+        radius: 8
+    }
     onTextChanged: changed(text)
 }

@@ -2,13 +2,13 @@ import QtQuick
 import QtQuick.Controls
 import Hermind
 
-Rectangle {
+GlassPanel {
     property string message: ""
 
     visible: message.length > 0
-    color: Theme.surface
-    border.color: Theme.border
-    radius: 4
+    baseColor: Theme.glassCard
+    highlightStrength: 0.1
+    radius: 8
     width: toastText.width + 24
     height: toastText.height + 16
 
