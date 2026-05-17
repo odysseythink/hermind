@@ -13,10 +13,12 @@ set(CPP_SOURCES
     src/main.cpp
     src/HermindProcess.cpp
     src/HermindClient.cpp
+    src/HermindCGOClient.cpp
     src/AppState.cpp
     src/SSEParser.cpp
     src/TrayIcon.cpp
     src/ShortcutManager.cpp
+    src/Theme.cpp
 )
 
 set(CPP_HEADERS
@@ -26,14 +28,42 @@ set(CPP_HEADERS
     src/SSEParser.h
     src/TrayIcon.h
     src/ShortcutManager.h
+    src/Theme.h
 )
 
-qt_add_executable(hermind-desktop ${CPP_SOURCES} ${CPP_HEADERS} translations/translations.qrc qml/theme.qrc)
+# ===== Go desktop interface static library =====
+set(GO_INTERFACE_DIR ${CMAKE_SOURCE_DIR}/../cmd/go-desktop-interface)
+file(GLOB_RECURSE GO_INTERFACE_SOURCES ${GO_INTERFACE_DIR}/*.go)
+set(GO_INTERFACE_A ${CMAKE_BINARY_DIR}/libgo-desktop-interface.a)
+set(GO_INTERFACE_H ${CMAKE_BINARY_DIR}/go-desktop-interface.h)
+
+add_custom_command(
+    OUTPUT ${GO_INTERFACE_A} ${GO_INTERFACE_H}
+    COMMAND ${CMAKE_COMMAND} -E env
+        CGO_ENABLED=1
+        GOOS=windows
+        GOARCH=amd64
+        CC=${CMAKE_C_COMPILER}
+        go build -buildmode=c-archive
+            -o ${GO_INTERFACE_A}
+            ${GO_INTERFACE_DIR}
+    DEPENDS ${GO_INTERFACE_SOURCES}
+    WORKING_DIRECTORY ${CMAKE_SOURCE_DIR}/..
+    COMMENT "Building go-desktop-interface static library..."
+    VERBATIM
+)
+
+add_custom_target(go-desktop-interface DEPENDS ${GO_INTERFACE_A} ${GO_INTERFACE_H})
+
+qt_add_executable(hermind-desktop ${CPP_SOURCES} ${CPP_HEADERS} translations/translations.qrc)
+
+target_include_directories(hermind-desktop PRIVATE ${CMAKE_BINARY_DIR})
 
 qt_add_qml_module(hermind-desktop
     URI Hermind
     VERSION 1.0
     RESOURCE_PREFIX "/"
+    NO_CACHEGEN
     QML_FILES
         qml/main.qml
         qml/AppWindow.qml
@@ -79,7 +109,12 @@ target_link_libraries(hermind-desktop PRIVATE
     Qt6::QuickControls2
     Qt6::Network
     Qt6::Widgets
+    ${GO_INTERFACE_A}
+    ws2_32
+    winmm
 )
+
+add_dependencies(hermind-desktop go-desktop-interface)
 
 set_target_properties(hermind-desktop PROPERTIES
     WIN32_EXECUTABLE TRUE
