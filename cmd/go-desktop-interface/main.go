@@ -11,8 +11,11 @@ import (
 
 //export HermindInit
 func HermindInit(configPathC *C.char) *C.char {
-	_ = C.GoString(configPathC)
-	status := map[string]string{"status": "ok", "version": "0.0.1-cgo"}
+	configPath := C.GoString(configPathC)
+	status, err := initHermind(configPath)
+	if err != nil {
+		status = map[string]string{"status": "error", "error": err.Error()}
+	}
 	data, _ := json.Marshal(status)
 	p := C.malloc(C.size_t(len(data)))
 	copy(unsafe.Slice((*byte)(p), len(data)), data)
