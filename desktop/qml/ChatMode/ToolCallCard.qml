@@ -7,11 +7,30 @@ Rectangle {
     property string name: ""
     property string status: ""
 
-    color: Theme.surfaceHover
-    border.color: Theme.border
+    color: Theme.glassCard
+    border.color: Theme.glassBorder
     border.width: 1
-    radius: 4
+    radius: 8
     height: 40
+
+    // Top highlight
+    Rectangle {
+        anchors.top: parent.top
+        anchors.left: parent.left
+        anchors.right: parent.right
+        height: 5
+        radius: parent.radius
+        color: Theme.glassSurfaceHover
+        opacity: 0.12
+        Rectangle {
+            anchors.bottom: parent.bottom
+            anchors.left: parent.left
+            anchors.right: parent.right
+            height: parent.height * 0.5
+            color: parent.parent.color
+            opacity: 1.0
+        }
+    }
 
     RowLayout {
         anchors.fill: parent

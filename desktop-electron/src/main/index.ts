@@ -47,10 +47,6 @@ app.whenReady().then(async () => {
   }
 })
 
-app.on('before-quit', () => {
-  isQuiting = true
-})
-
 app.on('will-quit', () => {
   unregisterAllShortcuts()
   destroyTray()

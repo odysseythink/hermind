@@ -6,37 +6,50 @@ import Hermind
 ColumnLayout {
     property int index
 
-    spacing: 16
+    spacing: 14
 
-    Text {
-        text: "Fallback Provider #" + (index + 1)
-        font.pixelSize: 20
-        font.weight: Font.Bold
-        color: Theme.textPrimary
-    }
+    GlassPanel {
+        Layout.fillWidth: true
+        baseColor: Theme.glassSurface
+        highlightStrength: 0.08
 
-    RowLayout {
-        spacing: 12
-        Button {
-            text: "↑"
-            enabled: index > 0
-            onClicked: appState.moveListInstance("fallback_providers", "", index, "up")
-        }
-        Button {
-            text: "↓"
-            onClicked: appState.moveListInstance("fallback_providers", "", index, "down")
-        }
-        Button {
-            text: "Fetch Models"
-            onClicked: appState.fetchFallbackModels(index)
-        }
-        Button {
-            text: "Delete"
-            onClicked: appState.deleteListInstance("fallback_providers", "", index)
+        ColumnLayout {
+            anchors.fill: parent
+            anchors.margins: 16
+            spacing: 12
+
+            Text {
+                text: "Fallback Provider #" + (index + 1)
+                font.pixelSize: 20
+                font.weight: Font.Bold
+                color: Theme.textPrimary
+            }
+
+            RowLayout {
+                spacing: 12
+                Button {
+                    text: "↑"
+                    enabled: index > 0
+                    onClicked: appState.moveListInstance("fallback_providers", "", index, "up")
+                }
+                Button {
+                    text: "↓"
+                    onClicked: appState.moveListInstance("fallback_providers", "", index, "down")
+                }
+                Button {
+                    text: "Fetch Models"
+                    onClicked: appState.fetchFallbackModels(index)
+                }
+                Button {
+                    text: "Delete"
+                    onClicked: appState.deleteListInstance("fallback_providers", "", index)
+                }
+            }
         }
     }
 
     ConfigSection {
+        Layout.fillWidth: true
         section: appState.configSections.find(s => s.key === "fallback_providers")
         value: appState.config.fallback_providers?.[index] || {}
         originalValue: appState.originalConfig.fallback_providers?.[index] || {}
