@@ -1,4 +1,5 @@
 #include "HermindCGOClient.h"
+#include "CGOStreamReply.h"
 #include <QJsonDocument>
 #include <QDebug>
 
@@ -7,6 +8,9 @@
 extern "C" {
 #include "libgo-desktop-interface.h"
 }
+
+void registerStreamReply(const QString &path, CGOStreamReply *reply);
+void unregisterStreamReply(const QString &path);
 
 HermindCGOClient::HermindCGOClient(QObject *parent)
     : QObject(parent)
@@ -105,8 +109,14 @@ void HermindCGOClient::upload(const QString &path, const QByteArray &data,
 
 QNetworkReply* HermindCGOClient::getStream(const QString &path)
 {
-    Q_UNUSED(path)
-    return nullptr;
+    CGOStreamReply *reply = new CGOStreamReply(path, this);
+    registerStreamReply(path, reply);
+
+    connect(reply, &CGOStreamReply::finished, [path]() {
+        unregisterStreamReply(path);
+    });
+
+    return reply;
 }
 
 // ===== QML API wrappers =====

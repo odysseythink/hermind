@@ -14,6 +14,8 @@ set(CPP_SOURCES
     src/HermindProcess.cpp
     src/HermindClient.cpp
     src/HermindCGOClient.cpp
+    src/CGOStreamReply.cpp
+    src/go_callbacks.cpp
     src/AppState.cpp
     src/SSEParser.cpp
     src/TrayIcon.cpp
