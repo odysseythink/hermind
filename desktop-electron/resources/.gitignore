@@ -1,0 +1,5 @@
+# Go backend binary (built from ../cmd/hermind)
+hermind-desktop.exe
+
+# macOS
+.DS_Store
