@@ -51,20 +51,3 @@ func HermindSetStreamCallback(callback unsafe.Pointer) {
 }
 
 func main() {}
-
-type response struct {
-	OK    bool        `json:"ok"`
-	Data  interface{} `json:"data,omitempty"`
-	Error string      `json:"error,omitempty"`
-	Code  int         `json:"code,omitempty"`
-}
-
-func handleRequest(method, path string, body []byte) response {
-	if method == "GET" && path == "/health" {
-		return response{OK: true, Data: map[string]string{"status": "healthy"}}
-	}
-	if method == "GET" && path == "/api/status" {
-		return response{OK: true, Data: map[string]string{"status": "ok", "mode": "cgo"}}
-	}
-	return response{OK: false, Error: "not found", Code: 404}
-}
