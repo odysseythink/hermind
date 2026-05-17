@@ -11,6 +11,7 @@ extraResources:
 win:
   target: nsis
   icon: resources/icon.ico
+  signAndEditExecutable: false
 nsis:
   oneClick: false
   allowToChangeInstallationDirectory: true
