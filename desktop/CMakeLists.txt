@@ -35,12 +35,16 @@ file(GLOB_RECURSE GO_INTERFACE_SOURCES ${GO_INTERFACE_DIR}/*.go)
 set(GO_INTERFACE_A ${CMAKE_BINARY_DIR}/libgo-desktop-interface.a)
 set(GO_INTERFACE_H ${CMAKE_BINARY_DIR}/libgo-desktop-interface.h)
 
+# Go executable path (hardcoded for Qt Creator build environment)
+set(GO_EXECUTABLE "D:/go_work/go/bin/go.exe")
+
 add_custom_command(
     OUTPUT ${GO_INTERFACE_A} ${GO_INTERFACE_H}
     COMMAND ${CMAKE_COMMAND} -E env
         CGO_ENABLED=1
         CC=${CMAKE_C_COMPILER}
-        go build -buildmode=c-archive
+        "PATH=D:/go_work/go/bin;$ENV{PATH}"
+        ${GO_EXECUTABLE} build -buildmode=c-archive
             -o ${GO_INTERFACE_A}
             ${GO_INTERFACE_DIR}
     DEPENDS ${GO_INTERFACE_SOURCES}
