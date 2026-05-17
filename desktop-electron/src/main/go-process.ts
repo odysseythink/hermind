@@ -100,7 +100,7 @@ export function createGoProcessManager(): GoProcessManager {
     for (let i = 0; i < HEALTH_POLL_MAX_ATTEMPTS; i++) {
       if (stopRequested) return false
       try {
-        const response = await fetch(`http://127.0.0.1:${targetPort}/api/health`)
+        const response = await fetch(`http://127.0.0.1:${targetPort}/health`)
         if (response.status === 200) {
           return true
         }
