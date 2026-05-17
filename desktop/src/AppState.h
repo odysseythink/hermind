@@ -7,7 +7,7 @@
 #include <QJsonValue>
 #include <QNetworkReply>
 
-class HermindClient;
+class HermindCGOClient;
 class SSEParser;
 
 class AppState : public QObject
@@ -26,7 +26,7 @@ class AppState : public QObject
     Q_PROPERTY(QString flashMessage READ flashMessage NOTIFY flashMessageChanged)
 
 public:
-    explicit AppState(HermindClient *client, QObject *parent = nullptr);
+    explicit AppState(HermindCGOClient *client, QObject *parent = nullptr);
 
     QJsonObject config() const { return m_config; }
     QJsonObject originalConfig() const { return m_originalConfig; }
@@ -65,7 +65,7 @@ public:
     Q_INVOKABLE void fetchAuxiliaryModels();
     Q_INVOKABLE void fetchFallbackModels(int index);
     Q_INVOKABLE void setLanguage(const QString &lang);
-    void setClient(HermindClient *client);
+    void setClient(HermindCGOClient *client);
 
 signals:
     void configChanged();
@@ -92,7 +92,7 @@ private:
     void appendMessage(const QJsonObject &msg);
     void updateDirtyCount();
 
-    HermindClient *m_client;
+    HermindCGOClient *m_client;
     SSEParser *m_sseParser;
     QNetworkReply *m_streamReply;
 
