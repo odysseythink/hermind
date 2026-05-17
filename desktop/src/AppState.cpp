@@ -1,11 +1,11 @@
 #include "AppState.h"
-#include "HermindClient.h"
+#include "HermindCGOClient.h"
 #include "SSEParser.h"
 #include <QNetworkReply>
 #include <QJsonDocument>
 #include <QDebug>
 
-AppState::AppState(HermindClient *client, QObject *parent)
+AppState::AppState(HermindCGOClient *client, QObject *parent)
     : QObject(parent)
     , m_client(client)
     , m_sseParser(new SSEParser(this))
@@ -339,7 +339,7 @@ void AppState::fetchAuxiliaryModels()
     });
 }
 
-void AppState::setClient(HermindClient *client)
+void AppState::setClient(HermindCGOClient *client)
 {
     m_client = client;
 }

@@ -6,12 +6,16 @@
 #include <QWindow>
 #include <QKeySequence>
 #include <QTranslator>
-#include <QQmlComponent>
-#include "HermindProcess.h"
-#include "HermindClient.h"
+#include <QtQml/qqml.h>
+#include <QJsonDocument>
+#include "HermindCGOClient.h"
+extern "C" {
+#include "go-desktop-interface.h"
+}
 #include "AppState.h"
 #include "TrayIcon.h"
 #include "ShortcutManager.h"
+#include "Theme.h"
 
 int main(int argc, char *argv[])
 {
@@ -32,42 +36,41 @@ int main(int argc, char *argv[])
 
     QQuickStyle::setStyle("Basic");
 
-    HermindProcess backend;
-    HermindClient *client = nullptr;
     QTranslator translator;
 
     QQmlApplicationEngine engine;
 
-    // Instantiate Theme.qml as a singleton-like context property
-    QQmlComponent themeComp(&engine, QUrl(QStringLiteral("qrc:/Hermind/qml/Theme.qml")));
-    QObject *theme = themeComp.create();
-    if (theme) {
-        engine.rootContext()->setContextProperty(QStringLiteral("Theme"), theme);
+    Theme theme;
+    AppState appState(nullptr, &app);
+
+    QJSValue global = engine.globalObject();
+    global.setProperty("Theme", engine.newQObject(&theme));
+    global.setProperty("appState", engine.newQObject(&appState));
+
+    // Initialize Go backend via CGO
+    char* initStatus = HermindInit("");
+    QJsonDocument initDoc = QJsonDocument::fromJson(QByteArray(initStatus));
+    HermindFree(initStatus);
+
+    if (!initDoc.isNull() && initDoc.object().value(QStringLiteral("status")).toString() == QStringLiteral("ok")) {
+        qDebug() << "Go backend initialized via CGO";
     } else {
-        qWarning() << "Failed to load Theme.qml:" << themeComp.errorString();
+        qWarning() << "Go backend init failed:" << initDoc.toJson();
     }
 
-    AppState appState(nullptr, &app);
-    engine.rootContext()->setContextProperty("appState", &appState);
+    // Create CGO client directly (no process startup needed)
+    HermindCGOClient *client = new HermindCGOClient(&engine);
+    appState.setClient(client);
+    engine.rootContext()->setContextProperty("hermindClient", client);
 
-    QObject::connect(&backend, &HermindProcess::backendReady,
-                     &app, [&engine, &client, &appState, &app, &translator](const QHostAddress&, int port) {
-        client = new HermindClient(QStringLiteral("http://127.0.0.1:%1").arg(port), &engine);
-        appState.setClient(client);
-        engine.rootContext()->setContextProperty("hermindClient", client);
-        QObject::connect(&appState, &AppState::languageChanged, &app, [&app, &translator](const QString &lang) {
-            app.removeTranslator(&translator);
-            if (translator.load(QStringLiteral(":/i18n/hermind_%1").arg(lang))) {
-                app.installTranslator(&translator);
-            }
-        });
-        appState.boot();
+    QObject::connect(&appState, &AppState::languageChanged, &app, [&app, &translator](const QString &lang) {
+        app.removeTranslator(&translator);
+        if (translator.load(QStringLiteral(":/i18n/hermind_%1").arg(lang))) {
+            app.installTranslator(&translator);
+        }
     });
 
-    QObject::connect(&backend, &HermindProcess::backendError,
-                     &app, [](const QString &msg) {
-        qWarning() << "Backend error:" << msg;
-    });
+    appState.boot();
 
     TrayIcon tray;
     tray.show();
@@ -96,9 +99,6 @@ int main(int argc, char *argv[])
     engine.load(QUrl(QStringLiteral("qrc:/Hermind/qml/main.qml")));
     if (engine.rootObjects().isEmpty()) return -1;
 
-    backend.start();
-
     int ret = app.exec();
-    backend.shutdown();
     return ret;
 }
