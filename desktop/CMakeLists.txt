@@ -43,8 +43,6 @@ add_custom_command(
     OUTPUT ${GO_INTERFACE_A} ${GO_INTERFACE_H}
     COMMAND ${CMAKE_COMMAND} -E env
         CGO_ENABLED=1
-        GOOS=windows
-        GOARCH=amd64
         CC=${CMAKE_C_COMPILER}
         go build -buildmode=c-archive
             -o ${GO_INTERFACE_A}
@@ -105,16 +103,39 @@ qt_add_qml_module(hermind-desktop
         qml/components/Toast.qml
 )
 
-target_link_libraries(hermind-desktop PRIVATE
-    Qt6::Core
-    Qt6::Quick
-    Qt6::QuickControls2
-    Qt6::Network
-    Qt6::Widgets
-    ${GO_INTERFACE_A}
-    ws2_32
-    winmm
-)
+if(WIN32)
+    target_link_libraries(hermind-desktop PRIVATE
+        Qt6::Core
+        Qt6::Quick
+        Qt6::QuickControls2
+        Qt6::Network
+        Qt6::Widgets
+        ${GO_INTERFACE_A}
+        ws2_32
+        winmm
+    )
+elseif(APPLE)
+    target_link_libraries(hermind-desktop PRIVATE
+        Qt6::Core
+        Qt6::Quick
+        Qt6::QuickControls2
+        Qt6::Network
+        Qt6::Widgets
+        ${GO_INTERFACE_A}
+        pthread
+    )
+else()
+    target_link_libraries(hermind-desktop PRIVATE
+        Qt6::Core
+        Qt6::Quick
+        Qt6::QuickControls2
+        Qt6::Network
+        Qt6::Widgets
+        ${GO_INTERFACE_A}
+        pthread
+        dl
+    )
+endif()
 
 add_dependencies(hermind-desktop go-desktop-interface)
 
