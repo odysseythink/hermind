@@ -8,7 +8,6 @@ files:
 extraResources:
   - from: resources/hermind-desktop.exe
     to: hermind-desktop.exe
-asar: false
 win:
   target: nsis
   icon: resources/icon.ico
