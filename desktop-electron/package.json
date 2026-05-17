@@ -8,9 +8,10 @@
   "scripts": {
     "dev": "electron-vite dev",
     "build": "electron-vite build",
+    "build:go": "go build -ldflags=\"-s -w\" -o resources/hermind-desktop.exe ../cmd/hermind",
     "preview": "electron-vite preview",
-    "dist": "npm run build && electron-builder",
-    "dist:dir": "npm run build && electron-builder --dir"
+    "dist": "npm run build:go && npm run build && electron-builder",
+    "dist:dir": "npm run build:go && npm run build && electron-builder --dir"
   },
   "devDependencies": {
     "@types/node": "^22.0.0",
