@@ -9,5 +9,16 @@ extraResources:
   - from: resources/hermind-desktop.exe
     to: hermind-desktop.exe
 win:
-  target: portable
+  target:
+    - target: nsis
+      arch: x64
+    - target: portable
+      arch: x64
   icon: resources/icon.ico
+nsis:
+  oneClick: false
+  allowToChangeInstallationDirectory: true
+  createDesktopShortcut: always
+  artifactName: ${productName}-Setup-${version}.${ext}
+portable:
+  artifactName: ${productName}-Portable-${version}.${ext}

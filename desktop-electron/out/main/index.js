@@ -21,6 +21,7 @@ function _interopNamespaceDefault(e) {
   return Object.freeze(n);
 }
 const path__namespace = /* @__PURE__ */ _interopNamespaceDefault(path);
+const fs__namespace = /* @__PURE__ */ _interopNamespaceDefault(fs);
 const MAX_RETRIES = 5;
 const RETRY_DELAY_MS = 2e3;
 const HEALTH_POLL_INTERVAL_MS = 500;
@@ -95,7 +96,7 @@ function createGoProcessManager() {
     for (let i = 0; i < HEALTH_POLL_MAX_ATTEMPTS; i++) {
       if (stopRequested) return false;
       try {
-        const response = await fetch(`http://127.0.0.1:${targetPort}/api/health`);
+        const response = await fetch(`http://127.0.0.1:${targetPort}/health`);
         if (response.status === 200) {
           return true;
         }
@@ -379,6 +380,7 @@ function registerToggleShortcut(mainWindow2, toggleFn) {
   return success;
 }
 function unregisterAllShortcuts() {
+  if (!electron.app.isReady()) return;
   electron.globalShortcut.unregisterAll();
   registered.clear();
 }
@@ -416,11 +418,25 @@ function registerIPCHandlers(mainWindow2) {
     }).show();
   });
 }
+const logPath = path__namespace.join(electron.app.getPath("userData"), "electron-startup.log");
+function log(msg) {
+  const line = `[${(/* @__PURE__ */ new Date()).toISOString()}] ${msg}
+`;
+  console.log(line.trim());
+  try {
+    fs__namespace.appendFileSync(logPath, line);
+  } catch {
+  }
+}
+log("=== Main process starting ===");
+log("appPath: " + electron.app.getAppPath());
+log("resourcesPath: " + process.resourcesPath);
 let goManager = createGoProcessManager();
 electron.app.whenReady().then(async () => {
+  log("app.whenReady fired");
   try {
     const port = await goManager.start();
-    console.log(`[Main] Go backend ready on port ${port}`);
+    log(`Go backend ready on port ${port}`);
     const mainWindow2 = createMainWindow(port);
     registerIPCHandlers(mainWindow2);
     createTray(
@@ -446,14 +462,19 @@ electron.app.whenReady().then(async () => {
       }
     });
   } catch (err) {
+    log("FAILED TO START: " + err.message);
     console.error("[Main] Failed to start:", err);
     electron.app.quit();
   }
 });
 electron.app.on("will-quit", () => {
+  log("will-quit");
   unregisterAllShortcuts();
   destroyTray();
   goManager.stop();
+});
+electron.app.on("window-all-closed", () => {
+  log("window-all-closed");
 });
 const gotTheLock = electron.app.requestSingleInstanceLock();
 if (!gotTheLock) {
