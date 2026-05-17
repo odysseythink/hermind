@@ -2,6 +2,11 @@ import { BrowserWindow, app } from 'electron'
 import * as path from 'path'
 
 let mainWindow: BrowserWindow | null = null
+let isQuiting = false
+
+app.on('before-quit', () => {
+  isQuiting = true
+})
 
 export function createMainWindow(port: number): BrowserWindow {
   mainWindow = new BrowserWindow({
@@ -30,7 +35,7 @@ export function createMainWindow(port: number): BrowserWindow {
   })
 
   mainWindow.on('close', (event) => {
-    if (!app.isQuiting) {
+    if (!isQuiting) {
       event.preventDefault()
       mainWindow?.hide()
     }

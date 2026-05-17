@@ -6,7 +6,6 @@ import { registerShortcuts, registerToggleShortcut, unregisterAllShortcuts } fro
 import { registerIPCHandlers } from './ipc'
 
 let goManager = createGoProcessManager()
-let isQuiting = false
 
 app.whenReady().then(async () => {
   try {
@@ -19,7 +18,6 @@ app.whenReady().then(async () => {
     createTray(
       () => showMainWindow(),
       () => {
-        isQuiting = true
         app.quit()
       }
     )
