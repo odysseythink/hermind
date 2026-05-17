@@ -9,6 +9,7 @@ import (
 	"net/http"
 	"os"
 	"os/exec"
+	"path/filepath"
 	"runtime"
 	"strconv"
 	"time"
@@ -119,6 +120,9 @@ func runWeb(ctx context.Context, app *App, opts webRunOptions) error {
 			if port, err := strconv.Atoi(portStr); err == nil {
 				fmt.Fprintf(os.Stdout, "HERMIND_READY %d\n", port)
 				_ = os.Stdout.Sync()
+				// Write port to temp file for Electron fallback discovery
+				tmpFile := filepath.Join(os.TempDir(), fmt.Sprintf("hermind-port-%d.txt", os.Getpid()))
+				_ = os.WriteFile(tmpFile, []byte(strconv.Itoa(port)), 0644)
 			}
 		}
 	}
