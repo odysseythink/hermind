@@ -1,19 +1,13 @@
 import QtQuick
-import QtQuick.Window
+import QtQuick.Controls
 import Hermind
 
-Window {
+ApplicationWindow {
     id: root
     visible: true
     width: 1200
     height: 800
     title: "hermind"
-    flags: Qt.Window | Qt.WindowMinimizeButtonHint | Qt.WindowCloseButtonHint
-
-    onClosing: (close) => {
-        close.accepted = false
-        root.hide()
-    }
 
     Loader {
         anchors.fill: parent
@@ -23,11 +17,11 @@ Window {
     Component {
         id: bootScreen
         Rectangle {
-            color: "#0a0b0d"
+            color: Theme.bg
             Text {
                 anchors.centerIn: parent
                 text: appState.status === "error" ? ("Boot failed: " + appState.flashMessage) : "Loading..."
-                color: "#e8e6e3"
+                color: Theme.textPrimary
                 font.pixelSize: 16
             }
         }

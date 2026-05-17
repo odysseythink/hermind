@@ -10,7 +10,7 @@
 #include <QJsonDocument>
 #include "HermindCGOClient.h"
 extern "C" {
-#include "go-desktop-interface.h"
+#include "libgo-desktop-interface.h"
 }
 #include "AppState.h"
 #include "TrayIcon.h"
@@ -48,7 +48,7 @@ int main(int argc, char *argv[])
     global.setProperty("appState", engine.newQObject(&appState));
 
     // Initialize Go backend via CGO
-    char* initStatus = HermindInit("");
+    char* initStatus = HermindInit(const_cast<char*>(""));
     QJsonDocument initDoc = QJsonDocument::fromJson(QByteArray(initStatus));
     HermindFree(initStatus);
 

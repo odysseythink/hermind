@@ -1,4 +1,5 @@
 import QtQuick
+import Hermind
 
 Rectangle {
     width: 8
