@@ -1,10 +1,35 @@
 .workspace {
-  display: grid;
-  grid-template-rows: auto 1fr auto;
+  position: relative;
   height: 100%;
   min-height: 0;
   overflow: hidden;
   background: var(--bg);
+}
+
+.chatMode {
+  display: grid;
+  grid-template-rows: auto 1fr auto auto;
+}
+
+.emptyMode {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: var(--space-6);
+  padding: var(--space-8);
+}
+
+.modelPicker {
+  position: absolute;
+  top: var(--space-3);
+  left: var(--space-4);
+  z-index: 10;
+}
+
+.promptWrapper {
+  width: 100%;
+  max-width: 640px;
 }
 
 .errorBanner {

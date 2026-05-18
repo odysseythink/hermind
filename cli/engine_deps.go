@@ -13,7 +13,6 @@ import (
 	"github.com/odysseythink/hermind/agent/presence"
 	"github.com/odysseythink/hermind/api"
 	"github.com/odysseythink/hermind/config"
-	"github.com/odysseythink/hermind/pantheonadapter"
 	"github.com/odysseythink/hermind/provider"
 	"github.com/odysseythink/hermind/skills"
 	"github.com/odysseythink/hermind/storage"
@@ -30,7 +29,6 @@ import (
 	"github.com/odysseythink/hermind/tool/vision"
 	"github.com/odysseythink/hermind/tool/web"
 	"github.com/odysseythink/mlog"
-	"github.com/odysseythink/pantheon/core"
 )
 
 // attachSkillsTracker constructs a Tracker and runs one initial
@@ -70,67 +68,20 @@ func BuildEngineDeps(ctx context.Context, app *App) (api.EngineDeps, func(), err
 		}
 	}
 
-	var p core.LanguageModel
-
-	// Resolve primary provider config
-	primaryName := app.Config.Model
-	if idx := strings.Index(app.Config.Model, "/"); idx >= 0 {
-		primaryName = app.Config.Model[:idx]
+	p, auxModel, err := buildProviders(ctx, app.Config)
+	if err != nil {
+		return api.EngineDeps{}, cleanup, err
 	}
-	primaryCfg, ok := app.Config.Providers[primaryName]
-	if !ok {
-		primaryCfg = config.ProviderConfig{Provider: primaryName}
-	}
-	if primaryCfg.Provider == "" {
-		primaryCfg.Provider = primaryName
-	}
-	if primaryName == "anthropic" && primaryCfg.APIKey == "" {
-		if envKey := os.Getenv("ANTHROPIC_API_KEY"); envKey != "" {
-			primaryCfg.APIKey = envKey
+	if p == nil {
+		primaryName := app.Config.Model
+		if idx := strings.Index(app.Config.Model, "/"); idx >= 0 {
+			primaryName = app.Config.Model[:idx]
 		}
-	}
-	if primaryCfg.Model == "" {
-		primaryCfg.Model = defaultModelFromString(app.Config.Model)
-	}
-
-	if primaryCfg.APIKey == "" {
 		fmt.Fprintf(os.Stderr, "%v: provider %q. Set api_key in <instance>/config.yaml or ANTHROPIC_API_KEY env var\n", errMissingAPIKey, primaryName)
 		fmt.Fprintln(os.Stderr, "hermind: starting in degraded mode. Chat will fail until you configure a provider.")
-		p = nil
-	} else {
-		primaryModel, err := pantheonadapter.BuildPrimaryModel(ctx, primaryCfg)
-		if err != nil {
-			return api.EngineDeps{}, cleanup, err
-		}
-		p = primaryModel
-	}
-
-	fallbackCfgs := app.Config.FallbackProviders
-	if p != nil && len(fallbackCfgs) > 0 {
-		fbModel, err := pantheonadapter.BuildFallbackModel(ctx, primaryCfg, fallbackCfgs)
-		if err == nil {
-			p = fbModel
-		}
 	}
 
 	displayModel := defaultModelFromString(app.Config.Model)
-
-	var auxModel core.LanguageModel
-	if app.Config.Auxiliary.APIKey != "" || app.Config.Auxiliary.Provider != "" {
-		auxCfg := config.ProviderConfig{
-			Provider: app.Config.Auxiliary.Provider,
-			BaseURL:  app.Config.Auxiliary.BaseURL,
-			APIKey:   app.Config.Auxiliary.APIKey,
-			Model:    app.Config.Auxiliary.Model,
-		}
-		if auxCfg.Provider == "" {
-			auxCfg.Provider = "anthropic"
-		}
-		auxModel, _ = pantheonadapter.BuildModel(ctx, auxCfg)
-	}
-	if auxModel == nil {
-		auxModel = p
-	}
 
 	toolRegistry := tool.NewRegistry()
 	file.RegisterAll(toolRegistry)

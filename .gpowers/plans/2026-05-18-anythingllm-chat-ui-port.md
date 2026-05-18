@@ -54,7 +54,7 @@
 - Modify: `web/src/locales/en/ui.json`
 - Modify: `web/src/locales/zh-CN/ui.json`
 
-- [ ] **Step 1: Add `ToolSchema` and `ToolsResponseSchema` to `schemas.ts`**
+- [x] **Step 1: Add `ToolSchema` and `ToolsResponseSchema` to `schemas.ts`**
 
 Append after `TTSResponseSchema` (end of file):
 
@@ -71,7 +71,7 @@ export const ToolsResponseSchema = z.object({
 export type ToolsResponse = z.infer<typeof ToolsResponseSchema>;
 ```
 
-- [ ] **Step 2: Add i18n keys**
+- [x] **Step 2: Add i18n keys**
 
 In `web/src/locales/en/ui.json`, add under existing `"chat.send"`:
 ```json
@@ -85,7 +85,7 @@ In `web/src/locales/zh-CN/ui.json`, add:
   "chat.noTools": "暂无可用工具",
 ```
 
-- [ ] **Step 3: Commit**
+- [x] **Step 3: Commit**
 
 ```bash
 git add web/src/api/schemas.ts web/src/locales/en/ui.json web/src/locales/zh-CN/ui.json
@@ -101,7 +101,7 @@ git commit -m "feat(chat): add Tool schema and i18n keys for new chat UI"
 - Create: `web/src/components/chat/ModelPicker.module.css`
 - Create: `web/src/components/chat/ModelPicker.test.tsx`
 
-- [ ] **Step 1: Write `ModelPicker.tsx`**
+- [x] **Step 1: Write `ModelPicker.tsx`**
 
 ```tsx
 import styles from './ModelPicker.module.css';
@@ -119,7 +119,7 @@ export default function ModelPicker({ modelName }: Props) {
 }
 ```
 
-- [ ] **Step 2: Write `ModelPicker.module.css`**
+- [x] **Step 2: Write `ModelPicker.module.css`**
 
 ```css
 .picker {
@@ -145,7 +145,7 @@ export default function ModelPicker({ modelName }: Props) {
 }
 ```
 
-- [ ] **Step 3: Write `ModelPicker.test.tsx`**
+- [x] **Step 3: Write `ModelPicker.test.tsx`**
 
 ```tsx
 import { describe, it, expect } from 'vitest';
@@ -165,14 +165,14 @@ describe('ModelPicker', () => {
 });
 ```
 
-- [ ] **Step 4: Run tests**
+- [x] **Step 4: Run tests**
 
 ```bash
 cd web && npx vitest run src/components/chat/ModelPicker.test.tsx
 ```
 Expected: 2 passes
 
-- [ ] **Step 5: Commit**
+- [x] **Step 5: Commit**
 
 ```bash
 git add web/src/components/chat/ModelPicker.tsx web/src/components/chat/ModelPicker.module.css web/src/components/chat/ModelPicker.test.tsx
@@ -187,7 +187,7 @@ git commit -m "feat(chat): add ModelPicker component"
 - Create: `web/src/components/chat/MentionButton.tsx`
 - Create: `web/src/components/chat/MentionButton.module.css`
 
-- [ ] **Step 1: Write `MentionButton.tsx`**
+- [x] **Step 1: Write `MentionButton.tsx`**
 
 ```tsx
 import styles from './MentionButton.module.css';
@@ -212,7 +212,7 @@ export default function MentionButton({ onClick, disabled }: Props) {
 }
 ```
 
-- [ ] **Step 2: Write `MentionButton.module.css`**
+- [x] **Step 2: Write `MentionButton.module.css`**
 
 ```css
 .btn {
@@ -242,7 +242,7 @@ export default function MentionButton({ onClick, disabled }: Props) {
 }
 ```
 
-- [ ] **Step 3: Commit**
+- [x] **Step 3: Commit**
 
 ```bash
 git add web/src/components/chat/MentionButton.tsx web/src/components/chat/MentionButton.module.css
@@ -257,7 +257,7 @@ git commit -m "feat(chat): add MentionButton component"
 - Create: `web/src/components/chat/ToolsButton.tsx`
 - Create: `web/src/components/chat/ToolsButton.module.css`
 
-- [ ] **Step 1: Write `ToolsButton.tsx`**
+- [x] **Step 1: Write `ToolsButton.tsx`**
 
 ```tsx
 import styles from './ToolsButton.module.css';
@@ -283,7 +283,7 @@ export default function ToolsButton({ onClick, active, disabled }: Props) {
 }
 ```
 
-- [ ] **Step 2: Write `ToolsButton.module.css`**
+- [x] **Step 2: Write `ToolsButton.module.css`**
 
 ```css
 .btn {
@@ -313,7 +313,7 @@ export default function ToolsButton({ onClick, active, disabled }: Props) {
 }
 ```
 
-- [ ] **Step 3: Commit**
+- [x] **Step 3: Commit**
 
 ```bash
 git add web/src/components/chat/ToolsButton.tsx web/src/components/chat/ToolsButton.module.css
@@ -329,7 +329,7 @@ git commit -m "feat(chat): add ToolsButton component"
 - Create: `web/src/components/chat/ToolsMenu.module.css`
 - Create: `web/src/components/chat/ToolsMenu.test.tsx`
 
-- [ ] **Step 1: Write `ToolsMenu.tsx`**
+- [x] **Step 1: Write `ToolsMenu.tsx`**
 
 ```tsx
 import { useEffect, useRef, useState } from 'react';
@@ -439,7 +439,7 @@ export default function ToolsMenu({ visible, onClose, onSelect, suggestions }: P
 }
 ```
 
-- [ ] **Step 2: Write `ToolsMenu.module.css`**
+- [x] **Step 2: Write `ToolsMenu.module.css`**
 
 ```css
 .menu {
@@ -507,7 +507,7 @@ export default function ToolsMenu({ visible, onClose, onSelect, suggestions }: P
 }
 ```
 
-- [ ] **Step 3: Write `ToolsMenu.test.tsx`**
+- [x] **Step 3: Write `ToolsMenu.test.tsx`**
 
 ```tsx
 import { describe, it, expect, vi } from 'vitest';
@@ -541,14 +541,14 @@ describe('ToolsMenu', () => {
 });
 ```
 
-- [ ] **Step 4: Run tests**
+- [x] **Step 4: Run tests**
 
 ```bash
 cd web && npx vitest run src/components/chat/ToolsMenu.test.tsx
 ```
 Expected: passes (ToolsMenu tests are isolated; API calls are caught by `.catch`)
 
-- [ ] **Step 5: Commit**
+- [x] **Step 5: Commit**
 
 ```bash
 git add web/src/components/chat/ToolsMenu.tsx web/src/components/chat/ToolsMenu.module.css web/src/components/chat/ToolsMenu.test.tsx
@@ -564,7 +564,7 @@ git commit -m "feat(chat): add ToolsMenu component"
 - Modify: `web/src/components/chat/PromptInput.module.css`
 - Modify: `web/src/components/chat/PromptInput.test.tsx`
 
-- [ ] **Step 1: Rewrite `PromptInput.tsx`**
+- [x] **Step 1: Rewrite `PromptInput.tsx`**
 
 Replace the entire file with:
 
@@ -742,7 +742,7 @@ export default function PromptInput({
 }
 ```
 
-- [ ] **Step 2: Rewrite `PromptInput.module.css`**
+- [x] **Step 2: Rewrite `PromptInput.module.css`**
 
 Replace the entire file with:
 
@@ -829,7 +829,7 @@ Replace the entire file with:
 }
 ```
 
-- [ ] **Step 3: Update `PromptInput.test.tsx`**
+- [x] **Step 3: Update `PromptInput.test.tsx`**
 
 Replace the entire file with:
 
@@ -894,14 +894,14 @@ describe('PromptInput', () => {
 });
 ```
 
-- [ ] **Step 4: Run tests**
+- [x] **Step 4: Run tests**
 
 ```bash
 cd web && npx vitest run src/components/chat/PromptInput.test.tsx
 ```
 Expected: 5 passes
 
-- [ ] **Step 5: Commit**
+- [x] **Step 5: Commit**
 
 ```bash
 git add web/src/components/chat/PromptInput.tsx web/src/components/chat/PromptInput.module.css web/src/components/chat/PromptInput.test.tsx
@@ -916,7 +916,7 @@ git commit -m "feat(chat): refactor PromptInput to rounded box with tool buttons
 - Modify: `web/src/components/chat/ChatHistory.tsx`
 - Modify: `web/src/components/chat/ChatHistory.test.tsx`
 
-- [ ] **Step 1: Rewrite `ChatHistory.tsx`**
+- [x] **Step 1: Rewrite `ChatHistory.tsx`**
 
 ```tsx
 import { useRef, useEffect } from 'react';
@@ -975,7 +975,7 @@ export default function ChatHistory({
 }
 ```
 
-- [ ] **Step 2: Update `ChatHistory.test.tsx`**
+- [x] **Step 2: Update `ChatHistory.test.tsx`**
 
 ```tsx
 import { describe, it, expect, vi, beforeAll, afterAll } from 'vitest';
@@ -1023,14 +1023,14 @@ describe('ChatHistory', () => {
 });
 ```
 
-- [ ] **Step 3: Run tests**
+- [x] **Step 3: Run tests**
 
 ```bash
 cd web && npx vitest run src/components/chat/ChatHistory.test.tsx
 ```
 Expected: 2 passes
 
-- [ ] **Step 4: Commit**
+- [x] **Step 4: Commit**
 
 ```bash
 git add web/src/components/chat/ChatHistory.tsx web/src/components/chat/ChatHistory.test.tsx
@@ -1046,7 +1046,7 @@ git commit -m "refactor(chat): remove EmptyState from ChatHistory"
 - Modify: `web/src/components/chat/EmptyState.module.css`
 - Modify: `web/src/components/chat/EmptyState.test.tsx`
 
-- [ ] **Step 1: Rewrite `EmptyState.tsx`**
+- [x] **Step 1: Rewrite `EmptyState.tsx`**
 
 ```tsx
 import { useTranslation } from 'react-i18next';
@@ -1080,7 +1080,7 @@ export default function EmptyState({ suggestions, onSuggestionClick }: Props) {
 }
 ```
 
-- [ ] **Step 2: Rewrite `EmptyState.module.css`**
+- [x] **Step 2: Rewrite `EmptyState.module.css`**
 
 ```css
 .greeting {
@@ -1116,7 +1116,7 @@ export default function EmptyState({ suggestions, onSuggestionClick }: Props) {
 }
 ```
 
-- [ ] **Step 3: Update `EmptyState.test.tsx`**
+- [x] **Step 3: Update `EmptyState.test.tsx`**
 
 ```tsx
 import { describe, it, expect, vi } from 'vitest';
@@ -1147,14 +1147,14 @@ describe('EmptyState', () => {
 });
 ```
 
-- [ ] **Step 4: Run tests**
+- [x] **Step 4: Run tests**
 
 ```bash
 cd web && npx vitest run src/components/chat/EmptyState.test.tsx
 ```
 Expected: 2 passes
 
-- [ ] **Step 5: Commit**
+- [x] **Step 5: Commit**
 
 ```bash
 git add web/src/components/chat/EmptyState.tsx web/src/components/chat/EmptyState.module.css web/src/components/chat/EmptyState.test.tsx
@@ -1169,7 +1169,7 @@ git commit -m "refactor(chat): simplify EmptyState, use i18n greeting"
 - Modify: `web/src/components/chat/ChatWorkspace.tsx`
 - Modify: `web/src/components/chat/ChatWorkspace.module.css`
 
-- [ ] **Step 1: Rewrite `ChatWorkspace.tsx`**
+- [x] **Step 1: Rewrite `ChatWorkspace.tsx`**
 
 Replace imports and component body. Keep all existing handler logic (`handleSend`, `handleStop`, `handleEdit`, `handleDelete`, `handleRegenerate`, `handleSuggestionClick`). Only the `return` block and one new `useEffect` change.
 
@@ -1418,7 +1418,7 @@ export default function ChatWorkspace({
 }
 ```
 
-- [ ] **Step 2: Rewrite `ChatWorkspace.module.css`**
+- [x] **Step 2: Rewrite `ChatWorkspace.module.css`**
 
 ```css
 .workspace {
@@ -1465,14 +1465,14 @@ export default function ChatWorkspace({
 }
 ```
 
-- [ ] **Step 3: Run all chat component tests**
+- [x] **Step 3: Run all chat component tests**
 
 ```bash
 cd web && npx vitest run src/components/chat/
 ```
 Expected: All passes (PromptInput, ChatHistory, EmptyState, ModelPicker, ToolsMenu)
 
-- [ ] **Step 4: Commit**
+- [x] **Step 4: Commit**
 
 ```bash
 git add web/src/components/chat/ChatWorkspace.tsx web/src/components/chat/ChatWorkspace.module.css
@@ -1486,28 +1486,28 @@ git commit -m "feat(chat): dual-mode layout with ModelPicker and empty state"
 **Files:**
 - Run: all frontend tests
 
-- [ ] **Step 1: Run full frontend test suite**
+- [x] **Step 1: Run full frontend test suite**
 
 ```bash
 cd web && npx vitest run
 ```
 Expected: All tests pass. If any fail, fix the component or test.
 
-- [ ] **Step 2: Type-check**
+- [x] **Step 2: Type-check**
 
 ```bash
 cd web && npx tsc --noEmit
 ```
 Expected: No type errors.
 
-- [ ] **Step 3: Build check**
+- [x] **Step 3: Build check**
 
 ```bash
 cd web && npm run build
 ```
 Expected: Build succeeds with no errors.
 
-- [ ] **Step 4: Commit**
+- [x] **Step 4: Commit**
 
 ```bash
 git add -A

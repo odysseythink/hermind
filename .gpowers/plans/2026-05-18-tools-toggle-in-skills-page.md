@@ -33,7 +33,7 @@
 **Files:**
 - Modify: `config/config.go`
 
-- [ ] **Step 1: Add `ToolsConfig` struct and wire into `Config`**
+- [x] **Step 1: Add `ToolsConfig` struct and wire into `Config`**
 
 Insert the new struct right after `SkillsConfig` (around line 120), then add the field to `Config`:
 
@@ -52,12 +52,12 @@ In the `Config` struct, add after the `Skills` field (around line 60):
 	Tools             ToolsConfig               `yaml:"tools,omitempty"`
 ```
 
-- [ ] **Step 2: Verify Go compiles**
+- [x] **Step 2: Verify Go compiles**
 
 Run: `go build ./config`
 Expected: no errors
 
-- [ ] **Step 3: Commit**
+- [x] **Step 3: Commit**
 
 ```bash
 git add config/config.go
@@ -71,7 +71,7 @@ git commit -m "config: add ToolsConfig and Config.Tools field"
 **Files:**
 - Create: `config/descriptor/tools.go`
 
-- [ ] **Step 1: Create the descriptor file**
+- [x] **Step 1: Create the descriptor file**
 
 ```go
 package descriptor
@@ -95,12 +95,12 @@ func init() {
 }
 ```
 
-- [ ] **Step 2: Verify Go compiles**
+- [x] **Step 2: Verify Go compiles**
 
 Run: `go build ./config/descriptor`
 Expected: no errors
 
-- [ ] **Step 3: Commit**
+- [x] **Step 3: Commit**
 
 ```bash
 git add config/descriptor/tools.go
@@ -114,7 +114,7 @@ git commit -m "config/descriptor: register tools section descriptor"
 **Files:**
 - Modify: `api/dto.go`
 
-- [ ] **Step 1: Extend `ToolDTO`**
+- [x] **Step 1: Extend `ToolDTO`**
 
 Replace the existing `ToolDTO` struct (around line 120):
 
@@ -128,12 +128,12 @@ type ToolDTO struct {
 }
 ```
 
-- [ ] **Step 2: Verify Go compiles**
+- [x] **Step 2: Verify Go compiles**
 
 Run: `go build ./api`
 Expected: no errors
 
-- [ ] **Step 3: Commit**
+- [x] **Step 3: Commit**
 
 ```bash
 git add api/dto.go
@@ -147,11 +147,11 @@ git commit -m "api: extend ToolDTO with Toolset and Enabled"
 **Files:**
 - Modify: `api/server.go`
 
-- [ ] **Step 1: Add import for `sort`**
+- [x] **Step 1: Add import for `sort`**
 
 Add `"sort"` to the imports at the top of `api/server.go`.
 
-- [ ] **Step 2: Add helper methods after `currentDeps()`**
+- [x] **Step 2: Add helper methods after `currentDeps()`**
 
 Insert after the `currentDeps()` method (around line 195):
 
@@ -187,7 +187,7 @@ func (s *Server) activeToolReg() *tool.Registry {
 }
 ```
 
-- [ ] **Step 3: Update `RunTurn` to use `activeToolReg()`**
+- [x] **Step 3: Update `RunTurn` to use `activeToolReg()`**
 
 Find the engine construction in `RunTurn` (around line 270):
 
@@ -207,12 +207,12 @@ Replace with:
 	)
 ```
 
-- [ ] **Step 4: Verify Go compiles**
+- [x] **Step 4: Verify Go compiles**
 
 Run: `go build ./api`
 Expected: no errors
 
-- [ ] **Step 5: Commit**
+- [x] **Step 5: Commit**
 
 ```bash
 git add api/server.go
@@ -226,7 +226,7 @@ git commit -m "api: add disabledTools and activeToolReg helpers; use filtered re
 **Files:**
 - Modify: `api/handlers_tools.go`
 
-- [ ] **Step 1: Rewrite the stub handler**
+- [x] **Step 1: Rewrite the stub handler**
 
 Replace the entire file content:
 
@@ -264,12 +264,12 @@ func (s *Server) handleToolsList(w http.ResponseWriter, _ *http.Request) {
 }
 ```
 
-- [ ] **Step 2: Verify Go compiles**
+- [x] **Step 2: Verify Go compiles**
 
 Run: `go build ./api`
 Expected: no errors
 
-- [ ] **Step 3: Commit**
+- [x] **Step 3: Commit**
 
 ```bash
 git add api/handlers_tools.go
@@ -283,7 +283,7 @@ git commit -m "api: implement handleToolsList returning real tool list with enab
 **Files:**
 - Modify: `api/handlers_conversation.go`
 
-- [ ] **Step 1: Update engine construction in `handleConversationPost`**
+- [x] **Step 1: Update engine construction in `handleConversationPost`**
 
 Find the engine construction (around line 165):
 
@@ -303,12 +303,12 @@ Replace with:
 	)
 ```
 
-- [ ] **Step 2: Verify Go compiles**
+- [x] **Step 2: Verify Go compiles**
 
 Run: `go build ./api`
 Expected: no errors
 
-- [ ] **Step 3: Commit**
+- [x] **Step 3: Commit**
 
 ```bash
 git add api/handlers_conversation.go
@@ -322,7 +322,7 @@ git commit -m "api: use activeToolReg in handleConversationPost"
 **Files:**
 - Create: `api/handlers_tools_test.go`
 
-- [ ] **Step 1: Create the test file**
+- [x] **Step 1: Create the test file**
 
 ```go
 package api
@@ -479,7 +479,7 @@ func buildTestRegistry(t *testing.T, tools []testTool) *tool.Registry {
 }
 ```
 
-- [ ] **Step 2: Run the new tests**
+- [x] **Step 2: Run the new tests**
 
 Run: `go test ./api -run TestToolsList -v`
 Expected: PASS for all 3 TestToolsList tests
@@ -487,12 +487,12 @@ Expected: PASS for all 3 TestToolsList tests
 Run: `go test ./api -run TestActiveToolReg -v`
 Expected: PASS for all 3 TestActiveToolReg tests
 
-- [ ] **Step 3: Run full api test suite**
+- [x] **Step 3: Run full api test suite**
 
 Run: `go test ./api -count=1`
 Expected: all tests pass (pre-existing failures unrelated to this change remain)
 
-- [ ] **Step 4: Commit**
+- [x] **Step 4: Commit**
 
 ```bash
 git add api/handlers_tools_test.go
@@ -506,7 +506,7 @@ git commit -m "api: add tests for tool listing and active registry filtering"
 **Files:**
 - Modify: `web/src/api/schemas.ts`
 
-- [ ] **Step 1: Extend `ToolSchema`**
+- [x] **Step 1: Extend `ToolSchema`**
 
 Find the existing `ToolSchema` (around line 158) and replace:
 
@@ -520,12 +520,12 @@ export const ToolSchema = z.object({
 export type Tool = z.infer<typeof ToolSchema>;
 ```
 
-- [ ] **Step 2: Verify TypeScript compiles**
+- [x] **Step 2: Verify TypeScript compiles**
 
 Run: `cd web && pnpm tsc --noEmit`
 Expected: no errors
 
-- [ ] **Step 3: Commit**
+- [x] **Step 3: Commit**
 
 ```bash
 git add web/src/api/schemas.ts
@@ -540,7 +540,7 @@ git commit -m "web: extend ToolSchema with toolset and enabled fields"
 - Modify: `web/src/components/groups/skills/SkillsSection.tsx`
 - Modify: `web/src/components/groups/skills/SkillsSection.module.css`
 
-- [ ] **Step 1: Extend `SkillsSectionProps` with `onSectionField`**
+- [x] **Step 1: Extend `SkillsSectionProps` with `onSectionField`**
 
 Add the optional callback to the interface (around line 12):
 
@@ -555,7 +555,7 @@ export interface SkillsSectionProps {
 }
 ```
 
-- [ ] **Step 2: Add imports**
+- [x] **Step 2: Add imports**
 
 Add `ToolsResponseSchema` to the schemas import (line 6):
 
@@ -563,7 +563,7 @@ Add `ToolsResponseSchema` to the schemas import (line 6):
 import { SkillsResponseSchema, ToolsResponseSchema, type ConfigSection as ConfigSectionT } from '../../../api/schemas';
 ```
 
-- [ ] **Step 3: Add tool panel state types**
+- [x] **Step 3: Add tool panel state types**
 
 Add after the `FetchState` type (around line 27):
 
@@ -574,7 +574,7 @@ type ToolFetchState =
   | { status: 'error'; message: string };
 ```
 
-- [ ] **Step 4: Add tool state and fetch logic**
+- [x] **Step 4: Add tool state and fetch logic**
 
 Inside the component, add after the skills fetch state:
 
@@ -612,7 +612,7 @@ Update the `useEffect` to also fetch tools:
   }, [load, loadTools]);
 ```
 
-- [ ] **Step 5: Add toggle helper and tool rows computation**
+- [x] **Step 5: Add toggle helper and tool rows computation**
 
 After `toggleSkill`, add:
 
@@ -642,7 +642,7 @@ After the skills `rows` computation, add tool rows:
   const toolDisabledCount = toolRows.filter(r => !r.enabled).length;
 ```
 
-- [ ] **Step 6: Add the tool panel UI**
+- [x] **Step 6: Add the tool panel UI**
 
 After the skills list panel (before the closing `</section>`), insert:
 
@@ -690,7 +690,7 @@ After the skills list panel (before the closing `</section>`), insert:
       </div>
 ```
 
-- [ ] **Step 7: Add CSS styles for toolset tag**
+- [x] **Step 7: Add CSS styles for toolset tag**
 
 Add to `SkillsSection.module.css`:
 
@@ -704,7 +704,7 @@ Add to `SkillsSection.module.css`:
 
 (If `.skillNameMissing` already exists, verify it has the right styling. The existing class is used for "missing" skills; reusing it for toolset tags is acceptable since the visual intent — a small muted label next to the name — is the same.)
 
-- [ ] **Step 8: Add translation keys**
+- [x] **Step 8: Add translation keys**
 
 In the i18n resources (check `web/src/i18n/` for the `ui` namespace), add these keys:
 
@@ -722,12 +722,12 @@ In the i18n resources (check `web/src/i18n/` for the `ui` namespace), add these 
 
 If the project uses a fixture/generator for translations, run the generator. Otherwise add the keys to the relevant translation file(s).
 
-- [ ] **Step 9: Verify TypeScript compiles**
+- [x] **Step 9: Verify TypeScript compiles**
 
 Run: `cd web && pnpm tsc --noEmit`
 Expected: no errors
 
-- [ ] **Step 10: Commit**
+- [x] **Step 10: Commit**
 
 ```bash
 git add web/src/components/groups/skills/SkillsSection.tsx web/src/components/groups/skills/SkillsSection.module.css
@@ -741,7 +741,7 @@ git commit -m "web: add tool panel to SkillsSection with fetch, toggle, and UI"
 **Files:**
 - Modify: `web/src/components/shell/SettingsPanel.tsx`
 
-- [ ] **Step 1: Pass the new props to `SkillsSection`**
+- [x] **Step 1: Pass the new props to `SkillsSection`**
 
 Find the `SkillsSection` render (around line 110) and replace:
 
@@ -768,12 +768,12 @@ With:
         />
 ```
 
-- [ ] **Step 2: Verify TypeScript compiles**
+- [x] **Step 2: Verify TypeScript compiles**
 
 Run: `cd web && pnpm tsc --noEmit`
 Expected: no errors
 
-- [ ] **Step 3: Commit**
+- [x] **Step 3: Commit**
 
 ```bash
 git add web/src/components/shell/SettingsPanel.tsx
@@ -787,7 +787,7 @@ git commit -m "web: pass onSectionField and config to SkillsSection"
 **Files:**
 - Modify: `web/src/components/groups/skills/SkillsSection.test.tsx`
 
-- [ ] **Step 1: Add mock helper for tools API**
+- [x] **Step 1: Add mock helper for tools API**
 
 After `mockSkillsApi`, add:
 
@@ -802,7 +802,7 @@ function mockToolsApi(tools: Array<{ name: string; description?: string; toolset
 }
 ```
 
-- [ ] **Step 2: Add tool panel rendering test**
+- [x] **Step 2: Add tool panel rendering test**
 
 Add inside the `describe('SkillsSection')` block:
 
@@ -879,12 +879,12 @@ Add inside the `describe('SkillsSection')` block:
   });
 ```
 
-- [ ] **Step 3: Run frontend tests**
+- [x] **Step 3: Run frontend tests**
 
 Run: `cd web && pnpm test -- SkillsSection.test.tsx`
 Expected: all tests pass
 
-- [ ] **Step 4: Commit**
+- [x] **Step 4: Commit**
 
 ```bash
 git add web/src/components/groups/skills/SkillsSection.test.tsx
@@ -895,34 +895,34 @@ git commit -m "web: add tests for SkillsSection tool panel"
 
 ## Task 12: Full Verification
 
-- [ ] **Step 1: Backend tests**
+- [x] **Step 1: Backend tests**
 
 Run: `go test ./... -count=1`
 Expected: all tests that were passing before continue to pass; new tests pass
 
-- [ ] **Step 2: Frontend type check**
+- [x] **Step 2: Frontend type check**
 
 Run: `cd web && pnpm tsc --noEmit`
 Expected: no type errors
 
-- [ ] **Step 3: Frontend build**
+- [x] **Step 3: Frontend build**
 
 Run: `cd web && pnpm build`
 Expected: build succeeds
 
-- [ ] **Step 4: Frontend tests**
+- [x] **Step 4: Frontend tests**
 
 Run: `cd web && pnpm test`
 Expected: all tests pass
 
-- [ ] **Step 5: Integration sanity — start server and hit endpoints**
+- [x] **Step 5: Integration sanity — start server and hit endpoints**
 
 Start the server (or use an existing test harness) and verify:
 1. `GET /api/tools` returns a sorted list with `enabled` fields
 2. `GET /api/config/schema` includes the `tools` section under `group_id: "skills"`
 3. `PUT /api/config` with `tools.disabled: ["some_tool"]` persists and `GET /api/tools` reflects the change
 
-- [ ] **Step 6: Commit final verification (optional)**
+- [x] **Step 6: Commit final verification (optional)**
 
 If any fix-up commits were needed during verification, squash or keep as-is depending on project conventions.
 

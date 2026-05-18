@@ -21,15 +21,15 @@ function StatefulPromptInput({ onSubmit, onTextChangeSpy }: { onSubmit?: () => v
 describe('PromptInput', () => {
   it('renders textarea and send button', () => {
     render(<StatefulPromptInput />);
-    expect(screen.getByPlaceholderText('Type a message...')).toBeInTheDocument();
-    expect(screen.getByLabelText('Send message')).toBeInTheDocument();
+    expect(screen.getByPlaceholderText(/type a message/i)).toBeInTheDocument();
+    expect(screen.getByLabelText(/send/i)).toBeInTheDocument();
   });
 
   it('calls onTextChange when typing', async () => {
     const user = userEvent.setup();
     const onTextChange = vi.fn();
     render(<StatefulPromptInput onTextChangeSpy={onTextChange} />);
-    await user.type(screen.getByPlaceholderText('Type a message...'), 'hi');
+    await user.type(screen.getByPlaceholderText(/type a message/i), 'hi');
     expect(onTextChange).toHaveBeenCalledWith('hi');
   });
 
@@ -37,7 +37,7 @@ describe('PromptInput', () => {
     const user = userEvent.setup();
     const onSubmit = vi.fn();
     render(<PromptInput text="hello" onTextChange={vi.fn()} onSubmit={onSubmit} />);
-    await user.click(screen.getByLabelText('Send message'));
+    await user.click(screen.getByLabelText(/send/i));
     expect(onSubmit).toHaveBeenCalled();
   });
 
@@ -45,7 +45,14 @@ describe('PromptInput', () => {
     const user = userEvent.setup();
     const onSubmit = vi.fn();
     render(<PromptInput text="hello" onTextChange={vi.fn()} onSubmit={onSubmit} />);
-    await user.type(screen.getByPlaceholderText('Type a message...'), '{Enter}');
+    await user.type(screen.getByPlaceholderText(/type a message/i), '{Enter}');
     expect(onSubmit).toHaveBeenCalled();
+  });
+
+  it('renders attach, mention, and tools buttons', () => {
+    render(<StatefulPromptInput />);
+    expect(screen.getByLabelText('Attach file')).toBeInTheDocument();
+    expect(screen.getByLabelText('Mention')).toBeInTheDocument();
+    expect(screen.getByLabelText('Tools')).toBeInTheDocument();
   });
 });

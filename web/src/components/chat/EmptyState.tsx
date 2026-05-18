@@ -1,3 +1,4 @@
+import { useTranslation } from 'react-i18next';
 import styles from './EmptyState.module.css';
 
 interface Props {
@@ -6,11 +7,10 @@ interface Props {
 }
 
 export default function EmptyState({ suggestions, onSuggestionClick }: Props) {
+  const { t } = useTranslation('ui');
   return (
-    <div className={styles.emptyState}>
-      <div className={styles.greeting}>
-        <h1 className={styles.title}>How can I help you today?</h1>
-      </div>
+    <>
+      <h1 className={styles.greeting}>{t('chat.greeting')}</h1>
       {suggestions.length > 0 && (
         <div className={styles.suggestions}>
           {suggestions.map((text) => (
@@ -24,6 +24,6 @@ export default function EmptyState({ suggestions, onSuggestionClick }: Props) {
           ))}
         </div>
       )}
-    </div>
+    </>
   );
 }

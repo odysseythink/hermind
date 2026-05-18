@@ -4,11 +4,17 @@ import ConversationHeader from './ConversationHeader';
 import ChatHistory from './ChatHistory';
 import PromptInput from './PromptInput';
 import Toast from './Toast';
+import ModelPicker from './ModelPicker';
+import EmptyState from './EmptyState';
 import styles from './ChatWorkspace.module.css';
 import { useChatStream } from '../../hooks/useChatStream';
 import { chatReducer, initialChatState } from '../../state/chat';
 import { apiFetch, apiPut, apiDelete, ApiError } from '../../api/client';
-import { ConversationHistoryResponseSchema, SuggestionsResponseSchema } from '../../api/schemas';
+import {
+  ConversationHistoryResponseSchema,
+  SuggestionsResponseSchema,
+  MetaResponseSchema,
+} from '../../api/schemas';
 
 type Props = {
   instanceRoot: string;
@@ -22,13 +28,11 @@ export default function ChatWorkspace({
   const { t } = useTranslation('ui');
   const [state, dispatch] = useReducer(chatReducer, initialChatState);
   const [toast, setToast] = useState<string | null>(null);
+  const [currentModel, setCurrentModel] = useState('');
   const [, startTransition] = useTransition();
 
   useChatStream(dispatch);
 
-  // Load conversation history in background to avoid blocking initial render.
-  // The dispatch must itself be in startTransition — wrapping the fetch call
-  // alone is useless because .then() resumes outside the sync transition scope.
   useEffect(() => {
     const ctrl = new AbortController();
     apiFetch('/api/conversation', {
@@ -53,7 +57,6 @@ export default function ChatWorkspace({
     return () => ctrl.abort();
   }, [startTransition]);
 
-  // Load suggestion prompts for empty-state cards.
   useEffect(() => {
     const ctrl = new AbortController();
     apiFetch('/api/suggestions', {
@@ -70,6 +73,14 @@ export default function ChatWorkspace({
       });
     return () => ctrl.abort();
   }, [startTransition]);
+
+  useEffect(() => {
+    const ctrl = new AbortController();
+    apiFetch('/api/status', { schema: MetaResponseSchema, signal: ctrl.signal })
+      .then((r) => setCurrentModel(r.current_model))
+      .catch(() => {});
+    return () => ctrl.abort();
+  }, []);
 
   async function handleSend(overrideText?: string) {
     const text = (overrideText ?? state.composer.text).trim();
@@ -167,34 +178,62 @@ export default function ChatWorkspace({
     handleSend(text);
   };
 
+  const isEmpty =
+    state.messages.length === 0 &&
+    !state.streaming.assistantDraft &&
+    state.streaming.toolCalls.length === 0;
+
   return (
-    <div className={styles.workspace}>
-      <ConversationHeader
-        instanceRoot={instanceRoot}
-        onStop={handleStop}
-        streaming={state.streaming.status === 'running'}
-      />
-      <ChatHistory
-        messages={state.messages}
-        streamingDraft={state.streaming.assistantDraft}
-        streamingToolCalls={state.streaming.toolCalls}
-        suggestions={state.suggestions}
-        onSuggestionClick={handleSuggestionClick}
-        onEdit={handleEdit}
-        onDelete={handleDelete}
-        onRegenerate={handleRegenerate}
-      />
-      {state.streaming.status === 'error' && state.streaming.error && (
-        <div role="alert" className={styles.errorBanner}>
-          {state.streaming.error}
-        </div>
+    <div className={`${styles.workspace} ${isEmpty ? styles.emptyMode : styles.chatMode}`}>
+      <div className={styles.modelPicker}>
+        <ModelPicker modelName={currentModel} />
+      </div>
+
+      {isEmpty ? (
+        <>
+          <EmptyState
+            suggestions={state.suggestions}
+            onSuggestionClick={handleSuggestionClick}
+          />
+          <div className={styles.promptWrapper}>
+            <PromptInput
+              text={state.composer.text}
+              onTextChange={(txt) => dispatch({ type: 'chat/composer/setText', text: txt })}
+              onSubmit={handleSend}
+              disabled={!providerConfigured || state.streaming.status === 'running'}
+              suggestions={state.suggestions}
+            />
+          </div>
+        </>
+      ) : (
+        <>
+          <ConversationHeader
+            instanceRoot={instanceRoot}
+            onStop={handleStop}
+            streaming={state.streaming.status === 'running'}
+          />
+          <ChatHistory
+            messages={state.messages}
+            streamingDraft={state.streaming.assistantDraft}
+            streamingToolCalls={state.streaming.toolCalls}
+            onEdit={handleEdit}
+            onDelete={handleDelete}
+            onRegenerate={handleRegenerate}
+          />
+          {state.streaming.status === 'error' && state.streaming.error && (
+            <div role="alert" className={styles.errorBanner}>
+              {state.streaming.error}
+            </div>
+          )}
+          <PromptInput
+            text={state.composer.text}
+            onTextChange={(txt) => dispatch({ type: 'chat/composer/setText', text: txt })}
+            onSubmit={handleSend}
+            disabled={!providerConfigured || state.streaming.status === 'running'}
+            suggestions={state.suggestions}
+          />
+        </>
       )}
-      <PromptInput
-        text={state.composer.text}
-        onTextChange={(txt) => dispatch({ type: 'chat/composer/setText', text: txt })}
-        onSubmit={handleSend}
-        disabled={!providerConfigured || state.streaming.status === 'running'}
-      />
       {toast && <Toast message={toast} onDismiss={() => setToast(null)} />}
     </div>
   );

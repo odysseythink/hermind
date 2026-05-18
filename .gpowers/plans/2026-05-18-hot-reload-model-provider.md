@@ -33,7 +33,7 @@
 - Create: `cli/provider_builder.go`
 - Modify: `cli/engine_deps.go:65-133`
 
-- [ ] **Step 1: Create `cli/provider_builder.go`**
+- [x] **Step 1: Create `cli/provider_builder.go`**
 
 ```go
 package cli
@@ -127,7 +127,7 @@ func RebuildProviderDeps(ctx context.Context, cfg *config.Config, current *api.E
 }
 ```
 
-- [ ] **Step 2: Replace provider-building in `BuildEngineDeps`**
+- [x] **Step 2: Replace provider-building in `BuildEngineDeps`**
 
 In `cli/engine_deps.go`, replace lines 73-133 (from `var p core.LanguageModel` through the auxiliary provider block) with:
 
@@ -146,12 +146,12 @@ In `cli/engine_deps.go`, replace lines 73-133 (from `var p core.LanguageModel` t
 	}
 ```
 
-- [ ] **Step 3: Verify Go compiles**
+- [x] **Step 3: Verify Go compiles**
 
 Run: `cd /d/workspace/go_work/hermind && go build ./cli/...`
 Expected: clean compile, no errors.
 
-- [ ] **Step 4: Commit**
+- [x] **Step 4: Commit**
 
 ```bash
 git add cli/provider_builder.go cli/engine_deps.go
@@ -165,7 +165,7 @@ git commit -m "refactor(cli): extract buildProviders for reuse in hot-reload"
 **Files:**
 - Modify: `api/server.go:36-373`
 
-- [ ] **Step 1: Change `ServerOpts.Deps` to pointer and add `DepsBuilder`**
+- [x] **Step 1: Change `ServerOpts.Deps` to pointer and add `DepsBuilder`**
 
 In `api/server.go`, replace the `Deps` field (line 95-99):
 
@@ -183,7 +183,7 @@ In `api/server.go`, replace the `Deps` field (line 95-99):
 	DepsBuilder func(ctx context.Context, cfg *config.Config, current *EngineDeps) (*EngineDeps, error)
 ```
 
-- [ ] **Step 2: Add `deps` field to `Server` struct**
+- [x] **Step 2: Add `deps` field to `Server` struct**
 
 After `idle *idle.IdleConsolidator` (line 113), add:
 
@@ -193,7 +193,7 @@ After `idle *idle.IdleConsolidator` (line 113), add:
 	deps atomic.Pointer[EngineDeps]
 ```
 
-- [ ] **Step 3: Update `NewServer` to initialize atomic deps**
+- [x] **Step 3: Update `NewServer` to initialize atomic deps**
 
 Replace the body of `NewServer` (lines 117-128):
 
@@ -216,7 +216,7 @@ func NewServer(opts *ServerOpts) (*Server, error) {
 }
 ```
 
-- [ ] **Step 4: Add `currentDeps` helper**
+- [x] **Step 4: Add `currentDeps` helper**
 
 After the `SetIdleConsolidator` method (line 140-141), add:
 
@@ -228,7 +228,7 @@ func (s *Server) currentDeps() *EngineDeps {
 }
 ```
 
-- [ ] **Step 5: Replace `s.opts.Deps` reads in `buildRouter`**
+- [x] **Step 5: Replace `s.opts.Deps` reads in `buildRouter`**
 
 In the middleware (line 156-163):
 
@@ -243,7 +243,7 @@ In the middleware (line 156-163):
 	})
 ```
 
-- [ ] **Step 6: Replace `s.opts.Deps` reads in `RunTurn`**
+- [x] **Step 6: Replace `s.opts.Deps` reads in `RunTurn`**
 
 Replace lines 268-330. All `s.opts.Deps.Xxx` become `s.currentDeps().Xxx`:
 
@@ -332,12 +332,12 @@ func (s *Server) RunTurn(ctx context.Context, userMessage string) (string, error
 }
 ```
 
-- [ ] **Step 7: Verify Go compiles**
+- [x] **Step 7: Verify Go compiles**
 
 Run: `go build ./api/...`
 Expected: clean compile. May fail because handlers still use `s.opts.Deps` — that's OK, fixed in Task 3.
 
-- [ ] **Step 8: Commit**
+- [x] **Step 8: Commit**
 
 ```bash
 git add api/server.go
@@ -354,7 +354,7 @@ git commit -m "feat(api): add atomic deps storage and currentDeps helper"
 - Modify: `api/handlers_v1_messages.go:26`
 - Modify: `api/memory_health.go:32`
 
-- [ ] **Step 1: Update `api/handlers_conversation.go`**
+- [x] **Step 1: Update `api/handlers_conversation.go`**
 
 Line 120:
 ```go
@@ -369,26 +369,26 @@ Lines 145-147:
 	)
 ```
 
-- [ ] **Step 2: Update `api/handlers_v1_messages.go`**
+- [x] **Step 2: Update `api/handlers_v1_messages.go`**
 
 Line 26:
 ```go
 	prov := s.currentDeps().Provider
 ```
 
-- [ ] **Step 3: Update `api/memory_health.go`**
+- [x] **Step 3: Update `api/memory_health.go`**
 
 Line 32:
 ```go
 	if p := s.currentDeps().Presence; p != nil {
 ```
 
-- [ ] **Step 4: Verify Go compiles**
+- [x] **Step 4: Verify Go compiles**
 
 Run: `go build ./api/...`
 Expected: clean compile.
 
-- [ ] **Step 5: Commit**
+- [x] **Step 5: Commit**
 
 ```bash
 git add api/handlers_conversation.go api/handlers_v1_messages.go api/memory_health.go
@@ -402,7 +402,7 @@ git commit -m "feat(api): read deps through atomic pointer in all handlers"
 **Files:**
 - Modify: `api/handlers_config.go:148-181`
 
-- [ ] **Step 1: Add `rebuildDeps` method**
+- [x] **Step 1: Add `rebuildDeps` method**
 
 Add after `handleConfigPut` (after line 181):
 
@@ -423,7 +423,7 @@ func (s *Server) rebuildDeps(ctx context.Context, cfg *config.Config) error {
 }
 ```
 
-- [ ] **Step 2: Reorder handleConfigPut logic**
+- [x] **Step 2: Reorder handleConfigPut logic**
 
 Replace the second half of `handleConfigPut` (line 174 onwards):
 
@@ -443,12 +443,12 @@ Replace the second half of `handleConfigPut` (line 174 onwards):
 	writeJSON(w, OKResponse{OK: true})
 ```
 
-- [ ] **Step 3: Verify Go compiles**
+- [x] **Step 3: Verify Go compiles**
 
 Run: `go build ./api/...`
 Expected: clean compile.
 
-- [ ] **Step 4: Commit**
+- [x] **Step 4: Commit**
 
 ```bash
 git add api/handlers_config.go
@@ -463,7 +463,7 @@ git commit -m "feat(api): rebuild deps before saving config in handleConfigPut"
 - Modify: `cli/web.go:54-66`
 - Modify: `cmd/go-desktop-interface/init.go:36-45`
 
-- [ ] **Step 1: Update `cli/web.go`**
+- [x] **Step 1: Update `cli/web.go`**
 
 Replace the `api.NewServer` call (lines 54-66):
 
@@ -482,7 +482,7 @@ Replace the `api.NewServer` call (lines 54-66):
 	})
 ```
 
-- [ ] **Step 2: Update `cmd/go-desktop-interface/init.go`**
+- [x] **Step 2: Update `cmd/go-desktop-interface/init.go`**
 
 Replace the `api.NewServer` call (lines 36-45):
 
@@ -501,12 +501,12 @@ Replace the `api.NewServer` call (lines 36-45):
 	})
 ```
 
-- [ ] **Step 3: Verify Go compiles**
+- [x] **Step 3: Verify Go compiles**
 
 Run: `go build ./cli/... ./cmd/...`
 Expected: clean compile.
 
-- [ ] **Step 4: Commit**
+- [x] **Step 4: Commit**
 
 ```bash
 git add cli/web.go cmd/go-desktop-interface/init.go
@@ -520,7 +520,7 @@ git commit -m "feat(cli): inject DepsBuilder for hot-reload model/provider"
 **Files:**
 - Modify: `api/handlers_config_test.go`
 
-- [ ] **Step 1: Add test for successful deps rebuild**
+- [x] **Step 1: Add test for successful deps rebuild**
 
 Append to `api/handlers_config_test.go`:
 
@@ -622,7 +622,7 @@ func (m *stubLM) GenerateObject(ctx context.Context, req *core.ObjectRequest) (*
 }
 ```
 
-- [ ] **Step 2: Add imports to test file**
+- [x] **Step 2: Add imports to test file**
 
 Add to the imports block in `api/handlers_config_test.go`:
 
@@ -634,7 +634,7 @@ Add to the imports block in `api/handlers_config_test.go`:
 	"github.com/odysseythink/pantheon/core"
 ```
 
-- [ ] **Step 3: Run new tests**
+- [x] **Step 3: Run new tests**
 
 Run: `go test ./api/ -run TestHandleConfigPut_RebuildsDeps -v`
 Expected: PASS
@@ -642,12 +642,12 @@ Expected: PASS
 Run: `go test ./api/ -run TestHandleConfigPut_BuilderError_AbortsSave -v`
 Expected: PASS
 
-- [ ] **Step 4: Run full api test suite**
+- [x] **Step 4: Run full api test suite**
 
 Run: `go test ./api/...`
 Expected: all tests pass.
 
-- [ ] **Step 5: Commit**
+- [x] **Step 5: Commit**
 
 ```bash
 git add api/handlers_config_test.go
@@ -660,22 +660,22 @@ git commit -m "test(api): verify hot-reload builder success and failure paths"
 
 **Files:** None (verification only)
 
-- [ ] **Step 1: Run all Go tests**
+- [x] **Step 1: Run all Go tests**
 
 Run: `go test ./...`
 Expected: all packages pass.
 
-- [ ] **Step 2: Build the binary**
+- [x] **Step 2: Build the binary**
 
 Run: `go build ./cmd/hermind`
 Expected: clean build.
 
-- [ ] **Step 3: Build desktop interface**
+- [x] **Step 3: Build desktop interface**
 
 Run: `go build ./cmd/go-desktop-interface`
 Expected: clean build.
 
-- [ ] **Step 4: Commit (if any fixes were needed)**
+- [x] **Step 4: Commit (if any fixes were needed)**
 
 ```bash
 git commit -m "fix: resolve regressions from hot-reload model/provider" || echo "no fixes needed"
