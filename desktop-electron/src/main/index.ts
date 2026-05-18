@@ -6,6 +6,7 @@ import { registerShortcuts, registerToggleShortcut, unregisterAllShortcuts } fro
 import { registerIPCHandlers } from './ipc'
 import * as fs from 'fs'
 import * as path from 'path'
+import * as os from 'os'
 
 const logPath = path.join(app.getPath('userData'), 'electron-startup.log')
 function log(msg: string) {
@@ -17,6 +18,24 @@ function log(msg: string) {
 log('=== Main process starting ===')
 log('appPath: ' + app.getAppPath())
 log('resourcesPath: ' + process.resourcesPath)
+
+// If the installer/uninstaller left a backup of .hermind in TEMP, restore it.
+function restoreHermindData() {
+  if (!app.isPackaged) return
+  const installDir = path.dirname(process.resourcesPath)
+  const hermindDir = path.join(installDir, '.hermind')
+  const backupDir = path.join(os.tmpdir(), 'hermind-data-backup')
+  if (fs.existsSync(backupDir) && !fs.existsSync(hermindDir)) {
+    try {
+      fs.cpSync(backupDir, hermindDir, { recursive: true, force: true })
+      fs.rmSync(backupDir, { recursive: true, force: true })
+      log('Restored .hermind from temp backup')
+    } catch (err) {
+      log('Failed to restore .hermind: ' + (err as Error).message)
+    }
+  }
+}
+restoreHermindData()
 
 let goManager = createGoProcessManager()
 

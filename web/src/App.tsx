@@ -4,7 +4,7 @@ import { apiFetch } from './api/client';
 import {
   ConfigResponseSchema,
   ConfigSchemaResponseSchema,
-  MetaResponseSchema,
+  // MetaResponseSchema,
   ProviderModelsResponseSchema,
   ProviderTestResponseSchema,
 } from './api/schemas';
@@ -32,7 +32,7 @@ export default function App() {
   console.time('App render');
   const { t } = useTranslation('ui');
   const [state, dispatch] = useReducer(reducer, initialState);
-  const [instanceRoot, setInstanceRoot] = useState<string>('');
+
   const [, startTransition] = useTransition();
 
   // Defer expensive computed values to avoid blocking the main thread
@@ -79,13 +79,7 @@ export default function App() {
         dispatch({ type: 'boot/failed', error: msg });
       }
     })();
-    apiFetch('/api/status', { schema: MetaResponseSchema, signal: ctrl.signal })
-      .then((s) => {
-        setInstanceRoot(s.instance_root);
-      })
-      .catch(() => {
-        /* header hides the label when empty */
-      });
+
     return () => ctrl.abort();
   }, []);
 
@@ -384,7 +378,6 @@ export default function App() {
       <div className="app-shell chat-mode">
         <TopBar dirtyCount={0} status={state.status} onSave={() => {}} mode="chat" onModeChange={setMode} />
         <ChatWorkspace
-          instanceRoot={instanceRoot}
           providerConfigured={providerConfigured}
         />
       </div>

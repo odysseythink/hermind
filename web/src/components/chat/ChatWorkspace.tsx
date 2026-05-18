@@ -1,6 +1,5 @@
 import { useEffect, useReducer, useState, useTransition } from 'react';
 import { useTranslation } from 'react-i18next';
-import ConversationHeader from './ConversationHeader';
 import ChatHistory from './ChatHistory';
 import PromptInput from './PromptInput';
 import Toast from './Toast';
@@ -17,12 +16,10 @@ import {
 } from '../../api/schemas';
 
 type Props = {
-  instanceRoot: string;
   providerConfigured?: boolean;
 };
 
 export default function ChatWorkspace({
-  instanceRoot,
   providerConfigured = true,
 }: Props) {
   const { t } = useTranslation('ui');
@@ -101,14 +98,6 @@ export default function ChatWorkspace({
       } else {
         setToast(t('chat.errorSendFailed', { msg: err instanceof Error ? err.message : '' }));
       }
-    }
-  }
-
-  async function handleStop() {
-    try {
-      await apiFetch('/api/conversation/cancel', { method: 'POST' });
-    } catch (err) {
-      console.warn('cancel failed', err);
     }
   }
 
@@ -207,11 +196,6 @@ export default function ChatWorkspace({
         </>
       ) : (
         <>
-          <ConversationHeader
-            instanceRoot={instanceRoot}
-            onStop={handleStop}
-            streaming={state.streaming.status === 'running'}
-          />
           <ChatHistory
             messages={state.messages}
             streamingDraft={state.streaming.assistantDraft}
