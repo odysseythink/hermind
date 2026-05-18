@@ -14,19 +14,6 @@ describe('ChatHistory', () => {
     HTMLElement.prototype.scrollTo = originalScrollTo;
   });
 
-  it('renders EmptyState when no messages and not streaming', () => {
-    render(
-      <ChatHistory
-        messages={[]}
-        streamingDraft=""
-        streamingToolCalls={[]}
-        suggestions={['Hi']}
-        onSuggestionClick={vi.fn()}
-      />
-    );
-    expect(screen.getByText('How can I help you today?')).toBeInTheDocument();
-  });
-
   it('renders messages when provided', () => {
     const messages: ChatMessage[] = [
       { id: '1', role: 'user', content: 'hello', timestamp: 0 },
@@ -37,11 +24,20 @@ describe('ChatHistory', () => {
         messages={messages}
         streamingDraft=""
         streamingToolCalls={[]}
-        suggestions={[]}
-        onSuggestionClick={vi.fn()}
       />
     );
     expect(screen.getByText('hello')).toBeInTheDocument();
     expect(screen.getByText('world')).toBeInTheDocument();
+  });
+
+  it('renders streaming draft', () => {
+    render(
+      <ChatHistory
+        messages={[]}
+        streamingDraft="thinking..."
+        streamingToolCalls={[]}
+      />
+    );
+    expect(screen.getByText('thinking...')).toBeInTheDocument();
   });
 });

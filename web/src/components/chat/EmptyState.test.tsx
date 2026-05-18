@@ -3,9 +3,15 @@ import { render, screen } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import EmptyState from './EmptyState';
 
+// Mock i18next
+vi.mock('react-i18next', () => ({
+  useTranslation: () => ({ t: (key: string) => (key === 'chat.greeting' ? 'Greeting Text' : key) }),
+}));
+
 describe('EmptyState', () => {
   it('renders greeting and suggestions', () => {
     render(<EmptyState suggestions={['What can you do?', 'Help me code']} onSuggestionClick={vi.fn()} />);
+    expect(screen.getByText('Greeting Text')).toBeInTheDocument();
     expect(screen.getByText('What can you do?')).toBeInTheDocument();
     expect(screen.getByText('Help me code')).toBeInTheDocument();
   });

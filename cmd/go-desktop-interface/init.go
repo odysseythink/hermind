@@ -6,6 +6,7 @@ import (
 
 	"github.com/odysseythink/hermind/api"
 	"github.com/odysseythink/hermind/cli"
+	"github.com/odysseythink/hermind/config"
 )
 
 var globalApp *cli.App
@@ -42,6 +43,9 @@ func initHermind(configPath string) (map[string]string, error) {
 		Version:      cli.Version,
 		Streams:      streams,
 		Deps:         &deps,
+		DepsBuilder: func(ctx context.Context, cfg *config.Config, current *api.EngineDeps) (*api.EngineDeps, error) {
+			return cli.RebuildProviderDeps(ctx, cfg, current)
+		},
 	})
 	if err != nil {
 		return nil, fmt.Errorf("new server: %w", err)

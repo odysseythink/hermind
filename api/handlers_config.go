@@ -1,10 +1,12 @@
 package api
 
 import (
+	"context"
 	"encoding/json"
 	"io"
 	"net/http"
 	"strings"
+	"time"
 
 	"gopkg.in/yaml.v3"
 
@@ -172,12 +174,37 @@ func (s *Server) handleConfigPut(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	preserveSecrets(&updated, s.opts.Config)
+
+	if err := s.rebuildDeps(r.Context(), &updated); err != nil {
+		http.Error(w, "invalid provider config: "+err.Error(), http.StatusBadRequest)
+		return
+	}
+
 	if err := config.SaveToPath(s.opts.ConfigPath, &updated); err != nil {
 		http.Error(w, err.Error(), http.StatusInternalServerError)
 		return
 	}
 	*s.opts.Config = updated
 	writeJSON(w, OKResponse{OK: true})
+}
+
+// rebuildDeps calls the configured DepsBuilder with cfg and swaps the
+// active deps atomically. If no builder is configured it is a no-op.
+// Uses a 30-second timeout independent of the HTTP request so client
+// disconnects do not abort provider validation mid-flight.
+func (s *Server) rebuildDeps(_ context.Context, cfg *config.Config) error {
+	if s.opts.DepsBuilder == nil {
+		return nil
+	}
+	ctx, cancel := context.WithTimeout(context.Background(), 30*time.Second)
+	defer cancel()
+	current := s.deps.Load()
+	newDeps, err := s.opts.DepsBuilder(ctx, cfg, current)
+	if err != nil {
+		return err
+	}
+	s.deps.Store(newDeps)
+	return nil
 }
 
 // preserveSecrets copies every blank secret in updated back from

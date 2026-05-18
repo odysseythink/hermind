@@ -9,6 +9,7 @@ import (
 	"github.com/odysseythink/hermind/api"
 	"github.com/odysseythink/hermind/config"
 	"github.com/odysseythink/hermind/pantheonadapter"
+	"github.com/odysseythink/mlog"
 	"github.com/odysseythink/pantheon/core"
 )
 
@@ -66,7 +67,11 @@ func buildProviders(ctx context.Context, cfg *config.Config) (primary, aux core.
 		if auxCfg.Provider == "" {
 			auxCfg.Provider = "anthropic"
 		}
-		aux, _ = pantheonadapter.BuildModel(ctx, auxCfg)
+		var auxErr error
+		aux, auxErr = pantheonadapter.BuildModel(ctx, auxCfg)
+		if auxErr != nil {
+			mlog.Warning("build auxiliary provider failed", mlog.String("err", auxErr.Error()))
+		}
 	}
 	if aux == nil {
 		aux = primary
