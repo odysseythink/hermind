@@ -201,7 +201,7 @@ func TestConversationPost_IgnoresBodyModel(t *testing.T) {
 		},
 		Version: "test",
 		Storage: store,
-		Deps:    EngineDeps{Provider: rec, AgentCfg: config.AgentConfig{MaxTurns: 5}},
+		Deps:    &EngineDeps{Provider: rec, AgentCfg: config.AgentConfig{MaxTurns: 5}},
 	})
 	require.NoError(t, err)
 

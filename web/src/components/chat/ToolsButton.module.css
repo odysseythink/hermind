@@ -1,0 +1,25 @@
+.btn {
+  padding: 2px 10px;
+  border-radius: 999px;
+  border: none;
+  background: transparent;
+  color: var(--muted);
+  font-size: var(--fs-sm);
+  cursor: pointer;
+  transition: background var(--t-short), color var(--t-short);
+}
+
+.btn:hover:not(:disabled) {
+  background: var(--hover-tint);
+  color: var(--text);
+}
+
+.btn.active {
+  background: var(--active-tint);
+  color: var(--accent);
+}
+
+.btn:disabled {
+  opacity: 0.4;
+  cursor: not-allowed;
+}

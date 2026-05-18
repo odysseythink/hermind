@@ -117,7 +117,7 @@ func (s *Server) handleConversationGet(w http.ResponseWriter, r *http.Request) {
 // engine turn, and returns 202. The engine streams its progress via
 // the event hub (/api/sse).
 func (s *Server) handleConversationPost(w http.ResponseWriter, r *http.Request) {
-	if s.opts.Deps.Provider == nil {
+	if s.currentDeps().Provider == nil {
 		http.Error(w, "provider not configured", http.StatusServiceUnavailable)
 		return
 	}
@@ -142,9 +142,10 @@ func (s *Server) handleConversationPost(w http.ResponseWriter, r *http.Request) 
 	s.runCancel = cancel
 	s.runMu.Unlock()
 
+	deps := s.currentDeps()
 	eng := agent.NewEngineWithToolsAndAux(
-		s.opts.Deps.Provider, s.opts.Deps.AuxProvider, s.opts.Deps.Storage,
-		s.opts.Deps.ToolReg, s.opts.Deps.AgentCfg, s.opts.Deps.Platform,
+		deps.Provider, deps.AuxProvider, deps.Storage,
+		s.activeToolReg(), deps.AgentCfg, deps.Platform,
 	)
 	wireEngineToHub(eng, s.streams)
 

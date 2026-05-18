@@ -44,6 +44,13 @@
   "skills.errorRetry": "重试",
   "skills.rowMissing": "（缺失）",
   "skills.toggleAria": "启用 {{name}}",
+  "tools.list": "工具",
+  "tools.listMeta": "可用 {{count}} · 已禁用 {{disabledCount}}",
+  "tools.loading": "加载工具中…",
+  "tools.error": "加载工具失败：{{msg}}",
+  "tools.errorRetry": "重试",
+  "tools.empty": "暂无可用工具。",
+  "tools.toggleAria": "启用 {{name}}",
   "error.keyRequired": "实例标识不能为空。",
   "error.keyFormat": "请使用小写字母、数字、下划线,并以字母开头。",
   "error.keyDuplicate": "已存在名为 \"{{key}}\" 的实例。",
@@ -142,6 +149,8 @@
   "summary.logLevel": "日志级别",
   "summary.metrics": "指标",
   "summary.tracing": "追踪",
+  "chat.greeting": "今天我能帮您什么？",
+  "chat.noTools": "暂无可用工具",
   "chat.errorEditFailed": "编辑失败：{{msg}}",
   "chat.errorDeleteFailed": "删除失败：{{msg}}"
 }

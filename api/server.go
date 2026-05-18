@@ -9,6 +9,7 @@ import (
 	"io/fs"
 	"net/http"
 	"sync"
+	"sync/atomic"
 	"time"
 
 	"github.com/go-chi/chi/v5"
@@ -96,7 +97,13 @@ type ServerOpts struct {
 	// (cli/web.go) fill this via cli.BuildEngineDeps. Required for the
 	// POST /api/conversation/messages endpoint; zero-value leaves the
 	// endpoint returning 503.
-	Deps EngineDeps
+	Deps *EngineDeps
+
+	// DepsBuilder rebuilds the provider-dependent parts of EngineDeps
+	// from a new config. When non-nil, handleConfigPut invokes it after
+	// parsing the payload so model/provider changes take effect without
+	// a server restart.
+	DepsBuilder func(ctx context.Context, cfg *config.Config, current *EngineDeps) (*EngineDeps, error)
 }
 
 // Server is the API server.
@@ -111,6 +118,10 @@ type Server struct {
 	runCancel context.CancelFunc
 
 	idle *idle.IdleConsolidator
+
+	// deps holds the current EngineDeps and is swapped atomically when
+	// the configuration is hot-reloaded.
+	deps atomic.Pointer[EngineDeps]
 }
 
 // NewServer wires routes and middleware.
@@ -118,11 +129,15 @@ func NewServer(opts *ServerOpts) (*Server, error) {
 	if opts == nil || opts.Config == nil {
 		return nil, fmt.Errorf("api: ServerOpts.Config is required")
 	}
+	if opts.Deps == nil {
+		opts.Deps = &EngineDeps{}
+	}
 	streams := opts.Streams
 	if streams == nil {
 		streams = NewMemoryStreamHub()
 	}
 	s := &Server{opts: opts, bootedAt: time.Now(), streams: streams}
+	s.deps.Store(opts.Deps)
 	s.router = s.buildRouter()
 	return s, nil
 }
@@ -140,6 +155,42 @@ func (s *Server) SetIdleConsolidator(c *idle.IdleConsolidator) {
 	s.idle = c
 }
 
+// currentDeps returns the live EngineDeps. Callers must not mutate the
+// returned value.
+func (s *Server) currentDeps() *EngineDeps {
+	return s.deps.Load()
+}
+
+// disabledTools returns a set of tool names that are currently disabled
+// according to the live config. Since s.opts.Config is atomically
+// updated by handleConfigPut, this always reflects the latest state.
+func (s *Server) disabledTools() map[string]bool {
+	m := make(map[string]bool)
+	for _, name := range s.opts.Config.Tools.Disabled {
+		m[name] = true
+	}
+	return m
+}
+
+// activeToolReg returns a new Registry containing only the tools that
+// are NOT in the disabled list. Callers get a fresh copy on each call
+// so the result is safe to pass into the engine. The overhead is
+// negligible because registries are small (< 50 entries).
+func (s *Server) activeToolReg() *tool.Registry {
+	deps := s.currentDeps()
+	if deps.ToolReg == nil {
+		return nil
+	}
+	disabled := s.disabledTools()
+	active := tool.NewRegistry()
+	for _, e := range deps.ToolReg.Entries(nil) {
+		if !disabled[e.Name] {
+			active.Register(e)
+		}
+	}
+	return active
+}
+
 // ListenAndServe binds to addr and serves until the server is shut down.
 func (s *Server) ListenAndServe(addr string) error {
 	httpSrv := &http.Server{
@@ -155,7 +206,7 @@ func (s *Server) buildRouter() chi.Router {
 
 	r.Use(func(next http.Handler) http.Handler {
 		return http.HandlerFunc(func(w http.ResponseWriter, req *http.Request) {
-			if h := s.opts.Deps.HTTPIdle; h != nil {
+			if h := s.currentDeps().HTTPIdle; h != nil {
 				h.NoteActivity()
 			}
 			next.ServeHTTP(w, req)
@@ -265,7 +316,8 @@ func writeJSONStatus(w http.ResponseWriter, code int, v interface{}) {
 // and returns the assistant reply text. Returns an error if a turn is
 // already in flight.
 func (s *Server) RunTurn(ctx context.Context, userMessage string) (string, error) {
-	if s.opts.Deps.Provider == nil {
+	deps := s.currentDeps()
+	if deps.Provider == nil {
 		return "", errors.New("provider not configured")
 	}
 	s.runMu.Lock()
@@ -285,12 +337,12 @@ func (s *Server) RunTurn(ctx context.Context, userMessage string) (string, error
 	}()
 
 	eng := agent.NewEngineWithToolsAndAux(
-		s.opts.Deps.Provider, s.opts.Deps.AuxProvider, s.opts.Deps.Storage,
-		s.opts.Deps.ToolReg, s.opts.Deps.AgentCfg, s.opts.Deps.Platform,
+		deps.Provider, deps.AuxProvider, deps.Storage,
+		s.activeToolReg(), deps.AgentCfg, deps.Platform,
 	)
-	if s.opts.Deps.MemProvider != nil {
-		eng.Memory().AddProvider(s.opts.Deps.MemProvider)
-		if r, ok := s.opts.Deps.MemProvider.(memprovider.Recaller); ok {
+	if deps.MemProvider != nil {
+		eng.Memory().AddProvider(deps.MemProvider)
+		if r, ok := deps.MemProvider.(memprovider.Recaller); ok {
 			mc := s.opts.Config.Memory.MetaClaw
 			memK := mc.InjectCount
 			if memK <= 0 {
@@ -310,23 +362,23 @@ func (s *Server) RunTurn(ctx context.Context, userMessage string) (string, error
 					DedupJaccard: 0.5,
 				})
 			}
-			if mc.JudgeEnabled && s.opts.Deps.AuxProvider != nil {
-				eng.SetConversationJudge(agent.NewLLMJudge(s.opts.Deps.AuxProvider))
+			if mc.JudgeEnabled && deps.AuxProvider != nil {
+				eng.SetConversationJudge(agent.NewLLMJudge(deps.AuxProvider))
 			}
 		}
 	}
 	wireEngineToHub(eng, s.streams)
 
 	// Wire skills evolver and retriever
-	if s.opts.Deps.SkillsEvolver != nil {
-		eng.SetSkillsEvolver(s.opts.Deps.SkillsEvolver)
+	if deps.SkillsEvolver != nil {
+		eng.SetSkillsEvolver(deps.SkillsEvolver)
 	}
-	if s.opts.Deps.SkillsRetriever != nil {
+	if deps.SkillsRetriever != nil {
 		injectCount := s.opts.Config.Skills.InjectCount
 		if injectCount <= 0 {
 			injectCount = 3
 		}
-		ret := s.opts.Deps.SkillsRetriever
+		ret := deps.SkillsRetriever
 		eng.SetActiveSkillsProvider(func(userMsg string) []agent.ActiveSkill {
 			snippets, _ := ret.Retrieve(runCtx, userMsg, injectCount)
 			return snippetsToActiveSkills(snippets)

@@ -44,7 +44,7 @@ func newProxyTestServer(t *testing.T, p core.LanguageModel) *Server {
 	cfg.Proxy.Enabled = true
 	srv, err := NewServer(&ServerOpts{
 		Config: cfg,
-		Deps:   EngineDeps{Provider: p},
+		Deps:   &EngineDeps{Provider: p},
 	})
 	require.NoError(t, err)
 	return srv
@@ -83,7 +83,7 @@ func TestV1Messages_DisabledReturnsNotFound(t *testing.T) {
 	cfg := &config.Config{} // proxy disabled by default
 	srv, err := NewServer(&ServerOpts{
 		Config: cfg,
-		Deps:   EngineDeps{Provider: stub},
+		Deps:   &EngineDeps{Provider: stub},
 	})
 	require.NoError(t, err)
 
@@ -98,7 +98,7 @@ func TestV1Messages_ProviderNotConfigured(t *testing.T) {
 	cfg.Proxy.Enabled = true
 	srv, err := NewServer(&ServerOpts{
 		Config: cfg,
-		Deps:   EngineDeps{Provider: nil},
+		Deps:   &EngineDeps{},
 	})
 	require.NoError(t, err)
 

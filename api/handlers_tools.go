@@ -1,13 +1,31 @@
 package api
 
-import "net/http"
+import (
+	"net/http"
+	"sort"
+)
 
-// handleToolsList responds to GET /api/tools. It returns an empty list
-// by default: the REPL-wired tool registry is per-session and not
-// trivially reachable from the read-only web surface without pulling
-// the agent/ package into our dependency graph. The WebSocket agent
-// can replace this by mounting its own route later, or we can extend
-// ServerOpts with a tool registry when the frontend needs it.
+// handleToolsList responds to GET /api/tools with all registered tools
+// and their current enabled/disabled status. The full registry is
+// always exposed so the UI can list disabled tools for re-enabling.
 func (s *Server) handleToolsList(w http.ResponseWriter, _ *http.Request) {
-	writeJSON(w, ToolsResponse{Tools: []ToolDTO{}})
+	deps := s.currentDeps()
+	if deps.ToolReg == nil {
+		writeJSON(w, ToolsResponse{Tools: []ToolDTO{}})
+		return
+	}
+
+	disabled := s.disabledTools()
+	entries := deps.ToolReg.Entries(nil)
+	out := make([]ToolDTO, 0, len(entries))
+	for _, e := range entries {
+		out = append(out, ToolDTO{
+			Name:        e.Name,
+			Description: e.Description,
+			Toolset:     e.Toolset,
+			Enabled:     !disabled[e.Name],
+		})
+	}
+	sort.Slice(out, func(i, j int) bool { return out[i].Name < out[j].Name })
+	writeJSON(w, ToolsResponse{Tools: out})
 }

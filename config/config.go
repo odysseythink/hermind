@@ -26,6 +26,7 @@ type Config struct {
 	Metrics           MetricsConfig             `yaml:"metrics,omitempty"`
 	Tracing           TracingConfig             `yaml:"tracing,omitempty"`
 	Skills            SkillsConfig              `yaml:"skills,omitempty"`
+	Tools             ToolsConfig               `yaml:"tools,omitempty"`
 	Web               WebConfig                 `yaml:"web,omitempty"`
 	Benchmark         BenchmarkConfig           `yaml:"benchmark,omitempty"`
 	// Proxy controls the Anthropic-compatible /v1/messages endpoint.
@@ -133,6 +134,12 @@ type SkillsConfig struct {
 	// generations. Default 5 (set by reader fallback). 0 disables the
 	// decay (signals weighted as 1.0).
 	GenerationHalfLife int `yaml:"generation_half_life,omitempty"`
+}
+
+// ToolsConfig records user tool enable/disable selections.
+// An empty struct means "all registered tools are active".
+type ToolsConfig struct {
+	Disabled []string `yaml:"disabled,omitempty"`
 }
 
 // CronConfig holds cron scheduler configuration.

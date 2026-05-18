@@ -154,3 +154,16 @@ export const TTSResponseSchema = z.object({
   audio_url: z.string(),
 });
 export type TTSResponse = z.infer<typeof TTSResponseSchema>;
+
+export const ToolSchema = z.object({
+  name: z.string(),
+  description: z.string().optional(),
+  toolset: z.string().optional(),
+  enabled: z.boolean(),
+});
+export type Tool = z.infer<typeof ToolSchema>;
+
+export const ToolsResponseSchema = z.object({
+  tools: z.array(ToolSchema),
+});
+export type ToolsResponse = z.infer<typeof ToolsResponseSchema>;

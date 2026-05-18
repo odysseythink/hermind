@@ -102,6 +102,7 @@ export default function SettingsPanel(props: ContentPanelProps) {
             value={value ?? {}}
             originalValue={original ?? {}}
             onField={(field, v) => props.onConfigField(section.key, field, v)}
+            onSectionField={props.onConfigField}
             config={props.config as unknown as Record<string, unknown>}
           />
         );

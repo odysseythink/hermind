@@ -14,3 +14,5 @@ web/dist/
 dist/
 .claude/
 .gstack/
+desktop-electron/dist/
+desktop-electron/node_modules/

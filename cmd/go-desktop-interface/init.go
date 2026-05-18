@@ -41,7 +41,7 @@ func initHermind(configPath string) (map[string]string, error) {
 		Storage:      app.Storage,
 		Version:      cli.Version,
 		Streams:      streams,
-		Deps:         deps,
+		Deps:         &deps,
 	})
 	if err != nil {
 		return nil, fmt.Errorf("new server: %w", err)

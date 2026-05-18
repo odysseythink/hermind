@@ -23,7 +23,7 @@ const v1MessagesMaxBodyBytes = 10 << 20 // 10 MB
 // handleV1Messages serves POST /v1/messages.
 func (s *Server) handleV1Messages(w http.ResponseWriter, r *http.Request) {
 	start := time.Now()
-	prov := s.opts.Deps.Provider
+	prov := s.currentDeps().Provider
 	if prov == nil {
 		writeAnthropicError(w, http.StatusServiceUnavailable, "service_unavailable", "no LLM provider configured")
 		return

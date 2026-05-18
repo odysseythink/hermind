@@ -59,7 +59,10 @@ func runWeb(ctx context.Context, app *App, opts webRunOptions) error {
 		Storage:      app.Storage,
 		Version:      Version,
 		Streams:      streams,
-		Deps:         deps,
+		Deps:         &deps,
+		DepsBuilder: func(ctx context.Context, cfg *config.Config, current *api.EngineDeps) (*api.EngineDeps, error) {
+			return RebuildProviderDeps(ctx, cfg, current)
+		},
 	})
 	if err != nil {
 		return err
