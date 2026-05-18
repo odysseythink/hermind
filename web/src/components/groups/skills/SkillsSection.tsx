@@ -3,7 +3,7 @@ import { useTranslation } from 'react-i18next';
 import styles from './SkillsSection.module.css';
 import Switch from '../../fields/Switch';
 import { apiFetch, ApiError } from '../../../api/client';
-import { SkillsResponseSchema, type ConfigSection as ConfigSectionT } from '../../../api/schemas';
+import { SkillsResponseSchema, ToolsResponseSchema, type ConfigSection as ConfigSectionT } from '../../../api/schemas';
 import { useDescriptorT } from '../../../i18n/useDescriptorT';
 
 export interface SkillsSectionProps {
@@ -11,12 +11,18 @@ export interface SkillsSectionProps {
   value: Record<string, unknown>;
   originalValue: Record<string, unknown>;
   onField: (field: string, value: unknown) => void;
+  onSectionField?: (sectionKey: string, field: string, value: unknown) => void;
   config?: Record<string, unknown>;
 }
 
 type FetchState =
   | { status: 'loading' }
   | { status: 'ok'; skills: { name: string; description: string; enabled: boolean }[] }
+  | { status: 'error'; message: string };
+
+type ToolFetchState =
+  | { status: 'loading' }
+  | { status: 'ok'; tools: { name: string; description: string; toolset: string; enabled: boolean }[] }
   | { status: 'error'; message: string };
 
 type SkillRow = {
@@ -50,6 +56,7 @@ export default function SkillsSection(props: SkillsSectionProps) {
   const { t } = useTranslation('ui');
   const dt = useDescriptorT();
   const [fetchState, setFetchState] = useState<FetchState>({ status: 'loading' });
+  const [toolState, setToolState] = useState<ToolFetchState>({ status: 'loading' });
 
   const load = useCallback((signal?: AbortSignal) => {
     setFetchState({ status: 'loading' });
@@ -69,11 +76,31 @@ export default function SkillsSection(props: SkillsSectionProps) {
       });
   }, []);
 
+  const loadTools = useCallback((signal?: AbortSignal) => {
+    setToolState({ status: 'loading' });
+    apiFetch('/api/tools', { schema: ToolsResponseSchema, signal })
+      .then(resp => {
+        const normalized = resp.tools.map(t => ({
+          name: t.name,
+          description: t.description || '',
+          toolset: t.toolset || '',
+          enabled: t.enabled,
+        }));
+        setToolState({ status: 'ok', tools: normalized });
+      })
+      .catch(err => {
+        if (signal?.aborted) return;
+        const msg = err instanceof ApiError ? `${err.status}` : err instanceof Error ? err.message : String(err);
+        setToolState({ status: 'error', message: msg });
+      });
+  }, []);
+
   useEffect(() => {
     const ac = new AbortController();
     load(ac.signal);
+    loadTools(ac.signal);
     return () => ac.abort();
-  }, [load]);
+  }, [load, loadTools]);
 
   const disabled = (props.value.disabled as string[] | undefined) ?? [];
   const disabledSet = new Set(disabled);
@@ -101,12 +128,32 @@ export default function SkillsSection(props: SkillsSectionProps) {
   const total = fetchState.status === 'ok' ? rows.length : 0;
   const disabledCount = rows.filter(r => !r.enabled).length;
 
+  const toolRows = toolState.status === 'ok'
+    ? toolState.tools.map(t => ({
+        name: t.name,
+        description: t.description,
+        toolset: t.toolset,
+        enabled: t.enabled,
+      }))
+    : [];
+  const toolDisabledCount = toolRows.filter(r => !r.enabled).length;
+
   function toggleSkill(name: string, nextEnabled: boolean) {
     const cur = (props.value.disabled as string[] | undefined) ?? [];
     const next = nextEnabled
       ? cur.filter(n => n !== name)
       : [...cur.filter(n => n !== name), name].sort();
     props.onField('disabled', next);
+  }
+
+  function toggleTool(name: string, nextEnabled: boolean) {
+    if (!props.onSectionField) return;
+    const toolsCfg = (props.config?.tools as Record<string, unknown> | undefined) ?? {};
+    const cur = (toolsCfg.disabled as string[] | undefined) ?? [];
+    const next = nextEnabled
+      ? cur.filter(n => n !== name)
+      : [...cur.filter(n => n !== name), name].sort();
+    props.onSectionField('tools', 'disabled', next);
   }
 
   const sectionLabel = dt.sectionLabel(props.section.key, props.section.label);
@@ -214,6 +261,48 @@ export default function SkillsSection(props: SkillsSectionProps) {
               checked={row.enabled}
               onChange={(next) => toggleSkill(row.name, next)}
               ariaLabel={t('skills.toggleAria', { name: row.name })}
+            />
+          </div>
+        ))}
+      </div>
+
+      <div className={styles.panel}>
+        <h3 className={styles.panelTitle}>
+          {t('tools.list')}
+          <span className={styles.panelTitleMeta}>
+            — {t('tools.listMeta', { count: toolRows.length, disabledCount: toolDisabledCount })}
+          </span>
+        </h3>
+
+        {toolState.status === 'loading' && (
+          <div className={styles.statusRow}>{t('tools.loading')}</div>
+        )}
+        {toolState.status === 'error' && (
+          <div className={styles.errorRow}>
+            <span>{t('tools.error', { msg: toolState.message })}</span>
+            <button type="button" className={styles.retryButton} onClick={() => loadTools()}>
+              {t('tools.errorRetry')}
+            </button>
+          </div>
+        )}
+        {toolState.status === 'ok' && toolRows.length === 0 && (
+          <div className={styles.statusRow}>{t('tools.empty')}</div>
+        )}
+        {toolState.status === 'ok' && toolRows.map(row => (
+          <div key={row.name} className={styles.skillRow}>
+            <div>
+              <div>
+                <span className={styles.skillName}>{row.name}</span>
+                {row.toolset && (
+                  <span className={styles.skillNameMissing}>{row.toolset}</span>
+                )}
+              </div>
+              {row.description && <div className={styles.skillDescription}>{row.description}</div>}
+            </div>
+            <Switch
+              checked={row.enabled}
+              onChange={(next) => toggleTool(row.name, next)}
+              ariaLabel={t('tools.toggleAria', { name: row.name })}
             />
           </div>
         ))}

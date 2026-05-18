@@ -16,7 +16,7 @@ export interface TopBarProps {
 
 export default function TopBar({ dirtyCount, status, onSave, mode = 'settings', onModeChange }: TopBarProps) {
   const { t } = useTranslation('ui');
-  const platform = null;  const busy = status === 'saving' || status === 'applying';
+    const busy = status === 'saving' || status === 'applying';
   const dotClass = busy
     ? styles.dotBusy
     : dirtyCount > 0

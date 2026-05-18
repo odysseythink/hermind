@@ -16,13 +16,29 @@ import (
 func (s *Server) handleConfigSchema(w http.ResponseWriter, r *http.Request) {
 	out := BuildConfigSchema()
 	for i := range out.Sections {
-		if out.Sections[i].Key != "skills" {
-			continue
-		}
-		names := discoveredSkillNames(r.Context())
-		for j := range out.Sections[i].Fields {
-			if out.Sections[i].Fields[j].Name == "disabled" {
-				out.Sections[i].Fields[j].Enum = names
+		switch out.Sections[i].Key {
+		case "skills":
+			names := discoveredSkillNames(r.Context())
+			for j := range out.Sections[i].Fields {
+				if out.Sections[i].Fields[j].Name == "disabled" {
+					out.Sections[i].Fields[j].Enum = names
+				}
+			}
+		case "tools":
+			deps := s.currentDeps()
+			var names []string
+			if deps.ToolReg != nil {
+				entries := deps.ToolReg.Entries(nil)
+				names = make([]string, 0, len(entries))
+				for _, e := range entries {
+					names = append(names, e.Name)
+				}
+				sort.Strings(names)
+			}
+			for j := range out.Sections[i].Fields {
+				if out.Sections[i].Fields[j].Name == "disabled" {
+					out.Sections[i].Fields[j].Enum = names
+				}
 			}
 		}
 	}

@@ -6,6 +6,7 @@ coverage.txt
 .env
 node_modules/
 /hermind
+/*.exe
 
 # Frontend (Stage 3)
 web/node_modules

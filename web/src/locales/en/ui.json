@@ -45,6 +45,13 @@
   "skills.errorRetry": "Retry",
   "skills.rowMissing": "(missing)",
   "skills.toggleAria": "Enable {{name}}",
+  "tools.list": "Tools",
+  "tools.listMeta": "{{count}} available · {{disabledCount}} disabled",
+  "tools.loading": "Loading tools…",
+  "tools.error": "Failed to load tools: {{msg}}",
+  "tools.errorRetry": "Retry",
+  "tools.empty": "No tools available.",
+  "tools.toggleAria": "Enable {{name}}",
   "error.keyRequired": "Instance key is required.",
   "error.keyFormat": "Use lowercase letters, digits, underscore. Must start with a letter.",
   "error.keyDuplicate": "An instance named \"{{key}}\" already exists.",
@@ -143,6 +150,8 @@
   "summary.logLevel": "Log level",
   "summary.metrics": "Metrics",
   "summary.tracing": "Tracing",
+  "chat.greeting": "What can I help you with today?",
+  "chat.noTools": "No tools available",
   "chat.errorEditFailed": "Edit failed: {{msg}}",
   "chat.errorDeleteFailed": "Delete failed: {{msg}}"
 }

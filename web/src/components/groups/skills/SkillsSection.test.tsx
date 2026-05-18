@@ -18,12 +18,43 @@ const skillsSection: ConfigSectionT = {
 };
 
 function mockSkillsApi(skills: Array<{ name: string; description?: string; enabled: boolean }>) {
-  return vi.spyOn(globalThis, 'fetch').mockResolvedValue(
-    new Response(JSON.stringify({ skills }), {
-      status: 200,
-      headers: { 'Content-Type': 'application/json' },
-    }),
-  );
+  return vi.spyOn(globalThis, 'fetch').mockImplementation((input) => {
+    const url = typeof input === 'string' ? input : input instanceof URL ? input.href : input.url;
+    if (url.includes('/api/tools')) {
+      return Promise.resolve(
+        new Response(JSON.stringify({ tools: [] }), {
+          status: 200,
+          headers: { 'Content-Type': 'application/json' },
+        }),
+      );
+    }
+    return Promise.resolve(
+      new Response(JSON.stringify({ skills }), {
+        status: 200,
+        headers: { 'Content-Type': 'application/json' },
+      }),
+    );
+  });
+}
+
+function mockToolsApi(tools: Array<{ name: string; description?: string; toolset?: string; enabled: boolean }>) {
+  return vi.spyOn(globalThis, 'fetch').mockImplementation((input) => {
+    const url = typeof input === 'string' ? input : input instanceof URL ? input.href : input.url;
+    if (url.includes('/api/tools')) {
+      return Promise.resolve(
+        new Response(JSON.stringify({ tools }), {
+          status: 200,
+          headers: { 'Content-Type': 'application/json' },
+        }),
+      );
+    }
+    return Promise.resolve(
+      new Response(JSON.stringify({ skills: [] }), {
+        status: 200,
+        headers: { 'Content-Type': 'application/json' },
+      }),
+    );
+  });
 }
 
 afterEach(() => {
@@ -132,8 +163,17 @@ describe('SkillsSection', () => {
 
   it('shows error + retry on fetch failure, retry refetches', async () => {
     const fetchSpy = vi.spyOn(globalThis, 'fetch')
-      .mockResolvedValueOnce(new Response('{"error":"boom"}', { status: 500, headers: { 'Content-Type': 'application/json' } }))
-      .mockResolvedValueOnce(new Response('{"skills":[]}', { status: 200, headers: { 'Content-Type': 'application/json' } }));
+      .mockImplementation((input) => {
+        const url = typeof input === 'string' ? input : input instanceof URL ? input.href : input.url;
+        if (url.includes('/api/tools')) {
+          return Promise.resolve(
+            new Response('{"tools":[]}', { status: 200, headers: { 'Content-Type': 'application/json' } }),
+          );
+        }
+        return Promise.resolve(
+          new Response('{"error":"boom"}', { status: 500, headers: { 'Content-Type': 'application/json' } }),
+        );
+      });
     render(
       <SkillsSection
         section={skillsSection}
@@ -144,9 +184,21 @@ describe('SkillsSection', () => {
       />,
     );
     await waitFor(() => screen.getByText(/failed to load skills/i));
+    // Update mock so retry succeeds
+    fetchSpy.mockImplementation((input) => {
+      const url = typeof input === 'string' ? input : input instanceof URL ? input.href : input.url;
+      if (url.includes('/api/tools')) {
+        return Promise.resolve(
+          new Response('{"tools":[]}', { status: 200, headers: { 'Content-Type': 'application/json' } }),
+        );
+      }
+      return Promise.resolve(
+        new Response('{"skills":[]}', { status: 200, headers: { 'Content-Type': 'application/json' } }),
+      );
+    });
     fireEvent.click(screen.getByText('Retry'));
     await waitFor(() => screen.getByText(/no skills installed/i));
-    expect(fetchSpy).toHaveBeenCalledTimes(2);
+    expect(fetchSpy).toHaveBeenCalledTimes(3); // initial skills+tools, retry skills
   });
 
   it('clicking the auto_extract switch dispatches onField with a boolean', async () => {
@@ -198,5 +250,68 @@ describe('SkillsSection', () => {
     const input = document.querySelector('#skills-inject-count') as HTMLInputElement;
     fireEvent.change(input, { target: { value: '' } });
     expect(onField).toHaveBeenCalledWith('inject_count', 0);
+  });
+
+  it('renders tool panel with fetched tools and switches', async () => {
+    mockToolsApi([
+      { name: 'file_read', description: 'Read a file', toolset: 'file', enabled: true },
+      { name: 'web_search', description: 'Search the web', toolset: 'web', enabled: false },
+    ]);
+    render(
+      <SkillsSection
+        section={skillsSection}
+        value={{}}
+        originalValue={{}}
+        onField={vi.fn()}
+        onSectionField={vi.fn()}
+        config={{ tools: { disabled: ['web_search'] } }}
+      />,
+    );
+    await waitFor(() => screen.getByText('file_read'));
+    expect(screen.getByText('file_read')).toBeInTheDocument();
+    expect(screen.getByText('Read a file')).toBeInTheDocument();
+    expect(screen.getByText('web_search')).toBeInTheDocument();
+  });
+
+  it('toggling a tool OFF dispatches onSectionField with updated disabled list', async () => {
+    mockToolsApi([
+      { name: 'file_read', description: '', toolset: 'file', enabled: true },
+      { name: 'web_search', description: '', toolset: 'web', enabled: true },
+    ]);
+    const onSectionField = vi.fn();
+    render(
+      <SkillsSection
+        section={skillsSection}
+        value={{}}
+        originalValue={{}}
+        onField={vi.fn()}
+        onSectionField={onSectionField}
+        config={{ tools: { disabled: [] } }}
+      />,
+    );
+    await waitFor(() => screen.getByText('file_read'));
+    fireEvent.click(screen.getByRole('switch', { name: 'Enable file_read' }));
+    expect(onSectionField).toHaveBeenCalledWith('tools', 'disabled', ['file_read']);
+  });
+
+  it('toggling a disabled tool ON dispatches onSectionField with removed name', async () => {
+    mockToolsApi([
+      { name: 'file_read', description: '', toolset: 'file', enabled: false },
+      { name: 'web_search', description: '', toolset: 'web', enabled: true },
+    ]);
+    const onSectionField = vi.fn();
+    render(
+      <SkillsSection
+        section={skillsSection}
+        value={{}}
+        originalValue={{}}
+        onField={vi.fn()}
+        onSectionField={onSectionField}
+        config={{ tools: { disabled: ['file_read'] } }}
+      />,
+    );
+    await waitFor(() => screen.getByText('file_read'));
+    fireEvent.click(screen.getByRole('switch', { name: 'Enable file_read' }));
+    expect(onSectionField).toHaveBeenCalledWith('tools', 'disabled', []);
   });
 });

@@ -89,6 +89,8 @@ type OKResponse struct {
 type ToolDTO struct {
 	Name        string `json:"name"`
 	Description string `json:"description,omitempty"`
+	Toolset     string `json:"toolset,omitempty"`
+	Enabled     bool   `json:"enabled"`
 }
 
 // ToolsResponse is the payload for GET /api/tools.
