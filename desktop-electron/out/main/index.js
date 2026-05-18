@@ -22,6 +22,7 @@ function _interopNamespaceDefault(e) {
 }
 const path__namespace = /* @__PURE__ */ _interopNamespaceDefault(path);
 const fs__namespace = /* @__PURE__ */ _interopNamespaceDefault(fs);
+const os__namespace = /* @__PURE__ */ _interopNamespaceDefault(os);
 const MAX_RETRIES = 5;
 const RETRY_DELAY_MS = 2e3;
 const HEALTH_POLL_INTERVAL_MS = 500;
@@ -431,6 +432,22 @@ function log(msg) {
 log("=== Main process starting ===");
 log("appPath: " + electron.app.getAppPath());
 log("resourcesPath: " + process.resourcesPath);
+function restoreHermindData() {
+  if (!electron.app.isPackaged) return;
+  const installDir = path__namespace.dirname(process.resourcesPath);
+  const hermindDir = path__namespace.join(installDir, ".hermind");
+  const backupDir = path__namespace.join(os__namespace.tmpdir(), "hermind-data-backup");
+  if (fs__namespace.existsSync(backupDir) && !fs__namespace.existsSync(hermindDir)) {
+    try {
+      fs__namespace.cpSync(backupDir, hermindDir, { recursive: true, force: true });
+      fs__namespace.rmSync(backupDir, { recursive: true, force: true });
+      log("Restored .hermind from temp backup");
+    } catch (err) {
+      log("Failed to restore .hermind: " + err.message);
+    }
+  }
+}
+restoreHermindData();
 let goManager = createGoProcessManager();
 electron.app.whenReady().then(async () => {
   log("app.whenReady fired");
