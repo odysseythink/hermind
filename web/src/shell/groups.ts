@@ -46,7 +46,7 @@ export const GROUPS: readonly GroupDef[] = [
     id: 'skills',
     label: 'Skills',
     plannedStage: 'done',
-    configKeys: ['skills'],
+    configKeys: ['skills', 'tools'],
     description: 'Skill enable/disable and per-platform overrides.',
     bullets: [
       'Global disabled list',
