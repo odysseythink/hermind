@@ -34,6 +34,7 @@ export const ConfigFieldSchema = z.object({
   required: z.boolean().optional(),
   default: z.unknown().optional(),
   enum: z.array(z.string()).optional(),
+  group: z.string().optional(),
   visible_when: ConfigPredicateSchema.optional(),
   datalist_source: DatalistSourceSchema.optional(),
 });

@@ -1,4 +1,4 @@
-import type { ConfigField } from '../../../api/schemas';
+import type { ConfigField } from '../../../../api/schemas';
 
 export interface ToolDetailProps {
   name: string;

@@ -2,7 +2,7 @@ import { useMemo } from 'react';
 import pageStyles from '../SkillToolsConfigPage.module.css';
 import styles from './ToolDetailFallback.module.css';
 import Switch from '../../../fields/Switch';
-import type { ConfigField, ConfigPredicate } from '../../../api/schemas';
+import type { ConfigField, ConfigPredicate } from '../../../../api/schemas';
 import type { ToolDetailProps } from './types';
 
 function asBool(v: unknown): boolean {
@@ -223,7 +223,7 @@ function SchemaFieldRow({
         aria-label={label}
       >
         {!field.required && <option value="">—</option>}
-        {choices.map((c) => (
+        {choices.map((c: string) => (
           <option key={c} value={c}>
             {c}
           </option>
@@ -245,7 +245,7 @@ function SchemaFieldRow({
     const choices = field.enum ?? [];
     input = (
       <div className={styles.multiSelect}>
-        {choices.map((c) => (
+        {choices.map((c: string) => (
           <label key={c} className={styles.checkboxRow}>
             <input
               type="checkbox"
