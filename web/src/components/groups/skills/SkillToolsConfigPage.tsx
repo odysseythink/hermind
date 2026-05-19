@@ -10,6 +10,9 @@ import {
   type ConfigField,
 } from '../../../api/schemas';
 import { useDescriptorT } from '../../../i18n/useDescriptorT';
+import { toolDetailRegistry, mcpDetailRegistry } from './detail-renderers/registry';
+import ToolDetailFallback from './detail-renderers/ToolDetailFallback';
+import McpDetailFallback from './detail-renderers/McpDetailFallback';
 
 export interface SkillToolsConfigPageProps {
   section: ConfigSectionT;
@@ -317,8 +320,40 @@ export default function SkillToolsConfigPage(props: SkillToolsConfigPageProps) {
           </div>
         )}
         {selected?.type === 'skill' && renderSkillDetail(selected.name, skillsState, disabledSkillSet, toggleSkill, props.config, props.onSectionField)}
-        {selected?.type === 'tool' && renderToolDetail(selected.name, toolsState, toolsDisabledSet, toggleTool, props.config, props.onSectionField)}
-        {selected?.type === 'mcp' && renderMcpDetail(selected.name, mcpList, toggleMcp, props.config, props.onSectionField)}
+        {selected?.type === 'tool' && (() => {
+          if (toolsState.status !== 'ok') return null;
+          const tl = toolsState.data.find(t => t.name === selected.name);
+          if (!tl) return null;
+          const enabled = !toolsDisabledSet.has(tl.name);
+          const Renderer = toolDetailRegistry[tl.name] ?? ToolDetailFallback;
+          return (
+            <Renderer
+              name={tl.name}
+              description={tl.description}
+              toolset={tl.toolset}
+              enabled={enabled}
+              settings_schema={tl.settings_schema}
+              onToggle={(next) => toggleTool(tl.name, next)}
+              config={props.config}
+              onSectionField={props.onSectionField!}
+            />
+          );
+        })()}
+        {selected?.type === 'mcp' && (() => {
+          const mcp = mcpList.find(m => m.key === selected.name);
+          if (!mcp) return null;
+          const Renderer = mcpDetailRegistry[mcp.key] ?? McpDetailFallback;
+          return (
+            <Renderer
+              key={mcp.key}
+              command={mcp.command}
+              enabled={mcp.enabled}
+              onToggle={(next) => toggleMcp(mcp.key, next)}
+              serverConfig={mcpServers?.[mcp.key] ?? {}}
+              onServerChange={(next) => props.onSectionField?.('mcp', 'servers', { ...mcpServers, [mcp.key]: next })}
+            />
+          );
+        })()}
       </div>
     </section>
   );
@@ -369,129 +404,45 @@ function renderSkillDetail(
       <div className={styles.configSection}>
         <h3>个性化配置</h3>
         {sk.settings_schema && sk.settings_schema.length > 0
-          ? renderSchemaFields(name, sk.settings_schema, _config, _onSectionField)
+          ? renderSkillSchemaFields(name, sk.settings_schema, _config, _onSectionField)
           : <p className={styles.noSettings}>此技能暂无配置项。</p>}
       </div>
     </div>
   );
 }
 
-function renderToolDetail(
-  name: string,
-  state: FetchState<ToolItem[]>,
-  disabledSet: Set<string>,
-  onToggle: (name: string, enabled: boolean) => void,
-  config?: Record<string, unknown>,
-  onSectionField?: (sectionKey: string, field: string, value: unknown) => void,
-) {
-  if (state.status !== 'ok') return null;
-  const tl = state.data.find(t => t.name === name);
-  if (!tl) return null;
-  const enabled = !disabledSet.has(tl.name);
-  return (
-    <div className={styles.detailContent}>
-      <div className={styles.detailHeader}>
-        <h2 className={styles.detailTitle}>
-          {tl.name}
-          {tl.toolset && <span style={{ fontSize: 'var(--fs-sm)', color: 'var(--muted)', marginLeft: 'var(--space-2)' }}>({tl.toolset})</span>}
-        </h2>
-        <Switch checked={enabled} onChange={(next) => onToggle(tl.name, next)} ariaLabel={`Enable ${tl.name}`} />
-      </div>
-      {tl.description && <div className={styles.detailDesc}>{tl.description}</div>}
-      <div className={styles.tabs}>
-        <div className={`${styles.tab} ${styles.active}`}>配置</div>
-        <div className={styles.tab}>权限</div>
-      </div>
-      <div className={styles.configSection}>
-        <h3>个性化配置</h3>
-        {tl.settings_schema && tl.settings_schema.length > 0
-          ? renderSchemaFields(name, tl.settings_schema, config, onSectionField)
-          : <p className={styles.noSettings}>此工具暂无配置项。</p>}
-      </div>
-    </div>
-  );
-}
-
-function renderMcpDetail(
-  name: string,
-  list: Array<{ key: string; command: string; enabled: boolean }>,
-  onToggle: (key: string, enabled: boolean) => void,
-  _config?: Record<string, unknown>,
-  _onSectionField?: (sectionKey: string, field: string, value: unknown) => void,
-) {
-  const mcp = list.find(m => m.key === name);
-  if (!mcp) return null;
-  return (
-    <div className={styles.detailContent}>
-      <div className={styles.detailHeader}>
-        <h2 className={styles.detailTitle}>{mcp.key}</h2>
-        <Switch checked={mcp.enabled} onChange={(next) => onToggle(mcp.key, next)} ariaLabel={`Enable ${mcp.key}`} />
-      </div>
-      {mcp.command && <div className={styles.detailDesc}>{mcp.command}</div>}
-      <div className={styles.tabs}>
-        <div className={`${styles.tab} ${styles.active}`}>配置</div>
-        <div className={styles.tab}>权限</div>
-      </div>
-      <div className={styles.configSection}>
-        <h3>个性化配置</h3>
-        <p className={styles.noSettings}>MCP 服务器配置请在 Advanced 页面管理。</p>
-      </div>
-    </div>
-  );
-}
-
-/* ===== Schema field renderer ===== */
-
-function getSettingValue(toolName: string, fieldName: string, config?: Record<string, unknown>): unknown {
-  // Special case: browser_control reads from browser_extension config
-  if (toolName === 'browser_control') {
-    const be = config?.browser_extension as Record<string, unknown> | undefined;
-    if (be && fieldName in be) return be[fieldName];
-  }
-  // Generic: read from tools.settings.<tool_name>.<field>
-  const settings = ((config?.tools as Record<string, unknown> | undefined)?.settings as
-    | Record<string, Record<string, unknown>>
-    | undefined);
-  return settings?.[toolName]?.[fieldName];
-}
-
-function setSettingValue(toolName: string, fieldName: string, value: unknown, onSectionField?: (sectionKey: string, field: string, value: unknown) => void) {
-  if (!onSectionField) return;
-  if (toolName === 'browser_control') {
-    onSectionField('browser_extension', fieldName, value);
-    return;
-  }
-  // Generic: would need to read current tools.settings, merge, and write back
-  // For now unsupported
-}
-
-function renderSchemaFields(
-  toolName: string,
+function renderSkillSchemaFields(
+  skillName: string,
   schema: ConfigField[],
   config?: Record<string, unknown>,
   onSectionField?: (sectionKey: string, field: string, value: unknown) => void,
 ) {
   return schema.map(field => {
-    const value = getSettingValue(toolName, field.name, config);
+    const settings = ((config?.tools as Record<string, unknown> | undefined)?.settings as
+      | Record<string, Record<string, unknown>>
+      | undefined);
+    const value = settings?.[skillName]?.[field.name];
     const label = field.label || field.name;
     const help = field.help || '';
 
+    const handleChange = (next: unknown) => {
+      if (!onSectionField) return;
+      const toolsCfg = (config?.tools as Record<string, unknown> | undefined) ?? {};
+      const s = (toolsCfg.settings as Record<string, Record<string, unknown>> | undefined) ?? {};
+      const nextSkill = { ...(s[skillName] ?? {}), [field.name]: next };
+      onSectionField('tools', 'settings', { ...s, [skillName]: nextSkill });
+    };
+
     let input: React.ReactNode;
     if (field.kind === 'bool') {
-      input = (
-        <Switch
-          checked={asBool(value)}
-          onChange={(next) => setSettingValue(toolName, field.name, next, onSectionField)}
-          ariaLabel={label}
-        />
-      );
+      input = <Switch checked={asBool(value)} onChange={handleChange} ariaLabel={label} />;
     } else if (field.kind === 'int') {
       input = (
         <input
           type="number"
           className={styles.numberInput}
           value={asString(value)}
-          onChange={(e) => setSettingValue(toolName, field.name, parseIntField(e.currentTarget.value), onSectionField)}
+          onChange={(e) => handleChange(parseIntField(e.currentTarget.value))}
           aria-label={label}
         />
       );
@@ -502,7 +453,7 @@ function renderSchemaFields(
           className={styles.numberInput}
           style={{ width: '280px', fontFamily: 'var(--font-mono)' }}
           value={asString(value)}
-          onChange={(e) => setSettingValue(toolName, field.name, e.currentTarget.value, onSectionField)}
+          onChange={(e) => handleChange(e.currentTarget.value)}
           placeholder={field.default as string}
           aria-label={label}
         />
@@ -514,7 +465,7 @@ function renderSchemaFields(
           className={styles.numberInput}
           style={{ width: '280px', fontFamily: 'var(--font-mono)' }}
           value={asString(value)}
-          onChange={(e) => setSettingValue(toolName, field.name, e.currentTarget.value, onSectionField)}
+          onChange={(e) => handleChange(e.currentTarget.value)}
           placeholder={field.default as string}
           aria-label={label}
         />
