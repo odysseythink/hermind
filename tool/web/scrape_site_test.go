@@ -18,6 +18,7 @@ func TestWebScrapeSiteHandler_InvalidArgs(t *testing.T) {
 		{"bad scheme", `{"url":"ftp://example.com"}`, "url scheme must be http or https"},
 		{"bad format", `{"url":"https://example.com","format":"xml"}`, "format must be text or markdown"},
 		{"invalid url", `{"url":"://bad"}`, "invalid URL"},
+		{"invalid json", `{"bad json"`, "invalid arguments"},
 	}
 
 	for _, tc := range cases {
@@ -33,15 +34,6 @@ func TestWebScrapeSiteHandler_InvalidArgs(t *testing.T) {
 				t.Fatalf("expected %q in response, got: %s", tc.want, res)
 			}
 		})
-	}
-}
-
-func TestWebScrapeSiteHandler_Defaults(t *testing.T) {
-	// We can't test the full handler without a browser, but we can verify
-	// that valid minimal args don't fail on validation.
-	args := webScrapeSiteArgs{URL: "https://example.com"}
-	if args.Depth != 0 || args.MaxLinks != 0 || args.Format != "" {
-		t.Log("default values are zero values; clamping happens inside handler")
 	}
 }
 
@@ -61,13 +53,31 @@ func TestWebScrapeSiteResult_Marshal(t *testing.T) {
 	}
 	s := string(b)
 	if !strings.Contains(s, "pages_scraped") {
-		t.Error("missing pages_scraped in json")
+		t.Errorf("missing pages_scraped in JSON: %s", s)
 	}
 	if !strings.Contains(s, "pages_skipped") {
-		t.Error("missing pages_skipped in json")
+		t.Errorf("missing pages_skipped in JSON: %s", s)
 	}
 	if !strings.Contains(s, "hello world") {
-		t.Error("missing page content in json")
+		t.Errorf("missing page content in JSON: %s", s)
+	}
+}
+
+func TestWebScrapeSiteResult_OmitEmpty(t *testing.T) {
+	res := webScrapeSiteResult{
+		URL:          "https://example.com",
+		PagesScraped: 1,
+		PagesSkipped: 0,
+		Pages:        []scrapedPage{{URL: "https://example.com/", Title: "Home", Content: "hello"}},
+	}
+	b, err := json.Marshal(res)
+	if err != nil {
+		t.Fatal(err)
+	}
+	s := string(b)
+	// PagesSkipped is 0 and has omitempty, so it should NOT appear
+	if strings.Contains(s, "pages_skipped") {
+		t.Errorf("pages_skipped should be omitted when 0, but found in JSON: %s", s)
 	}
 }
 
@@ -78,6 +88,6 @@ func TestScrapedPage_Marshal(t *testing.T) {
 		t.Fatal(err)
 	}
 	if !strings.Contains(string(b), `"url"`) {
-		t.Error("missing url key")
+		t.Errorf("missing url key in JSON: %s", string(b))
 	}
 }
