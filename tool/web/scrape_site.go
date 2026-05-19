@@ -112,7 +112,7 @@ func webScrapeSiteHandler(ctx context.Context, raw json.RawMessage) (string, err
 				break
 			}
 
-			content, err := scrapePage(ctx, browser, u, args.Format)
+			content, links, err := scrapePage(ctx, browser, u, args.Format)
 			if err != nil {
 				skipped++
 				continue
@@ -125,11 +125,6 @@ func webScrapeSiteHandler(ctx context.Context, raw json.RawMessage) (string, err
 			})
 
 			if d+1 < args.Depth && len(pages) < args.MaxLinks {
-				links, err := extractLinksFromPage(ctx, browser, u)
-				if err != nil {
-					// Skip pages with extraction errors
-					continue
-				}
 				for _, link := range links {
 					linkParsed, err := url.Parse(link)
 					if err != nil {

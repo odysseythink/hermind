@@ -55,27 +55,28 @@ func newBrowser(ctx context.Context) (*rod.Browser, func() error, error) {
 	return browser, cleanup, nil
 }
 
-// scrapePage navigates to url, waits for load, and extracts title + body text.
+// scrapePage navigates to url, waits for load, and extracts title + body text
+// along with all absolute HTTP(S) links on the page.
 // format is "text" or "markdown".
 // Returns an error if navigation or extraction fails.
 // Uses context timeout internally. Closes the page before returning.
-func scrapePage(ctx context.Context, browser *rod.Browser, url, format string) (*pageContent, error) {
+func scrapePage(ctx context.Context, browser *rod.Browser, url, format string) (*pageContent, []string, error) {
 	ctx, cancel := context.WithTimeout(ctx, scrapePageTimeout)
 	defer cancel()
 
 	page, err := browser.Page(proto.TargetCreateTarget{URL: url})
 	if err != nil {
-		return nil, fmt.Errorf("open page %s: %w", url, err)
+		return nil, nil, fmt.Errorf("open page %s: %w", url, err)
 	}
 	defer page.Close()
 
 	if err := page.Context(ctx).WaitIdle(2 * time.Second); err != nil {
-		return nil, fmt.Errorf("wait idle %s: %w", url, err)
+		return nil, nil, fmt.Errorf("wait idle %s: %w", url, err)
 	}
 
 	titleRes, err := page.Context(ctx).Eval("() => document.title")
 	if err != nil {
-		return nil, fmt.Errorf("extract title %s: %w", url, err)
+		return nil, nil, fmt.Errorf("extract title %s: %w", url, err)
 	}
 	title := titleRes.Value.String()
 
@@ -87,17 +88,33 @@ func scrapePage(ctx context.Context, browser *rod.Browser, url, format string) (
     return document.body ? document.body.innerText : '';
 }`)
 		if err != nil {
-			return nil, fmt.Errorf("extract text %s: %w", url, err)
+			return nil, nil, fmt.Errorf("extract text %s: %w", url, err)
 		}
 		content = textRes.Value.String()
 	} else {
 		html, err := page.Context(ctx).HTML()
 		if err != nil {
-			return nil, fmt.Errorf("extract html %s: %w", url, err)
+			return nil, nil, fmt.Errorf("extract html %s: %w", url, err)
 		}
 		content, err = mdConverter.ConvertString(html)
 		if err != nil {
-			return nil, fmt.Errorf("convert markdown %s: %w", url, err)
+			return nil, nil, fmt.Errorf("convert markdown %s: %w", url, err)
+		}
+	}
+
+	// Extract links before closing page
+	linkRes, err := page.Context(ctx).Eval("() => Array.from(document.querySelectorAll('a[href]')).map(a => a.href)")
+	if err != nil {
+		return nil, nil, fmt.Errorf("extract links %s: %w", url, err)
+	}
+	var allLinks []string
+	if err := linkRes.Value.Unmarshal(&allLinks); err != nil {
+		return nil, nil, fmt.Errorf("unmarshal links %s: %w", url, err)
+	}
+	var links []string
+	for _, link := range allLinks {
+		if strings.HasPrefix(link, "http://") || strings.HasPrefix(link, "https://") {
+			links = append(links, link)
 		}
 	}
 
@@ -105,7 +122,7 @@ func scrapePage(ctx context.Context, browser *rod.Browser, url, format string) (
 		URL:     url,
 		Title:   title,
 		Content: content,
-	}, nil
+	}, links, nil
 }
 
 // extractLinksFromPage returns all absolute HTTP(S) <a href> URLs found on the given page.
