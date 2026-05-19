@@ -4,6 +4,7 @@ package web
 import (
 	"context"
 	"encoding/json"
+	"net/url"
 	"strings"
 	"testing"
 )
@@ -124,5 +125,25 @@ func TestWebScrapeSiteHandler_PrivateURL(t *testing.T) {
 	}
 	if !strings.Contains(res, "private or internal address") {
 		t.Fatalf("expected private address error, got: %s", res)
+	}
+}
+
+func TestLinkNormalization(t *testing.T) {
+	u1, _ := url.Parse("https://example.com/page?b=2&a=1")
+	u1.Fragment = ""
+	if u1.RawQuery != "" {
+		q := u1.Query()
+		u1.RawQuery = q.Encode()
+	}
+
+	u2, _ := url.Parse("https://example.com/page?a=1&b=2")
+	u2.Fragment = ""
+	if u2.RawQuery != "" {
+		q := u2.Query()
+		u2.RawQuery = q.Encode()
+	}
+
+	if u1.String() != u2.String() {
+		t.Errorf("normalized URLs should be equal: %s vs %s", u1.String(), u2.String())
 	}
 }

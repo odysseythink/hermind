@@ -160,6 +160,11 @@ func webScrapeSiteHandler(ctx context.Context, raw json.RawMessage) (string, err
 					// Normalize: strip fragment for deduplication
 					linkParsed.Fragment = ""
 					linkParsed.RawFragment = ""
+					// Sort query parameters for consistent deduplication
+					if linkParsed.RawQuery != "" {
+						q := linkParsed.Query()
+						linkParsed.RawQuery = q.Encode()
+					}
 					normalized := linkParsed.String()
 
 					if isPrivateHost(linkParsed.Host) {
