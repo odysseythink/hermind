@@ -97,6 +97,12 @@ func init() {
 				Kind:  FieldBool,
 			},
 			{
+				Name:  "disable_web_scrape_site",
+				Label: "Disable web scrape site",
+				Help:  "When enabled, the web_scrape_site tool is not registered. Useful when you do not want the LLM to crawl websites.",
+				Kind:  FieldBool,
+			},
+			{
 				Name:  "search.default_num_results",
 				Label: "Default result count",
 				Help:  "Number of search results to return when the LLM does not specify. 0 = 5.",
