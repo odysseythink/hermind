@@ -5,6 +5,7 @@ import (
 	"context"
 	"encoding/json"
 	"net/url"
+	"time"
 
 	"github.com/odysseythink/hermind/tool"
 )
@@ -25,7 +26,7 @@ type webScrapeSiteArgs struct {
 	URL        string `json:"url"`
 	Depth      int    `json:"depth,omitempty"`
 	MaxLinks   int    `json:"max_links,omitempty"`
-	SameDomain bool   `json:"same_domain,omitempty"`
+	SameDomain *bool  `json:"same_domain,omitempty"`
 	Format     string `json:"format,omitempty"`
 }
 
@@ -80,7 +81,19 @@ func webScrapeSiteHandler(ctx context.Context, raw json.RawMessage) (string, err
 		return tool.ToolError("format must be text or markdown"), nil
 	}
 
-	browser, cleanup, err := newBrowser()
+	sameDomain := true
+	if args.SameDomain != nil {
+		sameDomain = *args.SameDomain
+	}
+
+	overallTimeout := time.Duration(args.Depth*args.MaxLinks) * scrapePageTimeout
+	if overallTimeout > 5*time.Minute {
+		overallTimeout = 5 * time.Minute
+	}
+	ctx, cancel := context.WithTimeout(ctx, overallTimeout)
+	defer cancel()
+
+	browser, cleanup, err := newBrowser(ctx)
 	if err != nil {
 		return tool.ToolError("failed to launch browser: " + err.Error()), nil
 	}
@@ -99,7 +112,7 @@ func webScrapeSiteHandler(ctx context.Context, raw json.RawMessage) (string, err
 				break
 			}
 
-			content, err := scrapePage(browser, u, args.Format)
+			content, err := scrapePage(ctx, browser, u, args.Format)
 			if err != nil {
 				skipped++
 				continue
@@ -112,7 +125,7 @@ func webScrapeSiteHandler(ctx context.Context, raw json.RawMessage) (string, err
 			})
 
 			if d+1 < args.Depth && len(pages) < args.MaxLinks {
-				links, err := extractLinksFromPage(browser, u)
+				links, err := extractLinksFromPage(ctx, browser, u)
 				if err != nil {
 					// Skip pages with extraction errors
 					continue
@@ -127,7 +140,7 @@ func webScrapeSiteHandler(ctx context.Context, raw json.RawMessage) (string, err
 					linkParsed.RawFragment = ""
 					normalized := linkParsed.String()
 
-					if args.SameDomain && linkParsed.Host != parsedURL.Host {
+					if sameDomain && linkParsed.Host != parsedURL.Host {
 						continue
 					}
 					if !discovered[normalized] {
