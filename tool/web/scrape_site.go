@@ -41,7 +41,8 @@ const webScrapeSiteSchema = `{
     "depth":       { "type": "integer", "description": "How many link-hops deep to crawl (default 1, max 3)", "minimum": 1, "maximum": 3 },
     "max_links":   { "type": "integer", "description": "Maximum total pages to scrape (default 10, max 50)", "minimum": 1, "maximum": 50 },
     "same_domain": { "type": "boolean", "description": "Only follow links on the same domain as the start URL (default true)" },
-    "format":      { "type": "string", "enum": ["text","markdown"], "description": "Output format (default text)" }
+    "format":      { "type": "string", "enum": ["text","markdown"], "description": "Output format (default text)" },
+    "wait_idle_ms":{ "type": "integer", "description": "Milliseconds to wait for network idle after page load (default 2000, min 500, max 10000)", "minimum": 500, "maximum": 10000 }
   },
   "required": ["url"]
 }`
@@ -52,6 +53,7 @@ type webScrapeSiteArgs struct {
 	MaxLinks   int    `json:"max_links,omitempty"`
 	SameDomain *bool  `json:"same_domain,omitempty"`
 	Format     string `json:"format,omitempty"`
+	WaitIdleMs int    `json:"wait_idle_ms,omitempty"`
 }
 
 type scrapedPage struct {
@@ -107,6 +109,15 @@ func webScrapeSiteHandler(ctx context.Context, raw json.RawMessage) (string, err
 	if args.Format != "text" && args.Format != "markdown" {
 		return tool.ToolError("format must be text or markdown"), nil
 	}
+	if args.WaitIdleMs <= 0 {
+		args.WaitIdleMs = 2000
+	}
+	if args.WaitIdleMs < 500 {
+		args.WaitIdleMs = 500
+	}
+	if args.WaitIdleMs > 10000 {
+		args.WaitIdleMs = 10000
+	}
 
 	sameDomain := true
 	if args.SameDomain != nil {
@@ -139,7 +150,17 @@ func webScrapeSiteHandler(ctx context.Context, raw json.RawMessage) (string, err
 				break
 			}
 
-			content, links, err := scrapePage(ctx, browser, u, args.Format)
+			allowed, err := checkRobots(u)
+			if err != nil {
+				skipped++
+				continue
+			}
+			if !allowed {
+				skipped++
+				continue
+			}
+
+			content, links, err := scrapePage(ctx, browser, u, args.Format, time.Duration(args.WaitIdleMs)*time.Millisecond)
 			if err != nil {
 				skipped++
 				continue
@@ -168,6 +189,10 @@ func webScrapeSiteHandler(ctx context.Context, raw json.RawMessage) (string, err
 					normalized := linkParsed.String()
 
 					if isPrivateHost(linkParsed.Host) {
+						continue
+					}
+					allowed, err := checkRobots(normalized)
+					if err != nil || !allowed {
 						continue
 					}
 					if sameDomain && linkParsed.Host != parsedURL.Host {

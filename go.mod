@@ -15,6 +15,7 @@ require (
 	github.com/odysseythink/pantheon v0.0.8
 	github.com/spf13/cobra v1.10.2
 	github.com/stretchr/testify v1.11.1
+	github.com/temoto/robotstxt v1.1.2
 	github.com/yuin/goldmark v1.8.2
 	github.com/yuin/goldmark-highlighting v0.0.0-20220208100518-594be1970594
 	go.opentelemetry.io/proto/otlp v1.10.0
