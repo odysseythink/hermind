@@ -105,11 +105,10 @@ func scrapePage(browser *rod.Browser, url, format string) (*pageContent, error) 
 	}, nil
 }
 
-// extractLinksFromPage returns all absolute <a href> URLs found on the given page
-// that share the same origin as baseOrigin.
+// extractLinksFromPage returns all absolute HTTP(S) <a href> URLs found on the given page.
 // Returns an empty slice (not error) on navigation failure.
 // Closes the page before returning.
-func extractLinksFromPage(browser *rod.Browser, pageURL, baseOrigin string) ([]string, error) {
+func extractLinksFromPage(browser *rod.Browser, pageURL string) ([]string, error) {
 	ctx, cancel := context.WithTimeout(context.Background(), scrapePageTimeout)
 	defer cancel()
 
@@ -135,7 +134,7 @@ func extractLinksFromPage(browser *rod.Browser, pageURL, baseOrigin string) ([]s
 
 	var links []string
 	for _, link := range allLinks {
-		if link == baseOrigin || strings.HasPrefix(link, baseOrigin+"/") {
+		if strings.HasPrefix(link, "http://") || strings.HasPrefix(link, "https://") {
 			links = append(links, link)
 		}
 	}

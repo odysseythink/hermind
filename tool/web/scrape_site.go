@@ -86,8 +86,6 @@ func webScrapeSiteHandler(ctx context.Context, raw json.RawMessage) (string, err
 	}
 	defer cleanup()
 
-	baseOrigin := parsedURL.Scheme + "://" + parsedURL.Host
-
 	var pages []scrapedPage
 	skipped := 0
 
@@ -114,24 +112,27 @@ func webScrapeSiteHandler(ctx context.Context, raw json.RawMessage) (string, err
 			})
 
 			if d+1 < args.Depth && len(pages) < args.MaxLinks {
-				links, err := extractLinksFromPage(browser, u, baseOrigin)
+				links, err := extractLinksFromPage(browser, u)
 				if err != nil {
-					// Log extraction errors silently and continue
+					// Skip pages with extraction errors
 					continue
 				}
 				for _, link := range links {
-					if args.SameDomain {
-						linkURL, err := url.Parse(link)
-						if err != nil {
-							continue
-						}
-						if linkURL.Host != parsedURL.Host {
-							continue
-						}
+					linkParsed, err := url.Parse(link)
+					if err != nil {
+						continue
 					}
-					if !discovered[link] {
-						discovered[link] = true
-						nextQueue = append(nextQueue, link)
+					// Normalize: strip fragment for deduplication
+					linkParsed.Fragment = ""
+					linkParsed.RawFragment = ""
+					normalized := linkParsed.String()
+
+					if args.SameDomain && linkParsed.Host != parsedURL.Host {
+						continue
+					}
+					if !discovered[normalized] {
+						discovered[normalized] = true
+						nextQueue = append(nextQueue, normalized)
 					}
 				}
 			}
