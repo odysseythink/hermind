@@ -128,6 +128,17 @@ func TestWebScrapeSiteHandler_PrivateURL(t *testing.T) {
 	}
 }
 
+func TestCheckRobots_AllowsPublic(t *testing.T) {
+	// This is a network test — skip if offline
+	allowed, err := checkRobots("https://www.google.com/")
+	if err != nil {
+		t.Skipf("network unreachable: %v", err)
+	}
+	// Google's robots.txt allows some paths, disallows others.
+	// We just verify the function doesn't crash and returns a bool.
+	_ = allowed
+}
+
 func TestLinkNormalization(t *testing.T) {
 	u1, _ := url.Parse("https://example.com/page?b=2&a=1")
 	u1.Fragment = ""

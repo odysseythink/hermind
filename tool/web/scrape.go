@@ -60,7 +60,7 @@ func newBrowser(ctx context.Context) (*rod.Browser, func() error, error) {
 // format is "text" or "markdown".
 // Returns an error if navigation or extraction fails.
 // Uses context timeout internally. Closes the page before returning.
-func scrapePage(ctx context.Context, browser *rod.Browser, url, format string) (*pageContent, []string, error) {
+func scrapePage(ctx context.Context, browser *rod.Browser, url, format string, waitIdle time.Duration) (*pageContent, []string, error) {
 	ctx, cancel := context.WithTimeout(ctx, scrapePageTimeout)
 	defer cancel()
 
@@ -70,7 +70,7 @@ func scrapePage(ctx context.Context, browser *rod.Browser, url, format string) (
 	}
 	defer page.Close()
 
-	if err := page.Context(ctx).WaitIdle(2 * time.Second); err != nil {
+	if err := page.Context(ctx).WaitIdle(waitIdle); err != nil {
 		return nil, nil, fmt.Errorf("wait idle %s: %w", url, err)
 	}
 
@@ -128,7 +128,7 @@ func scrapePage(ctx context.Context, browser *rod.Browser, url, format string) (
 // extractLinksFromPage returns all absolute HTTP(S) <a href> URLs found on the given page.
 // Returns an empty slice (not error) on navigation failure.
 // Closes the page before returning.
-func extractLinksFromPage(ctx context.Context, browser *rod.Browser, pageURL string) ([]string, error) {
+func extractLinksFromPage(ctx context.Context, browser *rod.Browser, pageURL string, waitIdle time.Duration) ([]string, error) {
 	ctx, cancel := context.WithTimeout(ctx, scrapePageTimeout)
 	defer cancel()
 
@@ -138,7 +138,7 @@ func extractLinksFromPage(ctx context.Context, browser *rod.Browser, pageURL str
 	}
 	defer page.Close()
 
-	if err := page.Context(ctx).WaitIdle(2 * time.Second); err != nil {
+	if err := page.Context(ctx).WaitIdle(waitIdle); err != nil {
 		return []string{}, nil // load failure → silent skip
 	}
 
