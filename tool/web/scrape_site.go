@@ -4,11 +4,35 @@ package web
 import (
 	"context"
 	"encoding/json"
+	"net"
 	"net/url"
 	"time"
 
 	"github.com/odysseythink/hermind/tool"
 )
+
+// isPrivateHost returns true if the host is localhost, a private IP,
+// or a link-local address.
+func isPrivateHost(host string) bool {
+	if host == "localhost" {
+		return true
+	}
+	ip := net.ParseIP(host)
+	if ip == nil {
+		// Try to strip port and re-parse
+		if h, _, err := net.SplitHostPort(host); err == nil {
+			ip = net.ParseIP(h)
+			host = h
+		}
+	}
+	if ip == nil {
+		return false // hostname (e.g., example.com) — allow
+	}
+	if ip.IsLoopback() || ip.IsPrivate() || ip.IsLinkLocalUnicast() || ip.IsLinkLocalMulticast() {
+		return true
+	}
+	return false
+}
 
 const webScrapeSiteSchema = `{
   "type": "object",
@@ -59,6 +83,9 @@ func webScrapeSiteHandler(ctx context.Context, raw json.RawMessage) (string, err
 	}
 	if parsedURL.Scheme != "http" && parsedURL.Scheme != "https" {
 		return tool.ToolError("url scheme must be http or https"), nil
+	}
+	if isPrivateHost(parsedURL.Host) {
+		return tool.ToolError("url points to a private or internal address"), nil
 	}
 
 	// Apply defaults
@@ -135,6 +162,9 @@ func webScrapeSiteHandler(ctx context.Context, raw json.RawMessage) (string, err
 					linkParsed.RawFragment = ""
 					normalized := linkParsed.String()
 
+					if isPrivateHost(linkParsed.Host) {
+						continue
+					}
 					if sameDomain && linkParsed.Host != parsedURL.Host {
 						continue
 					}
