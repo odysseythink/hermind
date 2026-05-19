@@ -10,7 +10,7 @@ require (
 	github.com/go-chi/chi/v5 v5.2.5
 	github.com/google/uuid v1.6.0
 	github.com/odysseythink/mlog v0.2.4
-	github.com/odysseythink/pantheon v0.0.7
+	github.com/odysseythink/pantheon v0.0.8
 	github.com/spf13/cobra v1.10.2
 	github.com/stretchr/testify v1.11.1
 	github.com/yuin/goldmark v1.8.2
