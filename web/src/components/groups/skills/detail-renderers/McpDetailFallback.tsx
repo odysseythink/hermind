@@ -1,6 +1,6 @@
 import pageStyles from '../SkillToolsConfigPage.module.css';
 import styles from './McpDetailFallback.module.css';
-import Switch from '../../fields/Switch';
+import Switch from '../../../fields/Switch';
 import type { McpDetailProps } from './types';
 
 export default function McpDetailFallback({

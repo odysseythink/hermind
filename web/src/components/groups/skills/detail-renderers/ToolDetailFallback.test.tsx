@@ -1,7 +1,7 @@
 import { describe, it, expect, vi } from 'vitest';
 import { render, screen, fireEvent } from '@testing-library/react';
 import ToolDetailFallback from './ToolDetailFallback';
-import type { ConfigField } from '../../../api/schemas';
+import type { ConfigField } from '../../../../api/schemas';
 
 const baseProps = {
   name: 'test_tool',

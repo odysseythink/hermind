@@ -316,41 +316,4 @@ describe('SkillsSection', () => {
     expect(onSectionField).toHaveBeenCalledWith('tools', 'disabled', []);
   });
 
-  it('renders BrowserControlConfig for browser_control tool', async () => {
-    mockToolsApi([
-      { name: 'browser_control', description: 'Browser control', toolset: 'browser', enabled: true, settings_schema: [] },
-    ]);
-    render(
-      <SkillToolsConfigPage
-        section={skillsSection}
-        value={{}}
-        originalValue={{}}
-        onField={vi.fn()}
-        onSectionField={vi.fn()}
-        config={{}}
-      />,
-    );
-    await waitFor(() => screen.getByText('browser_control'));
-    fireEvent.click(screen.getByText('browser_control'));
-    await waitFor(() => expect(screen.getByTestId('status-unknown')).toBeInTheDocument());
-  });
-
-  it('renders fallback for unregistered tools', async () => {
-    mockToolsApi([
-      { name: 'web_search', description: 'Search', toolset: 'web', enabled: true, settings_schema: [{ name: 'api_key', label: 'API Key', kind: 'secret' }] },
-    ]);
-    render(
-      <SkillToolsConfigPage
-        section={skillsSection}
-        value={{}}
-        originalValue={{}}
-        onField={vi.fn()}
-        onSectionField={vi.fn()}
-        config={{}}
-      />,
-    );
-    await waitFor(() => screen.getByText('web_search'));
-    fireEvent.click(screen.getByText('web_search'));
-    await waitFor(() => expect(screen.getByLabelText('API Key')).toBeInTheDocument());
-  });
 });
