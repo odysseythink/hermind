@@ -91,3 +91,38 @@ func TestScrapedPage_Marshal(t *testing.T) {
 		t.Errorf("missing url key in JSON: %s", string(b))
 	}
 }
+
+func TestIsPrivateHost(t *testing.T) {
+	cases := []struct {
+		host string
+		want bool
+	}{
+		{"localhost", true},
+		{"127.0.0.1", true},
+		{"10.0.0.1", true},
+		{"192.168.1.1", true},
+		{"172.16.0.1", true},
+		{"169.254.1.1", true},
+		{"example.com", false},
+		{"8.8.8.8", false},
+		{"1.1.1.1", false},
+	}
+	for _, tc := range cases {
+		t.Run(tc.host, func(t *testing.T) {
+			got := isPrivateHost(tc.host)
+			if got != tc.want {
+				t.Errorf("isPrivateHost(%q) = %v, want %v", tc.host, got, tc.want)
+			}
+		})
+	}
+}
+
+func TestWebScrapeSiteHandler_PrivateURL(t *testing.T) {
+	res, err := webScrapeSiteHandler(context.Background(), []byte(`{"url":"http://localhost/secret"}`))
+	if err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
+	if !strings.Contains(res, "private or internal address") {
+		t.Fatalf("expected private address error, got: %s", res)
+	}
+}
