@@ -29,7 +29,7 @@ type pageContent struct {
 // If not found, rod auto-downloads on first Launch().
 // Returns an error (never panics) if launch fails.
 // Caller must call cleanup() when done.
-func newBrowser() (*rod.Browser, func() error, error) {
+func newBrowser(ctx context.Context) (*rod.Browser, func() error, error) {
 	l := launcher.New()
 	if path, found := launcher.LookPath(); found {
 		l.Bin(path)
@@ -39,7 +39,7 @@ func newBrowser() (*rod.Browser, func() error, error) {
 		return nil, nil, fmt.Errorf("launch browser: %w", err)
 	}
 
-	browser := rod.New().ControlURL(u)
+	browser := rod.New().ControlURL(u).Context(ctx)
 	if err := browser.Connect(); err != nil {
 		l.Cleanup()
 		return nil, nil, fmt.Errorf("connect to browser: %w", err)
@@ -59,8 +59,8 @@ func newBrowser() (*rod.Browser, func() error, error) {
 // format is "text" or "markdown".
 // Returns an error if navigation or extraction fails.
 // Uses context timeout internally. Closes the page before returning.
-func scrapePage(browser *rod.Browser, url, format string) (*pageContent, error) {
-	ctx, cancel := context.WithTimeout(context.Background(), scrapePageTimeout)
+func scrapePage(ctx context.Context, browser *rod.Browser, url, format string) (*pageContent, error) {
+	ctx, cancel := context.WithTimeout(ctx, scrapePageTimeout)
 	defer cancel()
 
 	page, err := browser.Page(proto.TargetCreateTarget{URL: url})
@@ -69,9 +69,8 @@ func scrapePage(browser *rod.Browser, url, format string) (*pageContent, error) 
 	}
 	defer page.Close()
 
-	err = page.Context(ctx).WaitLoad()
-	if err != nil {
-		return nil, fmt.Errorf("wait load %s: %w", url, err)
+	if err := page.Context(ctx).WaitIdle(2 * time.Second); err != nil {
+		return nil, fmt.Errorf("wait idle %s: %w", url, err)
 	}
 
 	titleRes, err := page.Context(ctx).Eval("() => document.title")
@@ -82,7 +81,11 @@ func scrapePage(browser *rod.Browser, url, format string) (*pageContent, error) 
 
 	var content string
 	if format == "text" {
-		textRes, err := page.Context(ctx).Eval("() => document.body ? document.body.innerText : ''")
+		textRes, err := page.Context(ctx).Eval(`() => {
+    const el = document.querySelector('article, main, [role="main"]');
+    if (el) return el.innerText;
+    return document.body ? document.body.innerText : '';
+}`)
 		if err != nil {
 			return nil, fmt.Errorf("extract text %s: %w", url, err)
 		}
@@ -108,8 +111,8 @@ func scrapePage(browser *rod.Browser, url, format string) (*pageContent, error) 
 // extractLinksFromPage returns all absolute HTTP(S) <a href> URLs found on the given page.
 // Returns an empty slice (not error) on navigation failure.
 // Closes the page before returning.
-func extractLinksFromPage(browser *rod.Browser, pageURL string) ([]string, error) {
-	ctx, cancel := context.WithTimeout(context.Background(), scrapePageTimeout)
+func extractLinksFromPage(ctx context.Context, browser *rod.Browser, pageURL string) ([]string, error) {
+	ctx, cancel := context.WithTimeout(ctx, scrapePageTimeout)
 	defer cancel()
 
 	page, err := browser.Page(proto.TargetCreateTarget{URL: pageURL})
@@ -118,7 +121,7 @@ func extractLinksFromPage(browser *rod.Browser, pageURL string) ([]string, error
 	}
 	defer page.Close()
 
-	if err := page.Context(ctx).WaitLoad(); err != nil {
+	if err := page.Context(ctx).WaitIdle(2 * time.Second); err != nil {
 		return []string{}, nil // load failure → silent skip
 	}
 
