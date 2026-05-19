@@ -1,7 +1,6 @@
 import { describe, it, expect, vi, afterEach } from 'vitest';
 import { render, screen, fireEvent, waitFor } from '@testing-library/react';
 import SkillsSection from './SkillsSection';
-import SkillToolsConfigPage from './SkillToolsConfigPage';
 import type { ConfigSection as ConfigSectionT } from '../../../api/schemas';
 
 const skillsSection: ConfigSectionT = {
