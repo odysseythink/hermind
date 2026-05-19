@@ -1,6 +1,7 @@
 import { describe, it, expect, vi, afterEach } from 'vitest';
 import { render, screen, fireEvent, waitFor } from '@testing-library/react';
 import SkillsSection from './SkillsSection';
+import SkillToolsConfigPage from './SkillToolsConfigPage';
 import type { ConfigSection as ConfigSectionT } from '../../../api/schemas';
 
 const skillsSection: ConfigSectionT = {
@@ -37,7 +38,7 @@ function mockSkillsApi(skills: Array<{ name: string; description?: string; enabl
   });
 }
 
-function mockToolsApi(tools: Array<{ name: string; description?: string; toolset?: string; enabled: boolean }>) {
+function mockToolsApi(tools: Array<{ name: string; description?: string; toolset?: string; enabled: boolean; settings_schema?: unknown[] }>) {
   return vi.spyOn(globalThis, 'fetch').mockImplementation((input) => {
     const url = typeof input === 'string' ? input : input instanceof URL ? input.href : input.url;
     if (url.includes('/api/tools')) {
@@ -313,5 +314,43 @@ describe('SkillsSection', () => {
     await waitFor(() => screen.getByText('file_read'));
     fireEvent.click(screen.getByRole('switch', { name: 'Enable file_read' }));
     expect(onSectionField).toHaveBeenCalledWith('tools', 'disabled', []);
+  });
+
+  it('renders BrowserControlConfig for browser_control tool', async () => {
+    mockToolsApi([
+      { name: 'browser_control', description: 'Browser control', toolset: 'browser', enabled: true, settings_schema: [] },
+    ]);
+    render(
+      <SkillToolsConfigPage
+        section={skillsSection}
+        value={{}}
+        originalValue={{}}
+        onField={vi.fn()}
+        onSectionField={vi.fn()}
+        config={{}}
+      />,
+    );
+    await waitFor(() => screen.getByText('browser_control'));
+    fireEvent.click(screen.getByText('browser_control'));
+    await waitFor(() => expect(screen.getByTestId('status-unknown')).toBeInTheDocument());
+  });
+
+  it('renders fallback for unregistered tools', async () => {
+    mockToolsApi([
+      { name: 'web_search', description: 'Search', toolset: 'web', enabled: true, settings_schema: [{ name: 'api_key', label: 'API Key', kind: 'secret' }] },
+    ]);
+    render(
+      <SkillToolsConfigPage
+        section={skillsSection}
+        value={{}}
+        originalValue={{}}
+        onField={vi.fn()}
+        onSectionField={vi.fn()}
+        config={{}}
+      />,
+    );
+    await waitFor(() => screen.getByText('web_search'));
+    fireEvent.click(screen.getByText('web_search'));
+    await waitFor(() => expect(screen.getByLabelText('API Key')).toBeInTheDocument());
   });
 });
