@@ -13,7 +13,6 @@ import (
 	"github.com/odysseythink/pantheon/providers/deepseek"
 	"github.com/odysseythink/pantheon/providers/kimi"
 	"github.com/odysseythink/pantheon/providers/minimax"
-	"github.com/odysseythink/pantheon/providers/openai"
 	"github.com/odysseythink/pantheon/providers/openaicompat"
 	"github.com/odysseythink/pantheon/providers/openrouter"
 	"github.com/odysseythink/pantheon/providers/qwen"
@@ -102,7 +101,15 @@ func withBaseURL[T any](setter func(string) T, url string) []T {
 func buildProvider(cfg config.ProviderConfig) (core.Provider, error) {
 	switch strings.ToLower(cfg.Provider) {
 	case "openai":
-		return openai.New(cfg.APIKey, withBaseURL(openai.WithBaseURL, cfg.BaseURL)...)
+		baseURL := cfg.BaseURL
+		if baseURL == "" {
+			baseURL = "https://api.openai.com"
+		}
+		client := openaicompat.NewClient(baseURL, cfg.APIKey)
+		if strings.HasSuffix(baseURL, "/v1") {
+			client.ChatCompletionPath = "/chat/completions"
+		}
+		return &compatProvider{name: cfg.Provider, client: client}, nil
 	case "anthropic":
 		return anthropic.New(cfg.APIKey, withBaseURL(anthropic.WithBaseURL, cfg.BaseURL)...)
 	case "openrouter":
@@ -121,10 +128,10 @@ func buildProvider(cfg config.ProviderConfig) (core.Provider, error) {
 		return wenxin.New(cfg.APIKey, withBaseURL(wenxin.WithBaseURL, cfg.BaseURL)...)
 	case "openaicompatible":
 		client := openaicompat.NewClient(cfg.BaseURL, cfg.APIKey)
-		return &compatProvider{
-			name:   cfg.Provider,
-			client: client,
-		}, nil
+		if strings.HasSuffix(cfg.BaseURL, "/v1") {
+			client.ChatCompletionPath = "/chat/completions"
+		}
+		return &compatProvider{name: cfg.Provider, client: client}, nil
 	default:
 		return nil, fmt.Errorf("unknown provider: %s", cfg.Provider)
 	}

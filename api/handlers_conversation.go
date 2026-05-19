@@ -3,7 +3,9 @@ package api
 import (
 	"context"
 	"encoding/json"
+	"fmt"
 	"net/http"
+	"os"
 	"strconv"
 	"strings"
 
@@ -13,6 +15,7 @@ import (
 	"github.com/odysseythink/hermind/message"
 	"github.com/odysseythink/hermind/provider"
 	"github.com/odysseythink/hermind/tool/obsidian"
+	"github.com/odysseythink/mlog"
 	"github.com/odysseythink/pantheon/core"
 )
 
@@ -151,6 +154,10 @@ func (s *Server) handleConversationPost(w http.ResponseWriter, r *http.Request) 
 
 	go func() {
 		defer func() {
+			if r := recover(); r != nil {
+				fmt.Fprintf(os.Stderr, "PANIC in conversation goroutine: %v\n", r)
+				mlog.Error("PANIC in conversation goroutine", mlog.String("panic", fmt.Sprintf("%v", r)))
+			}
 			s.runMu.Lock()
 			s.runCancel = nil
 			s.runMu.Unlock()

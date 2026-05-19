@@ -90,18 +90,7 @@ func init() {
 				Kind:        FieldSecret,
 				VisibleWhen: ddgGate("DuckDuckGo"),
 			},
-			{
-				Name:  "disable_web_fetch",
-				Label: "Disable web fetch",
-				Help:  "When enabled, the web_fetch tool is not registered and will not be exposed to the LLM. Useful when you rely on web_search or browser automation instead of raw HTTP fetches.",
-				Kind:  FieldBool,
-			},
-			{
-				Name:  "disable_web_scrape_site",
-				Label: "Disable web scrape site",
-				Help:  "When enabled, the web_scrape_site tool is not registered. Useful when you do not want the LLM to crawl websites.",
-				Kind:  FieldBool,
-			},
+
 			{
 				Name:  "search.default_num_results",
 				Label: "Default result count",

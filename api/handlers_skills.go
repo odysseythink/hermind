@@ -30,9 +30,10 @@ func (s *Server) handleSkillsList(w http.ResponseWriter, r *http.Request) {
 	for _, sk := range loaded {
 		_, isDisabled := disabled[sk.Name]
 		out = append(out, SkillDTO{
-			Name:        sk.Name,
-			Description: sk.Description,
-			Enabled:     !isDisabled,
+			Name:           sk.Name,
+			Description:    sk.Description,
+			Enabled:        !isDisabled,
+			SettingsSchema: []ConfigFieldDTO{},
 		})
 		seen[sk.Name] = struct{}{}
 	}
@@ -40,7 +41,7 @@ func (s *Server) handleSkillsList(w http.ResponseWriter, r *http.Request) {
 		if _, found := seen[name]; found {
 			continue
 		}
-		out = append(out, SkillDTO{Name: name, Enabled: false})
+		out = append(out, SkillDTO{Name: name, Enabled: false, SettingsSchema: []ConfigFieldDTO{}})
 	}
 
 	sort.Slice(out, func(i, j int) bool { return out[i].Name < out[j].Name })

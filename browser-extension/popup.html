@@ -1,0 +1,45 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Hermind Extension</title>
+  <link rel="stylesheet" href="popup.css">
+</head>
+<body>
+  <div class="header">
+    <h1>Hermind</h1>
+    <span class="status" id="statusDot"></span>
+  </div>
+
+  <div class="page-info" id="pageInfo">
+    <div class="skeleton-loader"></div>
+  </div>
+
+  <div class="format-toggle">
+    <label>
+      <input type="radio" name="format" value="text" checked>
+      <span>Text</span>
+    </label>
+    <label>
+      <input type="radio" name="format" value="html">
+      <span>HTML</span>
+    </label>
+  </div>
+
+  <div class="actions">
+    <button id="sendBtn" class="btn-primary" disabled>
+      <span class="btn-text">Send to Hermind</span>
+      <span class="spinner hidden"></span>
+    </button>
+  </div>
+
+  <div class="message" id="message"></div>
+
+  <div class="footer">
+    <a href="#" id="optionsLink">Settings</a>
+  </div>
+
+  <script src="popup.js"></script>
+</body>
+</html>

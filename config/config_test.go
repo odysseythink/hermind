@@ -92,11 +92,9 @@ func TestReplayConfigYAMLRoundTrip(t *testing.T) {
 func TestWebConfigYAMLRoundTrip(t *testing.T) {
 	yamlSrc := []byte(
 		"web:\n" +
-			"  addr: 127.0.0.1:34567\n" +
-			"  disable_web_fetch: true\n",
+			"  addr: 127.0.0.1:34567\n",
 	)
 	var cfg Config
 	require.NoError(t, yaml.Unmarshal(yamlSrc, &cfg))
 	require.Equal(t, "127.0.0.1:34567", cfg.Web.Addr)
-	require.True(t, cfg.Web.DisableWebFetch)
 }

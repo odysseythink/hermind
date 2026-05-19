@@ -7,7 +7,7 @@ import ProviderEditor from '../groups/models/ProviderEditor';
 import FallbackProviderEditor from '../groups/models/FallbackProviderEditor';
 import DefaultModelEditor from '../groups/models/DefaultModelEditor';
 import AuxiliaryEditor from '../groups/runtime/AuxiliaryEditor';
-import SkillsSection from '../groups/skills/SkillsSection';
+import SkillToolsConfigPage from '../groups/skills/SkillToolsConfigPage';
 import ListElementInlineEditor from './ListElementInlineEditor';
 import KeyedInstanceInlineEditor from './KeyedInstanceInlineEditor';
 
@@ -97,7 +97,7 @@ export default function SettingsPanel(props: ContentPanelProps) {
         | undefined;
       if (section.key === 'skills') {
         return (
-          <SkillsSection
+          <SkillToolsConfigPage
             section={section}
             value={value ?? {}}
             originalValue={original ?? {}}

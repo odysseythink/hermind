@@ -8,6 +8,8 @@ import (
 	"time"
 
 	"github.com/JohannesKaufmann/html-to-markdown/v2/converter"
+	"github.com/JohannesKaufmann/html-to-markdown/v2/plugin/base"
+	"github.com/JohannesKaufmann/html-to-markdown/v2/plugin/commonmark"
 	"github.com/go-rod/rod"
 	"github.com/go-rod/rod/lib/launcher"
 	"github.com/go-rod/rod/lib/proto"
@@ -15,7 +17,12 @@ import (
 
 const scrapePageTimeout = 15 * time.Second
 
-var mdConverter = converter.NewConverter()
+var mdConverter = converter.NewConverter(
+	converter.WithPlugins(
+		base.NewBasePlugin(),
+		commonmark.NewCommonmarkPlugin(),
+	),
+)
 
 // pageContent holds extracted data from a single page.
 type pageContent struct {

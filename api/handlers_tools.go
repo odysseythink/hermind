@@ -19,12 +19,20 @@ func (s *Server) handleToolsList(w http.ResponseWriter, _ *http.Request) {
 	entries := deps.ToolReg.Entries(nil)
 	out := make([]ToolDTO, 0, len(entries))
 	for _, e := range entries {
-		out = append(out, ToolDTO{
-			Name:        e.Name,
-			Description: e.Description,
-			Toolset:     e.Toolset,
-			Enabled:     !disabled[e.Name],
-		})
+		dto := ToolDTO{
+			Name:           e.Name,
+			Description:    e.Description,
+			Toolset:        e.Toolset,
+			Enabled:        !disabled[e.Name],
+			SettingsSchema: []ConfigFieldDTO{},
+		}
+		if e.Name == "browser_control" {
+			dto.SettingsSchema = []ConfigFieldDTO{
+				{Name: "enabled", Label: "Enabled", Kind: "bool", Help: "Enable the browser extension integration."},
+				{Name: "api_key", Label: "API key", Kind: "secret", Help: "Authentication key for the browser extension."},
+			}
+		}
+		out = append(out, dto)
 	}
 	sort.Slice(out, func(i, j int) bool { return out[i].Name < out[j].Name })
 	writeJSON(w, ToolsResponse{Tools: out})

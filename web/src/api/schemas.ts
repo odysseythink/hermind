@@ -112,6 +112,7 @@ export const SkillSchema = z.object({
   name: z.string(),
   description: z.string().optional().default(''),
   enabled: z.boolean(),
+  settings_schema: z.array(ConfigFieldSchema).optional().default([]),
 });
 export type Skill = z.infer<typeof SkillSchema>;
 
@@ -160,6 +161,7 @@ export const ToolSchema = z.object({
   description: z.string().optional(),
   toolset: z.string().optional(),
   enabled: z.boolean(),
+  settings_schema: z.array(ConfigFieldSchema).optional().default([]),
 });
 export type Tool = z.infer<typeof ToolSchema>;
 

@@ -27,6 +27,7 @@ type Config struct {
 	Tracing           TracingConfig             `yaml:"tracing,omitempty"`
 	Skills            SkillsConfig              `yaml:"skills,omitempty"`
 	Tools             ToolsConfig               `yaml:"tools,omitempty"`
+	BrowserExtension  BrowserExtensionConfig    `yaml:"browser_extension,omitempty"`
 	Web               WebConfig                 `yaml:"web,omitempty"`
 	Benchmark         BenchmarkConfig           `yaml:"benchmark,omitempty"`
 	// Proxy controls the Anthropic-compatible /v1/messages endpoint.
@@ -41,10 +42,8 @@ type Config struct {
 // Firecrawl (used by web_extract) continues to read FIRECRAWL_API_KEY
 // directly and is not represented here.
 type WebConfig struct {
-	Addr                 string       `yaml:"addr,omitempty"`
-	Search               SearchConfig `yaml:"search,omitempty"`
-	DisableWebFetch      bool         `yaml:"disable_web_fetch,omitempty"`
-	DisableWebScrapeSite bool         `yaml:"disable_web_scrape_site,omitempty"`
+	Addr   string       `yaml:"addr,omitempty"`
+	Search SearchConfig `yaml:"search,omitempty"`
 }
 
 // BenchmarkConfig parameterizes `hermind bench` subcommands.
@@ -135,12 +134,22 @@ type SkillsConfig struct {
 	// generations. Default 5 (set by reader fallback). 0 disables the
 	// decay (signals weighted as 1.0).
 	GenerationHalfLife int `yaml:"generation_half_life,omitempty"`
+	// Settings holds per-skill个性化配置. Keys are skill names.
+	Settings map[string]map[string]any `yaml:"settings,omitempty"`
 }
 
 // ToolsConfig records user tool enable/disable selections.
 // An empty struct means "all registered tools are active".
 type ToolsConfig struct {
-	Disabled []string `yaml:"disabled,omitempty"`
+	Disabled []string                  `yaml:"disabled,omitempty"`
+	// Settings holds per-tool个性化配置. Keys are tool names.
+	Settings map[string]map[string]any `yaml:"settings,omitempty"`
+}
+
+// BrowserExtensionConfig holds settings for the browser extension integration.
+type BrowserExtensionConfig struct {
+	Enabled bool   `yaml:"enabled,omitempty"`
+	APIKey  string `yaml:"api_key,omitempty"`
 }
 
 // CronConfig holds cron scheduler configuration.
