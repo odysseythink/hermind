@@ -397,10 +397,6 @@ function renderSkillDetail(
         <Switch checked={enabled} onChange={(next) => onToggle(sk.name, next)} ariaLabel={`Enable ${sk.name}`} />
       </div>
       {sk.description && <div className={styles.detailDesc}>{sk.description}</div>}
-      <div className={styles.tabs}>
-        <div className={`${styles.tab} ${styles.active}`}>配置</div>
-        <div className={styles.tab}>权限</div>
-      </div>
       <div className={styles.configSection}>
         <h3>个性化配置</h3>
         {sk.settings_schema && sk.settings_schema.length > 0
