@@ -15,6 +15,8 @@ import (
 
 const scrapePageTimeout = 15 * time.Second
 
+var mdConverter = converter.NewConverter()
+
 // pageContent holds extracted data from a single page.
 type pageContent struct {
 	URL     string
@@ -26,21 +28,31 @@ type pageContent struct {
 // It tries to find an existing Chrome/Chromium installation first.
 // If not found, rod auto-downloads on first Launch().
 // Returns an error (never panics) if launch fails.
-func newBrowser() (*rod.Browser, error) {
+// Caller must call cleanup() when done.
+func newBrowser() (*rod.Browser, func() error, error) {
 	l := launcher.New()
 	if path, found := launcher.LookPath(); found {
 		l.Bin(path)
 	}
 	u, err := l.Launch()
 	if err != nil {
-		return nil, fmt.Errorf("launch browser: %w", err)
+		return nil, nil, fmt.Errorf("launch browser: %w", err)
 	}
 
 	browser := rod.New().ControlURL(u)
 	if err := browser.Connect(); err != nil {
-		return nil, fmt.Errorf("connect to browser: %w", err)
+		l.Cleanup()
+		return nil, nil, fmt.Errorf("connect to browser: %w", err)
 	}
-	return browser, nil
+
+	cleanup := func() error {
+		if err := browser.Close(); err != nil {
+			return err
+		}
+		l.Cleanup()
+		return nil
+	}
+	return browser, cleanup, nil
 }
 
 // scrapePage navigates to url, waits for load, and extracts title + body text.
@@ -70,7 +82,7 @@ func scrapePage(browser *rod.Browser, url, format string) (*pageContent, error) 
 
 	var content string
 	if format == "text" {
-		textRes, err := page.Context(ctx).Eval("() => document.body.innerText")
+		textRes, err := page.Context(ctx).Eval("() => document.body ? document.body.innerText : ''")
 		if err != nil {
 			return nil, fmt.Errorf("extract text %s: %w", url, err)
 		}
@@ -80,8 +92,7 @@ func scrapePage(browser *rod.Browser, url, format string) (*pageContent, error) 
 		if err != nil {
 			return nil, fmt.Errorf("extract html %s: %w", url, err)
 		}
-		conv := converter.NewConverter()
-		content, err = conv.ConvertString(html)
+		content, err = mdConverter.ConvertString(html)
 		if err != nil {
 			return nil, fmt.Errorf("convert markdown %s: %w", url, err)
 		}
@@ -98,29 +109,28 @@ func scrapePage(browser *rod.Browser, url, format string) (*pageContent, error) 
 // that share the same origin as baseOrigin.
 // Returns an empty slice (not error) on navigation failure.
 // Closes the page before returning.
-func extractLinksFromPage(browser *rod.Browser, pageURL string, baseOrigin string) ([]string, error) {
+func extractLinksFromPage(browser *rod.Browser, pageURL, baseOrigin string) ([]string, error) {
 	ctx, cancel := context.WithTimeout(context.Background(), scrapePageTimeout)
 	defer cancel()
 
 	page, err := browser.Page(proto.TargetCreateTarget{URL: pageURL})
 	if err != nil {
-		return []string{}, nil
+		return []string{}, nil // navigation failure → silent skip
 	}
 	defer page.Close()
 
-	err = page.Context(ctx).WaitLoad()
-	if err != nil {
-		return []string{}, nil
+	if err := page.Context(ctx).WaitLoad(); err != nil {
+		return []string{}, nil // load failure → silent skip
 	}
 
 	res, err := page.Context(ctx).Eval("() => Array.from(document.querySelectorAll('a[href]')).map(a => a.href)")
 	if err != nil {
-		return []string{}, nil
+		return nil, fmt.Errorf("eval links on %s: %w", pageURL, err)
 	}
 
 	var allLinks []string
 	if err := res.Value.Unmarshal(&allLinks); err != nil {
-		return []string{}, nil
+		return nil, fmt.Errorf("unmarshal links on %s: %w", pageURL, err)
 	}
 
 	var links []string
