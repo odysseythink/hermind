@@ -35,11 +35,9 @@ type Options struct {
 	BraveAPIKey          string
 	ExaAPIKey            string
 	FirecrawlAPIKey      string
-	DDGProxyConfig       *config.DDGProxyConfig
-	BingMarket           string
-	SearXNGBaseURL       string
-	DisableWebFetch      bool
-	DisableWebScrapeSite bool
-	DefaultNumResults    int
+	DDGProxyConfig    *config.DDGProxyConfig
+	BingMarket        string
+	SearXNGBaseURL    string
+	DefaultNumResults int
 	MaxNumResults        int
 }

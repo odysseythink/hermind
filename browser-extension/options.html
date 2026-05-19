@@ -1,0 +1,73 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Hermind Extension Settings</title>
+  <link rel="stylesheet" href="options.css">
+</head>
+<body>
+  <div class="container">
+    <header>
+      <h1>Hermind Extension Settings</h1>
+      <p>Configure how the extension connects to your Hermind instance</p>
+    </header>
+
+    <form id="settingsForm">
+      <div class="field">
+        <label for="hermindUrl">Hermind Server URL</label>
+        <input
+          type="url"
+          id="hermindUrl"
+          name="hermindUrl"
+          placeholder="http://localhost:8080"
+          required
+        >
+        <span class="hint">The base URL of your Hermind server</span>
+      </div>
+
+      <div class="field">
+        <label for="apiKey">Extension API Key</label>
+        <div class="input-group">
+          <input
+            type="password"
+            id="apiKey"
+            name="apiKey"
+            placeholder="Paste your API key here"
+            required
+          >
+          <button type="button" id="toggleKey" class="btn-icon">👁</button>
+        </div>
+        <span class="hint">
+          Set this in your Hermind config.yaml under
+          <code>browser_extension.api_key</code>
+        </span>
+      </div>
+
+      <div class="actions">
+        <button type="submit" class="btn-primary">Save Settings</button>
+        <button type="button" id="testBtn" class="btn-secondary">Test Connection</button>
+      </div>
+    </form>
+
+    <div id="message" class="message"></div>
+
+    <section class="help">
+      <h2>How to use</h2>
+      <ol>
+        <li>Enter your Hermind server URL and API Key above</li>
+        <li>Click "Test Connection" to verify</li>
+        <li>Navigate to any web page (including logged-in pages)</li>
+        <li>Click the Hermind extension icon in your browser toolbar</li>
+        <li>Choose "Text" or "HTML" format</li>
+        <li>Click "Send to Hermind"</li>
+        <li>In Hermind, ask the AI about the page using the
+          <code>browser_extension_read</code> tool
+        </li>
+      </ol>
+    </section>
+  </div>
+
+  <script src="options.js"></script>
+</body>
+</html>

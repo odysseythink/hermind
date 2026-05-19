@@ -18,6 +18,7 @@ import (
 	"github.com/odysseythink/hermind/storage"
 	"github.com/odysseythink/hermind/tool"
 	"github.com/odysseythink/hermind/tool/browser"
+	"github.com/odysseythink/pantheon/core"
 	"github.com/odysseythink/pantheon/extensions/delegate"
 	"github.com/odysseythink/hermind/tool/embedding"
 	"github.com/odysseythink/hermind/tool/file"
@@ -117,12 +118,10 @@ func BuildEngineDeps(ctx context.Context, app *App) (api.EngineDeps, func(), err
 		BraveAPIKey:          app.Config.Web.Search.Providers.Brave.APIKey,
 		ExaAPIKey:            app.Config.Web.Search.Providers.Exa.APIKey,
 		DDGProxyConfig:       app.Config.Web.Search.Providers.DuckDuckGo,
-		FirecrawlAPIKey:      os.Getenv("FIRECRAWL_API_KEY"),
-		BingMarket:           app.Config.Web.Search.Providers.Bing.Market,
-		SearXNGBaseURL:       app.Config.Web.Search.Providers.SearXNG.BaseURL,
-		DisableWebFetch:      app.Config.Web.DisableWebFetch,
-		DisableWebScrapeSite: app.Config.Web.DisableWebScrapeSite,
-		DefaultNumResults:    app.Config.Web.Search.DefaultNumResults,
+		FirecrawlAPIKey:   os.Getenv("FIRECRAWL_API_KEY"),
+		BingMarket:        app.Config.Web.Search.Providers.Bing.Market,
+		SearXNGBaseURL:    app.Config.Web.Search.Providers.SearXNG.BaseURL,
+		DefaultNumResults: app.Config.Web.Search.DefaultNumResults,
 		MaxNumResults:        app.Config.Web.Search.MaxNumResults,
 	})
 
@@ -138,6 +137,33 @@ func BuildEngineDeps(ctx context.Context, app *App) (api.EngineDeps, func(), err
 		visionModel = displayModel
 	}
 	vision.Register(toolRegistry, auxModel, visionModel)
+
+	// Register browser extension tools
+	toolRegistry.Register(&tool.Entry{
+		Name:        "browser_extension_read",
+		Toolset:     "browser_extension",
+		Description: "Read content previously scraped by the browser extension. Lists recent items or reads a specific document by ID.",
+		Emoji:       "🔖",
+		Handler:     api.NewBrowserExtensionReadHandler(app.InstanceRoot),
+		Schema: core.ToolDefinition{
+			Name:        "browser_extension_read",
+			Description: "Read web page content that was previously scraped by the browser extension. Use this when the user refers to something they 'sent from the browser' or when you need to access content from a logged-in page that was captured via the extension.",
+			Parameters:  core.MustSchemaFromJSON([]byte(api.BrowserExtensionReadSchema)),
+		},
+	})
+
+	toolRegistry.Register(&tool.Entry{
+		Name:        "browser_control",
+		Toolset:     "browser_extension",
+		Description: "Control the user's browser through the browser extension to navigate, click, fill forms, scroll, and extract content from web pages including those that require login.",
+		Emoji:       "🌐",
+		Handler:     api.NewBrowserControlHandler("", ""),
+		Schema: core.ToolDefinition{
+			Name:        "browser_control",
+			Description: "Control the user's browser through the browser extension. Can navigate to URLs, click elements, fill forms, scroll pages, and extract text or HTML content. USE THIS for websites that require login or when you need to interact with a web page dynamically. The extension must be installed and running in the user's browser.",
+			Parameters:  core.MustSchemaFromJSON([]byte(api.BrowserControlSchema)),
+		},
+	})
 
 	// Use a stable session prefix for delegate sub-conversations spawned
 	// from web requests. Each sub-conversation gets its own UUID suffix.

@@ -142,9 +142,24 @@ func HermindMessageToLegacy(m HermindMessage) Message {
 		content = partsToContent(m.Content)
 	}
 
+	var toolCalls []ToolCall
+	for _, p := range m.Content {
+		if tc, ok := p.(core.ToolCallPart); ok {
+			toolCalls = append(toolCalls, ToolCall{
+				ID:   tc.ID,
+				Type: "function",
+				Function: ToolCallFunction{
+					Name:      tc.Name,
+					Arguments: tc.Arguments,
+				},
+			})
+		}
+	}
+
 	return Message{
 		Role:       Role(m.Role),
 		Content:    content,
+		ToolCalls:  toolCalls,
 		ToolCallID: m.ToolCallID,
 	}
 }

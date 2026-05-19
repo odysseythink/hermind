@@ -87,10 +87,11 @@ type OKResponse struct {
 
 // ToolDTO describes a single tool exposed by /api/tools.
 type ToolDTO struct {
-	Name        string `json:"name"`
-	Description string `json:"description,omitempty"`
-	Toolset     string `json:"toolset,omitempty"`
-	Enabled     bool   `json:"enabled"`
+	Name           string           `json:"name"`
+	Description    string           `json:"description,omitempty"`
+	Toolset        string           `json:"toolset,omitempty"`
+	Enabled        bool             `json:"enabled"`
+	SettingsSchema []ConfigFieldDTO `json:"settings_schema,omitempty"`
 }
 
 // ToolsResponse is the payload for GET /api/tools.
@@ -100,9 +101,10 @@ type ToolsResponse struct {
 
 // SkillDTO describes a single skill exposed by /api/skills.
 type SkillDTO struct {
-	Name        string `json:"name"`
-	Description string `json:"description,omitempty"`
-	Enabled     bool   `json:"enabled"`
+	Name           string           `json:"name"`
+	Description    string           `json:"description,omitempty"`
+	Enabled        bool             `json:"enabled"`
+	SettingsSchema []ConfigFieldDTO `json:"settings_schema,omitempty"`
 }
 
 // SkillsResponse is the payload for GET /api/skills.

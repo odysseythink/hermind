@@ -256,6 +256,12 @@ func (s *Server) buildRouter() chi.Router {
 		r.Post("/feedback", s.handleFeedback)
 		r.Get("/suggestions", s.handleSuggestions)
 		r.Post("/tts", s.handleTTS)
+
+		// Browser extension endpoints
+		r.Get("/browser-extension/check", s.extensionAuth(s.handleBrowserExtensionCheck))
+		r.Post("/browser-extension/scrape", s.extensionAuth(s.handleBrowserExtensionScrape))
+		r.Get("/browser-extension/poll", s.extensionAuth(s.handleBrowserExtensionPoll))
+		r.Post("/browser-extension/result", s.extensionAuth(s.handleBrowserExtensionResult))
 	})
 
 	if s.opts.Config.Proxy.Enabled {

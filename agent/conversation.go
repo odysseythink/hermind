@@ -563,87 +563,88 @@ func parseContentJSON(data []byte) ([]core.ContentParter, error) {
 		return core.NewTextContent(s), nil
 	}
 
-	// Must be an array
-	if data[0] != '[' {
-		return nil, fmt.Errorf("content must be string or array, got %q", data[:1])
-	}
-
-	// Try new format first (core.Message unmarshal handles ContentParter array)
-	wrapper := fmt.Sprintf(`{"role":"user","content":%s}`, string(data))
-	var msg core.Message
-	if err := json.Unmarshal([]byte(wrapper), &msg); err == nil {
-		return msg.Content, nil
-	}
-
-	// Fallback: old ContentBlock array format
-	var rawItems []json.RawMessage
-	if err := json.Unmarshal(data, &rawItems); err != nil {
-		return nil, err
-	}
-
-	var parts []core.ContentParter
-	for _, raw := range rawItems {
-		var typ struct {
-			Type string `json:"type"`
+	// JSON array → new or old format
+	if data[0] == '[' {
+		// Try new format first (core.Message unmarshal handles ContentParter array)
+		wrapper := fmt.Sprintf(`{"role":"user","content":%s}`, string(data))
+		var msg core.Message
+		if err := json.Unmarshal([]byte(wrapper), &msg); err == nil {
+			return msg.Content, nil
 		}
-		if err := json.Unmarshal(raw, &typ); err != nil {
+
+		// Fallback: old ContentBlock array format
+		var rawItems []json.RawMessage
+		if err := json.Unmarshal(data, &rawItems); err != nil {
 			return nil, err
 		}
 
-		switch typ.Type {
-		case "text":
-			var p core.TextPart
-			if err := json.Unmarshal(raw, &p); err != nil {
+		var parts []core.ContentParter
+		for _, raw := range rawItems {
+			var typ struct {
+				Type string `json:"type"`
+			}
+			if err := json.Unmarshal(raw, &typ); err != nil {
 				return nil, err
 			}
-			parts = append(parts, p)
-		case "image_url":
-			var old struct {
-				ImageURL struct {
-					URL    string `json:"url"`
-					Detail string `json:"detail,omitempty"`
-				} `json:"image_url"`
+
+			switch typ.Type {
+			case "text":
+				var p core.TextPart
+				if err := json.Unmarshal(raw, &p); err != nil {
+					return nil, err
+				}
+				parts = append(parts, p)
+			case "image_url":
+				var old struct {
+					ImageURL struct {
+						URL    string `json:"url"`
+						Detail string `json:"detail,omitempty"`
+					} `json:"image_url"`
+				}
+				if err := json.Unmarshal(raw, &old); err != nil {
+					return nil, err
+				}
+				parts = append(parts, core.ImagePart{
+					URL:    old.ImageURL.URL,
+					Detail: old.ImageURL.Detail,
+				})
+			case "tool_use":
+				var old struct {
+					ID    string          `json:"id"`
+					Name  string          `json:"name"`
+					Input json.RawMessage `json:"input"`
+				}
+				if err := json.Unmarshal(raw, &old); err != nil {
+					return nil, err
+				}
+				args := string(old.Input)
+				if args == "" {
+					args = "{}"
+				}
+				parts = append(parts, core.ToolCallPart{
+					ID:        old.ID,
+					Name:      old.Name,
+					Arguments: args,
+				})
+			case "tool_result":
+				var old struct {
+					ID      string `json:"id"`
+					Content string `json:"content"`
+				}
+				if err := json.Unmarshal(raw, &old); err != nil {
+					return nil, err
+				}
+				parts = append(parts, core.ToolResultPart{
+					ToolCallID: old.ID,
+					Content:    core.NewTextContent(old.Content),
+				})
+			default:
+				return nil, fmt.Errorf("unknown old content block type: %q", typ.Type)
 			}
-			if err := json.Unmarshal(raw, &old); err != nil {
-				return nil, err
-			}
-			parts = append(parts, core.ImagePart{
-				URL:    old.ImageURL.URL,
-				Detail: old.ImageURL.Detail,
-			})
-		case "tool_use":
-			var old struct {
-				ID    string          `json:"id"`
-				Name  string          `json:"name"`
-				Input json.RawMessage `json:"input"`
-			}
-			if err := json.Unmarshal(raw, &old); err != nil {
-				return nil, err
-			}
-			args := string(old.Input)
-			if args == "" {
-				args = "{}"
-			}
-			parts = append(parts, core.ToolCallPart{
-				ID:        old.ID,
-				Name:      old.Name,
-				Arguments: args,
-			})
-		case "tool_result":
-			var old struct {
-				ID      string `json:"id"`
-				Content string `json:"content"`
-			}
-			if err := json.Unmarshal(raw, &old); err != nil {
-				return nil, err
-			}
-			parts = append(parts, core.ToolResultPart{
-				ToolCallID: old.ID,
-				Content:    core.NewTextContent(old.Content),
-			})
-		default:
-			return nil, fmt.Errorf("unknown old content block type: %q", typ.Type)
 		}
+		return parts, nil
 	}
-	return parts, nil
+
+	// Plain text (legacy storage or non-JSON content)
+	return core.NewTextContent(string(data)), nil
 }
