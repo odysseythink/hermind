@@ -128,12 +128,14 @@ export default function SkillsSection(props: SkillsSectionProps) {
   const total = fetchState.status === 'ok' ? rows.length : 0;
   const disabledCount = rows.filter(r => !r.enabled).length;
 
+  const toolsDisabled = (props.config?.tools as Record<string, unknown> | undefined)?.disabled as string[] | undefined;
+  const toolsDisabledSet = new Set(toolsDisabled ?? []);
   const toolRows = toolState.status === 'ok'
     ? toolState.tools.map(t => ({
         name: t.name,
         description: t.description,
         toolset: t.toolset,
-        enabled: t.enabled,
+        enabled: !toolsDisabledSet.has(t.name),
       }))
     : [];
   const toolDisabledCount = toolRows.filter(r => !r.enabled).length;
