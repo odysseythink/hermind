@@ -16,6 +16,7 @@ import (
 
 	"github.com/odysseythink/hermind/agent"
 	"github.com/odysseythink/hermind/agent/idle"
+	"github.com/odysseythink/hermind/agent/memorylayer"
 	"github.com/odysseythink/hermind/agent/presence"
 	"github.com/odysseythink/hermind/config"
 	"github.com/odysseythink/hermind/gateway"
@@ -54,6 +55,9 @@ type EngineDeps struct {
 	// MemProvider, if non-nil, is added to the engine's MemoryManager so
 	// SyncTurn is called after each conversation turn.
 	MemProvider memprovider.Provider
+	// MemoryLayer, if non-nil, wraps the memory provider with hybrid
+	// retrieval (BM25+Vector+RRF) and boundary-triggered extraction.
+	MemoryLayer *memorylayer.MemoryLayer
 	// SkillsTracker maintains the skills-library content hash and
 	// generation seq used by the memory ranker to decay stale signals.
 	// Constructed at startup; nil if skills are not available.
@@ -431,10 +435,16 @@ func (s *Server) RunTurn(ctx context.Context, userMessage string) (string, error
 			if memK <= 0 {
 				memK = 3
 			}
-			eng.SetActiveMemoriesProvider(func(ctx context.Context, userMsg string) []memprovider.InjectedMemory {
+
+			recallFn := func(ctx context.Context, userMsg string) []memprovider.InjectedMemory {
+				if deps.MemoryLayer != nil {
+					out, _ := deps.MemoryLayer.Recall(ctx, userMsg, memK)
+					return out
+				}
 				out, _ := r.Recall(ctx, userMsg, memK)
 				return out
-			})
+			}
+			eng.SetActiveMemoriesProvider(recallFn)
 			if mc.BufferEvery > 0 {
 				eng.SetBufferEvery(mc.BufferEvery)
 			}
@@ -448,6 +458,9 @@ func (s *Server) RunTurn(ctx context.Context, userMessage string) (string, error
 			if mc.JudgeEnabled && deps.AuxProvider != nil {
 				eng.SetConversationJudge(agent.NewLLMJudge(deps.AuxProvider))
 			}
+		}
+		if deps.MemoryLayer != nil {
+			eng.SetMemoryLayer(deps.MemoryLayer)
 		}
 	}
 	wireEngineToHub(eng, s.streams)

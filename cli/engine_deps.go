@@ -10,6 +10,7 @@ import (
 
 	"github.com/google/uuid"
 	"github.com/odysseythink/hermind/agent"
+	"github.com/odysseythink/hermind/agent/memorylayer"
 	"github.com/odysseythink/hermind/agent/presence"
 	"github.com/odysseythink/hermind/api"
 	"github.com/odysseythink/hermind/config"
@@ -232,6 +233,30 @@ func BuildEngineDeps(ctx context.Context, app *App) (api.EngineDeps, func(), err
 		}
 	}
 
+	// MemoryLayer is constructed when hybrid retrieval is enabled and the
+	// underlying provider implements Recaller. A nil layer is a no-op.
+	var memLayer *memorylayer.MemoryLayer
+	if app.Config.MemoryLayer.Hybrid.Enabled {
+		if r, ok := extMem.(memprovider.Recaller); ok && app.Storage != nil {
+			memLayer = memorylayer.New(
+				app.Storage,
+				emb,
+				r,
+				p,
+				translateMemoryLayerConfig(app.Config.MemoryLayer),
+			)
+		} else {
+			mlog.Info("memorylayer: skipped (provider has no Recaller or no storage)")
+		}
+	}
+	if memLayer != nil {
+		cleanupFns = append(cleanupFns, func() {
+			shutdownCtx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
+			defer cancel()
+			memLayer.Flush(shutdownCtx)
+		})
+	}
+
 	delegate.RegisterDelegate(toolRegistry, func(subCtx context.Context, task, extra string, maxTurns int) (*delegate.SubagentResult, error) {
 		// Sub-agent runs are ephemeral — they should not write to the
 		// main conversation history.
@@ -314,8 +339,42 @@ func BuildEngineDeps(ctx context.Context, app *App) (api.EngineDeps, func(), err
 		SkillsEvolver:   evolver,
 		SkillsRetriever: retriever,
 		MemProvider:     extMem,
+		MemoryLayer:     memLayer,
 		SkillsTracker:   skillsTracker,
 		HTTPIdle:        httpIdle,
 		Presence:        composite,
 	}, cleanup, nil
+}
+
+func translateMemoryLayerConfig(cfg config.MemoryLayerConfig) memorylayer.Config {
+	return memorylayer.Config{
+		Hybrid: memorylayer.HybridConfig{
+			RRFConstant:             cfg.Hybrid.RRFConstant,
+			BM25TopNMultiplier:      cfg.Hybrid.BM25TopNMultiplier,
+			VectorTopNMultiplier:    cfg.Hybrid.VectorTopNMultiplier,
+			PreRerankTopKMultiplier: cfg.Hybrid.PreRerankTopKMultiplier,
+			ReinforcementAlpha:      cfg.Hybrid.ReinforcementAlpha,
+			NeglectPenalty:          cfg.Hybrid.NeglectPenalty,
+		},
+		Reranker: memorylayer.RerankerConfig{
+			Enabled:   cfg.Reranker.Enabled,
+			BatchSize: cfg.Reranker.BatchSize,
+			Timeout:   time.Duration(cfg.Reranker.TimeoutMS) * time.Millisecond,
+		},
+		Boundary: memorylayer.BoundaryConfig{
+			HardTokenLimit:            cfg.Boundary.HardTokenLimit,
+			HardTurnLimit:             cfg.Boundary.HardTurnLimit,
+			SoftTokenThreshold:        cfg.Boundary.SoftTokenThreshold,
+			IdleGap:                   time.Duration(cfg.Boundary.IdleGapMinutes) * time.Minute,
+			EnableTopicShift:          cfg.Boundary.EnableTopicShift,
+			TopicShiftCosineThreshold: cfg.Boundary.TopicShiftCosineThreshold,
+		},
+		Taxonomy: memorylayer.TaxonomyConfig{
+			Enabled:      cfg.Taxonomy.Enabled,
+			MaxOutputs:   cfg.Taxonomy.MaxOutputs,
+			Timeout:      time.Duration(cfg.Taxonomy.TimeoutMS) * time.Millisecond,
+			AllowedTypes: cfg.Taxonomy.AllowedTypes,
+		},
+		RecallLimit: cfg.RecallLimit,
+	}
 }
