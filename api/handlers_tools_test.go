@@ -273,6 +273,128 @@ func TestToolsList_FilesystemAggregation(t *testing.T) {
 	assert.True(t, bc.Enabled)
 }
 
+func TestToolsList_DocumentCreationAggregated(t *testing.T) {
+	cfg := &config.Config{}
+	srv, err := NewServer(&ServerOpts{
+		Config: cfg,
+		Deps: &EngineDeps{
+			ToolReg: buildTestRegistry(t, []testTool{
+				{Name: "create_text_file", Description: "Create text files", Toolset: "document_creation"},
+				{Name: "create_word_document", Description: "Create Word docs", Toolset: "document_creation"},
+				{Name: "browser_control", Description: "Browser", Toolset: "browser_extension"},
+			}),
+		},
+	})
+	require.NoError(t, err)
+
+	rr := httptest.NewRecorder()
+	srv.Router().ServeHTTP(rr, httptest.NewRequest("GET", "/api/tools", nil))
+	require.Equal(t, http.StatusOK, rr.Code)
+
+	var resp ToolsResponse
+	require.NoError(t, json.NewDecoder(rr.Body).Decode(&resp))
+
+	// Should have exactly 2 entries: browser_control + aggregated document_creation
+	require.Len(t, resp.Tools, 2)
+
+	byName := make(map[string]ToolDTO)
+	for _, t := range resp.Tools {
+		byName[t.Name] = t
+	}
+
+	docCreation, ok := byName["document_creation"]
+	require.True(t, ok, "document_creation entry should be present")
+	assert.Equal(t, "document_creation", docCreation.Toolset)
+	assert.True(t, docCreation.Enabled)
+	assert.Len(t, docCreation.SettingsSchema, 5)
+
+	// Individual document tools should NOT appear
+	assert.NotContains(t, byName, "create_text_file", "individual document tools should be hidden")
+	assert.NotContains(t, byName, "create_word_document", "individual document tools should be hidden")
+
+	// browser_control should still appear normally
+	bc, ok := byName["browser_control"]
+	require.True(t, ok, "browser_control should be present")
+	assert.True(t, bc.Enabled)
+}
+
+func TestActiveToolReg_DocumentCreationFiltering(t *testing.T) {
+	cfg := &config.Config{
+		Tools: config.ToolsConfig{
+			Disabled: []string{"document_creation"},
+		},
+	}
+	srv, err := NewServer(&ServerOpts{
+		Config: cfg,
+		Deps: &EngineDeps{
+			ToolReg: buildTestRegistry(t, []testTool{
+				{Name: "create_text_file", Description: "Create text files", Toolset: "document_creation"},
+				{Name: "create_pdf_document", Description: "Create PDF docs", Toolset: "document_creation"},
+				{Name: "other_tool", Description: "Other tool", Toolset: "other"},
+			}),
+		},
+	})
+	require.NoError(t, err)
+
+	active := srv.activeToolReg()
+	require.NotNil(t, active)
+
+	// document_creation tools should be excluded
+	entries := active.Entries(nil)
+	for _, e := range entries {
+		require.NotEqual(t, "create_text_file", e.Name)
+		require.NotEqual(t, "create_pdf_document", e.Name)
+	}
+	// other_tool should remain
+	found := false
+	for _, e := range entries {
+		if e.Name == "other_tool" {
+			found = true
+			break
+		}
+	}
+	require.True(t, found)
+}
+
+func TestActiveToolReg_DocumentCreationSubtoolFiltering(t *testing.T) {
+	cfg := &config.Config{
+		Tools: config.ToolsConfig{
+			Settings: map[string]map[string]interface{}{
+				"document_creation": {
+					"create_text_file":    false,
+					"create_pdf_document": true,
+				},
+			},
+		},
+	}
+	srv, err := NewServer(&ServerOpts{
+		Config: cfg,
+		Deps: &EngineDeps{
+			ToolReg: buildTestRegistry(t, []testTool{
+				{Name: "create_text_file", Description: "Create text files", Toolset: "document_creation"},
+				{Name: "create_pdf_document", Description: "Create PDF docs", Toolset: "document_creation"},
+			}),
+		},
+	})
+	require.NoError(t, err)
+
+	active := srv.activeToolReg()
+	entries := active.Entries(nil)
+
+	foundText := false
+	foundPDF := false
+	for _, e := range entries {
+		if e.Name == "create_text_file" {
+			foundText = true
+		}
+		if e.Name == "create_pdf_document" {
+			foundPDF = true
+		}
+	}
+	require.False(t, foundText, "create_text_file should be filtered out")
+	require.True(t, foundPDF, "create_pdf_document should remain")
+}
+
 func TestToolsList_FilesystemDisabledHidesFileTools(t *testing.T) {
 	cfg := &config.Config{
 		Tools: config.ToolsConfig{

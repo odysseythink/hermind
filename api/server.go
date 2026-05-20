@@ -202,6 +202,19 @@ func (s *Server) activeToolReg() *tool.Registry {
 		}
 	}
 
+	// Check document_creation master toggle
+	docCreationDisabled := disabled["document_creation"]
+
+	// Read document_creation subtool enablement from settings
+	docSubtoolEnabled := make(map[string]bool)
+	if docSettings, ok := s.opts.Config.Tools.Settings["document_creation"]; ok {
+		for key, val := range docSettings {
+			if b, ok := val.(bool); ok {
+				docSubtoolEnabled[key] = b
+			}
+		}
+	}
+
 	for _, e := range deps.ToolReg.Entries(nil) {
 		// Virtual filesystem entry has no handler — skip from engine registry
 		if e.Name == "filesystem" {
@@ -216,6 +229,18 @@ func (s *Server) activeToolReg() *tool.Registry {
 		// If filesystem is enabled, check per-subtool setting
 		if e.Toolset == "file" && !filesystemDisabled {
 			if enabled, ok := subtoolEnabled[e.Name]; ok && !enabled {
+				continue
+			}
+		}
+
+		// If document_creation is disabled, drop all document_creation toolset entries
+		if e.Toolset == "document_creation" && docCreationDisabled {
+			continue
+		}
+
+		// If document_creation is enabled, check per-subtool setting
+		if e.Toolset == "document_creation" && !docCreationDisabled {
+			if enabled, ok := docSubtoolEnabled[e.Name]; ok && !enabled {
 				continue
 			}
 		}
@@ -287,6 +312,7 @@ func (s *Server) buildRouter() chi.Router {
 		r.Get("/sse", s.handleSSE)
 
 		r.Get("/tools", s.handleToolsList)
+		r.Get("/generated-files/{filename}", s.handleGeneratedFileDownload)
 		r.Get("/skills", s.handleSkillsList)
 		r.Get("/providers", s.handleProvidersList)
 		r.Post("/providers/{name}/models", s.handleProvidersModels)

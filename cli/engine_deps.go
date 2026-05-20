@@ -20,6 +20,7 @@ import (
 	"github.com/odysseythink/hermind/tool/browser"
 	"github.com/odysseythink/pantheon/core"
 	"github.com/odysseythink/pantheon/extensions/delegate"
+	"github.com/odysseythink/hermind/tool/document"
 	"github.com/odysseythink/hermind/tool/embedding"
 	"github.com/odysseythink/hermind/tool/file"
 	"github.com/odysseythink/hermind/tool/mcp"
@@ -87,6 +88,7 @@ func BuildEngineDeps(ctx context.Context, app *App) (api.EngineDeps, func(), err
 	toolRegistry := tool.NewRegistry()
 	file.RegisterAll(toolRegistry)
 	obsidian.RegisterAll(toolRegistry)
+	document.RegisterAll(toolRegistry, app.InstanceRoot)
 	tool.RegisterChart(toolRegistry)
 
 	termCfg := terminal.Config{

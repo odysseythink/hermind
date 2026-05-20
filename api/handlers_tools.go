@@ -23,16 +23,19 @@ func (s *Server) handleToolsList(w http.ResponseWriter, _ *http.Request) {
 
 	// Collect file toolset entries for aggregation
 	var fileTools []*tool.Entry
+	var docTools []*tool.Entry
 	var otherTools []*tool.Entry
 	for _, e := range entries {
 		if e.Toolset == "file" {
 			fileTools = append(fileTools, e)
+		} else if e.Toolset == "document_creation" {
+			docTools = append(docTools, e)
 		} else {
 			otherTools = append(otherTools, e)
 		}
 	}
 
-	out := make([]ToolDTO, 0, len(otherTools)+1)
+	out := make([]ToolDTO, 0, len(otherTools)+2)
 
 	// Add non-file tools (skip the virtual filesystem entry — it gets the aggregated DTO below)
 	for _, e := range otherTools {
@@ -52,6 +55,23 @@ func (s *Server) handleToolsList(w http.ResponseWriter, _ *http.Request) {
 			}
 		}
 		out = append(out, dto)
+	}
+
+	// Add aggregated document_creation entry if any document tools exist
+	if len(docTools) > 0 {
+		out = append(out, ToolDTO{
+			Name:        "document_creation",
+			Description: "Document creation — allows the agent to generate text files, Word documents, PowerPoint presentations, PDFs, and Excel spreadsheets.",
+			Toolset:     "document_creation",
+			Enabled:     !disabled["document_creation"],
+			SettingsSchema: []ConfigFieldDTO{
+				{Name: "create_text_file", Label: "Text files", Kind: "bool", Help: "Create text files (.txt, .md, .json, .csv, etc.)", Default: true},
+				{Name: "create_word_document", Label: "Word documents", Kind: "bool", Help: "Create Microsoft Word documents (.docx)", Default: true},
+				{Name: "create_pptx_presentation", Label: "PowerPoint", Kind: "bool", Help: "Create PowerPoint presentations (.pptx)", Default: true},
+				{Name: "create_pdf_document", Label: "PDF documents", Kind: "bool", Help: "Create PDF documents", Default: true},
+				{Name: "create_excel_spreadsheet", Label: "Excel spreadsheets", Kind: "bool", Help: "Create Excel spreadsheets (.xlsx)", Default: true},
+			},
+		})
 	}
 
 	// Add aggregated filesystem entry if any file tools exist
