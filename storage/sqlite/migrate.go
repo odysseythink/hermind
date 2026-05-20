@@ -67,7 +67,17 @@ CREATE TABLE IF NOT EXISTS memories (
     created_at REAL NOT NULL,
     updated_at REAL NOT NULL,
     mem_type TEXT NOT NULL DEFAULT '',
-    vector BLOB
+    vector BLOB,
+    status TEXT NOT NULL DEFAULT 'active',
+    superseded_by TEXT NOT NULL DEFAULT '',
+    reinforcement_count INTEGER NOT NULL DEFAULT 0,
+    neglect_count INTEGER NOT NULL DEFAULT 0,
+    last_used_at REAL NOT NULL DEFAULT 0,
+    reinforced_at_seq INTEGER NOT NULL DEFAULT 0,
+    parent_turn_id INTEGER NOT NULL DEFAULT 0,
+    parent_mem_id TEXT NOT NULL DEFAULT '',
+    expires_at REAL NOT NULL DEFAULT 0,
+    cluster_id TEXT NOT NULL DEFAULT ''
 );
 CREATE INDEX IF NOT EXISTS idx_memories_user ON memories(user_id);
 CREATE INDEX IF NOT EXISTS idx_memories_created ON memories(created_at);
@@ -100,7 +110,8 @@ INSERT OR IGNORE INTO schema_meta (key, value) VALUES ('version', '3');
 // v7 adds memory_events table for event-driven memory consolidation;
 // v8 adds skills_generation table + memories.reinforced_at_seq column;
 // v9 adds feedback and attachments tables.
-const currentSchemaVersion = 9
+// v10 adds parent_turn_id, parent_mem_id, expires_at, cluster_id to memories.
+const currentSchemaVersion = 10
 
 // Migrate applies the base schema. Idempotent. Legacy v1/v2 DBs are
 // never reached here — they are backed up before Migrate() runs.
@@ -254,6 +265,28 @@ func (s *Store) applyVersion(v int) error {
 			);
 		`); err != nil {
 			return err
+		}
+	case 10:
+		for _, ddl := range []string{
+			`ALTER TABLE memories ADD COLUMN parent_turn_id INTEGER NOT NULL DEFAULT 0`,
+			`ALTER TABLE memories ADD COLUMN parent_mem_id  TEXT    NOT NULL DEFAULT ''`,
+			`ALTER TABLE memories ADD COLUMN expires_at     REAL    NOT NULL DEFAULT 0`,
+			`ALTER TABLE memories ADD COLUMN cluster_id     TEXT    NOT NULL DEFAULT ''`,
+		} {
+			if _, err := tx.Exec(ddl); err != nil {
+				if !strings.Contains(err.Error(), "duplicate column name") {
+					return fmt.Errorf("v10 alter memories: %w", err)
+				}
+			}
+		}
+		for _, ddl := range []string{
+			`CREATE INDEX IF NOT EXISTS idx_memories_parent_turn ON memories(parent_turn_id)`,
+			`CREATE INDEX IF NOT EXISTS idx_memories_expires_at  ON memories(expires_at)`,
+			`CREATE INDEX IF NOT EXISTS idx_memories_cluster_id  ON memories(cluster_id)`,
+		} {
+			if _, err := tx.Exec(ddl); err != nil {
+				return fmt.Errorf("v10 create index: %w", err)
+			}
 		}
 	default:
 		return fmt.Errorf("no migration step for v%d", v)

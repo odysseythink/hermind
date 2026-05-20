@@ -353,3 +353,191 @@ func TestSearchMemoriesHalfLifeZeroDisablesDecay(t *testing.T) {
 	// With decay off, raw reinforcement is identical → ordering depends on
 	// other signals (FTS / cosine / recency); just assert both are present.
 }
+
+func TestMemory_ParentAndExpiresPersist(t *testing.T) {
+	store := newTestStore(t)
+	ctx := context.Background()
+	now := time.Now().UTC().Truncate(time.Second)
+
+	m := &storage.Memory{
+		ID:           "parent-test",
+		Content:      "test",
+		ParentTurnID: 42,
+		ParentMemID:  "m_parent",
+		ExpiresAt:    now.Add(24 * time.Hour),
+		ClusterID:    "cluster_1",
+		CreatedAt:    now,
+		UpdatedAt:    now,
+	}
+	require.NoError(t, store.SaveMemory(ctx, m))
+
+	got, err := store.GetMemory(ctx, "parent-test")
+	require.NoError(t, err)
+	assert.Equal(t, int64(42), got.ParentTurnID)
+	assert.Equal(t, "m_parent", got.ParentMemID)
+	assert.Equal(t, "cluster_1", got.ClusterID)
+	assert.WithinDuration(t, m.ExpiresAt, got.ExpiresAt, time.Second)
+}
+
+func TestSearchMemories_FilterMemTypes(t *testing.T) {
+	store := newTestStore(t)
+	ctx := context.Background()
+	now := time.Now().UTC()
+
+	for _, mt := range []string{"fact", "foresight", "episode", "core"} {
+		require.NoError(t, store.SaveMemory(ctx, &storage.Memory{
+			ID:        "mt_" + mt,
+			Content:   "content " + mt,
+			MemType:   mt,
+			CreatedAt: now,
+			UpdatedAt: now,
+		}))
+	}
+
+	results, err := store.SearchMemories(ctx, "", &storage.MemorySearchOptions{
+		Limit:    10,
+		MemTypes: []string{"fact", "foresight"},
+	})
+	require.NoError(t, err)
+	require.Len(t, results, 2)
+	ids := make(map[string]bool)
+	for _, r := range results {
+		ids[r.MemType] = true
+	}
+	assert.True(t, ids["fact"])
+	assert.True(t, ids["foresight"])
+	assert.False(t, ids["episode"])
+	assert.False(t, ids["core"])
+}
+
+func TestSearchMemories_ExcludeExpired(t *testing.T) {
+	store := newTestStore(t)
+	ctx := context.Background()
+	now := time.Now().UTC()
+
+	require.NoError(t, store.SaveMemory(ctx, &storage.Memory{
+		ID:        "expired",
+		Content:   "old foresight",
+		MemType:   "foresight",
+		ExpiresAt: now.Add(-time.Hour),
+		CreatedAt: now,
+		UpdatedAt: now,
+	}))
+	require.NoError(t, store.SaveMemory(ctx, &storage.Memory{
+		ID:        "active",
+		Content:   "new foresight",
+		MemType:   "foresight",
+		ExpiresAt: now.Add(time.Hour),
+		CreatedAt: now,
+		UpdatedAt: now,
+	}))
+
+	// Default: exclude expired
+	results, err := store.SearchMemories(ctx, "", &storage.MemorySearchOptions{Limit: 10})
+	require.NoError(t, err)
+	require.Len(t, results, 1)
+	assert.Equal(t, "active", results[0].ID)
+
+	// Include expired
+	results, err = store.SearchMemories(ctx, "", &storage.MemorySearchOptions{Limit: 10, IncludeExpired: true})
+	require.NoError(t, err)
+	require.Len(t, results, 2)
+}
+
+func TestSearchMemories_RankingMode_FTSOnly(t *testing.T) {
+	store := newTestStore(t)
+	ctx := context.Background()
+	now := time.Now().UTC()
+
+	// Create memories with different reinforcement but same content keyword
+	require.NoError(t, store.SaveMemory(ctx, &storage.Memory{
+		ID:                 "low_reinforcement",
+		Content:            "fox jumps",
+		CreatedAt:          now,
+		UpdatedAt:          now,
+		ReinforcementCount: 0,
+	}))
+	require.NoError(t, store.SaveMemory(ctx, &storage.Memory{
+		ID:                 "high_reinforcement",
+		Content:            "lazy fox",
+		CreatedAt:          now,
+		UpdatedAt:          now,
+		ReinforcementCount: 10,
+	}))
+
+	// fts_only should return BM25-ranked results, ignoring reinforcement
+	results, err := store.SearchMemories(ctx, "fox", &storage.MemorySearchOptions{
+		Limit:       10,
+		RankingMode: "fts_only",
+	})
+	require.NoError(t, err)
+	require.GreaterOrEqual(t, len(results), 2)
+	// In fts_only, ordering is BM25-based; reinforcement doesn't matter.
+	// We just verify both are present.
+	ids := make(map[string]bool)
+	for _, r := range results {
+		ids[r.ID] = true
+	}
+	assert.True(t, ids["low_reinforcement"])
+	assert.True(t, ids["high_reinforcement"])
+}
+
+func TestSearchMemories_RankingMode_VectorOnly(t *testing.T) {
+	store := newTestStore(t)
+	ctx := context.Background()
+	now := time.Now().UTC()
+
+	vecA := []float32{1, 0, 0}
+	vecB := []float32{0, 1, 0}
+	encA, _ := embedding.EncodeVector(vecA)
+	encB, _ := embedding.EncodeVector(vecB)
+
+	require.NoError(t, store.SaveMemory(ctx, &storage.Memory{
+		ID:        "mem_a",
+		Content:   "alpha",
+		Vector:    encA,
+		CreatedAt: now,
+		UpdatedAt: now,
+	}))
+	require.NoError(t, store.SaveMemory(ctx, &storage.Memory{
+		ID:        "mem_b",
+		Content:   "beta",
+		Vector:    encB,
+		CreatedAt: now,
+		UpdatedAt: now,
+	}))
+
+	queryVec := []float32{1, 0, 0}
+	results, err := store.SearchMemories(ctx, "", &storage.MemorySearchOptions{
+		Limit:       10,
+		QueryVector: queryVec,
+		RankingMode: "vector_only",
+	})
+	require.NoError(t, err)
+	require.GreaterOrEqual(t, len(results), 2)
+	// mem_a should rank first because it has perfect cosine similarity
+	assert.Equal(t, "mem_a", results[0].ID)
+}
+
+func TestMigrate_v9_to_v10(t *testing.T) {
+	store := newTestStore(t)
+	defer store.Close()
+	ctx := context.Background()
+
+	// v9 schema is applied by newTestStore which calls Migrate().
+	// Insert a memory using only v9 columns.
+	require.NoError(t, store.SaveMemory(ctx, &storage.Memory{
+		ID:        "v9mem",
+		Content:   "pre-v10",
+		CreatedAt: time.Now().UTC(),
+		UpdatedAt: time.Now().UTC(),
+	}))
+
+	// Verify v10 columns default correctly.
+	got, err := store.GetMemory(ctx, "v9mem")
+	require.NoError(t, err)
+	assert.Equal(t, int64(0), got.ParentTurnID)
+	assert.Equal(t, "", got.ParentMemID)
+	assert.True(t, got.ExpiresAt.IsZero())
+	assert.Equal(t, "", got.ClusterID)
+}

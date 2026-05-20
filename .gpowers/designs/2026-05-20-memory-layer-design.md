@@ -1,8 +1,32 @@
-# Hermind Memory Layer — 智能记忆中间层设计文档
+# Hermind Memory Layer — 智能记忆中间层设计文档（v2）
 
-> **Status**: Approved  
-> **Date**: 2026-05-20  
-> **Source**: EverOS 亮点功能引入方案（方案 A：智能记忆中间层）
+> **Status**: Draft (v2, awaiting approval)
+> **Date**: 2026-05-21
+> **Supersedes**: v1 (2026-05-20)
+> **Source**: EverOS / EverCore 亮点功能引入方案 — 经客观评估后的修订版
+
+---
+
+## 0. v2 修订纲要
+
+v1 抓住了"分类 + 生命周期 + 技能提取"的脚手架，但漏掉了 EverCore 在 LoCoMo 92.3% 上真正发力的几件事，同时引入了若干非必要抽象。v2 的核心变化：
+
+**补强（高 ROI）**
+1. 新增 **Hybrid Retrieval（BM25 + 向量 + RRF）+ 轻量 Reranker** —— Agentic 多轮的真正地基。
+2. 新增 **MemCell-lite 边界检测 + Provenance 链路（`ParentTurnID` / `ParentMemID`）** —— 决定下游提取质量与可追溯性。
+3. 新增 **Living Profile 作为独立单文档对象**（不是把 profile 当作一个 MemType）。
+4. **Foresight 真做成时效对象**（`ExpiresAt` + 过期归档 + 可选提醒事件）。
+5. 把现有的 `ReinforcementCount / NeglectCount / LastUsedAt` 接入检索打分。
+
+**剔除（过度设计）**
+1. 独立 `SkillExtractor` 并行管线 → 改为向 `skills.Evolver` 发候选事件，单一写入者。
+2. 4 段生命周期钩子 → 收敛为 2 段（`OnSessionStart` + `OnTurnComplete`）。
+3. `memory_layer.enabled: false` 全零成本回退 → 删除，默认开启 + 做好降级。
+4. 6 类 MemType 同表 → 拆为 4 类 MemType（`core/episode/fact/foresight`）+ 独立 Profile 表 + 现有 skills 文件。
+5. 删除：`sufficiency_model` 独立模型配置、`eviction_policy` 双策略、`extract_prompt` 自定义路径、`OnBeforePrompt` / `OnConversationEnd` 钩子。
+6. Agentic：`max_rounds=2` → `max_extra_rounds=1`，`expansion_queries=3` → `2`。
+
+工时由 v1 的 9 天调整为 **13–17 天**（含真实地基）。
 
 ---
 
@@ -10,560 +34,636 @@
 
 ### 1.1 问题陈述
 
-Hermind 当前的记忆系统存在以下缺口：
+Hermind 当前记忆系统的缺口：
 
-1. **记忆扁平化**：`memory_save` / `memory_search` 将所有记忆视为无差别的文本块，缺乏结构化分类。
-2. **检索简单**：依赖单次 FTS5 / 向量搜索，没有根据查询复杂度自适应调整检索深度的能力。
-3. **无生命周期管理**：对话开始前不会自动预加载用户画像，对话结束后不会自动结构化提取新记忆。
-4. **技能提取稀疏**：`SkillsEvolver` 分析完整 history 生成 skill，成本高且命中率低。
+1. **检索地基薄弱**：`Recaller.Recall` 要么 FTS 要么向量，没有融合，更没有精排；无法对复杂查询给出稳定召回。
+2. **派生记忆扁平且无溯源**：`storage.Memory` 没有 `ParentTurnID` 字段，提取出的 fact 与源对话之间断开。
+3. **无生命周期管理**：会话开始不预加载画像；turn 完成无统一处理面；working_summary 是 MetaClaw 私有逻辑。
+4. **画像缺失**：没有"who is this user"的单文档对象；偏好散落在 `preference` 记忆中，无法增量编辑。
+5. **缺时效语义**：无法表达"这件事下周三过期"。
+6. **已有信号未利用**：`ReinforcementCount / NeglectCount / LastUsedAt / ReinforcedAtSeq` 在存储层已实现，但 Recall 完全没用上。
 
 ### 1.2 设计目标
 
-借鉴 EverOS 的 EverCore 记忆系统，在 Hermind 中引入一个**可选的智能记忆中间层**（`agent/memorylayer`），实现：
+在 `agent/memorylayer` 引入智能记忆中间层，目标按重要性排序：
 
-- **记忆分类学（Taxonomy）**：6 类结构化记忆类型
-- **Agentic 多轮检索**：LLM 引导的迭代召回
-- **生命周期钩子（Lifecycle Hooks）**：对话启动/结束的自动注入与提取
-- **Taxonomy-Driven Skill 提取**：从分类记忆中高效生成 SKILL.md
+- **G1 检索质量**：Hybrid + RRF + Reranker，把单轮召回先做扎实；Agentic 多轮作为上层增益。
+- **G2 派生质量**：MemCell-lite 边界检测，让提取作用在完整语义单元上而非碎片 turn。
+- **G3 画像与时效**：Living Profile 独立对象 + Foresight 时效字段。
+- **G4 生命周期统一**：两段钩子覆盖会话启动与每轮收尾。
+- **G5 信号闭环**：把 reinforcement 信号反哺到检索排序。
 
-**核心约束**：零侵入现有架构，关闭时行为完全不变。
+**约束**：对外接口（`memprovider.Provider` / `Recaller` / `tool.Registry`）保持兼容；MetaClaw 等现有 provider 不强制改造。
 
 ---
 
 ## 2. 总体架构
 
-### 2.1 组件位置
-
 ```
-┌─────────────────────────────────────────────────────────────┐
-│                    API / CLI / Gateway                       │
-│                      (现有，无改动)                           │
-└─────────────────────────────────────────────────────────────┘
+┌───────────────────────────────────────────────────────────────────────┐
+│                      API / CLI / Gateway（无改动）                      │
+└───────────────────────────────────────────────────────────────────────┘
                               │
                               ▼
-┌─────────────────────────────────────────────────────────────┐
-│              agent/memorylayer (新增)                        │
-│  ┌──────────────┐  ┌──────────────┐  ┌──────────────────┐  │
-│  │ Taxonomy     │  │ Agentic      │  │ Lifecycle        │  │
-│  │ Extractor    │  │ Retriever    │  │ Hooks            │  │
-│  │ (LLM分类)     │  │ (多轮检索)    │  │ (启动/结束注入)   │  │
-│  └──────────────┘  └──────────────┘  └──────────────────┘  │
-│  ┌──────────────────────────────────────────────────────┐  │
-│  │ Skill Extractor (技能自动提取)                        │  │
-│  └──────────────────────────────────────────────────────┘  │
-└─────────────────────────────────────────────────────────────┘
+┌───────────────────────────────────────────────────────────────────────┐
+│                        agent/memorylayer（新增）                        │
+│                                                                       │
+│  ┌──────────────┐  ┌──────────────────────────────────────┐           │
+│  │ Lifecycle    │  │ Hybrid Recaller                       │           │
+│  │ (2 hooks)    │  │  ├── BM25 (FTS5)                      │           │
+│  └──────┬───────┘  │  ├── Vector (existing embedder)       │           │
+│         │          │  ├── RRF Fusion                       │           │
+│         │          │  └── Signal Boost (reinforcement)     │           │
+│         │          └──────────────┬───────────────────────┘           │
+│         │                         │                                    │
+│         │                         ▼                                    │
+│         │          ┌─────────────────────────────┐                     │
+│         │          │ LLM Reranker（top-K → top-N）│                     │
+│         │          └──────────────┬───────────────┘                     │
+│         │                         │                                    │
+│         │                         ▼                                    │
+│         │          ┌─────────────────────────────────────┐             │
+│         │          │ Agentic Wrapper                      │             │
+│         │          │  ├── Sufficiency Check               │             │
+│         │          │  └── 1 extra round (≤2 sub-queries)  │             │
+│         │          └─────────────────────────────────────┘             │
+│         │                                                              │
+│         ▼                                                              │
+│  ┌────────────────────────────────────────────────────────────┐        │
+│  │ Boundary-Triggered Extractors                              │        │
+│  │  ├── MemCell-lite boundary detector                         │        │
+│  │  ├── Taxonomy Extractor (core / episode / fact / foresight)│        │
+│  │  ├── Profile Updater (incremental add/update/delete)       │        │
+│  │  └── Skill Candidate Emitter → skills.Evolver              │        │
+│  └────────────────────────────────────────────────────────────┘        │
+└───────────────────────────────────────────────────────────────────────┘
                               │
-              ┌───────────────┼───────────────┐
-              ▼               ▼               ▼
-      ┌──────────┐   ┌──────────┐   ┌──────────────┐
-      │ MetaClaw │   │ Honcho   │   │ Built-in     │
-      │ (本地LLM) │   │ (云端)    │   │ SQLite FTS5  │
-      └──────────┘   └──────────┘   └──────────────┘
+              ┌───────────────┼────────────────┬─────────────────┐
+              ▼               ▼                ▼                 ▼
+       ┌──────────┐   ┌──────────────┐  ┌────────────┐  ┌────────────┐
+       │ MetaClaw │   │ External     │  │ SQLite +   │  │ skills/    │
+       │ (本地LLM) │   │ memproviders │  │ FTS5 +     │  │ (.md files)│
+       │          │   │ (Honcho 等)   │  │ vectors    │  │            │
+       └──────────┘   └──────────────┘  └────────────┘  └────────────┘
 ```
 
-### 2.2 核心原则
+**设计原则**
 
-1. **可选包装**：`memorylayer` 是现有 `memprovider.Provider` / `Recaller` 之上的可选增强层。
-2. **接口兼容**：不修改现有 `Provider` / `Recaller` / `tool.Registry` 接口。
-3. **引擎层通用化**：所有增强功能对所有 memory provider 生效（MetaClaw、Honcho、Mem0、SQLite 等）。
-4. **配置驱动**：通过 `config.AgentConfig.MemoryLayer` 完全控制开关和行为参数。
+1. **可选包装**：是 `Recaller` 之上的装饰器，外部接口不变。
+2. **引擎层通用化**：所有 provider 受益于 Hybrid + Rerank + Agentic。
+3. **单一写入者**：skill 由 `skills.Evolver` 唯一写入；记忆层只发候选事件。
+4. **配置驱动**：通过 `config.AgentConfig.MemoryLayer` 控制；**不再有全功能 disable 开关**，但子能力可独立关闭。
 
 ---
 
-## 3. 记忆分类学（Taxonomy）
+## 3. 记忆分类学（4 类 MemType + 2 类独立对象）
 
-### 3.1 记忆类型定义
+v1 的 6 类混在一起；v2 按存储形态拆分。
 
-在现有 `MetaClaw` 的 `episodic / semantic / preference` 基础上，扩展到 **6 类记忆**：
+### 3.1 进入 `MemType` 的 4 类（共用 `memories` 表）
 
-| 类型 | 英文名 | 说明 | 注入策略 |
-|---|---|---|---|
-| 核心记忆 | `core` | 用户明确要求的"永远记住"（如"我是左撇子"） | 每次对话强制注入，受 `core_max_count` 限制 |
-| 用户画像 | `profile` | 推断出的用户属性、习惯、偏好 | 按需检索注入，受 synergy budget 限制 |
-| 原子事实 | `fact` | 离散知识点（如"项目的 API 密钥存在 .env"） | 按需检索注入 |
-| 对话片段 | `episode` | 完整或压缩的对话回合 | 按需检索注入 |
-| 技能模板 | `skill` | 从成功任务中提取的可复用模式 | 存入 skills 目录，同时保留记忆引用 |
-| 前瞻记忆 | `foresight` | 用户的计划、待办、预测性信息 | 高优先级检索，启动时可选强制注入 |
+| 类型 | 说明 | 检索时注入策略 |
+|---|---|---|
+| `core` | 用户显式要求永远记住（"我对花生过敏"） | 每次对话强制注入，受 `core_max_tokens` 上限 |
+| `episode` | MemCell 派生的对话段叙事（替代 v1 `episodic`） | 按相关度检索注入 |
+| `fact` | 原子事实（替代 v1 `semantic`） | 按相关度检索注入 |
+| `foresight` | **带时效**的前瞻预测，含 `ExpiresAt` | 未过期者高优先；启动时可选强注入未来 7 天内 |
 
-### 3.2 存储层扩展
-
-现有 `storage.Memory` 结构已有 `MemType string`，扩展合法取值并增加索引：
-
-```go
-// storage/storage.go — 已有字段兼容
-type Memory struct {
-    ID        string
-    Content   string
-    MemType   string  // 新增枚举: core, profile, fact, episode, skill, foresight
-    Category  string  // 保留用于向后兼容
-    Embedding []float32
-    CreatedAt time.Time
-    UpdatedAt time.Time
-    Source    string  // "manual" | "extracted" | "synced"
-    TurnID    string  // 关联的对话回合
-}
-```
-
-**向后兼容映射**：
+**向后兼容映射**
 - `episodic` → `episode`
 - `semantic` → `fact`
-- `preference` → `profile`
+- `preference` → 迁移到 Profile 独立对象（见 §6）
 
-### 3.3 自动分类提取器
+### 3.2 独立对象：Profile（独立表）
 
-新增 `agent/memorylayer/extractor.go`：
+详见 §6。**不是 `MemType`**，因为它是单文档增量编辑对象，与离散记忆形态不同。
+
+### 3.3 独立对象：Skill（仍住 `skills/` 目录）
+
+记忆层不在 `memories` 表里另开一份 skill 副本；只通过事件通知 `skills.Evolver`，由 Evolver 决定是否写文件。**不引入 `MemType=skill`**。
+
+### 3.4 存储层字段扩展
 
 ```go
-type Extractor struct {
-    provider provider.Provider
-    config   TaxonomyConfig
-}
+// storage/types.go — 在现有 Memory 上增量
+type Memory struct {
+    // ...现有字段保留...
+    MemType      string    // 取值: core | episode | fact | foresight（+ 兼容旧值）
 
-func (ex *Extractor) Extract(ctx context.Context, userMsg, assistantMsg string) ([]TypedMemory, error) {
-    // LLM 调用：从对话中提取结构化的记忆列表
-    // 提示词模板包含完整的 6 类定义和示例
-}
-
-type TypedMemory struct {
-    Type        string    // core | profile | fact | episode | skill | foresight
-    Content     string
-    Context     string    // 提取时的上下文摘要
-    Confidence  float64   // 0.0 ~ 1.0
-    Embedding   []float32 // 可选
+    // v2 新增
+    ParentTurnID  int64    // 源对话 turn id，0 表示手工或外部同步
+    ParentMemID   string   // 源 MemCell id（episode/fact/foresight 派生时）
+    ExpiresAt     time.Time// foresight 必填；其他类型零值表示永久
+    ClusterID     string   // 主题簇 id（可选，§9）
 }
 ```
 
-提取示例输出：
+新增/调整索引：`idx_memories_mem_type`、`idx_memories_expires_at`、`idx_memories_parent_turn`。
+
+### 3.5 Taxonomy Extractor（按边界触发，不按 turn 触发）
+
+```go
+// agent/memorylayer/extractor.go
+type TypedMemory struct {
+    Type         string    // core | episode | fact | foresight
+    Content      string
+    Confidence   float64
+    ExpiresAt    time.Time // 仅 foresight
+    ParentTurnID int64
+    ParentMemID  string
+}
+
+func (ex *Extractor) ExtractFromBoundary(ctx, cell MemCell) ([]TypedMemory, error)
+```
+
+LLM 输出示例：
 
 ```json
 [
-  {"type": "profile", "content": "用户偏好使用 TypeScript 而非 JavaScript", "confidence": 0.92},
-  {"type": "fact",    "content": "项目使用 pnpm 作为包管理器", "confidence": 0.88},
-  {"type": "skill",   "content": "修复 Vite 构建时，先检查 public/ 目录路径是否正确映射", "confidence": 0.85}
+  {"type":"core",     "content":"用户对花生过敏","confidence":0.98},
+  {"type":"episode",  "content":"调试 Vite 静态文件 404 的会话","confidence":0.9},
+  {"type":"fact",     "content":"项目使用 pnpm","confidence":0.92},
+  {"type":"foresight","content":"用户计划周三前交报告","expires_at":"2026-05-27T00:00:00Z","confidence":0.86}
 ]
 ```
 
 ---
 
-## 4. Agentic 多轮检索
+## 4. Hybrid Retrieval + Reranker（地基）
 
-### 4.1 核心流程
+### 4.1 为什么不能跳过这一层
 
-在现有 `Recaller.Recall()` 之上，包装 `AgenticRetriever`：
+EverCore 的 Agentic 之所以好用，是因为每一轮内部就是 BM25 + dense + RRF；Hermind 现在每一轮拿到的候选质量本身就差，多轮也救不回来。v2 把 Hybrid 当作地基先做。
 
-```
-用户输入 ──► AgenticRetriever.Retrieve(userMsg, limit)
-                │
-                ├── Round 1: 底层 Recaller.Recall(userMsg, limit*2)
-                │            → 候选记忆 M1
-                │
-                ├── Sufficiency Check: LLM 判断 M1 是否足够回答用户问题
-                │            → "sufficient" → 直接返回 M1[:limit]
-                │
-                └── "insufficient":
-                     ├── Query Expansion: LLM 生成 N 个子查询
-                     ├── Round 2: 对每个子查询调用 Recaller.Recall(subQ, limit/2)
-                     │            → M2, M3, ...
-                     ├── Fusion: 合并 M1 + M2 + ...，去重，按原始相关度重排
-                     └── 返回 Top K
-```
+### 4.2 Hybrid Recaller 实现
 
-### 4.2 Sufficiency Check 提示词
+```go
+// agent/memorylayer/hybrid_recaller.go
+type HybridRecaller struct {
+    base       memprovider.Recaller   // 兜底 / 外部 provider
+    fts        FTS5Recaller           // SQLite FTS5 直查
+    vector     VectorRecaller         // 现有 embedder + sqlite_vec
+    reranker   Reranker               // §4.3
+    signalFn   func(*storage.Memory) float64 // reinforcement 信号
+    cfg        HybridConfig
+}
 
-```
-你是一个记忆质量评估器。用户的问题是：
-"{userMsg}"
-
-已召回的相关记忆：
-{memory_list}
-
-请判断：这些记忆是否足够回答用户的问题？
-- 如果足够，回答 "SUFFICIENT"
-- 如果不够，说明缺失了哪些信息，并以 JSON 输出 2-3 个补充查询
+func (h *HybridRecaller) Recall(ctx, query string, limit int) ([]InjectedMemory, error) {
+    // 1. 并发跑 BM25 与 Vector，各取 top-N（默认 N = limit * 3）
+    // 2. RRF 融合：score(d) = Σ 1/(k + rank_m(d))，默认 k=60
+    // 3. 信号加权：final = rrf * (1 + α * normalizedReinforcement(d))
+    //    - α 默认 0.15；新记忆 reinforcement=0 时不加分
+    //    - neglect 高的记忆扣分（penalty）
+    // 4. 取 top-K（K = limit * 2）送 Reranker
+    // 5. Reranker → top-limit
+}
 ```
 
-### 4.3 成本配置
+**RRF 默认参数**
+- `k = 60`（Cormack 经典值）
+- `bm25_top_n = vector_top_n = limit * 3`
+- `pre_rerank_top_k = limit * 2`
+
+**信号利用**（Hermind 优势，EverCore 没有）
+- `ReinforcementCount` ↑ → 轻微加权
+- `NeglectCount` 高且 `LastUsedAt` 久远 → 轻微扣分
+- 跨 `ReinforcedAtSeq` 的 reinforcement 按 skills 代差衰减（与现有 `skills/generation.go` 协同）
+
+### 4.3 Reranker（轻量 LLM-as-reranker）
+
+```go
+type Reranker interface {
+    Rerank(ctx context.Context, query string, candidates []Candidate, topN int) ([]Candidate, error)
+}
+
+type LLMReranker struct {
+    llm   core.LanguageModel
+    cfg   RerankerConfig  // BatchSize, Timeout, Concurrency
+}
+```
+
+- 一次性把 top-K 候选喂给 LLM，让其按相关度返回排序索引（不是逐对打分，避免 O(K²) 调用）。
+- 批量 + 并发，参考 EverCore 的 `rerank_service.py`。
+- **失败降级**：reranker 报错 → 跳过精排直接返回 RRF top-N，记录 `metadata.reranker_skipped=true`。
+
+### 4.4 与外部 provider 的协同
+
+外部 provider 没有 FTS+vector 双索引时，HybridRecaller 退化为：`base.Recall` 单路 + Reranker。仍然比纯 base 强（多了精排）。
+
+---
+
+## 5. Agentic 多轮检索（建在 §4 之上）
+
+### 5.1 流程
+
+```
+userMsg
+  ↓
+HybridRecaller.Recall（已含 RRF + Rerank）→ M1
+  ↓
+Sufficiency Shortcut: 若 M1[0].score > shortcut_threshold（默认 0.85），直接返回
+  ↓
+Sufficiency Check（LLM）
+  ├── "SUFFICIENT" → 返回 M1
+  └── "INSUFFICIENT":
+        LLM 生成 2 个补充子查询（max_extra_rounds=1）
+        并发 HybridRecaller.Recall(subQ) → M2, M3
+        RRF 跨查询再融合
+        Reranker → top-limit
+```
+
+### 5.2 配置
 
 ```go
 type AgenticConfig struct {
-    Enabled           bool   // 总开关
-    MaxRounds         int    // 最大检索轮次（默认 2）
-    ExpansionQueries  int    // 每轮生成的子查询数（默认 3）
-    SufficiencyModel  string // sufficiency check 用的模型（空=使用当前对话模型）
-    CostBudgetTokens  int    // 每轮对话最多消耗的额外 token（默认 2000）
+    Enabled           bool    // 默认 true
+    MaxExtraRounds    int     // 默认 1（v1 是 2，砍）
+    ExpansionQueries  int     // 默认 2（v1 是 3，砍）
+    ShortcutThreshold float64 // 默认 0.85，跳过 LLM 判断
+    PerSessionTokenCap int    // 整个 session 多花的 token 上限，默认 20000
+    PerTurnTokenCap    int    // 单 turn 默认 2000
+    Timeout           time.Duration // 默认 8s，超时降级单轮
 }
 ```
 
-### 4.4 实现位置
+**降级路径**
+- 超时 / LLM 失败 → 返回 §4 的 HybridRecaller 结果，metadata 标 `agentic_fallback=true`。
+- 触达 `PerSessionTokenCap` → 当前 session 后续 turn 自动只走 §4。
 
-新增 `agent/memorylayer/retriever.go`：
+### 5.3 与 Synergy Budget 的协同
 
-```go
-type AgenticRetriever struct {
-    base     memprovider.Recaller
-    provider provider.Provider
-    config   AgenticConfig
-}
-
-func (ar *AgenticRetriever) Retrieve(ctx context.Context, userMsg string, limit int) ([]memprovider.InjectedMemory, error) {
-    // Round 1
-    candidates, _ := ar.base.Recall(ctx, userMsg, limit*2)
-    
-    // Sufficiency check
-    if sufficient, _ := ar.checkSufficiency(ctx, userMsg, candidates); sufficient {
-        return candidates[:limit], nil
-    }
-    
-    // Query expansion + Round 2
-    queries, _ := ar.expandQueries(ctx, userMsg, candidates)
-    for _, q := range queries {
-        extra, _ := ar.base.Recall(ctx, q, limit/2)
-        candidates = merge(candidates, extra)
-    }
-    
-    return rerank(candidates, userMsg)[:limit], nil
-}
-```
-
-**引擎集成**：在 `api/server.go` 中，若 `AgenticConfig.Enabled`，将 `eng.SetActiveMemoriesProvider()` 的 callback 包装为 `AgenticRetriever.Retrieve`。`AgenticRetriever` 内部持有底层 `Recaller`，对其召回结果进行多轮增强后返回。
-
-### 4.5 与 Synergy Budget 的交互
-
-`applySynergyBudget(activeSkills, memContents, e.synergy)` 从头部截断记忆注入长度。Agentic 检索返回的记忆已按综合得分排序，截断逻辑无需改动。
+Agentic 返回的列表仍交给 `applySynergyBudget` 处理上下文长度。Pinned core 在 budget 计算前先扣除（§7）。
 
 ---
 
-## 5. 生命周期钩子（Lifecycle Hooks）
+## 6. Living Profile（独立对象）
 
-### 5.1 钩子定义
+### 6.1 与 v1 的差别
 
-新增 `agent/memorylayer/lifecycle.go`：
+v1 把 profile 当成 MemType；v2 把它做成 EverCore 的形态：**每个用户一条增量编辑的文档**。
+
+### 6.2 数据模型
 
 ```go
-type LifecycleHooks struct {
-    OnConversationStart func(ctx context.Context, engine *agent.Engine) error
-    OnBeforePrompt      func(ctx context.Context, opts *agent.PromptOptions) error
-    OnTurnComplete      func(ctx context.Context, turn TurnSnapshot) error
-    OnConversationEnd   func(ctx context.Context, result *ConversationResult) error
+// storage/types.go
+type Profile struct {
+    UserID    string
+    Sections  []ProfileSection // explicit_info + implicit_traits
+    UpdatedAt time.Time
+    Version   int64
 }
 
-type TurnSnapshot struct {
-    Iteration int
-    History   []message.HermindMessage
-    UserMsg   string
-    AssistantReply string
+type ProfileSection struct {
+    Kind        string   // "explicit" | "implicit"
+    Key         string   // e.g. "diet.restrictions", "style.communication"
+    Value       string
+    Evidence    string   // 文本佐证
+    SourceTurns []int64  // 关联 turn id，用于溯源
+    Confidence  float64
+    UpdatedAt   time.Time
 }
 ```
 
-### 5.2 各阶段行为
+新增表：`profiles`（按 user_id 主键），`profile_sections`（外键到 profile）。
 
-#### OnConversationStart — 预加载
-
-```go
-func (lh *LifecycleHooks) onConversationStart(ctx context.Context, eng *agent.Engine) {
-    // 1. 加载 core memories（强制注入）
-    coreMems, _ := eng.Storage().SearchMemories(ctx, "", 
-        &storage.MemorySearchOptions{MemTypes: []string{"core"}, Limit: coreMaxCount})
-    
-    // 2. 加载最近的高优先级 foresight
-    foresight, _ := eng.Storage().SearchMemories(ctx, "", 
-        &storage.MemorySearchOptions{MemTypes: []string{"foresight"}, Limit: foresightMaxCount})
-    
-    // 3. 标记为 pinned，绕过 synergy budget
-    // （通过 engine 新增字段或 callback 机制传递，具体实现见 engine.go 改动）
-    eng.SetPinnedMemories(append(coreMems, foresight...))
-}
-```
-
-#### OnBeforePrompt — 动态增强
+### 6.3 增量编辑（EverCore ID 映射策略）
 
 ```go
-func (lh *LifecycleHooks) onBeforePrompt(ctx context.Context, opts *agent.PromptOptions) {
-    // 将 pinned memories 插入 ActiveMemories 最前面
-    // pinned memories 渲染为独立的 ## Pinned memories 区块
-    opts.ActiveMemories = prependPinned(opts.ActiveMemories, lh.pinned)
+// agent/memorylayer/profile.go
+type ProfileUpdater struct {
+    storage  storage.Storage
+    llm      core.LanguageModel
 }
+
+// 输入：当前 profile + 新边界 MemCell；
+// 输出：差量操作 [add | update | delete]
+func (p *ProfileUpdater) Apply(ctx, userID, MemCell) (ProfileDelta, error)
 ```
 
-#### OnTurnComplete — 中期维护
+LLM 提示词里把 sections 映射成短 ID（`s1`, `s2`...）避免幻觉。差量产物原子写入。
 
-```go
-func (lh *LifecycleHooks) onTurnComplete(ctx context.Context, turn TurnSnapshot) {
-    if turn.Iteration%lh.config.WorkingSummaryInterval == 0 {
-        summary, _ := lh.generateWorkingSummary(ctx, turn.History)
-        lh.saveWorkingSummary(ctx, summary)
-    }
-}
-```
+### 6.4 注入策略
 
-#### OnConversationEnd — 后处理
-
-```go
-func (lh *LifecycleHooks) onConversationEnd(ctx context.Context, result *ConversationResult) {
-    // 1. 结构化提取
-    extracted, _ := lh.extractor.ExtractConversation(ctx, result.Messages)
-    for _, mem := range extracted {
-        lh.storage.SaveMemory(ctx, mem)
-    }
-    
-    // 2. Skill 候选检测
-    for _, mem := range extracted {
-        if mem.MemType == "skill" {
-            lh.skillExtractor.ProposeSkill(ctx, mem)
-        }
-    }
-    
-    // 3. Session 统计
-    lh.storage.AppendMemoryEvent(ctx, time.Now(), "session.end", map[string]any{
-        "turns": result.Iterations,
-        "new_memories": len(extracted),
-    })
-}
-```
-
-### 5.3 与现有机制的协同
-
-| 现有机制 | 生命周期钩子 | 关系 |
-|---|---|---|
-| `Recaller.Recall` | `OnBeforePrompt` | **前置增强**：先注入 pinned，再调用 Recall |
-| `SyncTurn` | `OnConversationEnd` | **并行**：SyncTurn 同步原始文本，钩子做结构化提取 |
-| `SkillsEvolver.Extract` | `OnConversationEnd` | **协同**：Evolver 分析完整 history，钩子从 extracted memories 加速 skill 候选 |
-| `MetaClaw.working_summary` | `OnTurnComplete` | **统一提升**：将 MetaClaw 特有逻辑引擎层通用化 |
+- **OnSessionStart**：整篇 profile 渲染为 `## User Profile` 段落注入（token 上限 `profile_max_tokens`，默认 800）。
+- **OnTurnComplete**（边界触发时）：`ProfileUpdater.Apply` 异步执行，不阻塞 turn。
 
 ---
 
-## 6. 技能自动提取增强
+## 7. MemCell-lite 边界检测 + Provenance
 
-### 6.1 设计
+### 7.1 为什么需要
 
-引入 `agent/memorylayer/skill_extractor.go`，与现有 `skills.Evolver` **协同**：
+v1 在 `OnConversationEnd` 提取记忆，但 Hermind 没有明确的 "conversation end" 信号。EverCore 的答案是按语义边界切片。v2 引入最简版本。
 
-```
-Conversation End
-    │
-    ├── Taxonomy Extractor 提取所有类型记忆
-    │       └── 发现 skill 类型记忆
-    │
-    ├── Skill Extractor 处理 skill 记忆
-    │       ├── 去重：与现有 skills 目录对比相似度
-    │       ├── 增强：用 LLM 将记忆片段扩展为完整 SKILL.md
-    │       └── 评估：Confidence > threshold 才写入
-    │
-    └── 写入 ./.hermind/skills/auto-{date}-{slug}.md
-```
-
-### 6.2 Skill 记忆格式
-
-```json
-{
-  "type": "skill",
-  "content": "修复 Vite 构建时 public/ 目录路径 404 的问题",
-  "context": "Hermind 前端项目使用 Vite，Go 后端通过 /ui/* 提供静态文件",
-  "applicability": ["vite", "static-files", "go-backend"],
-  "confidence": 0.85
-}
-```
-
-### 6.3 Skill Extractor 核心逻辑
+### 7.2 边界检测器
 
 ```go
-type SkillExtractor struct {
-    skillsDir      string
-    similarity     float64  // 默认 0.85
-    threshold      float64  // 默认 0.70
-    maxSkills      int      // 默认 50
-    evictionPolicy string   // "oldest" | "lowest_confidence"
+// agent/memorylayer/boundary.go
+type BoundaryDetector struct {
+    cfg BoundaryConfig
+    buf []TurnRef  // recent turns awaiting boundary
 }
 
-func (se *SkillExtractor) ProposeSkill(ctx context.Context, mem TypedMemory) error {
-    // 1. 与现有 skills 去重
-    existing, _ := loadExistingSkills(se.skillsDir)
-    for _, skill := range existing {
-        if cosineSim(mem.Embedding, skill.Embedding) > se.similarity {
-            return nil
-        }
-    }
-    
-    // 2. 扩展为 SKILL.md
-    skillMarkdown, _ := se.expandToSkillMarkdown(ctx, mem)
-    
-    // 3. 阈值过滤
-    if mem.Confidence < se.threshold {
-        return nil
-    }
-    
-    // 4. 容量检查 + 淘汰
-    if countAutoSkills(se.skillsDir) >= se.maxSkills {
-        se.evictOldestOrLowest(se.skillsDir, se.evictionPolicy)
-    }
-    
-    // 5. 写入
-    filename := fmt.Sprintf("auto-%s-%s.md", time.Now().Format("20060102"), slugify(mem.Content))
-    return os.WriteFile(filepath.Join(se.skillsDir, filename), []byte(skillMarkdown), 0644)
+type BoundaryConfig struct {
+    HardTokenLimit    int           // 默认 8000，超过强制切
+    HardTurnLimit     int           // 默认 20，超过强制切
+    IdleGap           time.Duration // 默认 10 分钟无新 turn → 切
+    TopicShiftSignal  bool          // 启用低成本主题漂移启发
 }
 ```
 
-### 6.4 与现有 Evolver 的协同
+**主题漂移启发（无 LLM 成本）**
+- 用现有 embedder 计算 buffer 头 vs 末 turn 的 cosine sim；< 0.55 视为漂移。
+- 计算只在到达"软阈值"（默认 1500 tokens）后触发。
 
-| 场景 | 处理方式 |
-|---|---|
-| Skill Extractor 生成新 skill | 直接写入 `skills/` 目录，Evolver 下一轮可见 |
-| Evolver 从 history 提取 skill | 正常流程，不受 Skill Extractor 影响 |
-| 两者同时提出相似 skill | 后写入的覆盖先写入的（文件命名含 timestamp）|
-| 用户手动编辑 auto- skill | 保留编辑，Skill Extractor 通过相似度检测跳过 |
+### 7.3 边界触发链
+
+```
+turn complete
+    ↓
+Detector.Observe(turn)
+    ↓
+若 IsBoundary():
+    ├── 形成 MemCell（in-memory，不入库）
+    ├── 异步 dispatch:
+    │     ├── Taxonomy Extractor → memories（带 ParentTurnID/ParentMemID）
+    │     ├── Profile Updater → profiles
+    │     └── Skill Candidate Emitter → skills.Evolver
+    └── 写 memory_event "boundary.detected"
+```
+
+### 7.4 Provenance 价值
+
+- UI 显示 citation："这条事实来自第 47 轮对话"。
+- Source turn 被删除时级联归档派生项。
+- Evolver 收到 candidate 时直接定位源对话，无须重读全部 history。
 
 ---
 
-## 7. 配置接口
+## 8. Foresight 真做成时效对象
 
-### 7.1 完整 YAML 配置
+### 8.1 字段
+
+`Memory.ExpiresAt` 已在 §3.4 加入。Foresight 类必须设置该字段。
+
+### 8.2 行为
+
+- **检索时过滤**：默认排除 `ExpiresAt < now` 的 foresight；除非查询显式要历史。
+- **Consolidate 扩展**：`memprovider/consolidate.go` 增加 "expired foresight → archived" 步骤。
+- **OnSessionStart 注入**：未来 7 天到期的 foresight 强注入（数量 ≤ `foresight_max_count`，默认 3）。
+- **可选：到期前事件**（v2.1 再加）：到期前 N 小时写 `memory_event "foresight.due"`，由 UI 或外部插件消费。
+
+### 8.3 Solo / Group
+
+Hermind 单人场景，照 EverCore 的"solo-only"逻辑全量启用，不做场景区分。
+
+---
+
+## 9. 主题聚类（可选，Tier 2）
+
+参考 EverCore `ClusterManager`：
+
+- 在线 centroid-based，不调 LLM。
+- 每条新 fact/episode 用 embedder 向量与现存 cluster centroid 比对，cosine > 0.78 加入该 cluster，否则新建。
+- 记入 `Memory.ClusterID`。
+- 检索时附加规则："命中的 fact 所属 cluster 的其他成员"作为补充 top-N（受 `cluster_companions_max` 限制）。
+
+**默认关**，配置 `clustering.enabled=true` 开启；不影响地基功能。
+
+---
+
+## 10. 生命周期钩子（2 段）
+
+v1 的 4 段简化为 2 段。
+
+### 10.1 OnSessionStart
+
+```go
+func (lh *LifecycleHooks) OnSessionStart(ctx, eng *agent.Engine) error {
+    // 1. 加载 core memories（受 core_max_tokens 限制）
+    // 2. 加载未过期且 < 7 天的 foresight
+    // 3. 加载 Profile（整篇渲染）
+    // 4. 写入 engine.pinnedMemories（独立于 synergy budget）
+}
+```
+
+### 10.2 OnTurnComplete
+
+```go
+func (lh *LifecycleHooks) OnTurnComplete(ctx, turn TurnSnapshot) error {
+    // 1. Detector.Observe(turn)
+    // 2. 若 boundary detected：
+    //     ├─ Taxonomy Extractor（异步）
+    //     ├─ Profile Updater（异步）
+    //     └─ Skill Candidate Emitter（异步）
+    // 3. working_summary（按 working_summary_interval 触发，统一从 MetaClaw 抽到这里）
+    // 4. AppendMemoryEvent(session.turn)
+}
+```
+
+**砍掉的 v1 钩子**
+- `OnBeforePrompt` → 直接改 `agent/prompt.go` 中 pinned 渲染逻辑。
+- `OnConversationEnd` → 由 Detector.Flush（session shutdown 时触发一次）替代，不暴露为公开 hook。
+
+---
+
+## 11. 配置接口
 
 ```yaml
-# config.yaml
 memory_layer:
-  enabled: true
-  
-  taxonomy:
+  # 不再有顶层 enabled；子能力可独立关
+  hybrid:
+    enabled: true             # 砍掉等于回到旧 Recaller，效果差，但保留逃生口
+    rrf_k: 60
+    bm25_top_n_multiplier: 3
+    vector_top_n_multiplier: 3
+    pre_rerank_top_k_multiplier: 2
+    reinforcement_alpha: 0.15
+    neglect_penalty: 0.10
+
+  reranker:
     enabled: true
-    types: [core, profile, fact, episode, skill, foresight]
-    extract_on_sync: true
-    extract_prompt: ""           # 可选：自定义提取提示词模板路径
-  
+    batch_size: 20
+    timeout_ms: 1500
+
   agentic:
     enabled: true
-    max_rounds: 2
-    expansion_queries: 3
-    sufficiency_model: ""        # 空=使用当前对话模型
-    cost_budget_tokens: 2000
-  
+    max_extra_rounds: 1
+    expansion_queries: 2
+    shortcut_threshold: 0.85
+    per_turn_token_cap: 2000
+    per_session_token_cap: 20000
+    timeout_ms: 8000
+
+  taxonomy:
+    types: [core, episode, fact, foresight]
+    extract_on_boundary: true
+
+  profile:
+    enabled: true
+    profile_max_tokens: 800
+
+  foresight:
+    inject_on_start_days_ahead: 7
+    foresight_max_count_on_start: 3
+
+  boundary:
+    hard_token_limit: 8000
+    hard_turn_limit: 20
+    idle_gap_minutes: 10
+    topic_shift_enabled: true
+    topic_shift_cosine_threshold: 0.55
+
   lifecycle:
     inject_core_on_start: true
-    inject_foresight_on_start: true
-    core_max_count: 10
-    foresight_max_count: 3
+    core_max_tokens: 600
     working_summary_interval: 5
-    extract_on_end: true
-  
-  skill_extraction:
-    enabled: true
-    threshold: 0.7
-    dedup_similarity: 0.85
-    max_auto_skills: 50
-    eviction_policy: "oldest"    # oldest | lowest_confidence
+
+  clustering:
+    enabled: false            # Tier 2，默认关
+    cluster_companions_max: 3
+
+  # —— v1 删除项（保留注释作为变更记录） ——
+  # skill_extraction: 删除（合并入 skills.Evolver）
+  # sufficiency_model: 删除（一律用对话模型）
+  # eviction_policy: 删除（统一 oldest）
+  # extract_prompt path: 删除（提示词硬编码）
 ```
 
-### 7.2 Go 配置结构
-
-```go
-// config/config.go
-type MemoryLayerConfig struct {
-    Enabled   bool                 `yaml:"enabled"`
-    Taxonomy  TaxonomyConfig       `yaml:"taxonomy"`
-    Agentic   AgenticConfig        `yaml:"agentic"`
-    Lifecycle LifecycleConfig      `yaml:"lifecycle"`
-    SkillExtraction SkillExtractionConfig `yaml:"skill_extraction"`
-}
-```
-
-### 7.3 向后兼容性
-
-| 场景 | 行为 |
-|---|---|
-| `memory_layer.enabled: false`（或缺失） | hermind 完全按现有逻辑运行 |
-| 旧版 MetaClaw 配置存在 | 两者独立运行，`memory_layer` 包装 MetaClaw 时保留 MetaClaw 原有行为 |
-| 无外部 memprovider | `memory_layer` 正常工作，Agentic 检索退化为纯本地 FTS5 |
-
 ---
 
-## 8. 测试策略
-
-### 8.1 单元测试
-
-| 测试文件 | 内容 |
-|---|---|
-| `agent/memorylayer/extractor_test.go` | 模拟 LLM 输出，验证 6 类记忆分类正确性 |
-| `agent/memorylayer/retriever_test.go` | mock Recaller，验证多轮检索 fusion 逻辑 |
-| `agent/memorylayer/lifecycle_test.go` | mock Engine，验证 4 个钩子触发时机 |
-| `agent/memorylayer/skill_extractor_test.go` | mock 文件系统，验证去重、阈值、写入逻辑 |
-
-### 8.2 集成测试
-
-- 启动临时 SQLite + mock LLM provider
-- 运行完整对话回合，验证：
-  1. core memory 是否正确注入 system prompt
-  2. Agentic 检索是否在 sufficiency 不足时触发第二轮
-  3. 对话结束后是否正确提取新记忆并保存
-
-### 8.3 基准测试
-
-对比开启/关闭 `memory_layer` 时的：
-- 对话完成延迟（增加 < 500ms 为可接受）
-- 额外 token 消耗（单轮 < 2000 tokens）
-- 记忆召回准确率（用合成数据集测试）
-
----
-
-## 9. 风险与缓解
-
-| 风险 | 缓解措施 |
-|---|---|
-| LLM 提取成本过高 | `cost_budget_tokens` 硬限制 + `sufficiency_model` 降级选项 |
-| core/foresight 注入过长 | `core_max_count` / `foresight_max_count` 硬上限 |
-| 自动 skill 质量差 | `threshold` + `dedup_similarity` 过滤，低质量不写入 |
-| 与 MetaClaw 功能重叠 | `memory_layer` 为引擎层通用包装，MetaClaw 作为 provider 继续存在 |
-| 多轮检索延迟高 | `max_rounds=2` 限制，sufficiency 命中时直接返回 |
-
----
-
-## 10. 里程碑
-
-| 里程碑 | 内容 | 预估工时 |
-|---|---|---|
-| M1 | Taxonomy Extractor + 存储层扩展 | 2 天 |
-| M2 | Agentic Retriever | 2 天 |
-| M3 | Lifecycle Hooks（4 阶段） | 2 天 |
-| M4 | Skill Extractor | 1 天 |
-| M5 | 配置集成 + 单元测试 | 1 天 |
-| M6 | 集成测试 + 性能调优 | 1 天 |
-| **总计** | | **~9 天** |
-
----
-
-## 11. 附录：文件变更清单
+## 12. 存储与代码改动清单
 
 ### 新增文件
 
 ```
 agent/memorylayer/
-├── layer.go              # 主入口：MemoryLayer 结构体，初始化/关闭
-├── extractor.go          # Taxonomy Extractor
-├── extractor_test.go
-├── retriever.go          # Agentic Retriever
-├── retriever_test.go
-├── lifecycle.go          # Lifecycle Hooks
-├── lifecycle_test.go
-├── skill_extractor.go    # Skill Extractor
-├── skill_extractor_test.go
-└── prompts/
-    ├── taxonomy_extract.txt    # 分类提取提示词模板
-    ├── sufficiency_check.txt   # Sufficiency Check 提示词模板
-    ├── query_expansion.txt     # Query Expansion 提示词模板
-    └── skill_expand.txt        # Skill 扩展提示词模板
+├── layer.go              # 入口、初始化
+├── hybrid_recaller.go    # §4.2
+├── reranker.go           # §4.3
+├── agentic.go            # §5
+├── boundary.go           # §7.2
+├── extractor.go          # §3.5
+├── profile.go            # §6
+├── lifecycle.go          # §10
+├── prompts/
+│   ├── taxonomy_extract.txt
+│   ├── sufficiency_check.txt
+│   ├── query_expansion.txt
+│   ├── rerank.txt
+│   └── profile_update.txt
+└── *_test.go
 ```
 
 ### 修改文件
 
 ```
-storage/storage.go              # Memory 结构扩展 MemType 枚举
-storage/sqlite/memory.go        # SearchMemories 支持 MemTypes 过滤
-agent/engine.go                 # 新增 PinnedMemories / LifecycleHooks 字段
-agent/conversation.go           # 在 4 个生命周期点调用 hooks
-agent/prompt.go                 # renderPinnedMemories + 注入位置
-api/server.go                   # 条件性包装 Recaller 为 AgenticRetriever
-config/config.go                # 新增 MemoryLayerConfig
-cli/engine_deps.go              # 条件性初始化 MemoryLayer
+storage/types.go              # Memory 增加 ParentTurnID/ParentMemID/ExpiresAt/ClusterID
+                              # 新增 Profile / ProfileSection
+storage/sqlite/memory.go      # SearchMemories 支持过滤 expires_at / cluster_id / parent_*
+storage/sqlite/profile.go     # 新增 profile CRUD
+storage/sqlite/migrations/    # 新表 profiles, profile_sections；新增列与索引
+agent/engine.go               # pinnedMemories 字段（独立于 synergy budget）
+agent/conversation.go         # OnSessionStart / OnTurnComplete 接入
+agent/prompt.go               # pinned 段落渲染（## User Profile / ## Core / ## Foresight）
+api/server.go                 # 用 HybridRecaller + Agentic 包装现有 Recaller
+config/config.go              # MemoryLayerConfig（结构如 §11）
+cli/engine_deps.go            # 初始化记忆层组件
+tool/memory/memprovider/consolidate.go  # 增加 expired foresight 归档
+skills/evolver.go             # 增加 OnSkillCandidate 入口（替代独立 SkillExtractor）
 ```
 
 ---
 
-*Design approved by user on 2026-05-20. Ready for implementation planning.*
+## 13. 测试与基准
+
+### 13.1 单元测试
+
+| 文件 | 重点 |
+|---|---|
+| `hybrid_recaller_test.go` | RRF 公式、信号加权、reranker 降级路径 |
+| `reranker_test.go` | 批量与并发、超时降级、空候选 |
+| `agentic_test.go` | shortcut、insufficient → 子查询、token 上限、fallback |
+| `boundary_test.go` | 硬阈值、idle、主题漂移；buffer flush 一致性 |
+| `extractor_test.go` | 4 类记忆产出、ParentTurnID 关联 |
+| `profile_test.go` | add/update/delete diff 应用、ID 映射、乐观锁 |
+| `lifecycle_test.go` | 两段钩子触发、异步任务不阻塞 turn |
+
+### 13.2 集成测试
+
+- 临时 SQLite + mock LLM；跑 50 turn 合成对话，断言：
+  1. core / profile / foresight 在 OnSessionStart 后出现在 system prompt。
+  2. Hybrid 在 BM25-only 和 Vector-only 两种偏置查询上都比单路高 ≥ 20% recall@10。
+  3. Agentic 在 6 个"复杂跨域"查询上 precision@5 ≥ 单 Hybrid 的 1.1×。
+  4. 派生记忆 `ParentTurnID` 全部有效。
+  5. 过期 foresight 在 Consolidate 后状态变为 archived。
+
+### 13.3 基准
+
+| 指标 | 目标 |
+|---|---|
+| Hybrid+Rerank 单轮延迟 | < 250ms（含 1 次小 LLM rerank） |
+| Agentic 多轮延迟 P95 | < 6s |
+| 单 turn 额外 token（开启 Agentic） | < 1500 tokens |
+| Recall@10（合成集） | Hybrid ≥ FTS-only + 25% / Vector-only + 15% |
+| Profile diff 准确率（人工评） | ≥ 0.85 |
+
+---
+
+## 14. 风险与缓解
+
+| 风险 | 缓解 |
+|---|---|
+| Reranker 提高了单轮延迟 | shortcut_threshold 命中时跳过；reranker 失败自动降级 |
+| Profile 增量编辑出错改坏画像 | 每次 Apply 写新 version，保留旧版；提供 `/profile rollback` |
+| Foresight 误判过期时间 | 默认置为"7 天后"如果 LLM 没给；UI 显示来源句子 |
+| Boundary 切得过密（每 turn 都切） | HardTurnLimit 下限 + 软阈值 1500 tokens 才允许漂移检测 |
+| Hybrid 对外部 provider 不友好 | 自动降级为 base.Recall + Reranker |
+| 多轮 token 失控 | per-turn 与 per-session 双上限；触达后只走单轮 |
+| Profile 注入泄露敏感信息到外部 LLM provider | 提供 `profile.redact_sections` 配置（v2.1） |
+
+---
+
+## 15. 里程碑（13–17 天）
+
+| 阶段 | 内容 | 工时 |
+|---|---|---|
+| **P1.1** | Hybrid Recaller（RRF + 信号加权）、storage 字段扩展、迁移脚本 | 3 天 |
+| **P1.2** | LLM Reranker + 降级路径 | 2 天 |
+| **P1.3** | Boundary Detector + Taxonomy Extractor（带 Provenance） | 2 天 |
+| **P2.1** | Agentic Wrapper（shortcut + 1 轮扩展 + token caps） | 2 天 |
+| **P2.2** | Lifecycle（OnSessionStart + OnTurnComplete）、prompt 渲染 | 1.5 天 |
+| **P3.1** | Living Profile（schema + ProfileUpdater + 注入） | 2 天 |
+| **P3.2** | Foresight 时效（ExpiresAt + Consolidate 扩展） | 1 天 |
+| **P3.3** | Skill Candidate Emitter → Evolver 接入 | 0.5 天 |
+| **P4（按需）** | Clustering、citation UI、reminder 事件 | 2–3 天 |
+| **测试 / 调优** | 集成测试 + 基准 + 文档 | 2 天 |
+
+**合计 P1–P3：13–14 天**；含 P4：16–17 天。
+
+---
+
+## 16. 与 v1 的差异速查
+
+| 维度 | v1 | v2 |
+|---|---|---|
+| MemType 数量 | 6 | 4（profile/skill 移出） |
+| Hybrid Retrieval | ❌ | ✅ BM25+Vector+RRF |
+| Reranker | ❌ | ✅ LLM-as-reranker |
+| 多轮配置 | rounds=2, expansion=3 | rounds=1, expansion=2 |
+| Lifecycle hooks | 4 | 2 |
+| Skill 抽取 | 并行管线 | 候选事件 → Evolver |
+| Profile | MemType=profile | 独立对象 + 增量编辑 |
+| Foresight | 仅打标签 | 时效字段 + 过期归档 + 启动注入 |
+| MemCell 边界 | ❌ | ✅（lite 版本） |
+| Provenance | ❌ | ✅ ParentTurnID / ParentMemID |
+| Reinforcement 反哺检索 | ❌ | ✅ 加权 + 惩罚 |
+| 顶层 enabled 开关 | 有 | 删除（子能力可关） |
+| 自定义 prompt 路径 | 有 | 删除 |
+| `sufficiency_model` | 有 | 删除 |
+| 双 eviction policy | 有 | 删除 |
+| 工时估计 | 9 天 | 13–17 天 |
+
+---
+
+*Drafted 2026-05-21 as v2. v1 (2026-05-20) preserved in git history.*
