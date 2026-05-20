@@ -9,6 +9,7 @@ import (
 	"strings"
 	"time"
 
+	"github.com/odysseythink/hermind/agent/memorylayer"
 	"github.com/odysseythink/hermind/message"
 	"github.com/odysseythink/hermind/pantheonadapter"
 	"github.com/odysseythink/hermind/provider"
@@ -230,6 +231,15 @@ func (e *Engine) RunConversation(ctx context.Context, opts *RunOptions) (*Conver
 			e.memory != nil && len(e.memory.Providers()) > 0 {
 			_ = e.memory.SyncTurn(ctx, opts.UserMessage, resp.Message.Text())
 		}
+		if e.memoryLayer != nil {
+			e.memoryLayer.ObserveTurn(ctx, memorylayer.Turn{
+				ID:        int64(iterations),
+				UserMsg:   opts.UserMessage,
+				Assistant: resp.Message.Text(),
+				Tokens:    len(opts.UserMessage)/4 + len(resp.Message.Text())/4,
+				Timestamp: time.Now().UTC(),
+			})
+		}
 
 		toolResults := e.executeToolCalls(ctx, toolCalls)
 		toolResultMsg := message.HermindMessage{
@@ -268,6 +278,15 @@ func (e *Engine) RunConversation(ctx context.Context, opts *RunOptions) (*Conver
 
 	if e.memory != nil && len(e.memory.Providers()) > 0 {
 		_ = e.memory.SyncTurn(ctx, opts.UserMessage, assistantReply)
+	}
+	if e.memoryLayer != nil {
+		e.memoryLayer.ObserveTurn(ctx, memorylayer.Turn{
+			ID:        int64(iterations),
+			UserMsg:   opts.UserMessage,
+			Assistant: assistantReply,
+			Tokens:    len(opts.UserMessage)/4 + len(assistantReply)/4,
+			Timestamp: time.Now().UTC(),
+		})
 	}
 
 	if e.skillsEvolver != nil {

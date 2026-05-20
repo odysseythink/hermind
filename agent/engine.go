@@ -10,6 +10,7 @@ import (
 	"github.com/odysseythink/hermind/provider"
 	"github.com/odysseythink/hermind/storage"
 	"github.com/odysseythink/hermind/tool"
+	"github.com/odysseythink/hermind/agent/memorylayer"
 	"github.com/odysseythink/hermind/tool/memory/memprovider"
 	"github.com/odysseythink/pantheon/agent/compression"
 	"github.com/odysseythink/pantheon/core"
@@ -30,6 +31,7 @@ type Engine struct {
 
 	modelInfo    *pantheonadapter.ModelInfoResolver
 	memory       *MemoryManager
+	memoryLayer  *memorylayer.MemoryLayer
 	toolSelector *toolselector.ToolSelector // nil when dynamic tool selection is disabled
 
 	// Callbacks — optional. Nil means no-op.
@@ -122,6 +124,12 @@ func (e *Engine) SetMemoryManager(mm *MemoryManager) {
 	if mm != nil && e.compressor != nil {
 		mm.SetCompressor(e.compressor)
 	}
+}
+
+// SetMemoryLayer wires the optional memory layer for hybrid retrieval
+// and boundary-triggered extraction.
+func (e *Engine) SetMemoryLayer(ml *memorylayer.MemoryLayer) {
+	e.memoryLayer = ml
 }
 
 // SetStreamDeltaCallback registers a callback invoked for each streaming delta.
