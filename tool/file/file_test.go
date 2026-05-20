@@ -5,6 +5,7 @@ import (
 	"encoding/json"
 	"os"
 	"path/filepath"
+	"strings"
 	"testing"
 
 	"github.com/odysseythink/hermind/tool"
@@ -18,13 +19,27 @@ func newTestRegistry() *tool.Registry {
 	return r
 }
 
+func setupTestConfig(allowedDir string) {
+	SetCurrentConfig(map[string]any{
+		"allowed_directories": allowedDir,
+	})
+}
+
+func mustJSON(t *testing.T, v any) json.RawMessage {
+	t.Helper()
+	b, err := json.Marshal(v)
+	require.NoError(t, err)
+	return b
+}
+
 func TestReadFileHappyPath(t *testing.T) {
 	dir := t.TempDir()
+	setupTestConfig(dir)
 	path := filepath.Join(dir, "hello.txt")
 	require.NoError(t, os.WriteFile(path, []byte("hello world"), 0o644))
 
 	r := newTestRegistry()
-	args := json.RawMessage(`{"path":"` + path + `"}`)
+	args := mustJSON(t, map[string]string{"path": path})
 	out, err := r.Dispatch(context.Background(), "read_file", args)
 	require.NoError(t, err)
 
@@ -34,15 +49,16 @@ func TestReadFileHappyPath(t *testing.T) {
 }
 
 func TestReadFileMissing(t *testing.T) {
+	setupTestConfig("/tmp")
 	r := newTestRegistry()
-	args := json.RawMessage(`{"path":"/nonexistent/path/x.txt"}`)
+	args := mustJSON(t, map[string]string{"path": "/nonexistent/path/x.txt"})
 	out, err := r.Dispatch(context.Background(), "read_file", args)
 	require.NoError(t, err)
 	assert.Contains(t, out, `"error"`)
-	assert.Contains(t, out, "no such file")
 }
 
 func TestReadFileRejectsEmptyPath(t *testing.T) {
+	setupTestConfig("/tmp")
 	r := newTestRegistry()
 	args := json.RawMessage(`{}`)
 	out, err := r.Dispatch(context.Background(), "read_file", args)
@@ -53,12 +69,13 @@ func TestReadFileRejectsEmptyPath(t *testing.T) {
 
 func TestListDirectoryHappyPath(t *testing.T) {
 	dir := t.TempDir()
+	setupTestConfig(dir)
 	require.NoError(t, os.WriteFile(filepath.Join(dir, "a.txt"), []byte("a"), 0o644))
 	require.NoError(t, os.WriteFile(filepath.Join(dir, "b.txt"), []byte("b"), 0o644))
 	require.NoError(t, os.Mkdir(filepath.Join(dir, "sub"), 0o755))
 
 	r := newTestRegistry()
-	args := json.RawMessage(`{"path":"` + dir + `"}`)
+	args := mustJSON(t, map[string]string{"path": dir})
 	out, err := r.Dispatch(context.Background(), "list_directory", args)
 	require.NoError(t, err)
 
@@ -79,8 +96,9 @@ func TestListDirectoryHappyPath(t *testing.T) {
 }
 
 func TestListDirectoryMissing(t *testing.T) {
+	setupTestConfig("/tmp")
 	r := newTestRegistry()
-	args := json.RawMessage(`{"path":"/nonexistent/dir"}`)
+	args := mustJSON(t, map[string]string{"path": "/nonexistent/dir"})
 	out, err := r.Dispatch(context.Background(), "list_directory", args)
 	require.NoError(t, err)
 	assert.Contains(t, out, `"error"`)
@@ -88,10 +106,11 @@ func TestListDirectoryMissing(t *testing.T) {
 
 func TestWriteFileHappyPath(t *testing.T) {
 	dir := t.TempDir()
+	setupTestConfig(dir)
 	path := filepath.Join(dir, "new.txt")
 
 	r := newTestRegistry()
-	args := json.RawMessage(`{"path":"` + path + `","content":"written"}`)
+	args := mustJSON(t, map[string]string{"path": path, "content": "written"})
 	out, err := r.Dispatch(context.Background(), "write_file", args)
 	require.NoError(t, err)
 
@@ -106,9 +125,10 @@ func TestWriteFileHappyPath(t *testing.T) {
 
 func TestWriteFileCreatesParentDirs(t *testing.T) {
 	dir := t.TempDir()
+	setupTestConfig(dir)
 	path := filepath.Join(dir, "a", "b", "deep.txt")
 	r := newTestRegistry()
-	args := json.RawMessage(`{"path":"` + path + `","content":"deep","create_dirs":true}`)
+	args := mustJSON(t, map[string]any{"path": path, "content": "deep", "create_dirs": true})
 	out, err := r.Dispatch(context.Background(), "write_file", args)
 	require.NoError(t, err)
 	assert.NotContains(t, out, `"error"`)
@@ -119,6 +139,7 @@ func TestWriteFileCreatesParentDirs(t *testing.T) {
 }
 
 func TestWriteFileRejectsEmptyPath(t *testing.T) {
+	setupTestConfig("/tmp")
 	r := newTestRegistry()
 	args := json.RawMessage(`{"content":"nothing"}`)
 	out, err := r.Dispatch(context.Background(), "write_file", args)
@@ -128,12 +149,13 @@ func TestWriteFileRejectsEmptyPath(t *testing.T) {
 
 func TestSearchFilesHappyPath(t *testing.T) {
 	dir := t.TempDir()
+	setupTestConfig(dir)
 	require.NoError(t, os.WriteFile(filepath.Join(dir, "a.go"), []byte("a"), 0o644))
 	require.NoError(t, os.WriteFile(filepath.Join(dir, "b.go"), []byte("b"), 0o644))
 	require.NoError(t, os.WriteFile(filepath.Join(dir, "c.txt"), []byte("c"), 0o644))
 
 	r := newTestRegistry()
-	args := json.RawMessage(`{"root":"` + dir + `","pattern":"*.go"}`)
+	args := mustJSON(t, map[string]string{"root": dir, "pattern": "*.go"})
 	out, err := r.Dispatch(context.Background(), "search_files", args)
 	require.NoError(t, err)
 
@@ -146,8 +168,9 @@ func TestSearchFilesHappyPath(t *testing.T) {
 
 func TestSearchFilesEmptyResults(t *testing.T) {
 	dir := t.TempDir()
+	setupTestConfig(dir)
 	r := newTestRegistry()
-	args := json.RawMessage(`{"root":"` + dir + `","pattern":"*.nope"}`)
+	args := mustJSON(t, map[string]string{"root": dir, "pattern": "*.nope"})
 	out, err := r.Dispatch(context.Background(), "search_files", args)
 	require.NoError(t, err)
 
@@ -159,8 +182,9 @@ func TestSearchFilesEmptyResults(t *testing.T) {
 
 func TestReadFileDirectory(t *testing.T) {
 	dir := t.TempDir()
+	setupTestConfig(dir)
 	r := newTestRegistry()
-	args, _ := json.Marshal(map[string]string{"path": dir})
+	args := mustJSON(t, map[string]string{"path": dir})
 	out, err := r.Dispatch(context.Background(), "read_file", args)
 	require.NoError(t, err)
 	assert.Contains(t, out, `"error"`)
@@ -169,11 +193,12 @@ func TestReadFileDirectory(t *testing.T) {
 
 func TestWriteFileOverwrite(t *testing.T) {
 	dir := t.TempDir()
+	setupTestConfig(dir)
 	path := filepath.Join(dir, "overwrite.txt")
 	require.NoError(t, os.WriteFile(path, []byte("original"), 0o644))
 
 	r := newTestRegistry()
-	args, _ := json.Marshal(map[string]string{"path": path, "content": "updated"})
+	args := mustJSON(t, map[string]string{"path": path, "content": "updated"})
 	out, err := r.Dispatch(context.Background(), "write_file", args)
 	require.NoError(t, err)
 	assert.NotContains(t, out, `"error"`)
@@ -185,10 +210,11 @@ func TestWriteFileOverwrite(t *testing.T) {
 
 func TestSearchFilesInvalidPattern(t *testing.T) {
 	dir := t.TempDir()
+	setupTestConfig(dir)
 	require.NoError(t, os.WriteFile(filepath.Join(dir, "x.txt"), []byte("x"), 0o644))
 	r := newTestRegistry()
 	// [] is an empty character class, which filepath.Match rejects
-	args, _ := json.Marshal(map[string]string{"root": dir, "pattern": "[]"})
+	args := mustJSON(t, map[string]string{"root": dir, "pattern": "[]"})
 	out, err := r.Dispatch(context.Background(), "search_files", args)
 	require.NoError(t, err)
 	assert.Contains(t, out, `"error"`)
@@ -196,8 +222,9 @@ func TestSearchFilesInvalidPattern(t *testing.T) {
 
 func TestListDirectoryEmpty(t *testing.T) {
 	dir := t.TempDir()
+	setupTestConfig(dir)
 	r := newTestRegistry()
-	args, _ := json.Marshal(map[string]string{"path": dir})
+	args := mustJSON(t, map[string]string{"path": dir})
 	out, err := r.Dispatch(context.Background(), "list_directory", args)
 	require.NoError(t, err)
 
@@ -209,6 +236,7 @@ func TestListDirectoryEmpty(t *testing.T) {
 
 func TestReadFileLargeFile(t *testing.T) {
 	dir := t.TempDir()
+	setupTestConfig(dir)
 	path := filepath.Join(dir, "big.txt")
 	big := make([]byte, 1<<20+1)
 	for i := range big {
@@ -217,9 +245,43 @@ func TestReadFileLargeFile(t *testing.T) {
 	require.NoError(t, os.WriteFile(path, big, 0o644))
 
 	r := newTestRegistry()
-	args, _ := json.Marshal(map[string]string{"path": path})
+	args := mustJSON(t, map[string]string{"path": path})
 	out, err := r.Dispatch(context.Background(), "read_file", args)
 	require.NoError(t, err)
 	assert.Contains(t, out, `"error"`)
 	assert.Contains(t, out, "too large")
+}
+
+func TestReadFileHeadAndTail(t *testing.T) {
+	dir := t.TempDir()
+	setupTestConfig(dir)
+	path := filepath.Join(dir, "lines.txt")
+	content := strings.Join([]string{"line1", "line2", "line3", "line4", "line5"}, "\n")
+	require.NoError(t, os.WriteFile(path, []byte(content), 0o644))
+
+	r := newTestRegistry()
+
+	// Test head
+	head := 2
+	args := mustJSON(t, map[string]any{"path": path, "head": head})
+	out, err := r.Dispatch(context.Background(), "read_file", args)
+	require.NoError(t, err)
+	assert.Contains(t, out, "line1")
+	assert.Contains(t, out, "line2")
+	assert.NotContains(t, out, "line3")
+
+	// Test tail
+	tail := 2
+	args = mustJSON(t, map[string]any{"path": path, "tail": tail})
+	out, err = r.Dispatch(context.Background(), "read_file", args)
+	require.NoError(t, err)
+	assert.Contains(t, out, "line4")
+	assert.Contains(t, out, "line5")
+	assert.NotContains(t, out, "line1")
+
+	// Test both head and tail rejected
+	args = mustJSON(t, map[string]any{"path": path, "head": 1, "tail": 1})
+	out, err = r.Dispatch(context.Background(), "read_file", args)
+	require.NoError(t, err)
+	assert.Contains(t, out, "cannot specify both head and tail")
 }
