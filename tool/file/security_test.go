@@ -64,6 +64,15 @@ func TestValidatePath_SymlinkEscape(t *testing.T) {
 	}
 }
 
+func TestValidatePath_DeepNonExistent(t *testing.T) {
+	tmp := t.TempDir()
+	allowed := []string{tmp}
+	deep := filepath.Join(tmp, "a", "b", "c", "new.txt")
+	if err := validatePath(deep, allowed); err != nil {
+		t.Fatalf("expected deep path under allowed to pass, got: %v", err)
+	}
+}
+
 func TestGetAllowedDirs(t *testing.T) {
 	cfg := map[string]any{"allowed_directories": "/home/user\n/tmp\n\n"}
 	got := getAllowedDirs(cfg)
