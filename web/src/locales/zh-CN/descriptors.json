@@ -302,5 +302,9 @@
   "web.fields.search.providers.duckduckgo.username.label": "DuckDuckGo 用户名",
   "web.fields.search.providers.duckduckgo.username.help": "可选的 DuckDuckGo 认证用户名。",
   "web.fields.search.providers.duckduckgo.password.label": "DuckDuckGo 密码",
-  "web.fields.search.providers.duckduckgo.password.help": "可选的 DuckDuckGo 认证密码。"
+  "web.fields.search.providers.duckduckgo.password.help": "可选的 DuckDuckGo 认证密码。",
+  "filesystem.label": "文件系统访问",
+  "filesystem.summary": "允许代理读取、写入、搜索和管理指定目录中的文件。支持文件编辑、目录导航和内容搜索功能。",
+  "filesystem.fields.allowed_directories.label": "Allowed directories",
+  "filesystem.fields.allowed_directories.help": "每行一个绝对路径。只允许访问这些目录下的文件。"
 }
