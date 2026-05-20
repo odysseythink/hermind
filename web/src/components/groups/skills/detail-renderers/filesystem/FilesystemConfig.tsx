@@ -164,7 +164,7 @@ export default function FilesystemConfig({
         tabIndex={contentDisabled ? -1 : undefined}
       >
         <img
-          src="/filesystem-banner.png"
+          src="/ui/filesystem-banner.png"
           alt="Filesystem access"
           className={styles.banner}
         />
