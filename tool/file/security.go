@@ -46,12 +46,23 @@ func validatePath(input string, allowed []string) error {
 				}
 				resolved = resolvedTarget
 			} else {
+				// Walk up the path tree to find the first existing ancestor.
 				parent := filepath.Dir(abs)
-				resolvedParent, err := filepath.EvalSymlinks(parent)
-				if err != nil {
-					return fmt.Errorf("failed to resolve parent directory: %w", err)
+				for parent != abs {
+					resolvedParent, perr := filepath.EvalSymlinks(parent)
+					if perr == nil {
+						resolved = resolvedParent
+						break
+					}
+					if !os.IsNotExist(perr) {
+						return fmt.Errorf("failed to resolve parent directory: %w", perr)
+					}
+					abs = parent
+					parent = filepath.Dir(parent)
 				}
-				resolved = resolvedParent
+				if resolved == "" {
+					return fmt.Errorf("no existing ancestor found for path %q", input)
+				}
 			}
 		} else {
 			return fmt.Errorf("failed to resolve symlinks: %w", err)

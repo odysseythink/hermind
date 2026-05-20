@@ -4,7 +4,6 @@ import (
 	"context"
 	"encoding/json"
 	"os"
-	"path/filepath"
 
 	"github.com/odysseythink/hermind/tool"
 )
@@ -30,12 +29,8 @@ func createDirectoryHandler(ctx context.Context, raw json.RawMessage, cfg map[st
 	if err := json.Unmarshal(raw, &args); err != nil {
 		return tool.ToolError("invalid arguments: " + err.Error()), nil
 	}
-	allowed := getAllowedDirs(cfg)
-	if err := validatePath(args.Path, allowed); err != nil {
-		parent := filepath.Dir(args.Path)
-		if parentErr := validatePath(parent, allowed); parentErr != nil {
-			return tool.ToolError(err.Error()), nil
-		}
+	if err := validatePath(args.Path, getAllowedDirs(cfg)); err != nil {
+		return tool.ToolError(err.Error()), nil
 	}
 
 	if err := os.MkdirAll(args.Path, 0o755); err != nil {
