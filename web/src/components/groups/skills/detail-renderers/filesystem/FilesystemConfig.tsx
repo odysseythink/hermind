@@ -93,10 +93,8 @@ export default function FilesystemConfig({
   const subtoolValues = useMemo(() => {
     const v: Record<string, boolean> = {};
     for (const st of SUBTOOLS) {
-      v[st.name] = asBool(getToolSettingValue('filesystem', st.name, config));
-      if (v[st.name] !== true && v[st.name] !== false) {
-        v[st.name] = true;
-      }
+      const val = getToolSettingValue('filesystem', st.name, config);
+      v[st.name] = val === undefined ? true : asBool(val);
     }
     return v;
   }, [config]);
@@ -118,6 +116,10 @@ export default function FilesystemConfig({
   const handleRemoveDir = useCallback(() => {
     if (allowedDirs.length === 0) return;
     const idx = selectedDirIndex !== null ? selectedDirIndex : allowedDirs.length - 1;
+    if (idx < 0 || idx >= allowedDirs.length) {
+      setSelectedDirIndex(null);
+      return;
+    }
     const next = allowedDirs.filter((_, i) => i !== idx);
     setAllowedDirs(next);
     setSelectedDirIndex(null);
@@ -148,7 +150,7 @@ export default function FilesystemConfig({
           <span className={pageStyles.detailEmoji}>📁</span>
           文件系统访问
           {toolset && (
-            <span style={{ fontSize: 'var(--fs-sm)', color: 'var(--muted)', marginLeft: 'var(--space-2)' }}>
+            <span className={styles.toolsetLabel}>
               ({toolset})
             </span>
           )}
@@ -156,7 +158,11 @@ export default function FilesystemConfig({
         <Switch checked={enabled} onChange={onToggle} ariaLabel={`Enable ${name}`} />
       </div>
 
-      <div className={contentDisabled ? styles.disabledOverlay : undefined}>
+      <div
+        className={contentDisabled ? styles.disabledOverlay : undefined}
+        aria-hidden={contentDisabled || undefined}
+        tabIndex={contentDisabled ? -1 : undefined}
+      >
         <img
           src="/filesystem-banner.png"
           alt="Filesystem access"
@@ -174,11 +180,13 @@ export default function FilesystemConfig({
           <div className={styles.description}>{description}</div>
         )}
 
-        <div className={pageStyles.tabs}>
+        <div className={pageStyles.tabs} role="tablist">
           <button
             type="button"
             className={`${pageStyles.tab} ${activeTab === 'tools' ? pageStyles.active : ''}`}
             onClick={() => setActiveTab('tools')}
+            role="tab"
+            aria-selected={activeTab === 'tools'}
           >
             🔧 可用工具
           </button>
@@ -186,12 +194,14 @@ export default function FilesystemConfig({
             type="button"
             className={`${pageStyles.tab} ${activeTab === 'permissions' ? pageStyles.active : ''}`}
             onClick={() => setActiveTab('permissions')}
+            role="tab"
+            aria-selected={activeTab === 'permissions'}
           >
             📁 权限配置
           </button>
         </div>
 
-        <div className={styles.tabContent}>
+        <div className={styles.tabContent} role="tabpanel">
           {activeTab === 'tools' && (
             <>
               <div className={styles.subtoolGroup}>
@@ -203,6 +213,7 @@ export default function FilesystemConfig({
                     enabled={subtoolValues[st.name] !== false}
                     onToggle={(next) => handleSubtoolToggle(st.name, next)}
                     isWrite={false}
+                    disabled={contentDisabled}
                   />
                 ))}
               </div>
@@ -219,6 +230,7 @@ export default function FilesystemConfig({
                     enabled={subtoolValues[st.name] !== false}
                     onToggle={(next) => handleSubtoolToggle(st.name, next)}
                     isWrite={true}
+                    disabled={contentDisabled}
                   />
                 ))}
               </div>
@@ -243,6 +255,7 @@ export default function FilesystemConfig({
                       onClick={handleAddDir}
                       aria-label="Add directory"
                       title="Add directory"
+                      disabled={contentDisabled}
                     >
                       +
                     </button>
@@ -252,6 +265,7 @@ export default function FilesystemConfig({
                       onClick={handleRemoveDir}
                       aria-label="Remove directory"
                       title="Remove directory"
+                      disabled={contentDisabled || allowedDirs.length === 0}
                     >
                       −
                     </button>
@@ -277,10 +291,7 @@ export default function FilesystemConfig({
                   </div>
                 ))}
                 {allowedDirs.length === 0 && (
-                  <div
-                    className={styles.dirRow}
-                    style={{ color: 'var(--muted)', fontSize: 'var(--fs-sm)', cursor: 'default' }}
-                  >
+                  <div className={`${styles.dirRow} ${styles.emptyRow}`}>
                     暂无配置目录，点击 + 添加
                   </div>
                 )}
@@ -298,11 +309,13 @@ function SubtoolCard({
   enabled,
   onToggle,
   isWrite,
+  disabled,
 }: {
   def: SubtoolDef;
   enabled: boolean;
   onToggle: (next: boolean) => void;
   isWrite: boolean;
+  disabled?: boolean;
 }) {
   return (
     <div
@@ -315,7 +328,7 @@ function SubtoolCard({
           <div className={styles.subtoolDesc}>{def.description}</div>
         </div>
       </div>
-      <Switch checked={enabled} onChange={onToggle} ariaLabel={def.title} />
+      <Switch checked={enabled} onChange={onToggle} ariaLabel={def.title} disabled={disabled} />
     </div>
   );
 }
