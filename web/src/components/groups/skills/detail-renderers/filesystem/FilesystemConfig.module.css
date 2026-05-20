@@ -35,6 +35,41 @@
   line-height: 1.5;
 }
 
+/* ===== Tab Navigation — AnythingLLM underline style ===== */
+.tabs {
+  display: flex;
+  gap: var(--space-5);
+  border-bottom: 1px solid var(--border);
+  margin-bottom: var(--space-4);
+}
+
+.tab {
+  padding: var(--space-2) var(--space-1);
+  font-family: var(--font-sans);
+  font-size: var(--fs-sm);
+  font-weight: 500;
+  color: var(--muted);
+  cursor: pointer;
+  border: none;
+  background: none;
+  border-bottom: 2px solid transparent;
+  margin-bottom: -1px;
+  transition: all var(--t-fast) ease;
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+}
+
+.tab:hover {
+  color: var(--text);
+}
+
+.tabActive {
+  color: #0ea5e9;
+  border-bottom-color: #0ea5e9;
+  font-weight: 600;
+}
+
 /* ===== Tab Content Wrapper ===== */
 .tabContent {
   margin-top: var(--space-4);

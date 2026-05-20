@@ -180,10 +180,10 @@ export default function FilesystemConfig({
           <div className={styles.description}>{description}</div>
         )}
 
-        <div className={pageStyles.tabs} role="tablist">
+        <div className={styles.tabs} role="tablist">
           <button
             type="button"
-            className={`${pageStyles.tab} ${activeTab === 'tools' ? pageStyles.active : ''}`}
+            className={`${styles.tab} ${activeTab === 'tools' ? styles.tabActive : ''}`}
             onClick={() => setActiveTab('tools')}
             role="tab"
             aria-selected={activeTab === 'tools'}
@@ -192,7 +192,7 @@ export default function FilesystemConfig({
           </button>
           <button
             type="button"
-            className={`${pageStyles.tab} ${activeTab === 'permissions' ? pageStyles.active : ''}`}
+            className={`${styles.tab} ${activeTab === 'permissions' ? styles.tabActive : ''}`}
             onClick={() => setActiveTab('permissions')}
             role="tab"
             aria-selected={activeTab === 'permissions'}
