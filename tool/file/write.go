@@ -31,13 +31,16 @@ type writeFileResult struct {
 	BytesWritten int    `json:"bytes_written"`
 }
 
-func writeFileHandler(ctx context.Context, raw json.RawMessage) (string, error) {
+func writeFileHandler(ctx context.Context, raw json.RawMessage, cfg map[string]any) (string, error) {
 	var args writeFileArgs
 	if err := json.Unmarshal(raw, &args); err != nil {
 		return tool.ToolError("invalid arguments: " + err.Error()), nil
 	}
 	if args.Path == "" {
 		return tool.ToolError("path is required"), nil
+	}
+	if err := validatePath(args.Path, getAllowedDirs(cfg)); err != nil {
+		return tool.ToolError(err.Error()), nil
 	}
 
 	if args.CreateDirs {
