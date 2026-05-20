@@ -8,6 +8,7 @@ import (
 	"os/exec"
 	"path/filepath"
 	"strings"
+	"time"
 
 	"github.com/odysseythink/hermind/tool"
 )
@@ -43,6 +44,14 @@ func (w *NodeJSWrapper) Generate(ctx context.Context, docType string, params map
 		return "", fmt.Errorf("marshal params: %w", err)
 	}
 
+	// Apply a hard timeout to prevent indefinite hangs
+	const maxTimeout = 30 * time.Second
+	if _, ok := ctx.Deadline(); !ok {
+		var cancel context.CancelFunc
+		ctx, cancel = context.WithTimeout(ctx, maxTimeout)
+		defer cancel()
+	}
+
 	cmd := exec.CommandContext(ctx, "node", scriptPath)
 	cmd.Dir = w.scriptDir
 	cmd.Stdin = strings.NewReader(string(jsonArgs))
@@ -58,6 +67,12 @@ func (w *NodeJSWrapper) Generate(ctx context.Context, docType string, params map
 	if path == "" {
 		return "", fmt.Errorf("node.js script returned empty path")
 	}
+
+	// Validate the returned path is within the expected output directory
+	if !isSubpath(path, w.outputDir) {
+		return "", fmt.Errorf("node.js script returned path outside output directory: %s", path)
+	}
+
 	return path, nil
 }
 
@@ -94,6 +109,7 @@ func NewCreateWordHandler(wrapper *NodeJSWrapper) tool.Handler {
 		if err != nil {
 			return tool.ToolError(fmt.Sprintf("generate docx: %v", err)), nil
 		}
+		defer os.Remove(path)
 
 		// Read the generated file
 		buf, err := os.ReadFile(path)
@@ -106,9 +122,6 @@ func NewCreateWordHandler(wrapper *NodeJSWrapper) tool.Handler {
 		if err != nil {
 			return tool.ToolError(fmt.Sprintf("save file: %v", err)), nil
 		}
-
-		// Clean up the temp file from Node.js
-		_ = os.Remove(path)
 
 		return resultJSON(saved, fmt.Sprintf("Successfully created Word document '%s' (%d bytes).", saved.DisplayFilename, saved.FileSize)), nil
 	}
@@ -135,6 +148,7 @@ func NewCreatePPTXHandler(wrapper *NodeJSWrapper) tool.Handler {
 		if err != nil {
 			return tool.ToolError(fmt.Sprintf("generate pptx: %v", err)), nil
 		}
+		defer os.Remove(path)
 
 		buf, err := os.ReadFile(path)
 		if err != nil {
@@ -145,8 +159,6 @@ func NewCreatePPTXHandler(wrapper *NodeJSWrapper) tool.Handler {
 		if err != nil {
 			return tool.ToolError(fmt.Sprintf("save file: %v", err)), nil
 		}
-
-		_ = os.Remove(path)
 
 		return resultJSON(saved, fmt.Sprintf("Successfully created PowerPoint presentation '%s' (%d bytes).", saved.DisplayFilename, saved.FileSize)), nil
 	}

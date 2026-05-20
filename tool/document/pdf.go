@@ -34,13 +34,13 @@ func NewCreatePDFHandler(outputDir string) tool.Handler {
 		doc := fpdf.New("P", "mm", "A4", "")
 		doc.SetAutoPageBreak(true, 15)
 		doc.AddPage()
-		doc.SetFont("Arial", "", 12)
+		doc.SetFont("Helvetica", "", 12)
 
 		if params.Title != "" {
-			doc.SetFont("Arial", "B", 16)
+			doc.SetFont("Helvetica", "B", 16)
 			doc.Cell(0, 10, params.Title)
 			doc.Ln(12)
-			doc.SetFont("Arial", "", 12)
+			doc.SetFont("Helvetica", "", 12)
 		}
 
 		lines := strings.Split(params.Content, "\n")
@@ -51,29 +51,29 @@ func NewCreatePDFHandler(outputDir string) tool.Handler {
 				continue
 			}
 			if strings.HasPrefix(line, "# ") {
-				doc.SetFont("Arial", "B", 14)
+				doc.SetFont("Helvetica", "B", 14)
 				doc.Cell(0, 10, strings.TrimPrefix(line, "# "))
 				doc.Ln(10)
-				doc.SetFont("Arial", "", 12)
+				doc.SetFont("Helvetica", "", 12)
 			} else if strings.HasPrefix(line, "## ") {
-				doc.SetFont("Arial", "B", 13)
+				doc.SetFont("Helvetica", "B", 13)
 				doc.Cell(0, 8, strings.TrimPrefix(line, "## "))
 				doc.Ln(8)
-				doc.SetFont("Arial", "", 12)
+				doc.SetFont("Helvetica", "", 12)
 			} else if strings.HasPrefix(line, "### ") {
-				doc.SetFont("Arial", "B", 12)
+				doc.SetFont("Helvetica", "B", 12)
 				doc.Cell(0, 7, strings.TrimPrefix(line, "### "))
 				doc.Ln(7)
-				doc.SetFont("Arial", "", 12)
+				doc.SetFont("Helvetica", "", 12)
 			} else if strings.HasPrefix(line, "- ") {
 				doc.Cell(5, 6, "\u2022")
 				doc.Cell(0, 6, strings.TrimPrefix(line, "- "))
 				doc.Ln(6)
 			} else if strings.HasPrefix(line, "**") && strings.HasSuffix(line, "**") {
-				doc.SetFont("Arial", "B", 12)
+				doc.SetFont("Helvetica", "B", 12)
 				text := strings.TrimSuffix(strings.TrimPrefix(line, "**"), "**")
 				doc.MultiCell(0, 6, text, "", "", false)
-				doc.SetFont("Arial", "", 12)
+				doc.SetFont("Helvetica", "", 12)
 			} else {
 				doc.MultiCell(0, 6, line, "", "", false)
 			}

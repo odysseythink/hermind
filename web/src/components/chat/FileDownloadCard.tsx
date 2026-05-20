@@ -24,9 +24,7 @@ function getIcon(filename: string): string {
 }
 
 export default function FileDownloadCard({ filename, storageFilename, fileSize }: FileDownloadCardProps) {
-  const handleDownload = () => {
-    window.open(`/api/generated-files/${storageFilename}`, '_blank');
-  };
+  const downloadUrl = `/api/generated-files/${storageFilename}`;
 
   return (
     <div className={styles.card}>
@@ -35,9 +33,9 @@ export default function FileDownloadCard({ filename, storageFilename, fileSize }
         <span className={styles.filename}>{filename}</span>
         <span className={styles.size}>{formatSize(fileSize)}</span>
       </div>
-      <button className={styles.button} onClick={handleDownload}>
+      <a className={styles.button} href={downloadUrl} download={filename}>
         Download
-      </button>
+      </a>
     </div>
   );
 }
