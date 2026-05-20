@@ -205,6 +205,10 @@
   outline: none;
 }
 
+.dirRowInput:focus {
+  border-bottom: 1px solid var(--accent);
+}
+
 .dirRowInput::placeholder {
   color: var(--muted);
   opacity: 0.5;
