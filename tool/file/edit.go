@@ -45,6 +45,9 @@ func editFileHandler(ctx context.Context, raw json.RawMessage, cfg map[string]an
 	}
 
 	content := string(data)
+	if args.OldString == "" {
+		return tool.ToolError("old_string cannot be empty"), nil
+	}
 	if !strings.Contains(content, args.OldString) {
 		return tool.ToolError("old_string not found in file"), nil
 	}
