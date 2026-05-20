@@ -178,6 +178,7 @@ func (s *Server) disabledTools() map[string]bool {
 // so the result is safe to pass into the engine. The overhead is
 // negligible because registries are small (< 50 entries).
 func (s *Server) activeToolReg() *tool.Registry {
+	s.injectFilesystemConfig()
 	deps := s.currentDeps()
 	if deps.ToolReg == nil {
 		return nil
