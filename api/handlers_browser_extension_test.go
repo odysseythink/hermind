@@ -17,47 +17,9 @@ import (
 
 // --- scrape tests ---
 
-func TestBrowserExtensionAuth_MissingKey(t *testing.T) {
-	dir := t.TempDir()
-	cfg := &config.Config{}
-	deps := &EngineDeps{}
-	opts := &ServerOpts{Config: cfg, Deps: deps, InstanceRoot: dir}
-	srv, err := NewServer(opts)
-	if err != nil {
-		t.Fatal(err)
-	}
-	req := httptest.NewRequest("GET", "/api/browser-extension/check", nil)
-	w := httptest.NewRecorder()
-	srv.Router().ServeHTTP(w, req)
-	if w.Code != http.StatusForbidden {
-		t.Fatalf("expected 403, got %d", w.Code)
-	}
-	if !strings.Contains(w.Body.String(), "not configured") {
-		t.Fatalf("expected 'not configured' error")
-	}
-}
-
-func TestBrowserExtensionAuth_InvalidKey(t *testing.T) {
-	dir := t.TempDir()
-	cfg := &config.Config{BrowserExtension: config.BrowserExtensionConfig{Enabled: true, APIKey: "correct-key"}}
-	deps := &EngineDeps{}
-	opts := &ServerOpts{Config: cfg, Deps: deps, InstanceRoot: dir}
-	srv, err := NewServer(opts)
-	if err != nil {
-		t.Fatal(err)
-	}
-	req := httptest.NewRequest("GET", "/api/browser-extension/check", nil)
-	req.Header.Set("X-Extension-Key", "wrong-key")
-	w := httptest.NewRecorder()
-	srv.Router().ServeHTTP(w, req)
-	if w.Code != http.StatusUnauthorized {
-		t.Fatalf("expected 401, got %d", w.Code)
-	}
-}
-
 func TestBrowserExtensionCheck_Success(t *testing.T) {
 	dir := t.TempDir()
-	cfg := &config.Config{BrowserExtension: config.BrowserExtensionConfig{Enabled: true, APIKey: "test-key"}}
+	cfg := &config.Config{BrowserExtension: config.BrowserExtensionConfig{Enabled: true}}
 	deps := &EngineDeps{}
 	opts := &ServerOpts{Config: cfg, Deps: deps, InstanceRoot: dir, Version: "test-v1"}
 	srv, err := NewServer(opts)
@@ -65,7 +27,6 @@ func TestBrowserExtensionCheck_Success(t *testing.T) {
 		t.Fatal(err)
 	}
 	req := httptest.NewRequest("GET", "/api/browser-extension/check", nil)
-	req.Header.Set("X-Extension-Key", "test-key")
 	w := httptest.NewRecorder()
 	srv.Router().ServeHTTP(w, req)
 	if w.Code != http.StatusOK {
@@ -82,7 +43,7 @@ func TestBrowserExtensionCheck_Success(t *testing.T) {
 
 func TestBrowserExtensionScrape_Success(t *testing.T) {
 	dir := t.TempDir()
-	cfg := &config.Config{BrowserExtension: config.BrowserExtensionConfig{Enabled: true, APIKey: "test-key"}}
+	cfg := &config.Config{BrowserExtension: config.BrowserExtensionConfig{Enabled: true}}
 	deps := &EngineDeps{}
 	opts := &ServerOpts{Config: cfg, Deps: deps, InstanceRoot: dir}
 	srv, err := NewServer(opts)
@@ -93,7 +54,6 @@ func TestBrowserExtensionScrape_Success(t *testing.T) {
 	body, _ := json.Marshal(payload)
 	req := httptest.NewRequest("POST", "/api/browser-extension/scrape", bytes.NewReader(body))
 	req.Header.Set("Content-Type", "application/json")
-	req.Header.Set("X-Extension-Key", "test-key")
 	w := httptest.NewRecorder()
 	srv.Router().ServeHTTP(w, req)
 	if w.Code != http.StatusOK {
@@ -118,7 +78,7 @@ func TestBrowserExtensionScrape_Success(t *testing.T) {
 
 func TestBrowserExtensionScrape_MissingURL(t *testing.T) {
 	dir := t.TempDir()
-	cfg := &config.Config{BrowserExtension: config.BrowserExtensionConfig{Enabled: true, APIKey: "test-key"}}
+	cfg := &config.Config{BrowserExtension: config.BrowserExtensionConfig{Enabled: true}}
 	deps := &EngineDeps{}
 	opts := &ServerOpts{Config: cfg, Deps: deps, InstanceRoot: dir}
 	srv, err := NewServer(opts)
@@ -129,7 +89,6 @@ func TestBrowserExtensionScrape_MissingURL(t *testing.T) {
 	body, _ := json.Marshal(payload)
 	req := httptest.NewRequest("POST", "/api/browser-extension/scrape", bytes.NewReader(body))
 	req.Header.Set("Content-Type", "application/json")
-	req.Header.Set("X-Extension-Key", "test-key")
 	w := httptest.NewRecorder()
 	srv.Router().ServeHTTP(w, req)
 	if w.Code != http.StatusBadRequest {
@@ -141,7 +100,7 @@ func TestBrowserExtensionScrape_MissingURL(t *testing.T) {
 
 func TestBrowserExtensionPoll_Empty(t *testing.T) {
 	dir := t.TempDir()
-	cfg := &config.Config{BrowserExtension: config.BrowserExtensionConfig{Enabled: true, APIKey: "test-key"}}
+	cfg := &config.Config{BrowserExtension: config.BrowserExtensionConfig{Enabled: true}}
 	deps := &EngineDeps{}
 	opts := &ServerOpts{Config: cfg, Deps: deps, InstanceRoot: dir}
 	srv, err := NewServer(opts)
@@ -149,7 +108,6 @@ func TestBrowserExtensionPoll_Empty(t *testing.T) {
 		t.Fatal(err)
 	}
 	req := httptest.NewRequest("GET", "/api/browser-extension/poll", nil)
-	req.Header.Set("X-Extension-Key", "test-key")
 	w := httptest.NewRecorder()
 	srv.Router().ServeHTTP(w, req)
 	if w.Code != http.StatusOK {
@@ -166,7 +124,7 @@ func TestBrowserExtensionPoll_Empty(t *testing.T) {
 
 func TestBrowserExtensionPoll_WithTask(t *testing.T) {
 	dir := t.TempDir()
-	cfg := &config.Config{BrowserExtension: config.BrowserExtensionConfig{Enabled: true, APIKey: "test-key"}}
+	cfg := &config.Config{BrowserExtension: config.BrowserExtensionConfig{Enabled: true}}
 	deps := &EngineDeps{}
 	opts := &ServerOpts{Config: cfg, Deps: deps, InstanceRoot: dir}
 	srv, err := NewServer(opts)
@@ -178,7 +136,6 @@ func TestBrowserExtensionPoll_WithTask(t *testing.T) {
 	defaultTaskQueue.enqueue(task)
 
 	req := httptest.NewRequest("GET", "/api/browser-extension/poll", nil)
-	req.Header.Set("X-Extension-Key", "test-key")
 	w := httptest.NewRecorder()
 	srv.Router().ServeHTTP(w, req)
 	if w.Code != http.StatusOK {
@@ -198,7 +155,7 @@ func TestBrowserExtensionResult_Success(t *testing.T) {
 	ch := defaultTaskQueue.enqueue(task)
 
 	dir := t.TempDir()
-	cfg := &config.Config{BrowserExtension: config.BrowserExtensionConfig{Enabled: true, APIKey: "test-key"}}
+	cfg := &config.Config{BrowserExtension: config.BrowserExtensionConfig{Enabled: true}}
 	deps := &EngineDeps{}
 	opts := &ServerOpts{Config: cfg, Deps: deps, InstanceRoot: dir}
 	srv, err := NewServer(opts)
@@ -210,7 +167,6 @@ func TestBrowserExtensionResult_Success(t *testing.T) {
 	body, _ := json.Marshal(result)
 	req := httptest.NewRequest("POST", "/api/browser-extension/result", bytes.NewReader(body))
 	req.Header.Set("Content-Type", "application/json")
-	req.Header.Set("X-Extension-Key", "test-key")
 	w := httptest.NewRecorder()
 	srv.Router().ServeHTTP(w, req)
 	if w.Code != http.StatusOK {
@@ -229,7 +185,7 @@ func TestBrowserExtensionResult_Success(t *testing.T) {
 
 func TestBrowserExtensionResult_NotFound(t *testing.T) {
 	dir := t.TempDir()
-	cfg := &config.Config{BrowserExtension: config.BrowserExtensionConfig{Enabled: true, APIKey: "test-key"}}
+	cfg := &config.Config{BrowserExtension: config.BrowserExtensionConfig{Enabled: true}}
 	deps := &EngineDeps{}
 	opts := &ServerOpts{Config: cfg, Deps: deps, InstanceRoot: dir}
 	srv, err := NewServer(opts)
@@ -241,7 +197,6 @@ func TestBrowserExtensionResult_NotFound(t *testing.T) {
 	body, _ := json.Marshal(result)
 	req := httptest.NewRequest("POST", "/api/browser-extension/result", bytes.NewReader(body))
 	req.Header.Set("Content-Type", "application/json")
-	req.Header.Set("X-Extension-Key", "test-key")
 	w := httptest.NewRecorder()
 	srv.Router().ServeHTTP(w, req)
 	if w.Code != http.StatusNotFound {

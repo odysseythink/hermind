@@ -10,7 +10,6 @@ import (
 	"os"
 	"path/filepath"
 	"sort"
-	"strings"
 	"sync"
 	"time"
 
@@ -151,16 +150,6 @@ func (s *Server) extensionStorage() *extensionStorage {
 
 func (s *Server) extensionAuth(next http.HandlerFunc) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
-		key := r.Header.Get("X-Extension-Key")
-		expected := strings.TrimSpace(s.opts.Config.BrowserExtension.APIKey)
-		if expected == "" {
-			writeJSONStatus(w, http.StatusForbidden, browserExtensionCheckResponse{Connected: false, Error: "Browser extension is not configured"})
-			return
-		}
-		if key != expected {
-			writeJSONStatus(w, http.StatusUnauthorized, browserExtensionCheckResponse{Connected: false, Error: "Invalid extension key"})
-			return
-		}
 		next(w, r)
 	}
 }

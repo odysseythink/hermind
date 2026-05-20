@@ -49,7 +49,6 @@ func (s *Server) handleToolsList(w http.ResponseWriter, _ *http.Request) {
 		if e.Name == "browser_control" {
 			dto.SettingsSchema = []ConfigFieldDTO{
 				{Name: "enabled", Label: "Enabled", Kind: "bool", Help: "Enable the browser extension integration."},
-				{Name: "api_key", Label: "API key", Kind: "secret", Help: "Authentication key for the browser extension."},
 			}
 		}
 		out = append(out, dto)

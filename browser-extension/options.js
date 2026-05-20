@@ -3,19 +3,15 @@
 (function() {
   const form = document.getElementById('settingsForm');
   const hermindUrlInput = document.getElementById('hermindUrl');
-  const apiKeyInput = document.getElementById('apiKey');
-  const toggleKeyBtn = document.getElementById('toggleKey');
   const testBtn = document.getElementById('testBtn');
   const messageEl = document.getElementById('message');
 
   // Load saved settings
   async function loadSettings() {
     const result = await chrome.storage.sync.get({
-      hermindUrl: 'http://localhost:8080',
-      apiKey: ''
+      hermindUrl: 'http://localhost:8080'
     });
     hermindUrlInput.value = result.hermindUrl;
-    apiKeyInput.value = result.apiKey;
   }
 
   // Show message
@@ -31,9 +27,8 @@
   async function saveSettings(e) {
     e.preventDefault();
     const hermindUrl = hermindUrlInput.value.trim().replace(/\/$/, '');
-    const apiKey = apiKeyInput.value.trim();
 
-    await chrome.storage.sync.set({ hermindUrl, apiKey });
+    await chrome.storage.sync.set({ hermindUrl });
     showMessage('Settings saved successfully!', 'success');
   }
 
@@ -57,17 +52,9 @@
     }
   }
 
-  // Toggle API key visibility
-  function toggleKeyVisibility() {
-    const type = apiKeyInput.type === 'password' ? 'text' : 'password';
-    apiKeyInput.type = type;
-    toggleKeyBtn.textContent = type === 'password' ? '👁' : '🙈';
-  }
-
   // Event listeners
   form.addEventListener('submit', saveSettings);
   testBtn.addEventListener('click', testConnection);
-  toggleKeyBtn.addEventListener('click', toggleKeyVisibility);
 
   // Init
   loadSettings();

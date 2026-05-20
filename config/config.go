@@ -148,8 +148,7 @@ type ToolsConfig struct {
 
 // BrowserExtensionConfig holds settings for the browser extension integration.
 type BrowserExtensionConfig struct {
-	Enabled bool   `yaml:"enabled,omitempty"`
-	APIKey  string `yaml:"api_key,omitempty"`
+	Enabled bool `yaml:"enabled,omitempty"`
 }
 
 // CronConfig holds cron scheduler configuration.

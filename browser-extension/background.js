@@ -8,8 +8,7 @@ const TASK_TIMEOUT_MS = 60000;
 
 async function getSettings() {
   return chrome.storage.sync.get({
-    hermindUrl: 'http://localhost:8080',
-    apiKey: ''
+    hermindUrl: 'http://localhost:8080'
   });
 }
 
@@ -37,22 +36,13 @@ async function pollLoop() {
 
   try {
     const settings = await getSettings();
-    if (!settings.apiKey) {
-      // Don't hammer the server if not configured
-      pollTimer = setTimeout(pollLoop, 10000);
-      return;
-    }
 
     const url = settings.hermindUrl.replace(/\/$/, '') + '/api/browser-extension/poll';
     const response = await fetch(url, {
-      method: 'GET',
-      headers: { 'X-Extension-Key': settings.apiKey }
+      method: 'GET'
     });
 
     if (!response.ok) {
-      if (response.status === 401 || response.status === 403) {
-        console.error('[Hermind] Invalid API key');
-      }
       pollTimer = setTimeout(pollLoop, 5000);
       return;
     }
@@ -129,8 +119,7 @@ async function reportResult(result) {
     await fetch(url, {
       method: 'POST',
       headers: {
-        'Content-Type': 'application/json',
-        'X-Extension-Key': settings.apiKey
+        'Content-Type': 'application/json'
       },
       body: JSON.stringify(result)
     });
@@ -373,15 +362,13 @@ chrome.runtime.onMessage.addListener((request, sender, sendResponse) => {
 
 async function handleScrape(data) {
   const settings = await getSettings();
-  if (!settings.apiKey) throw new Error('API Key not configured');
   const url = settings.hermindUrl.replace(/\/$/, '') + '/api/browser-extension/scrape';
   const response = await fetch(url, {
     method: 'POST',
-    headers: { 'Content-Type': 'application/json', 'X-Extension-Key': settings.apiKey },
+    headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify(data)
   });
   if (!response.ok) {
-    if (response.status === 401 || response.status === 403) throw new Error('Invalid API Key');
     throw new Error(`Server returned ${response.status}`);
   }
   return await response.json();
@@ -389,9 +376,8 @@ async function handleScrape(data) {
 
 async function checkConnection() {
   const settings = await getSettings();
-  if (!settings.apiKey) throw new Error('API Key not configured');
   const url = settings.hermindUrl.replace(/\/$/, '') + '/api/browser-extension/check';
-  const response = await fetch(url, { headers: { 'X-Extension-Key': settings.apiKey } });
+  const response = await fetch(url);
   if (!response.ok) throw new Error(`Server returned ${response.status}`);
   return await response.json();
 }
