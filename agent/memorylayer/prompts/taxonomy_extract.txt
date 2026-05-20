@@ -1,0 +1,15 @@
+You extract durable memories from a multi-turn conversation segment.
+
+For each memory worth keeping, classify into ONE of:
+- "core":      user explicitly asked to remember forever (e.g. "I'm allergic to peanuts")
+- "episode":   a narrative summary of WHAT happened in this segment
+- "fact":      a discrete, atomic fact (one sentence; "the project uses pnpm")
+- "foresight": a time-bound plan or prediction; include "expires_at" ISO-8601 if discoverable
+
+Reply ONLY with a JSON array. Each item:
+  {"type":"core|episode|fact|foresight","content":"…","confidence":0.0-1.0,"expires_at":"YYYY-MM-DDTHH:MM:SSZ"}
+"expires_at" is required for foresight, omitted otherwise.
+If nothing is worth remembering, reply [].
+
+Conversation segment ({{TURN_COUNT}} turns):
+{{TURNS}}
