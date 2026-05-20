@@ -1,4 +1,4 @@
-import { useMemo, useCallback } from 'react';
+import { useMemo, useCallback, useState } from 'react';
 import pageStyles from '../../SkillToolsConfigPage.module.css';
 import styles from './FilesystemConfig.module.css';
 import Switch from '../../../../fields/Switch';
@@ -13,16 +13,16 @@ interface SubtoolDef {
 }
 
 const SUBTOOLS: SubtoolDef[] = [
-  { name: 'read_file', title: '读取文件', description: '读取单个文件的内容', icon: '📄', category: 'read' },
-  { name: 'read_multiple_files', title: '批量读取文件', description: '同时读取多个文件', icon: '📑', category: 'read' },
-  { name: 'list_directory', title: '列出目录', description: '列出目录中的文件和子目录', icon: '📂', category: 'read' },
-  { name: 'search_files', title: '搜索文件', description: '按 glob 模式递归搜索文件', icon: '🔍', category: 'read' },
-  { name: 'get_file_info', title: '获取文件信息', description: '获取文件的元数据（大小、权限等）', icon: 'ℹ️', category: 'read' },
-  { name: 'write_file', title: '写入文件', description: '将内容写入文件', icon: '💾', category: 'write' },
-  { name: 'edit_file', title: '编辑文件', description: '在文件中查找并替换文本', icon: '✏️', category: 'write' },
-  { name: 'create_directory', title: '创建目录', description: '创建目录（支持递归）', icon: '📂', category: 'write' },
-  { name: 'copy_file', title: '复制文件', description: '复制文件到目标路径', icon: '📋', category: 'write' },
-  { name: 'move_file', title: '移动文件', description: '移动或重命名文件', icon: '↔️', category: 'write' },
+  { name: 'read_file', title: '读取文件', description: '读取文件内容（包括文本、代码、PDF、图像等）', icon: '📄', category: 'read' },
+  { name: 'read_multiple_files', title: '读取多个文件', description: '同时读取多个文件', icon: '📑', category: 'read' },
+  { name: 'list_directory', title: '目录', description: '列出文件夹中的文件和目录', icon: '📂', category: 'read' },
+  { name: 'search_files', title: '搜索文件', description: '按文件名或内容搜索文件', icon: '🔍', category: 'read' },
+  { name: 'get_file_info', title: '获取文件信息', description: '获取有关文件的详细元数据', icon: 'ℹ️', category: 'read' },
+  { name: 'write_file', title: '创建文本文件', description: '创建新的文本文件，或覆盖现有的文本文件', icon: '💾', category: 'write' },
+  { name: 'edit_file', title: '编辑文件', description: '对文本文件进行基于行的编辑', icon: '✏️', category: 'write' },
+  { name: 'create_directory', title: '创建目录', description: '创建新的目录', icon: '📂', category: 'write' },
+  { name: 'copy_file', title: '复制文件', description: '复制文件和目录', icon: '📋', category: 'write' },
+  { name: 'move_file', title: '移动/重命名文件', description: '移动或重命名文件和目录', icon: '↔️', category: 'write' },
 ];
 
 function asString(v: unknown): string {
@@ -62,6 +62,19 @@ function setToolSettingValue(
   onSectionField('tools', 'settings', nextSettings);
 }
 
+function parseDirs(raw: string): string[] {
+  const out: string[] = [];
+  for (const line of raw.split('\n')) {
+    const trimmed = line.trim();
+    if (trimmed) out.push(trimmed);
+  }
+  return out;
+}
+
+function serializeDirs(dirs: string[]): string {
+  return dirs.filter(d => d.trim() !== '').join('\n');
+}
+
 export default function FilesystemConfig({
   name,
   description,
@@ -71,7 +84,11 @@ export default function FilesystemConfig({
   config,
   onSectionField,
 }: ToolDetailProps) {
-  const allowedDirs = asString(getToolSettingValue('filesystem', 'allowed_directories', config));
+  const [activeTab, setActiveTab] = useState<'tools' | 'permissions'>('tools');
+  const [selectedDirIndex, setSelectedDirIndex] = useState<number | null>(null);
+
+  const allowedDirsRaw = asString(getToolSettingValue('filesystem', 'allowed_directories', config));
+  const allowedDirs = useMemo(() => parseDirs(allowedDirsRaw), [allowedDirsRaw]);
 
   const subtoolValues = useMemo(() => {
     const v: Record<string, boolean> = {};
@@ -84,23 +101,52 @@ export default function FilesystemConfig({
     return v;
   }, [config]);
 
-  const handleDirChange = useCallback((value: string) => {
-    setToolSettingValue('filesystem', 'allowed_directories', value, config, onSectionField);
-  }, [config, onSectionField]);
-
   const handleSubtoolToggle = useCallback((subtoolName: string, next: boolean) => {
     setToolSettingValue('filesystem', subtoolName, next, config, onSectionField);
   }, [config, onSectionField]);
 
+  const setAllowedDirs = useCallback((dirs: string[]) => {
+    setToolSettingValue('filesystem', 'allowed_directories', serializeDirs(dirs), config, onSectionField);
+  }, [config, onSectionField]);
+
+  const handleAddDir = useCallback(() => {
+    const next = [...allowedDirs, ''];
+    setAllowedDirs(next);
+    setSelectedDirIndex(next.length - 1);
+  }, [allowedDirs, setAllowedDirs]);
+
+  const handleRemoveDir = useCallback(() => {
+    if (allowedDirs.length === 0) return;
+    const idx = selectedDirIndex !== null ? selectedDirIndex : allowedDirs.length - 1;
+    const next = allowedDirs.filter((_, i) => i !== idx);
+    setAllowedDirs(next);
+    setSelectedDirIndex(null);
+  }, [allowedDirs, selectedDirIndex, setAllowedDirs]);
+
+  const handleDirChange = useCallback((index: number, value: string) => {
+    const next = allowedDirs.map((d, i) => (i === index ? value : d));
+    setAllowedDirs(next);
+  }, [allowedDirs, setAllowedDirs]);
+
+  const handleDirBlur = useCallback((index: number, value: string) => {
+    if (value.trim() === '') {
+      const next = allowedDirs.filter((_, i) => i !== index);
+      setAllowedDirs(next);
+      setSelectedDirIndex(null);
+    }
+  }, [allowedDirs, setAllowedDirs]);
+
   const readTools = SUBTOOLS.filter(s => s.category === 'read');
   const writeTools = SUBTOOLS.filter(s => s.category === 'write');
+
+  const contentDisabled = !enabled;
 
   return (
     <div className={pageStyles.detailContent}>
       <div className={pageStyles.detailHeader}>
         <h2 className={pageStyles.detailTitle}>
           <span className={pageStyles.detailEmoji}>📁</span>
-          {name}
+          文件系统访问
           {toolset && (
             <span style={{ fontSize: 'var(--fs-sm)', color: 'var(--muted)', marginLeft: 'var(--space-2)' }}>
               ({toolset})
@@ -110,71 +156,144 @@ export default function FilesystemConfig({
         <Switch checked={enabled} onChange={onToggle} ariaLabel={`Enable ${name}`} />
       </div>
 
-      {description && <div className={pageStyles.detailDesc}>{description}</div>}
+      <div className={contentDisabled ? styles.disabledOverlay : undefined}>
+        <img
+          src="/filesystem-banner.png"
+          alt="Filesystem access"
+          className={styles.banner}
+        />
 
-      <div className={styles.warningBanner}>
-        <div className={styles.warningIcon}>⚠️</div>
-        <div className={styles.warningText}>
-          访问文件系统可能存在风险，因为它可能修改或删除文件。在启用之前，请务必查阅文档。
-        </div>
-      </div>
-
-      <div className={pageStyles.configSection}>
-        <h3 className={styles.sectionTitle}>配置</h3>
-
-        <div className={styles.configRow}>
+        <div className={styles.warningBanner}>
+          <div className={styles.warningIcon}>⚠️</div>
           <div>
-            <div className={styles.label}>Allowed directories</div>
-            <div className={styles.help}>每行一个绝对路径。只允许访问这些目录下的文件。</div>
+            访问文件系统可能存在风险，因为它可能修改或删除文件。在启用之前，请务必查阅文档。
           </div>
-          <textarea
-            className={styles.textarea}
-            value={allowedDirs}
-            onChange={(e) => handleDirChange(e.currentTarget.value)}
-            rows={4}
-            placeholder="/home/user/projects&#10;/tmp"
-            aria-label="Allowed directories"
-          />
-        </div>
-      </div>
-
-      <div className={pageStyles.configSection}>
-        <h3 className={styles.sectionTitle}>可用工具</h3>
-
-        <div className={styles.subtoolGroup}>
-          <p className={styles.subtoolGroupLabel}>📖 阅读操作</p>
-          {readTools.map(st => (
-            <SubtoolRow
-              key={st.name}
-              def={st}
-              enabled={subtoolValues[st.name] !== false}
-              onToggle={(next) => handleSubtoolToggle(st.name, next)}
-              isWrite={false}
-            />
-          ))}
         </div>
 
-        <div className={styles.subtoolGroup}>
-          <p className={styles.subtoolGroupLabel}>
-            <span className={styles.writeWarningIcon}>⚠️</span>
-            ✏️ 写入操作
-          </p>
-          {writeTools.map(st => (
-            <SubtoolRow
-              key={st.name}
-              def={st}
-              enabled={subtoolValues[st.name] !== false}
-              onToggle={(next) => handleSubtoolToggle(st.name, next)}
-              isWrite={true}
-            />
-          ))}
+        {description && (
+          <div className={styles.description}>{description}</div>
+        )}
+
+        <div className={pageStyles.tabs}>
+          <button
+            type="button"
+            className={`${pageStyles.tab} ${activeTab === 'tools' ? pageStyles.active : ''}`}
+            onClick={() => setActiveTab('tools')}
+          >
+            🔧 可用工具
+          </button>
+          <button
+            type="button"
+            className={`${pageStyles.tab} ${activeTab === 'permissions' ? pageStyles.active : ''}`}
+            onClick={() => setActiveTab('permissions')}
+          >
+            📁 权限配置
+          </button>
+        </div>
+
+        <div className={styles.tabContent}>
+          {activeTab === 'tools' && (
+            <>
+              <div className={styles.subtoolGroup}>
+                <div className={styles.sectionTitle}>📖 阅读操作</div>
+                {readTools.map(st => (
+                  <SubtoolCard
+                    key={st.name}
+                    def={st}
+                    enabled={subtoolValues[st.name] !== false}
+                    onToggle={(next) => handleSubtoolToggle(st.name, next)}
+                    isWrite={false}
+                  />
+                ))}
+              </div>
+
+              <div className={styles.subtoolGroup}>
+                <div className={styles.sectionTitle}>
+                  <span className={styles.writeWarningIcon}>⚠️</span>
+                  ✏️ 编写操作
+                </div>
+                {writeTools.map(st => (
+                  <SubtoolCard
+                    key={st.name}
+                    def={st}
+                    enabled={subtoolValues[st.name] !== false}
+                    onToggle={(next) => handleSubtoolToggle(st.name, next)}
+                    isWrite={true}
+                  />
+                ))}
+              </div>
+            </>
+          )}
+
+          {activeTab === 'permissions' && (
+            <>
+              <div className={styles.description}>
+                定义文件系统代理可以访问哪些文件夹。代理只能在这些文件夹及其子目录中读取、写入和搜索。
+              </div>
+              <div className={styles.dirListContainer}>
+                <div className={styles.dirListHeader}>
+                  <div className={styles.dirListHeaderLeft}>
+                    <span>📁</span>
+                    <span>Name</span>
+                  </div>
+                  <div className={styles.dirListActions}>
+                    <button
+                      type="button"
+                      className={styles.dirActionBtn}
+                      onClick={handleAddDir}
+                      aria-label="Add directory"
+                      title="Add directory"
+                    >
+                      +
+                    </button>
+                    <button
+                      type="button"
+                      className={styles.dirActionBtn}
+                      onClick={handleRemoveDir}
+                      aria-label="Remove directory"
+                      title="Remove directory"
+                    >
+                      −
+                    </button>
+                  </div>
+                </div>
+                {allowedDirs.map((dir, idx) => (
+                  <div
+                    key={idx}
+                    className={`${styles.dirRow} ${selectedDirIndex === idx ? styles.dirRowSelected : ''}`}
+                    onClick={() => setSelectedDirIndex(idx)}
+                  >
+                    <span className={styles.dirRowIcon}>📁</span>
+                    <input
+                      type="text"
+                      className={styles.dirRowInput}
+                      value={dir}
+                      onChange={(e) => handleDirChange(idx, e.currentTarget.value)}
+                      onBlur={(e) => handleDirBlur(idx, e.currentTarget.value)}
+                      placeholder="/path/to/directory"
+                      aria-label={`Directory ${idx + 1}`}
+                      autoFocus={dir === ''}
+                    />
+                  </div>
+                ))}
+                {allowedDirs.length === 0 && (
+                  <div
+                    className={styles.dirRow}
+                    style={{ color: 'var(--muted)', fontSize: 'var(--fs-sm)', cursor: 'default' }}
+                  >
+                    暂无配置目录，点击 + 添加
+                  </div>
+                )}
+              </div>
+            </>
+          )}
         </div>
       </div>
     </div>
   );
 }
 
-function SubtoolRow({
+function SubtoolCard({
   def,
   enabled,
   onToggle,
@@ -186,7 +305,9 @@ function SubtoolRow({
   isWrite: boolean;
 }) {
   return (
-    <div className={`${styles.subtoolRow} ${enabled ? '' : styles.subtoolDisabled} ${isWrite ? styles.subtoolWrite : ''}`}>
+    <div
+      className={`${styles.subtoolCard} ${enabled ? '' : styles.subtoolCardDisabled} ${isWrite ? styles.subtoolCardWrite : ''}`}
+    >
       <div className={styles.subtoolInfo}>
         <span className={styles.subtoolIcon}>{def.icon}</span>
         <div>
