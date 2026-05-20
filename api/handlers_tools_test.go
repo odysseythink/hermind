@@ -224,3 +224,77 @@ func TestToolsList_HotReload(t *testing.T) {
 	assert.True(t, byName["alpha"])
 	assert.False(t, byName["beta"])
 }
+
+func TestToolsList_FilesystemAggregation(t *testing.T) {
+	cfg := &config.Config{}
+	srv, err := NewServer(&ServerOpts{
+		Config: cfg,
+		Deps: &EngineDeps{
+			ToolReg: buildTestRegistry(t, []testTool{
+				{Name: "read_file", Description: "Read a file", Toolset: "file"},
+				{Name: "write_file", Description: "Write a file", Toolset: "file"},
+				{Name: "list_directory", Description: "List dir", Toolset: "file"},
+				{Name: "browser_control", Description: "Browser", Toolset: "browser_extension"},
+			}),
+		},
+	})
+	require.NoError(t, err)
+
+	rr := httptest.NewRecorder()
+	srv.Router().ServeHTTP(rr, httptest.NewRequest("GET", "/api/tools", nil))
+	require.Equal(t, http.StatusOK, rr.Code)
+
+	var resp ToolsResponse
+	require.NoError(t, json.NewDecoder(rr.Body).Decode(&resp))
+
+	// Should have exactly 2 entries: browser_control + aggregated filesystem
+	require.Len(t, resp.Tools, 2)
+
+	byName := make(map[string]ToolDTO)
+	for _, t := range resp.Tools {
+		byName[t.Name] = t
+	}
+
+	// filesystem should be present with settings_schema
+	fs, ok := byName["filesystem"]
+	require.True(t, ok, "filesystem entry should be present")
+	assert.Equal(t, "filesystem", fs.Toolset)
+	assert.True(t, fs.Enabled)
+	assert.NotEmpty(t, fs.SettingsSchema, "filesystem should have settings_schema")
+
+	// Individual file tools should NOT appear
+	assert.NotContains(t, byName, "read_file", "individual file tools should be hidden")
+	assert.NotContains(t, byName, "write_file", "individual file tools should be hidden")
+	assert.NotContains(t, byName, "list_directory", "individual file tools should be hidden")
+
+	// browser_control should still appear normally
+	bc, ok := byName["browser_control"]
+	require.True(t, ok, "browser_control should be present")
+	assert.True(t, bc.Enabled)
+}
+
+func TestToolsList_FilesystemDisabledHidesFileTools(t *testing.T) {
+	cfg := &config.Config{
+		Tools: config.ToolsConfig{
+			Disabled: []string{"filesystem"},
+		},
+	}
+	srv, err := NewServer(&ServerOpts{
+		Config: cfg,
+		Deps: &EngineDeps{
+			ToolReg: buildTestRegistry(t, []testTool{
+				{Name: "read_file", Description: "Read a file", Toolset: "file"},
+				{Name: "browser_control", Description: "Browser", Toolset: "browser_extension"},
+			}),
+		},
+	})
+	require.NoError(t, err)
+
+	active := srv.activeToolReg()
+	entries := active.Entries(nil)
+
+	// No file tools should be active when filesystem is disabled
+	for _, e := range entries {
+		assert.NotEqual(t, "file", e.Toolset, "file toolset should be filtered when filesystem disabled")
+	}
+}
