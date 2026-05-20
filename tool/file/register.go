@@ -3,21 +3,33 @@ package file
 import (
 	"context"
 	"encoding/json"
+	"sync"
 
 	"github.com/odysseythink/hermind/tool"
 	"github.com/odysseythink/pantheon/core"
 )
 
-// currentFilesystemConfig holds the active filesystem settings for the current
-// request. The server sets this before dispatching file tools.
-var currentFilesystemConfig map[string]any
+// currentFilesystemConfig holds the active filesystem settings.
+// It is updated by the server before each request's tool dispatch.
+// In a multi-request scenario the last write wins; this is acceptable
+// because the config is sourced from the same shared config file.
+var (
+	currentFilesystemConfig map[string]any
+	configMu                sync.RWMutex
+)
 
-func setCurrentConfig(cfg map[string]any) { currentFilesystemConfig = cfg }
+func setCurrentConfig(cfg map[string]any) {
+	configMu.Lock()
+	defer configMu.Unlock()
+	currentFilesystemConfig = cfg
+}
 
 // SetCurrentConfig exports the config setter for use by the API server.
 func SetCurrentConfig(cfg map[string]any) { setCurrentConfig(cfg) }
 
 func getCfg() map[string]any {
+	configMu.RLock()
+	defer configMu.RUnlock()
 	if currentFilesystemConfig == nil {
 		return map[string]any{}
 	}
