@@ -152,5 +152,10 @@
   "chat.greeting": "今天我能帮您什么？",
   "chat.noTools": "暂无可用工具",
   "chat.errorEditFailed": "编辑失败：{{msg}}",
-  "chat.errorDeleteFailed": "删除失败：{{msg}}"
+  "chat.errorDeleteFailed": "删除失败：{{msg}}",
+  "tools.filesystem.readActions": "阅读操作",
+  "tools.filesystem.writeActions": "写入操作",
+  "tools.filesystem.warning": "访问文件系统可能存在风险，因为它可能修改或删除文件。在启用之前，请务必查阅文档。",
+  "tools.filesystem.configuration": "配置",
+  "tools.filesystem.availableTools": "可用工具"
 }

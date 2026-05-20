@@ -1,0 +1,132 @@
+.warningBanner {
+  display: flex;
+  align-items: flex-start;
+  gap: 0.625rem;
+  padding: 0.625rem;
+  background: rgba(234, 88, 12, 0.1);
+  border: 1px solid rgba(234, 88, 12, 0.3);
+  border-radius: 0.5rem;
+  margin-bottom: 1rem;
+}
+
+.warningIcon {
+  font-size: 1.25rem;
+  flex-shrink: 0;
+  margin-top: 0.125rem;
+}
+
+.warningText {
+  font-size: var(--fs-xs);
+  color: var(--warning, #ea580c);
+  font-weight: 500;
+  line-height: 1.4;
+}
+
+.sectionTitle {
+  font-size: var(--fs-sm);
+  font-weight: 600;
+  color: var(--text-primary);
+  margin-bottom: 0.75rem;
+}
+
+.configRow {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 1rem;
+  margin-bottom: 1rem;
+}
+
+.label {
+  font-size: var(--fs-sm);
+  font-weight: 500;
+  color: var(--text-primary);
+}
+
+.help {
+  font-size: var(--fs-xs);
+  color: var(--muted);
+  margin-top: 0.125rem;
+}
+
+.textarea {
+  width: 280px;
+  min-height: 80px;
+  padding: 0.5rem;
+  border: 1px solid var(--border);
+  border-radius: 0.375rem;
+  background: var(--bg-secondary);
+  color: var(--text-primary);
+  font-family: var(--font-mono);
+  font-size: var(--fs-sm);
+  resize: vertical;
+}
+
+.textarea:focus {
+  outline: none;
+  border-color: var(--accent);
+}
+
+.subtoolGroup {
+  display: flex;
+  flex-direction: column;
+  gap: 0.375rem;
+  margin-bottom: 1rem;
+}
+
+.subtoolGroupLabel {
+  font-size: var(--fs-xs);
+  font-weight: 600;
+  color: var(--muted);
+  text-transform: uppercase;
+  letter-spacing: 0.025em;
+  margin-bottom: 0.25rem;
+  display: flex;
+  align-items: center;
+  gap: 0.25rem;
+}
+
+.writeWarningIcon {
+  color: #ea580c;
+}
+
+.subtoolRow {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 0.5rem;
+  border-radius: 0.5rem;
+  border: 1px solid var(--border);
+  background: var(--bg-secondary);
+}
+
+.subtoolDisabled {
+  opacity: 0.5;
+  background: var(--bg-secondary);
+}
+
+.subtoolWrite {
+  background: rgba(234, 88, 12, 0.05);
+  border-color: rgba(234, 88, 12, 0.2);
+}
+
+.subtoolInfo {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+}
+
+.subtoolIcon {
+  font-size: 1rem;
+}
+
+.subtoolTitle {
+  font-size: var(--fs-sm);
+  font-weight: 500;
+  color: var(--text-primary);
+}
+
+.subtoolDesc {
+  font-size: var(--fs-xs);
+  color: var(--muted);
+}
