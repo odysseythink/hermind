@@ -170,3 +170,13 @@ export const ToolsResponseSchema = z.object({
   tools: z.array(ToolSchema),
 });
 export type ToolsResponse = z.infer<typeof ToolsResponseSchema>;
+
+// File download card event payload
+export interface FileDownloadCardEvent {
+  type: 'file_download_card';
+  payload: {
+    filename: string;
+    storageFilename: string;
+    fileSize: number;
+  };
+}

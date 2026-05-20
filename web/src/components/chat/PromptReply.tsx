@@ -1,5 +1,7 @@
 import styles from './PromptReply.module.css';
 import MessageContent from './MessageContent';
+import FileDownloadCard from './FileDownloadCard';
+import { tryParseFileDownload } from './parseFileDownload';
 import type { ToolCall } from '../../state/chat';
 
 interface Props {
@@ -9,6 +11,11 @@ interface Props {
 
 export default function PromptReply({ draft, toolCalls }: Props) {
   const hasRunningTool = toolCalls.some((t) => t.state === 'running');
+
+  const fileDownloads = toolCalls
+    .filter((tc) => tc.state === 'done' && tc.result)
+    .map((tc) => tryParseFileDownload(tc.result!))
+    .filter((fd): fd is NonNullable<typeof fd> => fd !== null);
 
   return (
     <div className={styles.reply}>
@@ -28,6 +35,13 @@ export default function PromptReply({ draft, toolCalls }: Props) {
             <span className={styles.typing}>Thinking...</span>
           )}
         </div>
+        {fileDownloads.length > 0 && (
+          <div className={styles.fileDownloads}>
+            {fileDownloads.map((fd, i) => (
+              <FileDownloadCard key={i} {...fd} />
+            ))}
+          </div>
+        )}
         {toolCalls.length > 0 && (
           <div className={styles.toolCalls}>
             {toolCalls.map((tc) => (
