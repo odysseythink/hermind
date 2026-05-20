@@ -1,5 +1,5 @@
-import { render, screen, fireEvent } from '@testing-library/react';
-import { describe, it, expect, vi } from 'vitest';
+import { render, screen } from '@testing-library/react';
+import { describe, it, expect } from 'vitest';
 import FileDownloadCard from './FileDownloadCard';
 
 describe('FileDownloadCard', () => {
@@ -9,12 +9,11 @@ describe('FileDownloadCard', () => {
     expect(screen.getByText('15.0 KB')).toBeInTheDocument();
   });
 
-  it('opens download on click', () => {
-    const openSpy = vi.spyOn(window, 'open').mockImplementation(() => null);
+  it('has correct download link', () => {
     render(<FileDownloadCard filename="report.docx" storageFilename="docx-abc.docx" fileSize={1024} />);
-    fireEvent.click(screen.getByText('Download'));
-    expect(openSpy).toHaveBeenCalledWith('/api/generated-files/docx-abc.docx', '_blank');
-    openSpy.mockRestore();
+    const link = screen.getByText('Download') as HTMLAnchorElement;
+    expect(link.href).toContain('/api/generated-files/docx-abc.docx');
+    expect(link.download).toBe('report.docx');
   });
 
   it('shows correct icon for file types', () => {

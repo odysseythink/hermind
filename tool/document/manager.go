@@ -6,6 +6,7 @@ import (
 	"path"
 	"path/filepath"
 	"regexp"
+	"strings"
 
 	"github.com/google/uuid"
 )
@@ -106,7 +107,7 @@ func isSubpath(target, base string) bool {
 }
 
 func containsDotDot(p string) bool {
-	parts := filepath.SplitList(p)
+	parts := strings.Split(p, string(filepath.Separator))
 	for _, part := range parts {
 		if part == ".." {
 			return true
