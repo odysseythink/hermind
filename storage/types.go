@@ -91,6 +91,23 @@ type Memory struct {
 	// ReinforcedAtSeq is the skills_generation seq at the time this memory was
 	// last reinforced. Used to decay reinforcement signals from stale skill generations.
 	ReinforcedAtSeq int64 `json:"reinforced_at_seq,omitempty"`
+
+	// ParentTurnID is the source message id this memory was derived from.
+	// 0 means no recorded source (manual entries, external syncs).
+	ParentTurnID int64 `json:"parent_turn_id,omitempty"`
+
+	// ParentMemID, when set, is the MemCell-equivalent parent memory id
+	// (i.e., episode → MemCell). Empty for top-level memories.
+	ParentMemID string `json:"parent_mem_id,omitempty"`
+
+	// ExpiresAt is non-zero only for time-bound memories (currently only
+	// MemType="foresight"). Consolidate uses this to archive expired rows
+	// (behavior wired in Phase 3; column persisted now).
+	ExpiresAt time.Time `json:"expires_at,omitempty"`
+
+	// ClusterID is the topical cluster id assigned by the clustering pass.
+	// Empty until P4 ships; column reserved now to avoid a future migration.
+	ClusterID string `json:"cluster_id,omitempty"`
 }
 
 // MemorySearchOptions controls MemorySearch behavior.
@@ -109,6 +126,20 @@ type MemorySearchOptions struct {
 	// GenerationHalfLife is the per-generation half-life used in the decay
 	// above. 0 disables the decay.
 	GenerationHalfLife int
+
+	// RankingMode selects which signals contribute to the result ordering.
+	//   "" or "hybrid": existing weighted-sum behavior (default, backward compat)
+	//   "fts_only":     return rows ranked by FTS5 BM25 alone, no cosine/recency/reinforcement
+	//   "vector_only":  return rows ranked by cosine alone (QueryVector required)
+	// Used by agent/memorylayer.HybridRecaller to feed independent ranked lists into RRF.
+	RankingMode string
+
+	// MemTypes, when non-empty, restricts results to these MemTypes (OR).
+	MemTypes []string
+
+	// IncludeExpired, when false (default), filters out rows whose ExpiresAt
+	// is non-zero and in the past.
+	IncludeExpired bool
 }
 
 // MemoryEvent is a structured log row surfaced by /api/memory/report.
