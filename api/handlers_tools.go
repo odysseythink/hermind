@@ -34,8 +34,11 @@ func (s *Server) handleToolsList(w http.ResponseWriter, _ *http.Request) {
 
 	out := make([]ToolDTO, 0, len(otherTools)+1)
 
-	// Add non-file tools
+	// Add non-file tools (skip the virtual filesystem entry — it gets the aggregated DTO below)
 	for _, e := range otherTools {
+		if e.Name == "filesystem" {
+			continue
+		}
 		dto := ToolDTO{
 			Name:           e.Name,
 			Description:    e.Description,
