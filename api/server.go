@@ -23,6 +23,7 @@ import (
 	"github.com/odysseythink/hermind/skills"
 	"github.com/odysseythink/hermind/storage"
 	"github.com/odysseythink/hermind/tool"
+	"github.com/odysseythink/hermind/tool/file"
 	"github.com/odysseythink/hermind/tool/memory/memprovider"
 	"github.com/odysseythink/mlog"
 	"github.com/odysseythink/pantheon/core"
@@ -183,12 +184,61 @@ func (s *Server) activeToolReg() *tool.Registry {
 	}
 	disabled := s.disabledTools()
 	active := tool.NewRegistry()
-	for _, e := range deps.ToolReg.Entries(nil) {
-		if !disabled[e.Name] {
-			active.Register(e)
+
+	// Check filesystem master toggle
+	filesystemDisabled := disabled["filesystem"]
+
+	// Read subtool enablement from settings
+	subtoolEnabled := make(map[string]bool)
+	if fsSettings, ok := s.opts.Config.Tools.Settings["filesystem"]; ok {
+		for key, val := range fsSettings {
+			if key == "allowed_directories" {
+				continue
+			}
+			if b, ok := val.(bool); ok {
+				subtoolEnabled[key] = b
+			}
 		}
 	}
+
+	for _, e := range deps.ToolReg.Entries(nil) {
+		// Virtual filesystem entry has no handler — skip from engine registry
+		if e.Name == "filesystem" {
+			continue
+		}
+
+		// If filesystem is disabled, drop all file toolset entries
+		if e.Toolset == "file" && filesystemDisabled {
+			continue
+		}
+
+		// If filesystem is enabled, check per-subtool setting
+		if e.Toolset == "file" && !filesystemDisabled {
+			if enabled, ok := subtoolEnabled[e.Name]; ok && !enabled {
+				continue
+			}
+		}
+
+		// Global disabled list check
+		if disabled[e.Name] {
+			continue
+		}
+
+		active.Register(e)
+	}
 	return active
+}
+
+// injectFilesystemConfig sets the current filesystem configuration
+// so that file tool handlers can access allowed_directories and subtool settings.
+func (s *Server) injectFilesystemConfig() {
+	cfg := map[string]any{}
+	if fsSettings, ok := s.opts.Config.Tools.Settings["filesystem"]; ok {
+		for k, v := range fsSettings {
+			cfg[k] = v
+		}
+	}
+	file.SetCurrentConfig(cfg)
 }
 
 // ListenAndServe binds to addr and serves until the server is shut down.
