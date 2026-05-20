@@ -36,13 +36,16 @@ type searchFilesResult struct {
 
 const maxSearchMatches = 500
 
-func searchFilesHandler(ctx context.Context, raw json.RawMessage) (string, error) {
+func searchFilesHandler(ctx context.Context, raw json.RawMessage, cfg map[string]any) (string, error) {
 	var args searchFilesArgs
 	if err := json.Unmarshal(raw, &args); err != nil {
 		return tool.ToolError("invalid arguments: " + err.Error()), nil
 	}
 	if args.Root == "" || args.Pattern == "" {
 		return tool.ToolError("root and pattern are required"), nil
+	}
+	if err := validatePath(args.Root, getAllowedDirs(cfg)); err != nil {
+		return tool.ToolError(err.Error()), nil
 	}
 
 	var matches []searchMatch
