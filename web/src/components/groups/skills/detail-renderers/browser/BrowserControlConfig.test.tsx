@@ -28,24 +28,6 @@ describe('BrowserControlConfig', () => {
     expect(baseProps.onToggle).toHaveBeenCalledWith(false);
   });
 
-  it('shows api key from browser_extension config', () => {
-    render(
-      <BrowserControlConfig
-        {...baseProps}
-        config={{ browser_extension: { api_key: 'secret123' } }}
-      />,
-    );
-    const input = screen.getByTestId('api-key-input') as HTMLInputElement;
-    expect(input.value).toBe('secret123');
-  });
-
-  it('dispatches onSectionField to browser_extension.api_key on change', () => {
-    render(<BrowserControlConfig {...baseProps} />);
-    const input = screen.getByTestId('api-key-input');
-    fireEvent.change(input, { target: { value: 'newkey' } });
-    expect(baseProps.onSectionField).toHaveBeenCalledWith('browser_extension', 'api_key', 'newkey');
-  });
-
   it('shows unknown status initially', () => {
     render(<BrowserControlConfig {...baseProps} />);
     expect(screen.getByTestId('status-unknown')).toBeInTheDocument();

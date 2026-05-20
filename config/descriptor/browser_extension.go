@@ -14,12 +14,7 @@ func init() {
 				Help:  "Enable the browser extension integration. When disabled, browser extension tools are not registered.",
 				Kind:  FieldBool,
 			},
-			{
-				Name:  "api_key",
-				Label: "API key",
-				Help:  "Authentication key shared between the backend and the browser extension. The extension sends this in the X-Extension-Key header.",
-				Kind:  FieldSecret,
-			},
+
 		},
 	})
 }
