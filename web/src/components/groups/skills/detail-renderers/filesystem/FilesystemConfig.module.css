@@ -57,6 +57,12 @@
   color: #ea580c;
 }
 
+.toolsetLabel {
+  font-size: var(--fs-sm);
+  color: var(--muted);
+  margin-left: var(--space-2);
+}
+
 /* ===== Subtool Card ===== */
 .subtoolGroup {
   display: flex;
@@ -212,6 +218,12 @@
 .dirRowInput::placeholder {
   color: var(--muted);
   opacity: 0.5;
+}
+
+.emptyRow {
+  color: var(--muted);
+  font-size: var(--fs-sm);
+  cursor: default;
 }
 
 /* ===== Disabled overlay ===== */
