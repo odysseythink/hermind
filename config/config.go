@@ -30,6 +30,7 @@ type Config struct {
 	BrowserExtension  BrowserExtensionConfig    `yaml:"browser_extension,omitempty"`
 	Web               WebConfig                 `yaml:"web,omitempty"`
 	Benchmark         BenchmarkConfig           `yaml:"benchmark,omitempty"`
+	MemoryLayer       MemoryLayerConfig         `yaml:"memory_layer,omitempty"`
 	// Proxy controls the Anthropic-compatible /v1/messages endpoint.
 	Proxy ProxyConfig `yaml:"proxy,omitempty"`
 	// Presence controls the user-presence framework gating background
@@ -265,6 +266,53 @@ type ByteroverConfig struct {
 // the shared SQLite storage so there is no backend URL or key.
 type HolographicConfig struct{}
 
+// MemoryLayerConfig is the on-disk shape of the memory layer.
+// Subsystems can be independently disabled; there is no top-level enabled flag
+// (any subsystem you disable falls back to the prior behavior).
+type MemoryLayerConfig struct {
+	Hybrid      HybridConfigML    `yaml:"hybrid"`
+	Reranker    RerankerConfigML  `yaml:"reranker"`
+	Boundary    BoundaryConfigML  `yaml:"boundary"`
+	Taxonomy    TaxonomyConfigML  `yaml:"taxonomy"`
+	RecallLimit int               `yaml:"recall_limit"`
+}
+
+// HybridConfigML mirrors memorylayer.HybridConfig for YAML.
+type HybridConfigML struct {
+	Enabled                 bool    `yaml:"enabled"`
+	RRFConstant             float64 `yaml:"rrf_k"`
+	BM25TopNMultiplier      int     `yaml:"bm25_top_n_multiplier"`
+	VectorTopNMultiplier    int     `yaml:"vector_top_n_multiplier"`
+	PreRerankTopKMultiplier int     `yaml:"pre_rerank_top_k_multiplier"`
+	ReinforcementAlpha      float64 `yaml:"reinforcement_alpha"`
+	NeglectPenalty          float64 `yaml:"neglect_penalty"`
+}
+
+// RerankerConfigML mirrors memorylayer.RerankerConfig for YAML.
+type RerankerConfigML struct {
+	Enabled   bool `yaml:"enabled"`
+	BatchSize int  `yaml:"batch_size"`
+	TimeoutMS int  `yaml:"timeout_ms"`
+}
+
+// BoundaryConfigML mirrors memorylayer.BoundaryConfig for YAML.
+type BoundaryConfigML struct {
+	HardTokenLimit            int     `yaml:"hard_token_limit"`
+	HardTurnLimit             int     `yaml:"hard_turn_limit"`
+	SoftTokenThreshold        int     `yaml:"soft_token_threshold"`
+	IdleGapMinutes            int     `yaml:"idle_gap_minutes"`
+	EnableTopicShift          bool    `yaml:"topic_shift_enabled"`
+	TopicShiftCosineThreshold float64 `yaml:"topic_shift_cosine_threshold"`
+}
+
+// TaxonomyConfigML mirrors memorylayer.TaxonomyConfig for YAML.
+type TaxonomyConfigML struct {
+	Enabled      bool     `yaml:"enabled"`
+	MaxOutputs   int      `yaml:"max_outputs"`
+	TimeoutMS    int      `yaml:"timeout_ms"`
+	AllowedTypes []string `yaml:"types"`
+}
+
 // MetaClawConfig configures the metaclaw provider. The provider uses
 // the shared SQLite storage and the main LLM provider for extraction,
 // so no external credentials are required — but a few knobs control
@@ -495,6 +543,37 @@ func Default() *Config {
 			},
 		},
 		Benchmark: BenchmarkConfig{DatasetSize: 50, Seed: 42, OutDir: ".hermind/benchmark"},
+		MemoryLayer: MemoryLayerConfig{
+			Hybrid: HybridConfigML{
+				Enabled:                 true,
+				RRFConstant:             60,
+				BM25TopNMultiplier:      3,
+				VectorTopNMultiplier:    3,
+				PreRerankTopKMultiplier: 2,
+				ReinforcementAlpha:      0.15,
+				NeglectPenalty:          0.10,
+			},
+			Reranker: RerankerConfigML{
+				Enabled:   true,
+				BatchSize: 20,
+				TimeoutMS: 1500,
+			},
+			Boundary: BoundaryConfigML{
+				HardTokenLimit:            8000,
+				HardTurnLimit:             20,
+				SoftTokenThreshold:        1500,
+				IdleGapMinutes:            10,
+				EnableTopicShift:          true,
+				TopicShiftCosineThreshold: 0.55,
+			},
+			Taxonomy: TaxonomyConfigML{
+				Enabled:      true,
+				MaxOutputs:   8,
+				TimeoutMS:    6000,
+				AllowedTypes: []string{"core", "episode", "fact", "foresight"},
+			},
+			RecallLimit: 5,
+		},
 	}
 }
 
