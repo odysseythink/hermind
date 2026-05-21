@@ -56,3 +56,26 @@ func TestPromptBuilder_EmptyDefaultPreservesIdentityOnly(t *testing.T) {
 		t.Errorf("expected identity-only output\nwant: %q\n got: %q", defaultIdentity, got)
 	}
 }
+
+func TestPrompt_RendersPinnedBeforeActive(t *testing.T) {
+	pb := NewPromptBuilder("cli", "")
+	out := pb.Build(&PromptOptions{
+		PinnedMemories: []string{"i am allergic to peanuts"},
+		ActiveMemories: []string{"recalled: discussed jenkins last week"},
+	})
+	pinnedIdx := strings.Index(out, "Pinned context")
+	activeIdx := strings.Index(out, "Relevant memories")
+	if pinnedIdx == -1 || activeIdx == -1 || pinnedIdx > activeIdx {
+		t.Fatalf("pinned must precede active; got pinned=%d active=%d", pinnedIdx, activeIdx)
+	}
+}
+
+func TestPrompt_PinnedSectionOmittedWhenEmpty(t *testing.T) {
+	pb := NewPromptBuilder("cli", "")
+	out := pb.Build(&PromptOptions{})
+	if strings.Contains(out, "Pinned context") {
+		t.Fatal("Pinned section must be omitted when no pinned memories")
+	}
+}
+
+

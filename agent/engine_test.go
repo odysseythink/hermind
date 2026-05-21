@@ -11,6 +11,7 @@ import (
 	"github.com/odysseythink/hermind/message"
 	"github.com/odysseythink/hermind/provider"
 	"github.com/odysseythink/hermind/tool"
+	"github.com/odysseythink/hermind/tool/memory/memprovider"
 	"github.com/odysseythink/pantheon/core"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
@@ -280,4 +281,15 @@ func TestRunConversation_EphemeralDoesNotPersist(t *testing.T) {
 		Ephemeral:   true,
 	})
 	require.NoError(t, err)
+}
+
+func TestEngine_SetPinnedMemoriesReturnsCopy(t *testing.T) {
+	e := NewEngine(nil, nil, config.AgentConfig{}, "cli")
+	in := []memprovider.InjectedMemory{{ID: "1", Content: "x"}}
+	e.SetPinnedMemories(in)
+	out := e.PinnedMemories()
+	out[0].Content = "tampered"
+	if e.PinnedMemories()[0].Content != "x" {
+		t.Fatal("PinnedMemories must return a defensive copy")
+	}
 }

@@ -47,6 +47,10 @@ type Engine struct {
 	// be prepended to the system prompt. Called once per turn.
 	activeMemories func(ctx context.Context, userMsg string) []memprovider.InjectedMemory
 
+	// pinnedMemories is the result of MemoryLayer Lifecycle.OnSessionStart.
+	// Rendered in every prompt above ActiveMemories, bypassing SynergyBudget.
+	pinnedMemories []memprovider.InjectedMemory
+
 	// skillsEvolver extracts skills after each conversation.
 	// If nil, skill extraction is disabled.
 	skillsEvolver interface {
@@ -157,6 +161,23 @@ func (e *Engine) SetActiveSkillsProvider(fn func(userMsg string) []ActiveSkill) 
 // memory snippets for the current turn. Pass nil to disable.
 func (e *Engine) SetActiveMemoriesProvider(fn func(ctx context.Context, userMsg string) []memprovider.InjectedMemory) {
 	e.activeMemories = fn
+}
+
+// SetPinnedMemories replaces the session-pinned memories. Call once on
+// session start (after MemoryLayer Lifecycle.OnSessionStart) and again
+// only if the underlying store is mutated externally.
+func (e *Engine) SetPinnedMemories(mems []memprovider.InjectedMemory) {
+	e.pinnedMemories = mems
+}
+
+// PinnedMemories returns the current pinned set (defensive copy).
+func (e *Engine) PinnedMemories() []memprovider.InjectedMemory {
+	if len(e.pinnedMemories) == 0 {
+		return nil
+	}
+	out := make([]memprovider.InjectedMemory, len(e.pinnedMemories))
+	copy(out, e.pinnedMemories)
+	return out
 }
 
 // SetBufferEvery configures mid-conversation memory syncing. When > 0,
