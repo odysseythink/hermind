@@ -1,4 +1,6 @@
 bin/
+!document-scripts/bin/
+!document-scripts/bin/*
 dist/
 *.test
 *.out
