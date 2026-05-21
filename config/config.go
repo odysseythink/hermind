@@ -10,8 +10,9 @@ type CompressionConfig = compression.CompressionConfig
 
 // YAML tags mirror the existing Python hermes config.yaml format.
 type Config struct {
-	Model             string                    `yaml:"model"`
-	Providers         map[string]ProviderConfig `yaml:"providers"`
+	Model      string                    `yaml:"model"`
+	EmbedModel string                    `yaml:"embed_model,omitempty"`
+	Providers  map[string]ProviderConfig `yaml:"providers"`
 	FallbackProviders []ProviderConfig          `yaml:"fallback_providers,omitempty"`
 	Agent             AgentConfig               `yaml:"agent"`
 	Auxiliary         AuxiliaryConfig           `yaml:"auxiliary,omitempty"`
@@ -557,8 +558,9 @@ type PresenceConfig struct {
 
 func Default() *Config {
 	return &Config{
-		Model:     "anthropic/claude-opus-4-6",
-		Providers: map[string]ProviderConfig{},
+		Model:      "anthropic/claude-opus-4-6",
+		EmbedModel: "text-embedding-3-small",
+		Providers:  map[string]ProviderConfig{},
 		Agent: AgentConfig{
 			MaxTurns:       15,
 			GatewayTimeout: 1800,
