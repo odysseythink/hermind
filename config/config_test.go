@@ -98,3 +98,20 @@ func TestWebConfigYAMLRoundTrip(t *testing.T) {
 	require.NoError(t, yaml.Unmarshal(yamlSrc, &cfg))
 	require.Equal(t, "127.0.0.1:34567", cfg.Web.Addr)
 }
+
+func TestConfigDefaultEmbedModel(t *testing.T) {
+	cfg := Default()
+	require.Equal(t, "text-embedding-3-small", cfg.EmbedModel)
+}
+
+func TestEmbedModelYAMLRoundTrip(t *testing.T) {
+	yamlSrc := []byte("embed_model: openai/text-embedding-3-large\n")
+	var cfg Config
+	require.NoError(t, yaml.Unmarshal(yamlSrc, &cfg))
+	require.Equal(t, "openai/text-embedding-3-large", cfg.EmbedModel)
+
+	// Empty string should unmarshal to zero value
+	var cfg2 Config
+	require.NoError(t, yaml.Unmarshal([]byte("\n"), &cfg2))
+	require.Equal(t, "", cfg2.EmbedModel)
+}
