@@ -120,3 +120,17 @@ func TestBuildEngineDeps_AuxFallsBackToMainProvider(t *testing.T) {
 	require.NotNil(t, deps.AuxProvider, "AuxProvider must fall back to main provider when auxiliary config is blank")
 	require.Same(t, deps.Provider, deps.AuxProvider, "blank-auxiliary fallback should reuse the main provider instance")
 }
+
+func TestResolveEmbedModel(t *testing.T) {
+	// Custom value is used when set
+	cfg := &config.Config{EmbedModel: "openai/text-embedding-3-large"}
+	require.Equal(t, "openai/text-embedding-3-large", resolveEmbedModel(cfg))
+
+	// Empty string falls back to default
+	cfg2 := &config.Config{}
+	require.Equal(t, "text-embedding-3-small", resolveEmbedModel(cfg2))
+
+	// Whitespace-only is NOT treated as empty -- passes through as-is
+	cfg3 := &config.Config{EmbedModel: "   "}
+	require.Equal(t, "   ", resolveEmbedModel(cfg3))
+}
