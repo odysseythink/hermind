@@ -2,6 +2,7 @@ package memorylayer
 
 import (
 	"context"
+	"strings"
 	"testing"
 	"time"
 
@@ -198,4 +199,79 @@ func TestMemoryLayer_RecallWithAgentic_EndToEnd(t *testing.T) {
 	out, err := layer.RecallWithAgentic(context.Background(), "original", 3)
 	require.NoError(t, err)
 	require.GreaterOrEqual(t, len(out), 1)
+}
+
+// promptSwitchLLM returns different responses based on prompt content.
+type promptSwitchLLM struct {
+	taxonomyResp *core.Response
+	profileResp  *core.Response
+}
+
+func (m *promptSwitchLLM) Generate(ctx context.Context, req *core.Request) (*core.Response, error) {
+	prompt := ""
+	for _, part := range req.Messages[0].Content {
+		if p, ok := part.(core.TextPart); ok {
+			prompt = p.Text
+			break
+		}
+	}
+	if strings.Contains(prompt, "CURRENT PROFILE") {
+		return m.profileResp, nil
+	}
+	return m.taxonomyResp, nil
+}
+func (m *promptSwitchLLM) Stream(ctx context.Context, req *core.Request) (core.StreamResponse, error) {
+	return nil, nil
+}
+func (m *promptSwitchLLM) GenerateObject(ctx context.Context, req *core.ObjectRequest) (*core.ObjectResponse, error) {
+	return nil, nil
+}
+func (m *promptSwitchLLM) Provider() string { return "stub" }
+func (m *promptSwitchLLM) Model() string    { return "stub" }
+
+func TestMemoryLayer_ProfileUpdaterOnBoundary(t *testing.T) {
+	store, err := sqlite.Open(":memory:")
+	require.NoError(t, err)
+	defer store.Close()
+	require.NoError(t, store.Migrate())
+	ctx := context.Background()
+
+	llm := &promptSwitchLLM{
+		taxonomyResp: &core.Response{Message: core.Message{Content: []core.ContentParter{
+			core.TextPart{Text: `[]`},
+		}}},
+		profileResp: &core.Response{Message: core.Message{Content: []core.ContentParter{
+			core.TextPart{Text: `{"adds":[{"kind":"explicit","key":"diet.restrictions","value":"peanuts","evidence":"I'm allergic to peanuts","source_turns":[1],"confidence":0.9}],"updates":[],"deletes":[]}`},
+		}}},
+	}
+	layer := New(store, nil, nil, llm, Config{
+		Boundary: BoundaryConfig{HardTurnLimit: 3, EnableTopicShift: false},
+		Taxonomy: TaxonomyConfig{Enabled: true, Timeout: time.Second},
+		Profile:  ProfileConfig{Enabled: true, Timeout: time.Second, DefaultUserID: "default"},
+	})
+
+	for i := 1; i <= 3; i++ {
+		layer.ObserveTurn(ctx, Turn{
+			ID: int64(i), UserMsg: "I'm allergic to peanuts",
+			Assistant: "Noted.", Timestamp: time.Now(),
+		})
+	}
+
+	// Poll for async profile write (≤ 2s).
+	var p *storage.Profile
+	deadline := time.Now().Add(2 * time.Second)
+	for time.Now().Before(deadline) {
+		if got, err := store.GetProfile(ctx, "default"); err == nil && len(got.Sections) > 0 {
+			p = got
+			break
+		}
+		time.Sleep(50 * time.Millisecond)
+	}
+	require.NotNil(t, p)
+	require.Len(t, p.Sections, 1)
+	assert.Equal(t, "explicit", p.Sections[0].Kind)
+	assert.Equal(t, int64(1), p.Version)
+
+	events, _ := store.ListMemoryEvents(ctx, 10, 0, []string{"profile.updated"})
+	require.Len(t, events, 1)
 }

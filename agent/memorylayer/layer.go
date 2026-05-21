@@ -18,6 +18,7 @@ type Config struct {
 	Taxonomy    TaxonomyConfig
 	Agentic     AgenticConfig
 	Lifecycle   LifecycleConfig
+	Profile     ProfileConfig
 	RecallLimit int // final top-N returned from Recall; default 5
 }
 
@@ -30,6 +31,8 @@ type MemoryLayer struct {
 	// P2 additions:
 	agentic   *Agentic   // optional
 	lifecycle *Lifecycle // optional
+	// P3 additions:
+	profile *ProfileUpdater // optional
 
 	cfg Config
 }
@@ -57,6 +60,9 @@ func New(
 	}
 	if cfg.Lifecycle.InjectCoreOnStart || cfg.Lifecycle.InjectForesightOnStart {
 		ml.lifecycle = NewLifecycle(store, cfg.Lifecycle)
+	}
+	if cfg.Profile.Enabled {
+		ml.profile = NewProfileUpdater(store, llm, cfg.Profile)
 	}
 	return ml
 }
@@ -147,14 +153,20 @@ func (l *MemoryLayer) handleBoundary(b *Boundary) {
 	mems, err := l.extractor.Extract(ctx, b)
 	if err != nil {
 		mlog.Warning("memorylayer: extractor failed", mlog.String("err", err.Error()), mlog.String("reason", b.Reason))
-		return
-	}
-	for _, m := range mems {
-		if err := l.store.SaveMemory(ctx, m); err != nil {
-			mlog.Warning("memorylayer: SaveMemory failed", mlog.String("err", err.Error()))
-			continue
+	} else {
+		for _, m := range mems {
+			if err := l.store.SaveMemory(ctx, m); err != nil {
+				mlog.Warning("memorylayer: SaveMemory failed", mlog.String("err", err.Error()))
+				continue
+			}
 		}
 	}
+
+	// P3 — profile update runs in parallel; failures are isolated.
+	if l.profile != nil {
+		go l.profile.Apply(context.Background(), b)
+	}
+
 	_ = l.store.AppendMemoryEvent(ctx, b.Turns[len(b.Turns)-1].Timestamp, "boundary.detected", []byte(`{"reason":"`+b.Reason+`","extracted":`+itoa(len(mems))+`}`))
 }
 
