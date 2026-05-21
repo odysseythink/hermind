@@ -48,6 +48,24 @@ func New(
 	}
 }
 
+// RecallCandidates runs Hybrid + Reranker and returns the internal
+// Candidate slice (not flattened to InjectedMemory). Used by Agentic
+// to compose multi-round fusion before final emit.
+func (l *MemoryLayer) RecallCandidates(ctx context.Context, query string, limit int) ([]Candidate, error) {
+	if limit <= 0 {
+		limit = l.cfg.RecallLimit
+	}
+	cands, err := l.hybrid.Recall(ctx, query, limit)
+	if err != nil {
+		return nil, err
+	}
+	if len(cands) == 0 {
+		return nil, nil
+	}
+	ranked, _ := l.reranker.Rerank(ctx, query, cands, limit)
+	return ranked, nil
+}
+
 // Recall is the single retrieval entry point. limit overrides the
 // configured RecallLimit when > 0.
 func (l *MemoryLayer) Recall(ctx context.Context, query string, limit int) ([]memprovider.InjectedMemory, error) {

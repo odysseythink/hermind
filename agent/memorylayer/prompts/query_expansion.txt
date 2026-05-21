@@ -1,0 +1,18 @@
+You generate complementary retrieval queries. The user asked the
+question below, and the first retrieval pass missed key context (the
+critic's note is included).
+
+Produce exactly {{N}} additional short queries that probe DIFFERENT
+angles than the original. Avoid paraphrases. Each query should be a
+single line, no numbering.
+
+Reply ONLY with a JSON array of strings, e.g. ["...", "..."].
+
+Original user query:
+{{QUERY}}
+
+Critic's note on what was missing:
+{{MISSING}}
+
+Already-retrieved memory snippets (so you don't re-query the same thing):
+{{MEMORIES}}
