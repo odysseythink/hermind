@@ -34,6 +34,15 @@ import (
 	"github.com/odysseythink/mlog"
 )
 
+// resolveEmbedModel returns the configured embedding model name,
+// falling back to the hardcoded default when empty.
+func resolveEmbedModel(cfg *config.Config) string {
+	if cfg.EmbedModel != "" {
+		return cfg.EmbedModel
+	}
+	return "text-embedding-3-small"
+}
+
 // attachSkillsTracker constructs a Tracker and runs one initial
 // Refresh so the persisted seq matches the current library content
 // before any consumer reads it. Refresh failure is logged and
@@ -176,7 +185,7 @@ func BuildEngineDeps(ctx context.Context, app *App) (api.EngineDeps, func(), err
 	var emb embedding.Embedder
 	if p != nil {
 		if ec, ok := p.(provider.EmbedCapable); ok {
-			emb = embedding.NewProviderEmbedder(ec, "text-embedding-3-small")
+			emb = embedding.NewProviderEmbedder(ec, resolveEmbedModel(app.Config))
 		}
 		// TODO: pantheon core.LanguageModel does not expose embedding yet;
 		// embedding-dependent features are disabled when the provider is not
