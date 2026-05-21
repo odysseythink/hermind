@@ -13,6 +13,44 @@ import (
 	"github.com/odysseythink/hermind/tool"
 )
 
+func findNodeExecutable() string {
+	exePath, err := os.Executable()
+	if err != nil {
+		return ""
+	}
+	return findNodeExecutableFrom(exePath)
+}
+
+func findNodeExecutableFrom(exePath string) string {
+	nodeName := "node"
+	if os.PathSeparator == '\\' {
+		nodeName = "node.exe"
+	}
+
+	candidates := []string{}
+	if exePath != "" {
+		exeDir := filepath.Dir(exePath)
+		candidates = append(candidates, filepath.Join(exeDir, nodeName))
+		candidates = append(candidates, filepath.Join(exeDir, "..", nodeName))
+	}
+
+	for _, c := range candidates {
+		info, err := os.Stat(c)
+		if err == nil && info != nil && !info.IsDir() {
+			abs, err := filepath.Abs(c)
+			if err == nil {
+				return abs
+			}
+		}
+	}
+
+	if path, err := exec.LookPath("node"); err == nil {
+		return path
+	}
+
+	return ""
+}
+
 // NodeJSWrapper invokes the Node.js document generation scripts.
 type NodeJSWrapper struct {
 	scriptDir string
@@ -52,7 +90,12 @@ func (w *NodeJSWrapper) Generate(ctx context.Context, docType string, params map
 		defer cancel()
 	}
 
-	cmd := exec.CommandContext(ctx, "node", scriptPath)
+	nodeExe := findNodeExecutable()
+	if nodeExe == "" {
+		return "", fmt.Errorf("node.js executable not found")
+	}
+
+	cmd := exec.CommandContext(ctx, nodeExe, scriptPath)
 	cmd.Dir = w.scriptDir
 	cmd.Stdin = strings.NewReader(string(jsonArgs))
 	out, err := cmd.Output()
@@ -82,7 +125,7 @@ func (w *NodeJSWrapper) IsAvailable() bool {
 	if _, err := os.Stat(scriptPath); err != nil {
 		return false
 	}
-	if _, err := exec.LookPath("node"); err != nil {
+	if findNodeExecutable() == "" {
 		return false
 	}
 	return true
