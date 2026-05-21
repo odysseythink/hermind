@@ -270,13 +270,15 @@ type HolographicConfig struct{}
 // Subsystems can be independently disabled; there is no top-level enabled flag
 // (any subsystem you disable falls back to the prior behavior).
 type MemoryLayerConfig struct {
-	Hybrid      HybridConfigML    `yaml:"hybrid"`
-	Reranker    RerankerConfigML  `yaml:"reranker"`
-	Boundary    BoundaryConfigML  `yaml:"boundary"`
-	Taxonomy    TaxonomyConfigML  `yaml:"taxonomy"`
-	Agentic     AgenticConfigML   `yaml:"agentic"`     // NEW
-	Lifecycle   LifecycleConfigML `yaml:"lifecycle"`   // NEW
-	RecallLimit int               `yaml:"recall_limit"`
+	Hybrid       HybridConfigML       `yaml:"hybrid"`
+	Reranker     RerankerConfigML     `yaml:"reranker"`
+	Boundary     BoundaryConfigML     `yaml:"boundary"`
+	Taxonomy     TaxonomyConfigML     `yaml:"taxonomy"`
+	Agentic      AgenticConfigML      `yaml:"agentic"`       // NEW
+	Lifecycle    LifecycleConfigML    `yaml:"lifecycle"`     // NEW
+	Profile      ProfileConfigML      `yaml:"profile"`       // NEW
+	SkillEmitter SkillEmitterConfigML `yaml:"skill_emitter"` // NEW
+	RecallLimit  int                  `yaml:"recall_limit"`
 }
 
 // HybridConfigML mirrors memorylayer.HybridConfig for YAML.
@@ -328,12 +330,29 @@ type AgenticConfigML struct {
 
 // LifecycleConfigML mirrors memorylayer.LifecycleConfig for YAML.
 type LifecycleConfigML struct {
-	InjectCoreOnStart      bool `yaml:"inject_core_on_start"`
-	CoreMaxCount           int  `yaml:"core_max_count"`
-	CoreMaxTokens          int  `yaml:"core_max_tokens"`
-	InjectForesightOnStart bool `yaml:"inject_foresight_on_start"`
-	ForesightMaxCount      int  `yaml:"foresight_max_count"`
-	ForesightDaysAhead     int  `yaml:"foresight_days_ahead"`
+	InjectCoreOnStart      bool   `yaml:"inject_core_on_start"`
+	CoreMaxCount           int    `yaml:"core_max_count"`
+	CoreMaxTokens          int    `yaml:"core_max_tokens"`
+	InjectForesightOnStart bool   `yaml:"inject_foresight_on_start"`
+	ForesightMaxCount      int    `yaml:"foresight_max_count"`
+	ForesightDaysAhead     int    `yaml:"foresight_days_ahead"`
+	InjectProfileOnStart   bool   `yaml:"inject_profile_on_start"`
+	ProfileMaxTokens       int    `yaml:"profile_max_tokens"`
+	ProfileUserID          string `yaml:"profile_user_id"`
+}
+
+// ProfileConfigML mirrors memorylayer.ProfileConfig for YAML.
+type ProfileConfigML struct {
+	Enabled       bool   `yaml:"enabled"`
+	TimeoutMS     int    `yaml:"timeout_ms"`
+	MaxSections   int    `yaml:"max_sections"`
+	DefaultUserID string `yaml:"default_user_id"`
+}
+
+// SkillEmitterConfigML mirrors memorylayer.SkillEmitterConfig for YAML.
+type SkillEmitterConfigML struct {
+	Enabled  bool `yaml:"enabled"`
+	MaxTurns int  `yaml:"max_turns"`
 }
 
 // MetaClawConfig configures the metaclaw provider. The provider uses
@@ -611,6 +630,19 @@ func Default() *Config {
 				InjectForesightOnStart: true,
 				ForesightMaxCount:      3,
 				ForesightDaysAhead:     7,
+				InjectProfileOnStart:   true,
+				ProfileMaxTokens:       800,
+				ProfileUserID:          "default",
+			},
+			Profile: ProfileConfigML{
+				Enabled:       true,
+				TimeoutMS:     6000,
+				MaxSections:   24,
+				DefaultUserID: "default",
+			},
+			SkillEmitter: SkillEmitterConfigML{
+				Enabled:  true,
+				MaxTurns: 8,
 			},
 			RecallLimit: 5,
 		},
