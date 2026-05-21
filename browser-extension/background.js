@@ -8,7 +8,7 @@ const TASK_TIMEOUT_MS = 60000;
 
 async function getSettings() {
   return chrome.storage.sync.get({
-    hermindUrl: 'http://localhost:8080'
+    hermindUrl: 'http://localhost:36265'
   });
 }
 

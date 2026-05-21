@@ -24,7 +24,7 @@ func newDesktopCmd(app *App) *cobra.Command {
 		},
 	}
 	c.Flags().StringVar(&opts.Addr, "addr", "",
-		"bind address; empty = random port in [30000,40000) on 127.0.0.1")
+		"bind address; empty = port 36265 (fallback to random port in [30000,40000) on 127.0.0.1)")
 	c.Flags().DurationVar(&opts.ExitAfter, "exit-after", 0,
 		"exit after the given duration (0 = run until Ctrl-C)")
 	return c

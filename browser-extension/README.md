@@ -38,7 +38,7 @@ Restart Hermind.
 ### 3. Configure the Extension
 
 1. Click the extension icon → **Settings**
-2. Enter your Hermind server URL (e.g. `http://localhost:8080`)
+2. Enter your Hermind server URL (e.g. `http://localhost:36265`)
 3. Paste the same `api_key` from your `config.yaml`
 4. Click **Test Connection** to verify
 
