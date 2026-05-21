@@ -859,3 +859,78 @@ func TestCompatModel_GenerateObject_Error(t *testing.T) {
 		t.Fatal("expected error for failed generation")
 	}
 }
+
+
+func TestCompatProvider_Models(t *testing.T) {
+	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		if r.URL.Path != "/v1/models" {
+			t.Errorf("path = %s, want /v1/models", r.URL.Path)
+		}
+		if r.Header.Get("Authorization") != "Bearer test-key" {
+			t.Errorf("auth = %s, want Bearer test-key", r.Header.Get("Authorization"))
+		}
+		_ = json.NewEncoder(w).Encode(map[string]any{
+			"data": []map[string]string{
+				{"id": "model-a"},
+				{"id": "model-b"},
+			},
+		})
+	}))
+	defer server.Close()
+
+	p, err := buildProvider(config.ProviderConfig{
+		Provider: "openai",
+		BaseURL:  server.URL,
+		APIKey:   "test-key",
+	})
+	if err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
+
+	models, err := p.Models(context.Background())
+	if err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
+
+	if len(models) != 2 {
+		t.Fatalf("len(models) = %d, want 2", len(models))
+	}
+	if models[0].ID != "model-a" {
+		t.Errorf("models[0].ID = %s, want model-a", models[0].ID)
+	}
+	if models[1].ID != "model-b" {
+		t.Errorf("models[1].ID = %s, want model-b", models[1].ID)
+	}
+}
+
+func TestCompatProvider_Models_WithV1Suffix(t *testing.T) {
+	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		if r.URL.Path != "/v1/models" {
+			t.Errorf("path = %s, want /v1/models", r.URL.Path)
+		}
+		_ = json.NewEncoder(w).Encode(map[string]any{
+			"data": []map[string]string{
+				{"id": "model-x"},
+			},
+		})
+	}))
+	defer server.Close()
+
+	p, err := buildProvider(config.ProviderConfig{
+		Provider: "openai",
+		BaseURL:  server.URL + "/v1",
+		APIKey:   "test-key",
+	})
+	if err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
+
+	models, err := p.Models(context.Background())
+	if err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
+
+	if len(models) != 1 || models[0].ID != "model-x" {
+		t.Fatalf("models = %v, want [model-x]", models)
+	}
+}
