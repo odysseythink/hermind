@@ -100,22 +100,25 @@ func (a *Agentic) Recall(ctx context.Context, query string, limit int) ([]Candid
 		return m1, nil
 	}
 
-	sufficient, missing := a.checkSufficiency(callCtx, query, m1)
-	if sufficient {
-		return m1, nil
+	current := m1
+	for round := 0; round < a.cfg.MaxExtraRounds; round++ {
+		sufficient, missing := a.checkSufficiency(callCtx, query, current)
+		if sufficient {
+			return current, nil
+		}
+
+		subqueries := a.expandQueries(callCtx, query, missing, current)
+		if len(subqueries) == 0 {
+			return current, nil // degrade
+		}
+
+		extras := a.runSubqueries(callCtx, subqueries, limit)
+		fused := rrfFuseCandidates(append([][]Candidate{current}, extras...), 60)
+
+		// Re-rank the union through the same reranker the base uses.
+		current, _ = a.base.reranker.Rerank(callCtx, query, fused, limit)
 	}
-
-	subqueries := a.expandQueries(callCtx, query, missing, m1)
-	if len(subqueries) == 0 {
-		return m1, nil // degrade
-	}
-
-	extras := a.runSubqueries(callCtx, subqueries, limit)
-	fused := rrfFuseCandidates(append([][]Candidate{m1}, extras...), 60)
-
-	// Re-rank the union through the same reranker the base uses.
-	final, _ := a.base.reranker.Rerank(callCtx, query, fused, limit)
-	return final, nil
+	return current, nil
 }
 
 func (a *Agentic) checkSufficiency(ctx context.Context, query string, cands []Candidate) (bool, string) {

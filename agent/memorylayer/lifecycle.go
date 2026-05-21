@@ -6,6 +6,7 @@ import (
 
 	"github.com/odysseythink/hermind/storage"
 	"github.com/odysseythink/hermind/tool/memory/memprovider"
+	"github.com/odysseythink/mlog"
 )
 
 type LifecycleConfig struct {
@@ -61,7 +62,9 @@ func (l *Lifecycle) OnSessionStart(ctx context.Context) ([]memprovider.InjectedM
 			MemTypes: []string{"core"},
 			Limit:    l.cfg.CoreMaxCount,
 		})
-		if err == nil {
+		if err != nil {
+			mlog.Warning("memorylayer: Lifecycle core search failed", mlog.String("err", err.Error()))
+		} else {
 			tokens := 0
 			for _, m := range core {
 				if tokens+len(m.Content) > l.cfg.CoreMaxTokens {
@@ -80,7 +83,9 @@ func (l *Lifecycle) OnSessionStart(ctx context.Context) ([]memprovider.InjectedM
 			Limit:          l.cfg.ForesightMaxCount * 4, // overfetch, then filter
 			IncludeExpired: false,
 		})
-		if err == nil {
+		if err != nil {
+			mlog.Warning("memorylayer: Lifecycle foresight search failed", mlog.String("err", err.Error()))
+		} else {
 			picked := 0
 			for _, m := range fs {
 				if picked >= l.cfg.ForesightMaxCount {
