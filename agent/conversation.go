@@ -97,9 +97,17 @@ func (e *Engine) RunConversation(ctx context.Context, opts *RunOptions) (*Conver
 		memContents = append(memContents, m.Content)
 	}
 	activeSkills, memContents = applySynergyBudget(activeSkills, memContents, e.synergy)
+
+	pinned := e.PinnedMemories()
+	pinnedContents := make([]string, 0, len(pinned))
+	for _, m := range pinned {
+		pinnedContents = append(pinnedContents, m.Content)
+	}
+
 	systemPrompt := e.prompt.Build(&PromptOptions{
 		Model:          model,
 		ActiveSkills:   activeSkills,
+		PinnedMemories: pinnedContents,
 		ActiveMemories: memContents,
 		ObsidianCtx:    opts.ObsidianCtx,
 	})

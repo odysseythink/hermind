@@ -38,7 +38,8 @@ type PromptOptions struct {
 	Model          string
 	SkipContext    bool
 	ActiveSkills   []ActiveSkill // prepended under a stable header
-	ActiveMemories []string      // recalled memory snippets, one per line
+	PinnedMemories []string      // ALWAYS injected; bypasses synergy budget
+	ActiveMemories []string      // recalled memory snippets, subject to synergy budget
 	ObsidianCtx    *ObsidianContext
 }
 
@@ -69,6 +70,9 @@ func (pb *PromptBuilder) Build(opts *PromptOptions) string {
 	if opts != nil && len(opts.ActiveSkills) > 0 {
 		parts = append(parts, renderActiveSkills(opts.ActiveSkills))
 	}
+	if opts != nil && len(opts.PinnedMemories) > 0 {
+		parts = append(parts, renderPinnedMemories(opts.PinnedMemories))
+	}
 	if opts != nil && len(opts.ActiveMemories) > 0 {
 		parts = append(parts, renderActiveMemories(opts.ActiveMemories))
 	}
@@ -76,6 +80,22 @@ func (pb *PromptBuilder) Build(opts *PromptOptions) string {
 		parts = append(parts, renderObsidianContext(opts.ObsidianCtx))
 	}
 	return strings.Join(parts, "\n\n")
+}
+
+func renderPinnedMemories(mems []string) string {
+	var b strings.Builder
+	b.WriteString("# Pinned context\n\n")
+	b.WriteString("Always-on facts you previously asked me to remember and short-term plans. ")
+	b.WriteString("Treat these as ground truth unless contradicted in this turn.\n")
+	for _, m := range mems {
+		trimmed := strings.TrimSpace(m)
+		if trimmed == "" {
+			continue
+		}
+		b.WriteString("\n- ")
+		b.WriteString(trimmed)
+	}
+	return strings.TrimRight(b.String(), "\n")
 }
 
 func renderActiveMemories(mems []string) string {

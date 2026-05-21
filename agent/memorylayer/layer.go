@@ -16,6 +16,8 @@ type Config struct {
 	Reranker    RerankerConfig
 	Boundary    BoundaryConfig
 	Taxonomy    TaxonomyConfig
+	Agentic     AgenticConfig
+	Lifecycle   LifecycleConfig
 	RecallLimit int // final top-N returned from Recall; default 5
 }
 
@@ -25,7 +27,11 @@ type MemoryLayer struct {
 	reranker  Reranker
 	boundary  *BoundaryDetector
 	extractor *TaxonomyExtractor
-	cfg       Config
+	// P2 additions:
+	agentic   *Agentic   // optional
+	lifecycle *Lifecycle // optional
+
+	cfg Config
 }
 
 func New(
@@ -38,7 +44,7 @@ func New(
 	if cfg.RecallLimit <= 0 {
 		cfg.RecallLimit = 5
 	}
-	return &MemoryLayer{
+	ml := &MemoryLayer{
 		store:     store,
 		hybrid:    NewHybridRecaller(store, emb, base, cfg.Hybrid),
 		reranker:  NewLLMReranker(llm, cfg.Reranker),
@@ -46,6 +52,13 @@ func New(
 		extractor: NewTaxonomyExtractor(llm, cfg.Taxonomy),
 		cfg:       cfg,
 	}
+	if cfg.Agentic.Enabled {
+		ml.agentic = NewAgentic(ml, llm, cfg.Agentic)
+	}
+	if cfg.Lifecycle.InjectCoreOnStart || cfg.Lifecycle.InjectForesightOnStart {
+		ml.lifecycle = NewLifecycle(store, cfg.Lifecycle)
+	}
+	return ml
 }
 
 // RecallCandidates runs Hybrid + Reranker and returns the internal
@@ -64,6 +77,33 @@ func (l *MemoryLayer) RecallCandidates(ctx context.Context, query string, limit 
 	}
 	ranked, _ := l.reranker.Rerank(ctx, query, cands, limit)
 	return ranked, nil
+}
+
+// Recall (existing) keeps its semantics: Hybrid + Rerank → InjectedMemory.
+
+// RecallWithAgentic runs the multi-round critic-driven flow when the
+// Agentic component is wired; otherwise it falls back to Recall.
+func (l *MemoryLayer) RecallWithAgentic(ctx context.Context, query string, limit int) ([]memprovider.InjectedMemory, error) {
+	if l == nil {
+		return nil, nil
+	}
+	if l.agentic == nil {
+		return l.Recall(ctx, query, limit)
+	}
+	cands, err := l.agentic.Recall(ctx, query, limit)
+	if err != nil {
+		return nil, err
+	}
+	return candidatesToInjected(cands, limit), nil
+}
+
+// LoadPinned runs OnSessionStart and returns the pinned set. Safe to
+// call when lifecycle is not wired (returns nil).
+func (l *MemoryLayer) LoadPinned(ctx context.Context) ([]memprovider.InjectedMemory, error) {
+	if l == nil || l.lifecycle == nil {
+		return nil, nil
+	}
+	return l.lifecycle.OnSessionStart(ctx)
 }
 
 // Recall is the single retrieval entry point. limit overrides the
