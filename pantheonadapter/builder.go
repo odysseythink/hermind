@@ -2,7 +2,9 @@ package pantheonadapter
 
 import (
 	"context"
+	"encoding/json"
 	"fmt"
+	"net/http"
 	"strings"
 
 	"github.com/odysseythink/hermind/config"
@@ -29,7 +31,50 @@ type compatProvider struct {
 func (p *compatProvider) Name() string { return p.name }
 
 func (p *compatProvider) Models(ctx context.Context) ([]core.Model, error) {
-	return nil, nil
+	modelsPath := "/v1/models"
+	if strings.HasSuffix(p.client.BaseURL, "/v1") {
+		modelsPath = "/models"
+	}
+
+	req, err := http.NewRequestWithContext(ctx, "GET", p.client.BaseURL+modelsPath, nil)
+	if err != nil {
+		return nil, fmt.Errorf("list models request: %w", err)
+	}
+	if p.client.APIKey != "" {
+		req.Header.Set("Authorization", "Bearer "+p.client.APIKey)
+	}
+	for k, v := range p.client.Headers {
+		req.Header.Set(k, v)
+	}
+
+	httpClient := p.client.HTTPClient
+	if httpClient == nil {
+		httpClient = http.DefaultClient
+	}
+	resp, err := httpClient.Do(req)
+	if err != nil {
+		return nil, fmt.Errorf("list models: %w", err)
+	}
+	defer resp.Body.Close()
+
+	if resp.StatusCode != http.StatusOK {
+		return nil, fmt.Errorf("list models: status %d", resp.StatusCode)
+	}
+
+	var body struct {
+		Data []struct {
+			ID string `json:"id"`
+		} `json:"data"`
+	}
+	if err := json.NewDecoder(resp.Body).Decode(&body); err != nil {
+		return nil, fmt.Errorf("decode list models: %w", err)
+	}
+
+	models := make([]core.Model, 0, len(body.Data))
+	for _, m := range body.Data {
+		models = append(models, core.Model{ID: m.ID})
+	}
+	return models, nil
 }
 
 func (p *compatProvider) LanguageModel(ctx context.Context, modelID string) (core.LanguageModel, error) {
