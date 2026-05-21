@@ -1,7 +1,8 @@
 # Hermind Memory Layer — 智能记忆中间层设计文档（v2）
 
-> **Status**: Draft (v2, awaiting approval)
-> **Date**: 2026-05-21
+> **Status**: Phase 1 shipped 2026-05-21. Phase 2 shipped 2026-05-22.
+>            Phase 3 plan pending.
+> **Date**: 2026-05-22
 > **Supersedes**: v1 (2026-05-20)
 > **Source**: EverOS / EverCore 亮点功能引入方案 — 经客观评估后的修订版
 

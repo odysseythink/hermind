@@ -6,6 +6,11 @@
 - **15 AI-generic capabilities extracted to pantheon** (`budget`, `pricing`, `redact`, `tracing`, `metrics`, `mcpoauth`, `embed/cosine`, `trajectory`, `skills`, `tool registry`, `osv`, `urlsafety`, `judge`, `toolselector`, `delegate`). Hermind retains thin wrappers for instance-aware defaults; new code should import pantheon directly.
 
 ### Added
+- **Memory Layer Phase 2**: Agentic multi-round retrieval (sufficiency
+  check + 1 extra round + 2 sub-queries + token caps + timeout
+  fallback). Lifecycle hook `OnSessionStart` preloads core memories and
+  near-term foresights as pinned context, rendered above active
+  memories and bypassing the synergy budget.
 - **Memory replay buffer**: a `hermind bench replay` subcommand tree that
   re-runs real historical user turns from `state.db` against the current
   configuration in an isolated tmp sqlite, then compares the new replies
