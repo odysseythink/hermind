@@ -21,7 +21,7 @@ import (
 // ID is generated using the epoch nanoseconds as a string.
 func (s *Store) SaveMemory(ctx context.Context, m *storage.Memory) error {
 	if m.ID == "" {
-		return fmt.Errorf("sqlite: memory ID is required")
+		m.ID = fmt.Sprintf("%d", time.Now().UnixNano())
 	}
 	tagsJSON, _ := json.Marshal(m.Tags)
 	metaStr := string(m.Metadata)

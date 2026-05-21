@@ -19,7 +19,11 @@ type mockLLM struct {
 
 func (m *mockLLM) Generate(ctx context.Context, req *core.Request) (*core.Response, error) {
 	if m.sleepFor > 0 {
-		time.Sleep(m.sleepFor)
+		select {
+		case <-time.After(m.sleepFor):
+		case <-ctx.Done():
+			return nil, ctx.Err()
+		}
 	}
 	if m.err != nil {
 		return nil, m.err
