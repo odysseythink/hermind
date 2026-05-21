@@ -5,6 +5,7 @@ import (
 	"encoding/json"
 	"time"
 
+	"github.com/odysseythink/hermind/agent/memorylayer"
 	"github.com/odysseythink/hermind/message"
 	"github.com/odysseythink/hermind/storage"
 	"github.com/odysseythink/mlog"
@@ -63,4 +64,32 @@ func (ev *Evolver) Extract(ctx context.Context, turns []message.HermindMessage, 
 		coreTurns[i] = message.ToPantheon(t)
 	}
 	return ev.Evolver.Extract(ctx, coreTurns, verdict)
+}
+
+// OnSkillCandidate receives a memory-layer SkillCandidate and runs the
+// legacy LLM-extraction path over its turns. The Evolver decides whether
+// to promote the candidate into a skill file. Best-effort; errors log
+// and do not bubble.
+func (ev *Evolver) OnSkillCandidate(ctx context.Context, cand memorylayer.SkillCandidate) {
+	if ev == nil || ev.Evolver == nil || len(cand.Turns) == 0 {
+		return
+	}
+	msgs := make([]core.Message, 0, len(cand.Turns)*2)
+	for _, t := range cand.Turns {
+		if t.UserMsg != "" {
+			msgs = append(msgs, core.Message{
+				Role:    core.MESSAGE_ROLE_USER,
+				Content: []core.ContentParter{core.TextPart{Text: t.UserMsg}},
+			})
+		}
+		if t.Assistant != "" {
+			msgs = append(msgs, core.Message{
+				Role:    core.MESSAGE_ROLE_ASSISTANT,
+				Content: []core.ContentParter{core.TextPart{Text: t.Assistant}},
+			})
+		}
+	}
+	if err := ev.Evolver.Extract(ctx, msgs, nil); err != nil {
+		mlog.Warning("evolver: OnSkillCandidate extract failed", mlog.String("err", err.Error()))
+	}
 }

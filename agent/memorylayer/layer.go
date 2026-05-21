@@ -12,14 +12,15 @@ import (
 )
 
 type Config struct {
-	Hybrid      HybridConfig
-	Reranker    RerankerConfig
-	Boundary    BoundaryConfig
-	Taxonomy    TaxonomyConfig
-	Agentic     AgenticConfig
-	Lifecycle   LifecycleConfig
-	Profile     ProfileConfig
-	RecallLimit int // final top-N returned from Recall; default 5
+	Hybrid       HybridConfig
+	Reranker     RerankerConfig
+	Boundary     BoundaryConfig
+	Taxonomy     TaxonomyConfig
+	Agentic      AgenticConfig
+	Lifecycle    LifecycleConfig
+	Profile      ProfileConfig
+	SkillEmitter SkillEmitterConfig
+	RecallLimit  int // final top-N returned from Recall; default 5
 }
 
 type MemoryLayer struct {
@@ -32,7 +33,8 @@ type MemoryLayer struct {
 	agentic   *Agentic   // optional
 	lifecycle *Lifecycle // optional
 	// P3 additions:
-	profile *ProfileUpdater // optional
+	profile      *ProfileUpdater // optional
+	skillEmitter *SkillEmitter   // optional
 
 	cfg Config
 }
@@ -63,6 +65,9 @@ func New(
 	}
 	if cfg.Profile.Enabled {
 		ml.profile = NewProfileUpdater(store, llm, cfg.Profile)
+	}
+	if cfg.SkillEmitter.Enabled {
+		ml.skillEmitter = NewSkillEmitter(cfg.SkillEmitter)
 	}
 	return ml
 }
@@ -167,7 +172,19 @@ func (l *MemoryLayer) handleBoundary(b *Boundary) {
 		go l.profile.Apply(context.Background(), b)
 	}
 
+	// P3 — skill candidate emitter runs in parallel.
+	if l.skillEmitter != nil {
+		go l.skillEmitter.Emit(context.Background(), b)
+	}
+
 	_ = l.store.AppendMemoryEvent(ctx, b.Turns[len(b.Turns)-1].Timestamp, "boundary.detected", []byte(`{"reason":"`+b.Reason+`","extracted":`+itoa(len(mems))+`}`))
+}
+
+func (l *MemoryLayer) SetSkillCandidateSink(fn func(SkillCandidate)) {
+	if l == nil || l.skillEmitter == nil {
+		return
+	}
+	l.skillEmitter.SetSink(fn)
 }
 
 func itoa(n int) string { return fmt.Sprintf("%d", n) }
