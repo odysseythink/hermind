@@ -67,8 +67,11 @@ async function main() {
     console.log(`Downloaded to ${zipPath}`);
 
     console.log('Extracting node.exe...');
+    // Convert Windows paths to POSIX for tar in Git Bash
+    const zipPathPosix = zipPath.replace(/\\/g, '/');
+    const tempDirPosix = TEMP_DIR.replace(/\\/g, '/');
     execSync(
-      `tar -xf '${zipPath}' -C '${TEMP_DIR}'`
+      `tar -xf '${zipPathPosix}' -C '${tempDirPosix}'`
     );
 
     const extractedNodePath = path.join(TEMP_DIR, `node-v${NODE_VERSION}-win-x64`, 'node.exe');
