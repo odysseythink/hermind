@@ -274,6 +274,8 @@ type MemoryLayerConfig struct {
 	Reranker    RerankerConfigML  `yaml:"reranker"`
 	Boundary    BoundaryConfigML  `yaml:"boundary"`
 	Taxonomy    TaxonomyConfigML  `yaml:"taxonomy"`
+	Agentic     AgenticConfigML   `yaml:"agentic"`     // NEW
+	Lifecycle   LifecycleConfigML `yaml:"lifecycle"`   // NEW
 	RecallLimit int               `yaml:"recall_limit"`
 }
 
@@ -311,6 +313,27 @@ type TaxonomyConfigML struct {
 	MaxOutputs   int      `yaml:"max_outputs"`
 	TimeoutMS    int      `yaml:"timeout_ms"`
 	AllowedTypes []string `yaml:"types"`
+}
+
+// AgenticConfigML mirrors memorylayer.AgenticConfig for YAML.
+type AgenticConfigML struct {
+	Enabled            bool    `yaml:"enabled"`
+	MaxExtraRounds     int     `yaml:"max_extra_rounds"`
+	ExpansionQueries   int     `yaml:"expansion_queries"`
+	ShortcutThreshold  float64 `yaml:"shortcut_threshold"`
+	PerTurnTokenCap    int     `yaml:"per_turn_token_cap"`
+	PerSessionTokenCap int     `yaml:"per_session_token_cap"`
+	TimeoutMS          int     `yaml:"timeout_ms"`
+}
+
+// LifecycleConfigML mirrors memorylayer.LifecycleConfig for YAML.
+type LifecycleConfigML struct {
+	InjectCoreOnStart      bool `yaml:"inject_core_on_start"`
+	CoreMaxCount           int  `yaml:"core_max_count"`
+	CoreMaxTokens          int  `yaml:"core_max_tokens"`
+	InjectForesightOnStart bool `yaml:"inject_foresight_on_start"`
+	ForesightMaxCount      int  `yaml:"foresight_max_count"`
+	ForesightDaysAhead     int  `yaml:"foresight_days_ahead"`
 }
 
 // MetaClawConfig configures the metaclaw provider. The provider uses
@@ -571,6 +594,23 @@ func Default() *Config {
 				MaxOutputs:   8,
 				TimeoutMS:    6000,
 				AllowedTypes: []string{"core", "episode", "fact", "foresight"},
+			},
+			Agentic: AgenticConfigML{
+				Enabled:            true,
+				MaxExtraRounds:     1,
+				ExpansionQueries:   2,
+				ShortcutThreshold:  0.85,
+				PerTurnTokenCap:    2000,
+				PerSessionTokenCap: 20000,
+				TimeoutMS:          8000,
+			},
+			Lifecycle: LifecycleConfigML{
+				InjectCoreOnStart:      true,
+				CoreMaxCount:           10,
+				CoreMaxTokens:          600,
+				InjectForesightOnStart: true,
+				ForesightMaxCount:      3,
+				ForesightDaysAhead:     7,
 			},
 			RecallLimit: 5,
 		},

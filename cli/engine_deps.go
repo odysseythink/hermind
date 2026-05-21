@@ -375,6 +375,23 @@ func translateMemoryLayerConfig(cfg config.MemoryLayerConfig) memorylayer.Config
 			Timeout:      time.Duration(cfg.Taxonomy.TimeoutMS) * time.Millisecond,
 			AllowedTypes: cfg.Taxonomy.AllowedTypes,
 		},
+		Agentic: memorylayer.AgenticConfig{
+			Enabled:            cfg.Agentic.Enabled,
+			MaxExtraRounds:     cfg.Agentic.MaxExtraRounds,
+			ExpansionQueries:   cfg.Agentic.ExpansionQueries,
+			ShortcutThreshold:  cfg.Agentic.ShortcutThreshold,
+			PerTurnTokenCap:    cfg.Agentic.PerTurnTokenCap,
+			PerSessionTokenCap: cfg.Agentic.PerSessionTokenCap,
+			Timeout:            time.Duration(cfg.Agentic.TimeoutMS) * time.Millisecond,
+		},
+		Lifecycle: memorylayer.LifecycleConfig{
+			InjectCoreOnStart:      cfg.Lifecycle.InjectCoreOnStart,
+			CoreMaxCount:           cfg.Lifecycle.CoreMaxCount,
+			CoreMaxTokens:          cfg.Lifecycle.CoreMaxTokens,
+			InjectForesightOnStart: cfg.Lifecycle.InjectForesightOnStart,
+			ForesightMaxCount:      cfg.Lifecycle.ForesightMaxCount,
+			ForesightDaysAhead:     cfg.Lifecycle.ForesightDaysAhead,
+		},
 		RecallLimit: cfg.RecallLimit,
 	}
 }

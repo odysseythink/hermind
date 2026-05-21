@@ -427,6 +427,13 @@ func (s *Server) RunTurn(ctx context.Context, userMessage string) (string, error
 		deps.Provider, deps.AuxProvider, deps.Storage,
 		s.activeToolReg(), deps.AgentCfg, deps.Platform,
 	)
+	if deps.MemoryLayer != nil {
+		if pinned, err := deps.MemoryLayer.LoadPinned(runCtx); err == nil && len(pinned) > 0 {
+			eng.SetPinnedMemories(pinned)
+			mlog.Info("memorylayer: loaded pinned context",
+				mlog.Int("count", len(pinned)))
+		}
+	}
 	if deps.MemProvider != nil {
 		eng.Memory().AddProvider(deps.MemProvider)
 		if r, ok := deps.MemProvider.(memprovider.Recaller); ok {
@@ -438,7 +445,7 @@ func (s *Server) RunTurn(ctx context.Context, userMessage string) (string, error
 
 			recallFn := func(ctx context.Context, userMsg string) []memprovider.InjectedMemory {
 				if deps.MemoryLayer != nil {
-					out, _ := deps.MemoryLayer.Recall(ctx, userMsg, memK)
+					out, _ := deps.MemoryLayer.RecallWithAgentic(ctx, userMsg, memK)
 					return out
 				}
 				out, _ := r.Recall(ctx, userMsg, memK)
