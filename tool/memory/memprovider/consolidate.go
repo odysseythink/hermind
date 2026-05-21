@@ -72,9 +72,10 @@ func Consolidate(ctx context.Context, store storage.Storage, opts *ConsolidateOp
 	report := &ConsolidateReport{}
 	types := []string{opts.MemType}
 	if opts.MemType == "" {
-		types = []string{"episodic", "semantic", "preference", ""}
+		types = []string{"episodic", "semantic", "preference", "foresight", ""}
 	}
 	now := time.Now().UTC()
+	foresightArchived := 0
 
 	for _, t := range types {
 		mems, err := store.ListMemoriesByType(ctx, t, opts.ScanLimit)
@@ -119,6 +120,32 @@ func Consolidate(ctx context.Context, store storage.Storage, opts *ConsolidateOp
 				}
 			}
 		}
+
+		// P3 — archive expired foresights.
+		if t == "foresight" {
+			for _, m := range mems {
+				if m.ExpiresAt.IsZero() {
+					continue
+				}
+				if !m.ExpiresAt.Before(now) {
+					continue
+				}
+				if m.Status != "" && m.Status != storage.MemoryStatusActive {
+					continue
+				}
+				mm := *m
+				mm.Status = storage.MemoryStatusArchived
+				mm.UpdatedAt = now
+				if err := store.SaveMemory(ctx, &mm); err == nil {
+					report.Archived++
+					foresightArchived++
+				}
+			}
+		}
+	}
+	if foresightArchived > 0 {
+		data, _ := json.Marshal(map[string]any{"archived": foresightArchived})
+		_ = store.AppendMemoryEvent(ctx, time.Now().UTC(), "memory.foresight_archived", data)
 	}
 	data, _ := json.Marshal(map[string]any{
 		"scanned":    report.Scanned,
