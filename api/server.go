@@ -468,6 +468,13 @@ func (s *Server) RunTurn(ctx context.Context, userMessage string) (string, error
 		}
 		if deps.MemoryLayer != nil {
 			eng.SetMemoryLayer(deps.MemoryLayer)
+			if deps.SkillsEvolver != nil {
+				if ev, ok := deps.SkillsEvolver.(*skills.Evolver); ok {
+					deps.MemoryLayer.SetSkillCandidateSink(func(cand memorylayer.SkillCandidate) {
+						ev.OnSkillCandidate(runCtx, cand)
+					})
+				}
+			}
 		}
 	}
 	wireEngineToHub(eng, s.streams)
