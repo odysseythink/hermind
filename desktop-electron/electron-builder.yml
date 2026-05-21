@@ -8,9 +8,15 @@ files:
 extraResources:
   - from: resources/hermind-desktop.exe
     to: hermind-desktop.exe
+  - from: resources/node.exe
+    to: node.exe
 extraFiles:
   - from: ../browser-extension
     to: browser-extension
+    filter:
+      - "**/*"
+  - from: resources/document-scripts
+    to: document-scripts
     filter:
       - "**/*"
 win:

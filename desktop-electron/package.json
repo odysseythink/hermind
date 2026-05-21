@@ -9,9 +9,10 @@
     "dev": "electron-vite dev",
     "build": "electron-vite build",
     "build:go": "go build -ldflags=\"-s -w\" -o resources/hermind-desktop.exe ../cmd/hermind",
+    "prepare:node": "node scripts/prepare-node.js",
     "preview": "electron-vite preview",
-    "dist": "npm run build:go && npm run build && electron-builder",
-    "dist:dir": "npm run build:go && npm run build && electron-builder --dir"
+    "dist": "npm run build:go && npm run prepare:node && npm run build && electron-builder",
+    "dist:dir": "npm run build:go && npm run prepare:node && npm run build && electron-builder --dir"
   },
   "devDependencies": {
     "@types/node": "^22.0.0",
@@ -38,12 +39,21 @@
       {
         "from": "resources/hermind-desktop.exe",
         "to": "hermind-desktop.exe"
+      },
+      {
+        "from": "resources/node.exe",
+        "to": "node.exe"
       }
     ],
     "extraFiles": [
       {
         "from": "../browser-extension",
         "to": "browser-extension",
+        "filter": ["**/*"]
+      },
+      {
+        "from": "resources/document-scripts",
+        "to": "document-scripts",
         "filter": ["**/*"]
       }
     ],
