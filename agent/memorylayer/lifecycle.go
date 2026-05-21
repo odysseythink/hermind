@@ -2,6 +2,8 @@ package memorylayer
 
 import (
 	"context"
+	"fmt"
+	"strings"
 	"time"
 
 	"github.com/odysseythink/hermind/storage"
@@ -16,6 +18,11 @@ type LifecycleConfig struct {
 	InjectForesightOnStart bool
 	ForesightMaxCount      int // default 3
 	ForesightDaysAhead     int // default 7 — only inject foresights expiring within this window
+
+	// P3 additions:
+	InjectProfileOnStart bool
+	ProfileMaxTokens     int    // default 800 (design §6.4)
+	ProfileUserID        string // default "default"
 }
 
 func (c *LifecycleConfig) fill() {
@@ -30,6 +37,12 @@ func (c *LifecycleConfig) fill() {
 	}
 	if c.ForesightDaysAhead <= 0 {
 		c.ForesightDaysAhead = 7
+	}
+	if c.ProfileMaxTokens <= 0 {
+		c.ProfileMaxTokens = 800
+	}
+	if c.ProfileUserID == "" {
+		c.ProfileUserID = "default"
 	}
 }
 
@@ -56,6 +69,16 @@ func NewLifecycle(store storage.Storage, cfg LifecycleConfig) *Lifecycle {
 // are bounded only by ForesightMaxCount.
 func (l *Lifecycle) OnSessionStart(ctx context.Context) ([]memprovider.InjectedMemory, error) {
 	out := []memprovider.InjectedMemory{}
+
+	// P3 — profile first (it's the most stable signal).
+	if l.cfg.InjectProfileOnStart {
+		if block := l.renderProfile(ctx); block != "" {
+			out = append(out, memprovider.InjectedMemory{
+				ID:      "profile:" + l.cfg.ProfileUserID,
+				Content: block,
+			})
+		}
+	}
 
 	if l.cfg.InjectCoreOnStart {
 		core, err := l.store.SearchMemories(ctx, "", &storage.MemorySearchOptions{
@@ -101,4 +124,23 @@ func (l *Lifecycle) OnSessionStart(ctx context.Context) ([]memprovider.InjectedM
 	}
 
 	return out, nil
+}
+
+func (l *Lifecycle) renderProfile(ctx context.Context) string {
+	p, err := l.store.GetProfile(ctx, l.cfg.ProfileUserID)
+	if err != nil || p == nil || len(p.Sections) == 0 {
+		return ""
+	}
+	var sb strings.Builder
+	sb.WriteString("## User Profile\n")
+	tokens := len("## User Profile\n")
+	for _, sec := range p.Sections {
+		line := fmt.Sprintf("- [%s] %s: %s\n", sec.Kind, sec.Key, sec.Value)
+		if tokens+len(line) > l.cfg.ProfileMaxTokens {
+			break
+		}
+		sb.WriteString(line)
+		tokens += len(line)
+	}
+	return strings.TrimRight(sb.String(), "\n")
 }

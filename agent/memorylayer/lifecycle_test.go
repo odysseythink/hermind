@@ -184,3 +184,114 @@ func TestLifecycle_DisabledTogglesAreNoOp(t *testing.T) {
 		t.Fatalf("expected 0 when both toggles disabled, got %d", len(out))
 	}
 }
+
+func TestLifecycle_ProfileRenderedFirst(t *testing.T) {
+	store, err := sqlite.Open(":memory:")
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer store.Close()
+	if err := store.Migrate(); err != nil {
+		t.Fatal(err)
+	}
+	ctx := context.Background()
+
+	_, err = store.SaveProfileDelta(ctx, &storage.ProfileDelta{
+		UserID: "default",
+		Adds: []storage.ProfileSection{
+			{Kind: "explicit", Key: "diet.restrictions", Value: "peanuts", Confidence: 0.9},
+			{Kind: "implicit", Key: "style.communication", Value: "terse", Confidence: 0.7},
+		},
+	})
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	lc := NewLifecycle(store, LifecycleConfig{
+		InjectProfileOnStart: true,
+		ProfileMaxTokens:     800,
+		ProfileUserID:        "default",
+	})
+
+	out, err := lc.OnSessionStart(ctx)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if len(out) != 1 {
+		t.Fatalf("expected 1 profile entry, got %d", len(out))
+	}
+	if !strings.HasPrefix(out[0].Content, "## User Profile") {
+		t.Errorf("expected profile block header, got %q", out[0].Content)
+	}
+	if !strings.Contains(out[0].Content, "diet.restrictions: peanuts") {
+		t.Errorf("expected diet section, got %q", out[0].Content)
+	}
+	if !strings.Contains(out[0].Content, "style.communication: terse") {
+		t.Errorf("expected style section, got %q", out[0].Content)
+	}
+}
+
+func TestLifecycle_ProfileMaxTokensCaps(t *testing.T) {
+	store, err := sqlite.Open(":memory:")
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer store.Close()
+	if err := store.Migrate(); err != nil {
+		t.Fatal(err)
+	}
+	ctx := context.Background()
+
+	_, err = store.SaveProfileDelta(ctx, &storage.ProfileDelta{
+		UserID: "default",
+		Adds: []storage.ProfileSection{
+			{Kind: "explicit", Key: "a", Value: "first", Confidence: 0.9},
+			{Kind: "explicit", Key: "b", Value: "second", Confidence: 0.8},
+		},
+	})
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	lc := NewLifecycle(store, LifecycleConfig{
+		InjectProfileOnStart: true,
+		ProfileMaxTokens:     40, // tight enough to fit header + first line only
+		ProfileUserID:        "default",
+	})
+
+	out, err := lc.OnSessionStart(ctx)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if len(out) != 1 {
+		t.Fatalf("expected 1 profile entry, got %d", len(out))
+	}
+	if strings.Contains(out[0].Content, "b: second") {
+		t.Errorf("second line should be capped, got %q", out[0].Content)
+	}
+}
+
+func TestLifecycle_EmptyProfileReturnsEmpty(t *testing.T) {
+	store, err := sqlite.Open(":memory:")
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer store.Close()
+	if err := store.Migrate(); err != nil {
+		t.Fatal(err)
+	}
+
+	lc := NewLifecycle(store, LifecycleConfig{
+		InjectProfileOnStart: true,
+		ProfileMaxTokens:     800,
+		ProfileUserID:        "default",
+	})
+
+	out, err := lc.OnSessionStart(context.Background())
+	if err != nil {
+		t.Fatal(err)
+	}
+	if len(out) != 0 {
+		t.Fatalf("expected 0 when profile empty, got %d", len(out))
+	}
+}
