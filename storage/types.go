@@ -236,3 +236,40 @@ type Attachment struct {
 	Size      int64
 	CreatedAt time.Time
 }
+
+// Profile is a user's structured Living Profile.
+type Profile struct {
+	UserID    string
+	Version   int64
+	UpdatedAt time.Time
+	Sections  []ProfileSection
+}
+
+// ProfileSection is one key-value entry inside a Profile.
+type ProfileSection struct {
+	ID          int64
+	UserID      string
+	Kind        string // "explicit" | "implicit"
+	Key         string // e.g. "diet.restrictions", "style.communication"
+	Value       string
+	Evidence    string
+	SourceTurns []int64
+	Confidence  float64
+	UpdatedAt   time.Time
+}
+
+// ProfileDelta is the atomic write unit emitted by ProfileUpdater.
+// Empty Adds/Updates/Deletes are all valid (e.g., a no-op LLM result).
+type ProfileDelta struct {
+	UserID  string
+	Adds    []ProfileSection // ID ignored; assigned on insert
+	Updates []ProfileSection // looked up by (UserID, Kind, Key)
+	Deletes []ProfileSectionRef
+}
+
+// ProfileSectionRef identifies a section for deletion.
+type ProfileSectionRef struct {
+	UserID string
+	Kind   string
+	Key    string
+}

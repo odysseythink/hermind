@@ -111,7 +111,8 @@ INSERT OR IGNORE INTO schema_meta (key, value) VALUES ('version', '3');
 // v8 adds skills_generation table + memories.reinforced_at_seq column;
 // v9 adds feedback and attachments tables.
 // v10 adds parent_turn_id, parent_mem_id, expires_at, cluster_id to memories.
-const currentSchemaVersion = 10
+// v11 adds profiles + profile_sections tables for Living Profile (Phase 3).
+const currentSchemaVersion = 11
 
 // Migrate applies the base schema. Idempotent. Legacy v1/v2 DBs are
 // never reached here — they are backed up before Migrate() runs.
@@ -287,6 +288,33 @@ func (s *Store) applyVersion(v int) error {
 			if _, err := tx.Exec(ddl); err != nil {
 				return fmt.Errorf("v10 create index: %w", err)
 			}
+		}
+	case 11:
+		if _, err := tx.Exec(`
+			CREATE TABLE IF NOT EXISTS profiles (
+				user_id     TEXT PRIMARY KEY,
+				version     INTEGER NOT NULL DEFAULT 0,
+				updated_at  REAL    NOT NULL DEFAULT 0
+			)`); err != nil {
+			return fmt.Errorf("v11 create profiles: %w", err)
+		}
+		if _, err := tx.Exec(`
+			CREATE TABLE IF NOT EXISTS profile_sections (
+				id           INTEGER PRIMARY KEY AUTOINCREMENT,
+				user_id      TEXT    NOT NULL,
+				kind         TEXT    NOT NULL,
+				key          TEXT    NOT NULL,
+				value        TEXT    NOT NULL DEFAULT '',
+				evidence     TEXT    NOT NULL DEFAULT '',
+				source_turns TEXT    NOT NULL DEFAULT '[]',
+				confidence   REAL    NOT NULL DEFAULT 0,
+				updated_at   REAL    NOT NULL DEFAULT 0,
+				UNIQUE(user_id, kind, key)
+			)`); err != nil {
+			return fmt.Errorf("v11 create profile_sections: %w", err)
+		}
+		if _, err := tx.Exec(`CREATE INDEX IF NOT EXISTS idx_profile_sections_user ON profile_sections(user_id)`); err != nil {
+			return fmt.Errorf("v11 idx profile_sections user: %w", err)
 		}
 	default:
 		return fmt.Errorf("no migration step for v%d", v)
