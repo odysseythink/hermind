@@ -91,14 +91,14 @@ func runWeb(ctx context.Context, app *App, opts webRunOptions) error {
 			}
 		}
 	} else {
-		// First start — random port
-		ln, err = listenRandomLocalhost()
+		// First start — try fixed default port, fall back to random
+		ln, err = listenDefaultPort()
 		if err != nil {
 			return fmt.Errorf("web: %w", err)
 		}
 		app.Config.Web.Addr = ln.Addr().String()
 		if serr := config.SaveToPath(app.ConfigPath, app.Config); serr != nil {
-			mlog.Warning("web: failed to save config with new random port", mlog.String("err", serr.Error()))
+			mlog.Warning("web: failed to save config with new port", mlog.String("err", serr.Error()))
 		}
 	}
 	realAddr := "http://" + ln.Addr().String()
@@ -174,16 +174,16 @@ func newWebCmd(app *App) *cobra.Command {
 		Short: "Start the hermind web UI and REST API",
 		Long: `Start the hermind web UI and REST API.
 
-Binds to 127.0.0.1 by default on a random port in [30000,40000). Use
---addr to pin a specific host:port (useful for bookmarks or reverse
-proxies).`,
+Binds to 127.0.0.1 by default on port 36265 (falls back to a random
+port in [30000,40000) if 36265 is in use). Use --addr to pin a
+specific host:port (useful for bookmarks or reverse proxies).`,
 		RunE: func(cmd *cobra.Command, args []string) error {
 			opts.Out = cmd.OutOrStdout()
 			return runWeb(cmd.Context(), app, opts)
 		},
 	}
 	c.Flags().StringVar(&opts.Addr, "addr", "",
-		"bind address; empty = random port in [30000,40000) on 127.0.0.1")
+		"bind address; empty = port 36265 (fallback to random port in [30000,40000) on 127.0.0.1)")
 	c.Flags().BoolVar(&opts.NoBrowser, "no-browser", false,
 		"do not open the browser automatically")
 	c.Flags().DurationVar(&opts.ExitAfter, "exit-after", 0,

@@ -9,7 +9,7 @@
   // Load saved settings
   async function loadSettings() {
     const result = await chrome.storage.sync.get({
-      hermindUrl: 'http://localhost:8080'
+      hermindUrl: 'http://localhost:36265'
     });
     hermindUrlInput.value = result.hermindUrl;
   }
