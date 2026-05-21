@@ -6,9 +6,9 @@ import (
 	"path/filepath"
 	"testing"
 
-	"github.com/stretchr/testify/require"
 	"github.com/odysseythink/hermind/config"
 	"github.com/odysseythink/hermind/storage/sqlite"
+	"github.com/stretchr/testify/require"
 )
 
 // TestBuildEngineDeps_Smoke constructs Deps with a minimal config and
@@ -128,9 +128,9 @@ func TestResolveEmbedModel(t *testing.T) {
 
 	// Empty string falls back to default
 	cfg2 := &config.Config{}
-	require.Equal(t, "text-embedding-3-small", resolveEmbedModel(cfg2))
+	require.Equal(t, config.DefaultEmbedModel, resolveEmbedModel(cfg2))
 
-	// Whitespace-only is NOT treated as empty -- passes through as-is
+	// Whitespace-only is treated as empty and falls back to default
 	cfg3 := &config.Config{EmbedModel: "   "}
-	require.Equal(t, "   ", resolveEmbedModel(cfg3))
+	require.Equal(t, config.DefaultEmbedModel, resolveEmbedModel(cfg3))
 }
