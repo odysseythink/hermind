@@ -79,6 +79,12 @@ func (f *fakeStorage) SaveAttachment(ctx context.Context, msgID int64, name stri
 func (f *fakeStorage) ListAttachments(ctx context.Context, msgID int64) ([]storage.Attachment, error) {
 	return nil, nil
 }
+func (f *fakeStorage) GetProfile(ctx context.Context, userID string) (*storage.Profile, error) {
+	return nil, storage.ErrNotFound
+}
+func (f *fakeStorage) SaveProfileDelta(ctx context.Context, delta *storage.ProfileDelta) (int64, error) {
+	return 0, nil
+}
 func (f *fakeStorage) Migrate() error { return nil }
 func (f *fakeStorage) Close() error { return nil }
 
@@ -241,6 +247,12 @@ func (f *failingStorage) SaveAttachment(ctx context.Context, msgID int64, name s
 }
 func (f *failingStorage) ListAttachments(ctx context.Context, msgID int64) ([]storage.Attachment, error) {
 	return nil, f.err
+}
+func (f *failingStorage) GetProfile(ctx context.Context, userID string) (*storage.Profile, error) {
+	return nil, f.err
+}
+func (f *failingStorage) SaveProfileDelta(ctx context.Context, delta *storage.ProfileDelta) (int64, error) {
+	return 0, f.err
 }
 func (f *failingStorage) Migrate() error { return f.err }
 func (f *failingStorage) Close() error { return nil }
