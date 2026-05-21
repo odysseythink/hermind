@@ -68,6 +68,10 @@ type Storage interface {
 	SaveAttachment(ctx context.Context, msgID int64, name string, mimeType string, url string, size int64) error
 	ListAttachments(ctx context.Context, msgID int64) ([]Attachment, error)
 
+	// Profile (Living Profile, Phase 3).
+	GetProfile(ctx context.Context, userID string) (*Profile, error)
+	SaveProfileDelta(ctx context.Context, delta *ProfileDelta) (int64, error)
+
 	// Transactions — group multiple operations atomically.
 	WithTx(ctx context.Context, fn func(tx Tx) error) error
 
