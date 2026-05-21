@@ -19,8 +19,6 @@ import (
 	"github.com/odysseythink/hermind/storage"
 	"github.com/odysseythink/hermind/tool"
 	"github.com/odysseythink/hermind/tool/browser"
-	"github.com/odysseythink/pantheon/core"
-	"github.com/odysseythink/pantheon/extensions/delegate"
 	"github.com/odysseythink/hermind/tool/document"
 	"github.com/odysseythink/hermind/tool/embedding"
 	"github.com/odysseythink/hermind/tool/file"
@@ -32,15 +30,17 @@ import (
 	"github.com/odysseythink/hermind/tool/vision"
 	"github.com/odysseythink/hermind/tool/web"
 	"github.com/odysseythink/mlog"
+	"github.com/odysseythink/pantheon/core"
+	"github.com/odysseythink/pantheon/extensions/delegate"
 )
 
 // resolveEmbedModel returns the configured embedding model name,
-// falling back to the hardcoded default when empty.
+// falling back to the default when empty or whitespace-only.
 func resolveEmbedModel(cfg *config.Config) string {
-	if cfg.EmbedModel != "" {
-		return cfg.EmbedModel
+	if m := strings.TrimSpace(cfg.EmbedModel); m != "" {
+		return m
 	}
-	return "text-embedding-3-small"
+	return config.DefaultEmbedModel
 }
 
 // attachSkillsTracker constructs a Tracker and runs one initial
@@ -125,16 +125,16 @@ func BuildEngineDeps(ctx context.Context, app *App) (api.EngineDeps, func(), err
 	terminal.RegisterShellExecute(toolRegistry, backend)
 
 	web.RegisterAll(toolRegistry, web.Options{
-		SearchProvider:       app.Config.Web.Search.Provider,
-		TavilyAPIKey:         app.Config.Web.Search.Providers.Tavily.APIKey,
-		BraveAPIKey:          app.Config.Web.Search.Providers.Brave.APIKey,
-		ExaAPIKey:            app.Config.Web.Search.Providers.Exa.APIKey,
-		DDGProxyConfig:       app.Config.Web.Search.Providers.DuckDuckGo,
+		SearchProvider:    app.Config.Web.Search.Provider,
+		TavilyAPIKey:      app.Config.Web.Search.Providers.Tavily.APIKey,
+		BraveAPIKey:       app.Config.Web.Search.Providers.Brave.APIKey,
+		ExaAPIKey:         app.Config.Web.Search.Providers.Exa.APIKey,
+		DDGProxyConfig:    app.Config.Web.Search.Providers.DuckDuckGo,
 		FirecrawlAPIKey:   os.Getenv("FIRECRAWL_API_KEY"),
 		BingMarket:        app.Config.Web.Search.Providers.Bing.Market,
 		SearXNGBaseURL:    app.Config.Web.Search.Providers.SearXNG.BaseURL,
 		DefaultNumResults: app.Config.Web.Search.DefaultNumResults,
-		MaxNumResults:        app.Config.Web.Search.MaxNumResults,
+		MaxNumResults:     app.Config.Web.Search.MaxNumResults,
 	})
 
 	if app.Storage != nil {

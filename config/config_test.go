@@ -101,7 +101,7 @@ func TestWebConfigYAMLRoundTrip(t *testing.T) {
 
 func TestConfigDefaultEmbedModel(t *testing.T) {
 	cfg := Default()
-	require.Equal(t, "text-embedding-3-small", cfg.EmbedModel)
+	require.Equal(t, DefaultEmbedModel, cfg.EmbedModel)
 }
 
 func TestEmbedModelYAMLRoundTrip(t *testing.T) {
