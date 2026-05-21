@@ -8,6 +8,7 @@ import (
 	"testing"
 
 	"github.com/odysseythink/hermind/agent"
+	"github.com/odysseythink/hermind/agent/memorylayer"
 	"github.com/odysseythink/hermind/message"
 	"github.com/odysseythink/hermind/skills"
 	"github.com/odysseythink/hermind/storage"
@@ -146,6 +147,30 @@ func (m *mockProvider) Stream(ctx context.Context, req *core.Request) (core.Stre
 }
 func (m *mockProvider) GenerateObject(context.Context, *core.ObjectRequest) (*core.ObjectResponse, error) {
 	return nil, errors.New("not implemented")
+}
+
+func TestEvolver_OnSkillCandidate(t *testing.T) {
+	skillDir := t.TempDir()
+	mockLLM := &mockProvider{
+		name: "test",
+		resp: "## Test Skill\n\n**When to use:** test\n\nDo this.",
+	}
+	ev := skills.NewEvolver(mockLLM, skillDir)
+
+	ev.OnSkillCandidate(context.Background(), memorylayer.SkillCandidate{
+		BoundaryReason: "hard_turn",
+		Turns: []memorylayer.TurnRef{
+			{ID: 1, UserMsg: "hello", Assistant: "hi"},
+			{ID: 2, UserMsg: "how do I reset git?", Assistant: "git reset --hard HEAD"},
+		},
+	})
+
+	entries, err := os.ReadDir(skillDir)
+	require.NoError(t, err)
+	require.Len(t, entries, 1, "expected one skill file written")
+	body, err := os.ReadFile(filepath.Join(skillDir, entries[0].Name()))
+	require.NoError(t, err)
+	assert.Contains(t, string(body), "Test Skill")
 }
 
 // newSkillsTestStore creates a test-scoped storage store.
