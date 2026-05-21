@@ -68,7 +68,7 @@ async function main() {
 
     console.log('Extracting node.exe...');
     execSync(
-      `powershell -Command "Expand-Archive -Path '${zipPath}' -DestinationPath '${TEMP_DIR}' -Force"`
+      `tar -xf '${zipPath}' -C '${TEMP_DIR}'`
     );
 
     const extractedNodePath = path.join(TEMP_DIR, `node-v${NODE_VERSION}-win-x64`, 'node.exe');
