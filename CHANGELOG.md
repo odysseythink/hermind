@@ -6,6 +6,15 @@
 - **15 AI-generic capabilities extracted to pantheon** (`budget`, `pricing`, `redact`, `tracing`, `metrics`, `mcpoauth`, `embed/cosine`, `trajectory`, `skills`, `tool registry`, `osv`, `urlsafety`, `judge`, `toolselector`, `delegate`). Hermind retains thin wrappers for instance-aware defaults; new code should import pantheon directly.
 
 ### Added
+- **Memory Layer Phase 3**: Living Profile (incremental per-user profile
+  stored in `profiles` / `profile_sections`, schema v11). `ProfileUpdater`
+  runs on each MemCell boundary, rendering as `## User Profile` at
+  `OnSessionStart`. Foresight expiry archival: `Consolidate` now archives
+  `foresight` rows whose `ExpiresAt` is in the past and emits
+  `memory.foresight_archived` events. Skill candidate emitter: boundary
+  detector dispatches `SkillCandidate` events to
+  `skills.Evolver.OnSkillCandidate`; `skills.Evolver` remains the single
+  writer of skill files.
 - **Memory Layer Phase 2**: Agentic multi-round retrieval (sufficiency
   check + 1 extra round + 2 sub-queries + token caps + timeout
   fallback). Lifecycle hook `OnSessionStart` preloads core memories and

@@ -60,7 +60,7 @@ func New(
 	if cfg.Agentic.Enabled {
 		ml.agentic = NewAgentic(ml, llm, cfg.Agentic)
 	}
-	if cfg.Lifecycle.InjectCoreOnStart || cfg.Lifecycle.InjectForesightOnStart {
+	if cfg.Lifecycle.InjectCoreOnStart || cfg.Lifecycle.InjectForesightOnStart || cfg.Lifecycle.InjectProfileOnStart {
 		ml.lifecycle = NewLifecycle(store, cfg.Lifecycle)
 	}
 	if cfg.Profile.Enabled {
