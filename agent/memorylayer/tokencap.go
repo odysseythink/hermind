@@ -36,17 +36,15 @@ func (t *TokenCap) Allow(cost int) bool {
 	if cost < 0 {
 		cost = 0
 	}
-	sessTotal := t.sessionUsed.Load() + int64(cost)
-	if t.perSession > 0 && sessTotal > int64(t.perSession) {
+	t.mu.Lock()
+	defer t.mu.Unlock()
+	if t.perSession > 0 && t.sessionUsed.Load()+int64(cost) > int64(t.perSession) {
 		return false
 	}
-	t.mu.Lock()
 	if t.perTurn > 0 && t.turnUsed+cost > t.perTurn {
-		t.mu.Unlock()
 		return false
 	}
 	t.turnUsed += cost
-	t.mu.Unlock()
 	t.sessionUsed.Add(int64(cost))
 	return true
 }

@@ -77,5 +77,3 @@ func TestPrompt_PinnedSectionOmittedWhenEmpty(t *testing.T) {
 		t.Fatal("Pinned section must be omitted when no pinned memories")
 	}
 }
-
-
