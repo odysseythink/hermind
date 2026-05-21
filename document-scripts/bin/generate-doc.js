@@ -48,4 +48,7 @@ async function main() {
   console.log(filePath);
 }
 
-main();
+main().catch(err => {
+  console.error(err.message || err);
+  process.exit(1);
+});

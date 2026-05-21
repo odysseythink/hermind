@@ -40,6 +40,13 @@
         "to": "hermind-desktop.exe"
       }
     ],
+    "extraFiles": [
+      {
+        "from": "../browser-extension",
+        "to": "browser-extension",
+        "filter": ["**/*"]
+      }
+    ],
     "win": {
       "target": [
         {
