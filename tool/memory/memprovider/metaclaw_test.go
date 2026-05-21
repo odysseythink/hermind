@@ -196,6 +196,12 @@ func (f *fakeStorage) SaveAttachment(_ context.Context, _ int64, _ string, _ str
 func (f *fakeStorage) ListAttachments(_ context.Context, _ int64) ([]storage.Attachment, error) {
 	return nil, nil
 }
+func (f *fakeStorage) GetProfile(_ context.Context, _ string) (*storage.Profile, error) {
+	return nil, storage.ErrNotFound
+}
+func (f *fakeStorage) SaveProfileDelta(_ context.Context, _ *storage.ProfileDelta) (int64, error) {
+	return 0, nil
+}
 
 // fakeTx implements the Tx interface for testing.
 type fakeTx struct{}
