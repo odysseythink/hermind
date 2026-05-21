@@ -391,6 +391,19 @@ func translateMemoryLayerConfig(cfg config.MemoryLayerConfig) memorylayer.Config
 			InjectForesightOnStart: cfg.Lifecycle.InjectForesightOnStart,
 			ForesightMaxCount:      cfg.Lifecycle.ForesightMaxCount,
 			ForesightDaysAhead:     cfg.Lifecycle.ForesightDaysAhead,
+			InjectProfileOnStart:   cfg.Lifecycle.InjectProfileOnStart,
+			ProfileMaxTokens:       cfg.Lifecycle.ProfileMaxTokens,
+			ProfileUserID:          cfg.Lifecycle.ProfileUserID,
+		},
+		Profile: memorylayer.ProfileConfig{
+			Enabled:       cfg.Profile.Enabled,
+			Timeout:       time.Duration(cfg.Profile.TimeoutMS) * time.Millisecond,
+			MaxSections:   cfg.Profile.MaxSections,
+			DefaultUserID: cfg.Profile.DefaultUserID,
+		},
+		SkillEmitter: memorylayer.SkillEmitterConfig{
+			Enabled:  cfg.SkillEmitter.Enabled,
+			MaxTurns: cfg.SkillEmitter.MaxTurns,
 		},
 		RecallLimit: cfg.RecallLimit,
 	}
