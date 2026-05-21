@@ -41,3 +41,48 @@ func TestConsolidateWritesEvent(t *testing.T) {
 	require.NotEmpty(t, store.events)
 	assert.Equal(t, "memory.consolidated", store.events[0].kind)
 }
+
+func TestConsolidate_ArchivesExpiredForesights(t *testing.T) {
+	store := &fakeStorageWithEvents{}
+	ctx := context.Background()
+	now := time.Now().UTC()
+
+	// Expired foresight.
+	require.NoError(t, store.SaveMemory(ctx, &storage.Memory{
+		ID: "f1", Content: "report due monday", MemType: "foresight", Status: "active",
+		ExpiresAt: now.Add(-time.Hour), CreatedAt: now.Add(-24 * time.Hour), UpdatedAt: now.Add(-24 * time.Hour),
+	}))
+	// Future foresight.
+	require.NoError(t, store.SaveMemory(ctx, &storage.Memory{
+		ID: "f2", Content: "demo next friday", MemType: "foresight", Status: "active",
+		ExpiresAt: now.Add(72 * time.Hour), CreatedAt: now, UpdatedAt: now,
+	}))
+
+	rep, err := memprovider.Consolidate(ctx, store, nil)
+	require.NoError(t, err)
+	assert.Equal(t, 1, rep.Archived)
+
+	// Verify states.
+	all, _ := store.ListMemoriesByType(ctx, "foresight", 100)
+	var archived, active int
+	for _, m := range all {
+		if m.Status == storage.MemoryStatusArchived {
+			archived++
+		}
+		if m.Status == storage.MemoryStatusActive {
+			active++
+		}
+	}
+	assert.Equal(t, 1, archived)
+	assert.Equal(t, 1, active)
+
+	// Verify event.
+	var found bool
+	for _, e := range store.events {
+		if e.kind == "memory.foresight_archived" {
+			found = true
+			assert.Contains(t, string(e.data), `"archived":1`)
+		}
+	}
+	assert.True(t, found, "expected memory.foresight_archived event")
+}
