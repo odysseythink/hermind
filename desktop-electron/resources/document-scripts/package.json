@@ -1,0 +1,14 @@
+{
+  "name": "hermind-document-scripts",
+  "version": "1.0.0",
+  "description": "Document generation scripts for Hermind (extracted from AnythingLLM)",
+  "bin": {
+    "generate-doc": "./bin/generate-doc.js"
+  },
+  "dependencies": {
+    "docx": "^9.0.0",
+    "marked": "^12.0.0",
+    "pptxgenjs": "^3.12.0",
+    "uuid": "^9.0.0"
+  }
+}
