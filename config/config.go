@@ -8,9 +8,13 @@ import (
 // CompressionConfig is an alias for the pantheon compression config.
 type CompressionConfig = compression.CompressionConfig
 
+// DefaultEmbedModel is the fallback embedding model when embed_model is empty.
+const DefaultEmbedModel = "text-embedding-3-small"
+
 // YAML tags mirror the existing Python hermes config.yaml format.
 type Config struct {
 	Model             string                    `yaml:"model"`
+	EmbedModel        string                    `yaml:"embed_model,omitempty"`
 	Providers         map[string]ProviderConfig `yaml:"providers"`
 	FallbackProviders []ProviderConfig          `yaml:"fallback_providers,omitempty"`
 	Agent             AgentConfig               `yaml:"agent"`
@@ -142,7 +146,7 @@ type SkillsConfig struct {
 // ToolsConfig records user tool enable/disable selections.
 // An empty struct means "all registered tools are active".
 type ToolsConfig struct {
-	Disabled []string                  `yaml:"disabled,omitempty"`
+	Disabled []string `yaml:"disabled,omitempty"`
 	// Settings holds per-tool个性化配置. Keys are tool names.
 	Settings map[string]map[string]any `yaml:"settings,omitempty"`
 }
@@ -557,8 +561,9 @@ type PresenceConfig struct {
 
 func Default() *Config {
 	return &Config{
-		Model:     "anthropic/claude-opus-4-6",
-		Providers: map[string]ProviderConfig{},
+		Model:      "anthropic/claude-opus-4-6",
+		EmbedModel: DefaultEmbedModel,
+		Providers:  map[string]ProviderConfig{},
 		Agent: AgentConfig{
 			MaxTurns:       15,
 			GatewayTimeout: 1800,
