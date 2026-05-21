@@ -6,9 +6,9 @@ import (
 	"path/filepath"
 	"testing"
 
-	"github.com/stretchr/testify/require"
 	"github.com/odysseythink/hermind/config"
 	"github.com/odysseythink/hermind/storage/sqlite"
+	"github.com/stretchr/testify/require"
 )
 
 // TestBuildEngineDeps_Smoke constructs Deps with a minimal config and
@@ -119,4 +119,18 @@ func TestBuildEngineDeps_AuxFallsBackToMainProvider(t *testing.T) {
 	require.NotNil(t, deps.Provider, "main provider must be set")
 	require.NotNil(t, deps.AuxProvider, "AuxProvider must fall back to main provider when auxiliary config is blank")
 	require.Same(t, deps.Provider, deps.AuxProvider, "blank-auxiliary fallback should reuse the main provider instance")
+}
+
+func TestResolveEmbedModel(t *testing.T) {
+	// Custom value is used when set
+	cfg := &config.Config{EmbedModel: "openai/text-embedding-3-large"}
+	require.Equal(t, "openai/text-embedding-3-large", resolveEmbedModel(cfg))
+
+	// Empty string falls back to default
+	cfg2 := &config.Config{}
+	require.Equal(t, config.DefaultEmbedModel, resolveEmbedModel(cfg2))
+
+	// Whitespace-only is treated as empty and falls back to default
+	cfg3 := &config.Config{EmbedModel: "   "}
+	require.Equal(t, config.DefaultEmbedModel, resolveEmbedModel(cfg3))
 }
