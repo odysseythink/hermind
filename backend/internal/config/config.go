@@ -315,6 +315,10 @@ type Config struct {
 	// === Scheduled Jobs ===
 	SchedJobMaxConcurrent int `env:"SCHEDULED_JOB_MAX_CONCURRENT" envDefault:"1"`
 	SchedJobTimeoutMS    int `env:"SCHEDULED_JOB_TIMEOUT_MS"     envDefault:"600000"`
+
+	// === WebPush ===
+	WebPushMailTo     string `env:"WEBPUSH_MAIL_TO"      envDefault:"mailto:webpush@hermind.local"`
+	WebPushTTLSeconds int    `env:"WEBPUSH_TTL_SECONDS"  envDefault:"60"`
 }
 
 func Load() (*Config, error) {

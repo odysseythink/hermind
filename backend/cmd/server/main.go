@@ -96,6 +96,14 @@ func main() {
 	eventLogSvc := services.NewEventLogService(db)
 	tempTokenSvc := services.NewTemporaryAuthTokenService(db)
 	sysSvc := services.NewSystemService(db)
+	webpushSvc := services.NewWebPushService(db, sysSvc, enc,
+		services.WebPushOptions{
+			MailTo: cfg.WebPushMailTo,
+			TTL:    cfg.WebPushTTLSeconds,
+		})
+	if err := webpushSvc.Init(context.Background()); err != nil {
+		mlog.Fatal("webpush init failed", mlog.Err(err))
+	}
 	phSvc := services.NewPromptHistoryService(db)
 	wsSvc := services.NewWorkspaceService(db, cfg, phSvc)
 	searchSvc := services.NewSearchService(db)
@@ -287,6 +295,7 @@ func main() {
 		handlers.RegisterAPIEmbedRoutes(api, embedSvc, apiKeySvc, db)
 		handlers.RegisterScheduledJobsRoutes(api, sjSvc, sched, contSvc, authSvc)
 		handlers.RegisterMemoryRoutes(api, memSvc, wsSvc, authSvc)
+		handlers.RegisterWebPushRoutes(api, webpushSvc, authSvc)
 
 		// API v1 routes (API key auth)
 		handlers.RegisterAPIAuthRoutes(api, apiKeySvc)
