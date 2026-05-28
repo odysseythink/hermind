@@ -13,12 +13,13 @@ import (
 )
 
 type ScheduledJobsHandler struct {
-	svc   *services.ScheduledJobService
-	sched *scheduler.JobScheduler
+	svc     *services.ScheduledJobService
+	sched   *scheduler.JobScheduler
+	contSvc *services.ScheduledJobContinueService
 }
 
-func NewScheduledJobsHandler(svc *services.ScheduledJobService, sched *scheduler.JobScheduler) *ScheduledJobsHandler {
-	return &ScheduledJobsHandler{svc: svc, sched: sched}
+func NewScheduledJobsHandler(svc *services.ScheduledJobService, sched *scheduler.JobScheduler, contSvc *services.ScheduledJobContinueService) *ScheduledJobsHandler {
+	return &ScheduledJobsHandler{svc: svc, sched: sched, contSvc: contSvc}
 }
 
 type createReq struct {
@@ -168,8 +169,22 @@ func (h *ScheduledJobsHandler) MarkRunRead(c *gin.Context) {
 	c.JSON(http.StatusOK, gin.H{"success": true})
 }
 
-func RegisterScheduledJobsRoutes(r *gin.RouterGroup, svc *services.ScheduledJobService, sched *scheduler.JobScheduler, authSvc *services.AuthService) {
-	h := NewScheduledJobsHandler(svc, sched)
+func (h *ScheduledJobsHandler) Continue(c *gin.Context) {
+	runID, err := strconv.Atoi(c.Param("runId"))
+	if err != nil {
+		c.JSON(http.StatusBadRequest, dto.ErrorResponse{Error: "bad id"})
+		return
+	}
+	ws, thr, err := h.contSvc.ContinueInThread(c.Request.Context(), runID)
+	if err != nil {
+		c.JSON(http.StatusInternalServerError, dto.ErrorResponse{Error: err.Error()})
+		return
+	}
+	c.JSON(http.StatusOK, gin.H{"workspace": ws, "thread": thr})
+}
+
+func RegisterScheduledJobsRoutes(r *gin.RouterGroup, svc *services.ScheduledJobService, sched *scheduler.JobScheduler, contSvc *services.ScheduledJobContinueService, authSvc *services.AuthService) {
+	h := NewScheduledJobsHandler(svc, sched, contSvc)
 	g := r.Group("/scheduled-jobs", middleware.ValidatedRequest(authSvc),
 		middleware.FlexUserRoleValid([]string{"admin"}))
 	g.GET("", h.List)
@@ -180,4 +195,5 @@ func RegisterScheduledJobsRoutes(r *gin.RouterGroup, svc *services.ScheduledJobS
 	g.GET("/:id/runs", h.ListRuns)
 	g.POST("/runs/:runId/kill", h.KillRun)
 	g.POST("/runs/:runId/read", h.MarkRunRead)
+	g.POST("/runs/:runId/continue", h.Continue)
 }

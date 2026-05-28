@@ -31,13 +31,14 @@ func newSJHandlerEnv(t *testing.T) (*gin.Engine, *gorm.DB, *services.ScheduledJo
 	gin.SetMode(gin.TestMode)
 	db, err := gorm.Open(sqlite.Open("file::memory:?cache=shared"), &gorm.Config{})
 	require.NoError(t, err)
-	require.NoError(t, db.AutoMigrate(&models.ScheduledJob{}, &models.ScheduledJobRun{}, &models.EventLog{}, &models.User{}, &models.WorkspaceUser{}))
+	require.NoError(t, db.AutoMigrate(&models.ScheduledJob{}, &models.ScheduledJobRun{}, &models.EventLog{}, &models.User{}, &models.WorkspaceUser{}, &models.Workspace{}, &models.WorkspaceThread{}, &models.WorkspaceChat{}))
 	sjSvc := services.NewScheduledJobService(db)
 	evt := services.NewEventLogService(db)
 	sched := scheduler.NewJobScheduler(db, sjSvc, immediateRunner{}, evt,
 		scheduler.Options{MaxConcurrent: 1, Timeout: 1 * time.Second})
 	require.NoError(t, sched.Boot(context.Background()))
 	authSvc := services.NewAuthService(db, &config.Config{JWTSecret: "t"}, nil)
+	contSvc := services.NewScheduledJobContinueService(db, sjSvc)
 
 	r := gin.New()
 	r.Use(func(c *gin.Context) {
@@ -45,7 +46,7 @@ func newSJHandlerEnv(t *testing.T) (*gin.Engine, *gorm.DB, *services.ScheduledJo
 		c.Next()
 	})
 	api := r.Group("/api")
-	RegisterScheduledJobsRoutes(api, sjSvc, sched, authSvc)
+	RegisterScheduledJobsRoutes(api, sjSvc, sched, contSvc, authSvc)
 	return r, db, sjSvc, sched
 }
 
@@ -104,4 +105,20 @@ func TestScheduledJobs_InvalidCronReturns400(t *testing.T) {
 	req.Header.Set("Content-Type", "application/json")
 	r.ServeHTTP(w, req)
 	assert.Equal(t, http.StatusBadRequest, w.Code)
+}
+
+func TestScheduledJobs_ContinueInThread_Endpoint(t *testing.T) {
+	r, db, sjSvc, _ := newSJHandlerEnv(t)
+	require.NoError(t, db.AutoMigrate(&models.WorkspaceThread{}))
+	job, _ := sjSvc.Create(context.Background(), services.ScheduledJobInput{
+		Name: "c", Prompt: "P", Schedule: "* * * * *",
+	})
+	run, _ := sjSvc.StartRun(context.Background(), job.ID)
+	_ = sjSvc.Complete(context.Background(), run.ID, `{"text":"answer"}`)
+
+	w := httptest.NewRecorder()
+	req := httptest.NewRequest(http.MethodPost,
+		"/api/scheduled-jobs/runs/"+strconv.Itoa(run.ID)+"/continue", nil)
+	r.ServeHTTP(w, req)
+	assert.Equal(t, http.StatusOK, w.Code, w.Body.String())
 }
