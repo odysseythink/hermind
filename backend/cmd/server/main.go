@@ -26,6 +26,7 @@ import (
 	"github.com/odysseythink/hermind/backend/internal/mcp"
 	"github.com/odysseythink/hermind/backend/internal/providers"
 	"github.com/odysseythink/hermind/backend/internal/reranker"
+	"github.com/odysseythink/hermind/backend/internal/scheduler"
 	"github.com/odysseythink/hermind/backend/internal/services"
 	"github.com/odysseythink/hermind/backend/internal/tts"
 	"github.com/unidoc/unioffice/common/license"
@@ -191,6 +192,20 @@ func main() {
 		OutlookStore:    tokenStore,
 		WhitelistSvc:    whitelistSvc,
 	})
+	sjSvc := services.NewScheduledJobService(db)
+	agentRunner := scheduler.NewRuntimeAgentRunner(agentRuntime, eventLogSvc)
+	sched := scheduler.NewJobScheduler(db, sjSvc, agentRunner, eventLogSvc, scheduler.Options{
+		MaxConcurrent: cfg.SchedJobMaxConcurrent,
+		Timeout:       time.Duration(cfg.SchedJobTimeoutMS) * time.Millisecond,
+		MaxActive:     cfg.SchedJobMaxActive,
+	})
+	if err := sched.Boot(context.Background()); err != nil {
+		mlog.Fatal("scheduler boot failed", mlog.Err(err))
+	}
+	defer func() { _ = sched.Stop(context.Background()) }()
+
+	contSvc := services.NewScheduledJobContinueService(db, sjSvc)
+
 	workerMgr := workers.NewManager(db, cfg)
 	workerMgr.Register(
 		workers.NewCleanupOrphanJob(db, cfg),
@@ -267,6 +282,7 @@ func main() {
 		handlers.RegisterEmbedRoutes(api, embedSvc, db)
 		handlers.RegisterEmbedManagementRoutes(api, embedSvc, authSvc, db)
 		handlers.RegisterAPIEmbedRoutes(api, embedSvc, apiKeySvc, db)
+		handlers.RegisterScheduledJobsRoutes(api, sjSvc, sched, contSvc, authSvc)
 
 		// API v1 routes (API key auth)
 		handlers.RegisterAPIAuthRoutes(api, apiKeySvc)

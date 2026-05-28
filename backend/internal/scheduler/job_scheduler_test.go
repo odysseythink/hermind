@@ -3,6 +3,7 @@ package scheduler
 import (
 	"context"
 	"errors"
+	"fmt"
 	"sync"
 	"sync/atomic"
 	"testing"
@@ -39,8 +40,12 @@ func (f *fakeRunner) RunOnce(ctx context.Context, job *models.ScheduledJob) (*Ag
 	return &AgentRunResult{Text: f.resultText, Duration: 1}, nil
 }
 
+var schedTestDBCounter int32
+
 func newSchedTestDB(t *testing.T) (*gorm.DB, *services.ScheduledJobService) {
-	db, err := gorm.Open(sqlite.Open("file::memory:?cache=shared"), &gorm.Config{})
+	// Use a unique shared-memory DB name per call so parallel tests don't collide.
+	name := fmt.Sprintf("file:%s_%d?mode=memory&cache=shared", t.Name(), atomic.AddInt32(&schedTestDBCounter, 1))
+	db, err := gorm.Open(sqlite.Open(name), &gorm.Config{})
 	require.NoError(t, err)
 	require.NoError(t, db.AutoMigrate(&models.ScheduledJob{}, &models.ScheduledJobRun{}, &models.EventLog{}))
 	return db, services.NewScheduledJobService(db)

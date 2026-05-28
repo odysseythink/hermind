@@ -183,6 +183,42 @@ func (h *ScheduledJobsHandler) Continue(c *gin.Context) {
 	c.JSON(http.StatusOK, gin.H{"workspace": ws, "thread": thr})
 }
 
+type ToolCatalogItem struct {
+	ID            string `json:"id"`
+	Name          string `json:"name"`
+	Description   string `json:"description,omitempty"`
+	RequiresSetup bool   `json:"requiresSetup,omitempty"`
+}
+
+type ToolCatalogCategory struct {
+	Category string            `json:"category"`
+	Name     string            `json:"name"`
+	Items    []ToolCatalogItem `json:"items"`
+}
+
+func (h *ScheduledJobsHandler) ListTools(c *gin.Context) {
+	// Static default skills first (always present).
+	cats := []ToolCatalogCategory{
+		{
+			Category: "agent-skills", Name: "Agent Skills",
+			Items: []ToolCatalogItem{
+				{ID: "rag-memory", Name: "RAG Memory", Description: "Recall and cite information from embedded documents"},
+				{ID: "document-summarizer", Name: "Document Summarizer", Description: "Summarize documents in the workspace"},
+				{ID: "web-scraping", Name: "Web Scraping", Description: "Scrape content from web pages"},
+				{ID: "create-chart", Name: "Create Charts", Description: "Generate data visualization charts"},
+				{ID: "web-browsing", Name: "Web Browsing", Description: "Search and browse the web"},
+				{ID: "sql-agent", Name: "SQL Agent", Description: "Query connected SQL databases"},
+				{ID: "filesystem-agent", Name: "Filesystem"},
+				{ID: "create-files-agent", Name: "Create Files"},
+			},
+		},
+	}
+	// MCP servers — left as a TODO for the engineer to populate from MCPService
+	// if available. The shape:
+	//   {Category: "mcp-servers", Name: "MCP Servers", Items: [{ID: "@@mcp_" + serverName, Name: ..., Description: ...}]}
+	c.JSON(http.StatusOK, gin.H{"categories": cats})
+}
+
 func RegisterScheduledJobsRoutes(r *gin.RouterGroup, svc *services.ScheduledJobService, sched *scheduler.JobScheduler, contSvc *services.ScheduledJobContinueService, authSvc *services.AuthService) {
 	h := NewScheduledJobsHandler(svc, sched, contSvc)
 	g := r.Group("/scheduled-jobs", middleware.ValidatedRequest(authSvc),
@@ -196,4 +232,5 @@ func RegisterScheduledJobsRoutes(r *gin.RouterGroup, svc *services.ScheduledJobS
 	g.POST("/runs/:runId/kill", h.KillRun)
 	g.POST("/runs/:runId/read", h.MarkRunRead)
 	g.POST("/runs/:runId/continue", h.Continue)
+	g.GET("/tools", h.ListTools)
 }

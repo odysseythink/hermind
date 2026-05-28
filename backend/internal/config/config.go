@@ -310,6 +310,11 @@ type Config struct {
 	WorkerSyncWatchedInterval string `env:"WORKER_SYNC_WATCHED_INTERVAL"      envDefault:"0 * * * *"`
 	WorkerSyncWatchedTimeout  string `env:"WORKER_SYNC_WATCHED_TIMEOUT"       envDefault:"10m"`
 	WorkerSyncWatchedEnabled  bool   `env:"WORKER_SYNC_WATCHED_ENABLED"       envDefault:"true"`
+
+	// === Scheduled Jobs ===
+	SchedJobMaxConcurrent int `env:"SCHEDULED_JOB_MAX_CONCURRENT" envDefault:"1"`
+	SchedJobTimeoutMS    int `env:"SCHEDULED_JOB_TIMEOUT_MS"     envDefault:"600000"`
+	SchedJobMaxActive    int `env:"SCHEDULED_JOB_MAX_ACTIVE"     envDefault:"0"`
 }
 
 func Load() (*Config, error) {

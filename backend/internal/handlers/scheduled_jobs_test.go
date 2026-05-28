@@ -122,3 +122,14 @@ func TestScheduledJobs_ContinueInThread_Endpoint(t *testing.T) {
 	r.ServeHTTP(w, req)
 	assert.Equal(t, http.StatusOK, w.Code, w.Body.String())
 }
+
+func TestScheduledJobs_ListTools(t *testing.T) {
+	r, _, _, _ := newSJHandlerEnv(t)
+	w := httptest.NewRecorder()
+	req := httptest.NewRequest(http.MethodGet, "/api/scheduled-jobs/tools", nil)
+	r.ServeHTTP(w, req)
+	require.Equal(t, http.StatusOK, w.Code)
+	var body struct{ Categories []ToolCatalogCategory }
+	require.NoError(t, json.Unmarshal(w.Body.Bytes(), &body))
+	assert.NotEmpty(t, body.Categories)
+}
