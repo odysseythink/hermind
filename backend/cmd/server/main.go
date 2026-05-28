@@ -197,12 +197,10 @@ func main() {
 	sched := scheduler.NewJobScheduler(db, sjSvc, agentRunner, eventLogSvc, scheduler.Options{
 		MaxConcurrent: cfg.SchedJobMaxConcurrent,
 		Timeout:       time.Duration(cfg.SchedJobTimeoutMS) * time.Millisecond,
-		MaxActive:     cfg.SchedJobMaxActive,
 	})
 	if err := sched.Boot(context.Background()); err != nil {
 		mlog.Fatal("scheduler boot failed", mlog.Err(err))
 	}
-	defer func() { _ = sched.Stop(context.Background()) }()
 
 	contSvc := services.NewScheduledJobContinueService(db, sjSvc)
 
@@ -331,7 +329,7 @@ func main() {
 	sig := <-sigCh
 	mlog.Info("shutdown signal received", mlog.String("signal", sig.String()))
 
-	// Order matters: stop accepting requests → drain MCP children → stop workers → exit.
+	// Order matters: stop accepting requests → drain MCP children → stop scheduler → stop workers → exit.
 	shutdownCtx, cancel := context.WithTimeout(context.Background(), 30*time.Second)
 	defer cancel()
 	if err := srv.Shutdown(shutdownCtx); err != nil {
@@ -339,6 +337,9 @@ func main() {
 	}
 	if err := mcpHyp.PruneAll(); err != nil {
 		mlog.Warning("mcp prune error", mlog.Err(err))
+	}
+	if err := sched.Stop(shutdownCtx); err != nil {
+		mlog.Warning("scheduler stop error", mlog.Err(err))
 	}
 	if err := workerMgr.Stop(shutdownCtx); err != nil {
 		mlog.Warning("worker manager stop error", mlog.Err(err))

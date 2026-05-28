@@ -18,7 +18,6 @@ import (
 type Options struct {
 	MaxConcurrent int           // semaphore size; default 1
 	Timeout       time.Duration // per-run wall-clock; default 10min
-	MaxActive     int           // cap on enabled jobs (0 = unlimited)
 }
 
 func (o *Options) fill() {
@@ -42,7 +41,8 @@ type JobScheduler struct {
 
 	mu          sync.Mutex
 	entries     map[int]cron.EntryID
-	inflightCxl map[int][]context.CancelFunc
+	inflightCxl map[int]context.CancelFunc // runID -> cancel
+	jobOfRun    map[int]int                // runID -> jobID
 
 	booted bool
 	wg     sync.WaitGroup
@@ -65,7 +65,8 @@ func NewJobScheduler(
 		cron:        cron.New(),
 		sem:         make(chan struct{}, opts.MaxConcurrent),
 		entries:     make(map[int]cron.EntryID),
-		inflightCxl: make(map[int][]context.CancelFunc),
+		inflightCxl: make(map[int]context.CancelFunc),
+		jobOfRun:    make(map[int]int),
 	}
 }
 
@@ -138,7 +139,9 @@ func (s *JobScheduler) EnqueueOnce(ctx context.Context, jobID int) (*models.Sche
 	if run == nil {
 		return nil, nil
 	}
-	_ = s.sjSvc.UpdateRunTimestamps(ctx, jobID)
+	if err := s.sjSvc.UpdateRunTimestamps(ctx, jobID); err != nil {
+		mlog.Warning("scheduler: UpdateRunTimestamps failed", mlog.Int("job", jobID), mlog.Err(err))
+	}
 	s.wg.Add(1)
 	go s.executeRun(jobID, run.ID)
 	return run, nil
@@ -146,7 +149,7 @@ func (s *JobScheduler) EnqueueOnce(ctx context.Context, jobID int) (*models.Sche
 
 // KillRun marks a run failed and cancels its goroutine.
 func (s *JobScheduler) KillRun(ctx context.Context, runID int) (bool, error) {
-	row, err := s.sjSvc.GetRun(ctx, runID)
+	_, err := s.sjSvc.GetRun(ctx, runID)
 	if err != nil {
 		return false, err
 	}
@@ -154,7 +157,7 @@ func (s *JobScheduler) KillRun(ctx context.Context, runID int) (bool, error) {
 	if err != nil || !killed {
 		return false, err
 	}
-	s.cancelInflight(row.JobID)
+	s.cancelInflight(runID)
 	return true, nil
 }
 
@@ -187,18 +190,29 @@ func (s *JobScheduler) removeCron(jobID int) {
 	}
 }
 
-func (s *JobScheduler) cancelInflight(jobID int) {
+func (s *JobScheduler) cancelInflight(runID int) {
 	s.mu.Lock()
-	fns := s.inflightCxl[jobID]
-	delete(s.inflightCxl, jobID)
+	fn, ok := s.inflightCxl[runID]
+	delete(s.inflightCxl, runID)
+	delete(s.jobOfRun, runID)
 	s.mu.Unlock()
-	for _, fn := range fns {
+	if ok {
 		fn()
 	}
 }
 
 func (s *JobScheduler) killAllForJob(jobID int) {
-	s.cancelInflight(jobID)
+	s.mu.Lock()
+	var toCancel []int
+	for runID, jid := range s.jobOfRun {
+		if jid == jobID {
+			toCancel = append(toCancel, runID)
+		}
+	}
+	s.mu.Unlock()
+	for _, runID := range toCancel {
+		s.cancelInflight(runID)
+	}
 }
 
 func (s *JobScheduler) executeRun(jobID, runID int) {
@@ -210,10 +224,15 @@ func (s *JobScheduler) executeRun(jobID, runID int) {
 	ctx, cancel := context.WithTimeout(context.Background(), s.opts.Timeout)
 	defer cancel()
 	s.mu.Lock()
-	s.inflightCxl[jobID] = append(s.inflightCxl[jobID], cancel)
+	s.inflightCxl[runID] = cancel
+	s.jobOfRun[runID] = jobID
 	s.mu.Unlock()
 
 	defer func() {
+		s.mu.Lock()
+		delete(s.inflightCxl, runID)
+		delete(s.jobOfRun, runID)
+		s.mu.Unlock()
 		if r := recover(); r != nil {
 			_, _ = s.sjSvc.Fail(context.Background(), runID, fmt.Sprintf("panic: %v", r))
 			mlog.Error("scheduled job panicked", mlog.Int("job", jobID), mlog.Any("recover", r))

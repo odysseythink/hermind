@@ -37,21 +37,15 @@ func (s *ScheduledJobContinueService) ContinueInThread(ctx context.Context, runI
 	}
 
 	// Upsert workspace by slug "scheduled-jobs"
-	var ws models.Workspace
-	if err := s.db.WithContext(ctx).Where("slug = ?", "scheduled-jobs").First(&ws).Error; err != nil {
-		if err != gorm.ErrRecordNotFound {
-			return nil, nil, err
-		}
-		ws = models.Workspace{
-			Name:          "Scheduled Jobs",
-			Slug:          "scheduled-jobs",
-			ChatMode:      strPtr("automatic"),
-			CreatedAt:     time.Now(),
-			LastUpdatedAt: time.Now(),
-		}
-		if err := s.db.WithContext(ctx).Create(&ws).Error; err != nil {
-			return nil, nil, err
-		}
+	ws := models.Workspace{
+		Name:          "Scheduled Jobs",
+		Slug:          "scheduled-jobs",
+		ChatMode:      strPtr("automatic"),
+		CreatedAt:     time.Now(),
+		LastUpdatedAt: time.Now(),
+	}
+	if err := s.db.WithContext(ctx).Where(models.Workspace{Slug: "scheduled-jobs"}).FirstOrCreate(&ws).Error; err != nil {
+		return nil, nil, err
 	}
 
 	thr := models.WorkspaceThread{

@@ -10,6 +10,7 @@ import (
 	"github.com/odysseythink/hermind/backend/internal/middleware"
 	"github.com/odysseythink/hermind/backend/internal/scheduler"
 	"github.com/odysseythink/hermind/backend/internal/services"
+	"gorm.io/gorm"
 )
 
 type ScheduledJobsHandler struct {
@@ -83,6 +84,10 @@ func (h *ScheduledJobsHandler) Update(c *gin.Context) {
 		Schedule: req.Schedule, Enabled: req.Enabled,
 	})
 	if err != nil {
+		if errors.Is(err, services.ErrJobNotFound) || errors.Is(err, gorm.ErrRecordNotFound) {
+			c.JSON(http.StatusNotFound, dto.ErrorResponse{Error: "job not found"})
+			return
+		}
 		if errors.Is(err, services.ErrInvalidCron) {
 			c.JSON(http.StatusBadRequest, dto.ErrorResponse{Error: "invalid cron"})
 			return
@@ -112,6 +117,14 @@ func (h *ScheduledJobsHandler) Trigger(c *gin.Context) {
 	id, err := strconv.Atoi(c.Param("id"))
 	if err != nil {
 		c.JSON(http.StatusBadRequest, dto.ErrorResponse{Error: "bad id"})
+		return
+	}
+	if _, err := h.svc.Get(c.Request.Context(), id); err != nil {
+		if errors.Is(err, services.ErrJobNotFound) || errors.Is(err, gorm.ErrRecordNotFound) {
+			c.JSON(http.StatusNotFound, dto.ErrorResponse{Error: "job not found"})
+			return
+		}
+		c.JSON(http.StatusInternalServerError, dto.ErrorResponse{Error: err.Error()})
 		return
 	}
 	run, err := h.sched.EnqueueOnce(c.Request.Context(), id)
@@ -150,6 +163,10 @@ func (h *ScheduledJobsHandler) KillRun(c *gin.Context) {
 	}
 	killed, err := h.sched.KillRun(c.Request.Context(), runID)
 	if err != nil {
+		if errors.Is(err, gorm.ErrRecordNotFound) {
+			c.JSON(http.StatusNotFound, dto.ErrorResponse{Error: "run not found"})
+			return
+		}
 		c.JSON(http.StatusInternalServerError, dto.ErrorResponse{Error: err.Error()})
 		return
 	}
@@ -177,6 +194,10 @@ func (h *ScheduledJobsHandler) Continue(c *gin.Context) {
 	}
 	ws, thr, err := h.contSvc.ContinueInThread(c.Request.Context(), runID)
 	if err != nil {
+		if errors.Is(err, gorm.ErrRecordNotFound) {
+			c.JSON(http.StatusNotFound, dto.ErrorResponse{Error: "run not found"})
+			return
+		}
 		c.JSON(http.StatusInternalServerError, dto.ErrorResponse{Error: err.Error()})
 		return
 	}

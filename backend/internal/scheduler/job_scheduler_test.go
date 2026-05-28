@@ -2,7 +2,6 @@ package scheduler
 
 import (
 	"context"
-	"errors"
 	"fmt"
 	"sync"
 	"sync/atomic"
@@ -44,9 +43,13 @@ var schedTestDBCounter int32
 
 func newSchedTestDB(t *testing.T) (*gorm.DB, *services.ScheduledJobService) {
 	// Use a unique shared-memory DB name per call so parallel tests don't collide.
+	// Force a single connection to avoid SQLITE_LOCKED in shared-cache mode.
 	name := fmt.Sprintf("file:%s_%d?mode=memory&cache=shared", t.Name(), atomic.AddInt32(&schedTestDBCounter, 1))
 	db, err := gorm.Open(sqlite.Open(name), &gorm.Config{})
 	require.NoError(t, err)
+	sqlDB, err := db.DB()
+	require.NoError(t, err)
+	sqlDB.SetMaxOpenConns(1)
 	require.NoError(t, db.AutoMigrate(&models.ScheduledJob{}, &models.ScheduledJobRun{}, &models.EventLog{}))
 	return db, services.NewScheduledJobService(db)
 }
@@ -164,11 +167,9 @@ func TestJobScheduler_TimeoutMarksRunTimedOut(t *testing.T) {
 		sched.Stop(context.Background())
 	}()
 
-	run, _ := sched.EnqueueOnce(context.Background(), job.ID)
+	_, _ = sched.EnqueueOnce(context.Background(), job.ID)
 	require.Eventually(t, func() bool {
-		r, _ := sjSvc.GetRun(context.Background(), run.ID)
-		return r != nil && r.Status == models.JobRunTimedOut
-	}, 2*time.Second, 25*time.Millisecond)
+		runs, _ := sjSvc.ListRuns(context.Background(), job.ID, 1, 0)
+		return len(runs) > 0 && runs[0].Status == models.JobRunTimedOut
+	}, 2*time.Second, 100*time.Millisecond)
 }
-
-var _ = errors.New // keep import even if not yet used
