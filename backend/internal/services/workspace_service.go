@@ -15,12 +15,19 @@ import (
 )
 
 type WorkspaceService struct {
-	db  *gorm.DB
-	cfg *config.Config
+	db            *gorm.DB
+	cfg           *config.Config
+	phSvc         *PromptHistoryService
+	defaultPrompt string
 }
 
-func NewWorkspaceService(db *gorm.DB, cfg *config.Config) *WorkspaceService {
-	return &WorkspaceService{db: db, cfg: cfg}
+func NewWorkspaceService(db *gorm.DB, cfg *config.Config, phSvc *PromptHistoryService) *WorkspaceService {
+	return &WorkspaceService{
+		db:            db,
+		cfg:           cfg,
+		phSvc:         phSvc,
+		defaultPrompt: "Given the following conversation, relevant context, and a follow up question, reply with an answer to the current question the user is asking.",
+	}
 }
 
 func (s *WorkspaceService) Create(ctx context.Context, userID int, req dto.CreateWorkspaceRequest) (*models.Workspace, error) {
@@ -75,11 +82,24 @@ func (s *WorkspaceService) GetBySlug(ctx context.Context, slug string) (*models.
 	return &ws, nil
 }
 
-func (s *WorkspaceService) Update(ctx context.Context, slug string, req dto.UpdateWorkspaceRequest) error {
+func (s *WorkspaceService) Update(ctx context.Context, slug string, req dto.UpdateWorkspaceRequest, userID *int) error {
 	var ws models.Workspace
 	if err := s.db.Where("slug = ?", slug).First(&ws).Error; err != nil {
 		return err
 	}
+
+	// Mirror anything-llm's 4-condition prompt-history hook (server/models/workspace.js:526–532):
+	// fires when new prompt is non-empty AND prev was non-empty AND prev != defaultPrompt AND prev != new.
+	if req.OpenAiPrompt != nil && *req.OpenAiPrompt != "" &&
+		ws.OpenAiPrompt != nil && *ws.OpenAiPrompt != "" &&
+		*ws.OpenAiPrompt != s.defaultPrompt &&
+		*ws.OpenAiPrompt != *req.OpenAiPrompt {
+		if s.phSvc != nil {
+			// Non-fatal — log on failure but never block the update.
+			_ = s.phSvc.Log(ctx, ws.ID, *ws.OpenAiPrompt, userID)
+		}
+	}
+
 	updates := map[string]any{}
 	if req.Name != "" {
 		updates["name"] = req.Name

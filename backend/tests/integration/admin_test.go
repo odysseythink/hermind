@@ -35,7 +35,7 @@ func setupAdminRouter(t *testing.T) (*gin.Engine, *gorm.DB, *services.AuthServic
 	authSvc := services.NewAuthService(db, cfg, enc)
 	adminSvc := services.NewAdminService(db)
 	sysSvc := services.NewSystemService(db)
-	wsSvc := services.NewWorkspaceService(db, cfg)
+	wsSvc := services.NewWorkspaceService(db, cfg, nil)
 	apiKeySvc := services.NewAPIKeyService(db)
 	r := gin.New()
 	handlers.RegisterAdminRoutes(r.Group("/api"), adminSvc, sysSvc, wsSvc, apiKeySvc, authSvc)

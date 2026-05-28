@@ -72,7 +72,7 @@ func setupTestDB(t *testing.T) (*gin.Engine, *services.AuthService, *gorm.DB) {
 	enc, err := utils.NewEncryptionManager(cfg.StorageDir)
 	require.NoError(t, err)
 	authSvc := services.NewAuthService(db, cfg, enc)
-	wsSvc := services.NewWorkspaceService(db, cfg)
+	wsSvc := services.NewWorkspaceService(db, cfg, nil)
 	searchSvc := services.NewSearchService(db)
 	vectorSvc := services.NewVectorService(cfg)
 	mockVDB := &mockVectorDB{}

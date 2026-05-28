@@ -34,7 +34,7 @@ func setupAuthExtendedRouter(t *testing.T) (*gin.Engine, *services.AuthService, 
 	authSvc := services.NewAuthService(db, cfg, enc)
 	adminSvc := services.NewAdminService(db)
 	sysSvc := services.NewSystemService(db)
-	wsSvc := services.NewWorkspaceService(db, cfg)
+	wsSvc := services.NewWorkspaceService(db, cfg, nil)
 	apiKeySvc := services.NewAPIKeyService(db)
 
 	r := gin.New()

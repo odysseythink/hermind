@@ -51,6 +51,7 @@ func AutoMigrate(db *gorm.DB) error {
 		&models.WorkspaceParsedFile{},
 		&models.DocumentSyncQueue{},
 		&models.OutlookOAuthToken{},
+		&models.PromptHistory{},
 	)
 }
 

@@ -55,7 +55,7 @@ func TestAPIOpenAI_Models(t *testing.T) {
 	require.NoError(t, env.DB.Create(&models.Workspace{Name: "Chat 1", Slug: "chat-1"}).Error)
 	require.NoError(t, env.DB.Create(&models.Workspace{Name: "Chat 2", Slug: "chat-2"}).Error)
 
-	wsSvc := services.NewWorkspaceService(env.DB, env.Cfg)
+	wsSvc := services.NewWorkspaceService(env.DB, env.Cfg, nil)
 	api := env.Router.Group("/api")
 	RegisterAPIOpenAIRoutes(api, env.APIKeySvc, wsSvc, nil, nil, nil, env.DB, env.Cfg)
 
@@ -87,7 +87,7 @@ func TestAPIOpenAI_Models(t *testing.T) {
 
 func TestAPIOpenAI_VectorStores_Empty(t *testing.T) {
 	env := newAPITestEnv(t, nil)
-	wsSvc := services.NewWorkspaceService(env.DB, env.Cfg)
+	wsSvc := services.NewWorkspaceService(env.DB, env.Cfg, nil)
 	api := env.Router.Group("/api")
 	RegisterAPIOpenAIRoutes(api, env.APIKeySvc, wsSvc, nil, nil, nil, env.DB, env.Cfg)
 
@@ -119,7 +119,7 @@ func TestAPIOpenAI_VectorStores_WithDocs(t *testing.T) {
 
 	cfg := env.Cfg
 	cfg.VectorDB = "lancedb"
-	wsSvc := services.NewWorkspaceService(env.DB, cfg)
+	wsSvc := services.NewWorkspaceService(env.DB, cfg, nil)
 	api := env.Router.Group("/api")
 	RegisterAPIOpenAIRoutes(api, env.APIKeySvc, wsSvc, nil, nil, nil, env.DB, cfg)
 
@@ -153,7 +153,7 @@ func TestAPIOpenAI_VectorStores_WithDocs(t *testing.T) {
 func TestAPIOpenAI_VectorStores_PaginationQueryShortCircuits(t *testing.T) {
 	env := newAPITestEnv(t, nil)
 	require.NoError(t, env.DB.Create(&models.Workspace{Name: "x", Slug: "x"}).Error)
-	wsSvc := services.NewWorkspaceService(env.DB, env.Cfg)
+	wsSvc := services.NewWorkspaceService(env.DB, env.Cfg, nil)
 	api := env.Router.Group("/api")
 	RegisterAPIOpenAIRoutes(api, env.APIKeySvc, wsSvc, nil, nil, nil, env.DB, env.Cfg)
 
@@ -175,7 +175,7 @@ func TestAPIOpenAI_VectorStores_PaginationQueryShortCircuits(t *testing.T) {
 func TestAPIOpenAI_Embeddings_ArrayInput(t *testing.T) {
 	env := newAPITestEnv(t, nil)
 	env.Cfg.EmbeddingModel = "text-embedding-3-small"
-	wsSvc := services.NewWorkspaceService(env.DB, env.Cfg)
+	wsSvc := services.NewWorkspaceService(env.DB, env.Cfg, nil)
 	api := env.Router.Group("/api")
 	RegisterAPIOpenAIRoutes(api, env.APIKeySvc, wsSvc, nil, nil, &mockEmbedder{}, env.DB, env.Cfg)
 
@@ -207,7 +207,7 @@ func TestAPIOpenAI_Embeddings_ArrayInput(t *testing.T) {
 
 func TestAPIOpenAI_Embeddings_StringInputCoerced(t *testing.T) {
 	env := newAPITestEnv(t, nil)
-	wsSvc := services.NewWorkspaceService(env.DB, env.Cfg)
+	wsSvc := services.NewWorkspaceService(env.DB, env.Cfg, nil)
 	api := env.Router.Group("/api")
 	RegisterAPIOpenAIRoutes(api, env.APIKeySvc, wsSvc, nil, nil, &mockEmbedder{}, env.DB, env.Cfg)
 
@@ -228,7 +228,7 @@ func TestAPIOpenAI_Embeddings_StringInputCoerced(t *testing.T) {
 
 func TestAPIOpenAI_Embeddings_EmptyInput500(t *testing.T) {
 	env := newAPITestEnv(t, nil)
-	wsSvc := services.NewWorkspaceService(env.DB, env.Cfg)
+	wsSvc := services.NewWorkspaceService(env.DB, env.Cfg, nil)
 	api := env.Router.Group("/api")
 	RegisterAPIOpenAIRoutes(api, env.APIKeySvc, wsSvc, nil, nil, &mockEmbedder{}, env.DB, env.Cfg)
 
@@ -244,7 +244,7 @@ func TestAPIOpenAI_Embeddings_EmptyInput500(t *testing.T) {
 
 func TestAPIOpenAI_Embeddings_NilEmbedder503(t *testing.T) {
 	env := newAPITestEnv(t, nil)
-	wsSvc := services.NewWorkspaceService(env.DB, env.Cfg)
+	wsSvc := services.NewWorkspaceService(env.DB, env.Cfg, nil)
 	api := env.Router.Group("/api")
 	RegisterAPIOpenAIRoutes(api, env.APIKeySvc, wsSvc, nil, nil, nil, env.DB, env.Cfg)
 
@@ -263,7 +263,7 @@ func TestAPIOpenAI_ChatCompletions_NonStreaming(t *testing.T) {
 	ws := &models.Workspace{Name: "ws", Slug: "ws"}
 	require.NoError(t, env.DB.Create(ws).Error)
 
-	wsSvc := services.NewWorkspaceService(env.DB, env.Cfg)
+	wsSvc := services.NewWorkspaceService(env.DB, env.Cfg, nil)
 	chatSvc := newChatSvcWithMock(t, env, "Hello from LLM")
 	api := env.Router.Group("/api")
 	RegisterAPIOpenAIRoutes(api, env.APIKeySvc, wsSvc, chatSvc, services.NewThreadService(env.DB), nil, env.DB, env.Cfg)
@@ -307,7 +307,7 @@ func TestAPIOpenAI_ChatCompletions_NonStreaming(t *testing.T) {
 
 func TestAPIOpenAI_ChatCompletions_UnknownModelReturns401(t *testing.T) {
 	env := newAPITestEnv(t, nil)
-	wsSvc := services.NewWorkspaceService(env.DB, env.Cfg)
+	wsSvc := services.NewWorkspaceService(env.DB, env.Cfg, nil)
 	chatSvc := newChatSvcWithMock(t, env, "n/a")
 	api := env.Router.Group("/api")
 	RegisterAPIOpenAIRoutes(api, env.APIKeySvc, wsSvc, chatSvc, services.NewThreadService(env.DB), nil, env.DB, env.Cfg)
@@ -329,7 +329,7 @@ func TestAPIOpenAI_ChatCompletions_ThreadScopedModel(t *testing.T) {
 	thread := &models.WorkspaceThread{Name: "t", Slug: "t1", WorkspaceID: ws.ID}
 	require.NoError(t, env.DB.Create(thread).Error)
 
-	wsSvc := services.NewWorkspaceService(env.DB, env.Cfg)
+	wsSvc := services.NewWorkspaceService(env.DB, env.Cfg, nil)
 	chatSvc := newChatSvcWithMock(t, env, "thread-scoped")
 	api := env.Router.Group("/api")
 	RegisterAPIOpenAIRoutes(api, env.APIKeySvc, wsSvc, chatSvc, services.NewThreadService(env.DB), nil, env.DB, env.Cfg)
@@ -348,7 +348,7 @@ func TestAPIOpenAI_ChatCompletions_NoUserMessageReturns400(t *testing.T) {
 	env := newAPITestEnv(t, nil)
 	ws := &models.Workspace{Name: "ws", Slug: "ws"}
 	require.NoError(t, env.DB.Create(ws).Error)
-	wsSvc := services.NewWorkspaceService(env.DB, env.Cfg)
+	wsSvc := services.NewWorkspaceService(env.DB, env.Cfg, nil)
 	chatSvc := newChatSvcWithMock(t, env, "")
 	api := env.Router.Group("/api")
 	RegisterAPIOpenAIRoutes(api, env.APIKeySvc, wsSvc, chatSvc, services.NewThreadService(env.DB), nil, env.DB, env.Cfg)
@@ -369,7 +369,7 @@ func TestAPIOpenAI_ChatCompletions_Stream_EmitsDataFrames(t *testing.T) {
 	ws := &models.Workspace{Name: "ws", Slug: "ws"}
 	require.NoError(t, env.DB.Create(ws).Error)
 
-	wsSvc := services.NewWorkspaceService(env.DB, env.Cfg)
+	wsSvc := services.NewWorkspaceService(env.DB, env.Cfg, nil)
 	chatSvc := newChatSvcWithMock(t, env, "Hello world")
 	api := env.Router.Group("/api")
 	RegisterAPIOpenAIRoutes(api, env.APIKeySvc, wsSvc, chatSvc, services.NewThreadService(env.DB), nil, env.DB, env.Cfg)
@@ -401,7 +401,7 @@ func TestAPIOpenAI_ChatCompletions_ModelSlugWithColons(t *testing.T) {
 	thread := &models.WorkspaceThread{Name: "t", Slug: "t1:extra", WorkspaceID: ws.ID}
 	require.NoError(t, env.DB.Create(thread).Error)
 
-	wsSvc := services.NewWorkspaceService(env.DB, env.Cfg)
+	wsSvc := services.NewWorkspaceService(env.DB, env.Cfg, nil)
 	chatSvc := newChatSvcWithMock(t, env, "thread-with-colon")
 	api := env.Router.Group("/api")
 	RegisterAPIOpenAIRoutes(api, env.APIKeySvc, wsSvc, chatSvc, services.NewThreadService(env.DB), nil, env.DB, env.Cfg)
@@ -421,7 +421,7 @@ func TestAPIOpenAI_VectorStores_Pagination(t *testing.T) {
 	for i := 0; i < 5; i++ {
 		require.NoError(t, env.DB.Create(&models.Workspace{Name: fmt.Sprintf("WS %d", i), Slug: fmt.Sprintf("ws-%d", i)}).Error)
 	}
-	wsSvc := services.NewWorkspaceService(env.DB, env.Cfg)
+	wsSvc := services.NewWorkspaceService(env.DB, env.Cfg, nil)
 	api := env.Router.Group("/api")
 	RegisterAPIOpenAIRoutes(api, env.APIKeySvc, wsSvc, nil, nil, nil, env.DB, env.Cfg)
 
@@ -469,7 +469,7 @@ func TestAPIOpenAI_ChatCompletions_NonStreaming_Usage(t *testing.T) {
 	ws := &models.Workspace{Name: "ws", Slug: "ws"}
 	require.NoError(t, env.DB.Create(ws).Error)
 
-	wsSvc := services.NewWorkspaceService(env.DB, env.Cfg)
+	wsSvc := services.NewWorkspaceService(env.DB, env.Cfg, nil)
 	chatSvc := newChatSvcWithMock(t, env, "Hello from LLM")
 	api := env.Router.Group("/api")
 	RegisterAPIOpenAIRoutes(api, env.APIKeySvc, wsSvc, chatSvc, services.NewThreadService(env.DB), nil, env.DB, env.Cfg)
@@ -507,7 +507,7 @@ func TestAPIOpenAI_ChatCompletions_ImageURL(t *testing.T) {
 	ws := &models.Workspace{Name: "ws", Slug: "ws"}
 	require.NoError(t, env.DB.Create(ws).Error)
 
-	wsSvc := services.NewWorkspaceService(env.DB, env.Cfg)
+	wsSvc := services.NewWorkspaceService(env.DB, env.Cfg, nil)
 	chatSvc := newChatSvcWithMock(t, env, "I see the image")
 	api := env.Router.Group("/api")
 	RegisterAPIOpenAIRoutes(api, env.APIKeySvc, wsSvc, chatSvc, services.NewThreadService(env.DB), nil, env.DB, env.Cfg)

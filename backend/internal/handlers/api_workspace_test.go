@@ -14,7 +14,7 @@ import (
 )
 
 func registerWorkspaceRoutesForTest(env *apiTestEnv) {
-	wsSvc := services.NewWorkspaceService(env.DB, env.Cfg)
+	wsSvc := services.NewWorkspaceService(env.DB, env.Cfg, nil)
 	api := env.Router.Group("/api")
 	RegisterAPIWorkspaceRoutes(api, env.APIKeySvc, wsSvc, nil, nil, nil, env.DB)
 }
@@ -178,7 +178,7 @@ func TestAPIWorkspace_UpdateEmbeddings(t *testing.T) {
 	// on the embed step, but the handler returns 200 + error message (Node parity).
 	docSvc := services.NewDocumentService(env.DB, env.Cfg, nil, nil, nil, nil, nil)
 	api := env.Router.Group("/api")
-	wsSvc := services.NewWorkspaceService(env.DB, env.Cfg)
+	wsSvc := services.NewWorkspaceService(env.DB, env.Cfg, nil)
 	RegisterAPIWorkspaceRoutes(api, env.APIKeySvc, wsSvc, nil, nil, docSvc, env.DB)
 
 	payload := []byte(`{"adds":[],"removes":[]}`)

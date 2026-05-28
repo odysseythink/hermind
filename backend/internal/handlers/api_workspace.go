@@ -69,7 +69,7 @@ func (h *APIWorkspaceHandler) Update(c *gin.Context) {
 		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
 		return
 	}
-	if err := h.wsSvc.Update(c.Request.Context(), ws.Slug, req); err != nil {
+	if err := h.wsSvc.Update(c.Request.Context(), ws.Slug, req, nil); err != nil {
 		c.JSON(http.StatusOK, gin.H{"workspace": nil, "message": err.Error()})
 		return
 	}

@@ -61,7 +61,7 @@ func setupChatTest(t *testing.T, llm providers.LLMProvider) (*gin.Engine, *servi
 	enc, err := utils.NewEncryptionManager(cfg.StorageDir)
 	require.NoError(t, err)
 	authSvc := services.NewAuthService(db, cfg, enc)
-	wsSvc := services.NewWorkspaceService(db, cfg)
+	wsSvc := services.NewWorkspaceService(db, cfg, nil)
 	searchSvc := services.NewSearchService(db)
 	vectorSvc := services.NewVectorService(cfg)
 	chatSvc := services.NewChatService(db, cfg, vectorSvc, llm, nil, nil, nil)

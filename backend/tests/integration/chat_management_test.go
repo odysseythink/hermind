@@ -34,7 +34,7 @@ func setupChatMgmtTest(t *testing.T) (*gin.Engine, string, string, int) {
 	enc, err := utils.NewEncryptionManager(cfg.StorageDir)
 	assert.NoError(t, err)
 	authSvc := services.NewAuthService(db, cfg, enc)
-	wsSvc := services.NewWorkspaceService(db, cfg)
+	wsSvc := services.NewWorkspaceService(db, cfg, nil)
 	searchSvc := services.NewSearchService(db)
 	chatSvc := services.NewChatService(db, cfg, nil, nil, nil, nil, nil)
 

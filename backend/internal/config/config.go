@@ -291,6 +291,9 @@ type Config struct {
 	AgentCreateFilesEnabled bool   `env:"AGENT_CREATE_FILES_ENABLED" envDefault:"true"`
 	AgentCreateFilesDir     string `env:"AGENT_CREATE_FILES_DIR"` // empty → <StorageDir>/generated-files
 
+	// === unioffice license (pptx generation) ===
+	UnidocMeteredKey string `env:"UNIDOC_METERED_KEY"`
+
 	// === OAuth / Public Base URL ===
 	PublicBaseURL    string `env:"PUBLIC_BASE_URL"`                       // e.g. "https://anything.example.com"
 	OutlookAuthority string `env:"OUTLOOK_AUTHORITY" envDefault:"common"` // common | consumers | <tenant-id>

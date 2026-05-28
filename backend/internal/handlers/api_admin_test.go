@@ -20,7 +20,7 @@ func setupAPIAdmin(t *testing.T, cfg *config.Config) (*apiTestEnv, *APIAdminHand
 	env := newAPITestEnv(t, cfg)
 	adminSvc := services.NewAdminService(env.DB)
 	sysSvc := services.NewSystemService(env.DB)
-	wsSvc := services.NewWorkspaceService(env.DB, env.Cfg)
+	wsSvc := services.NewWorkspaceService(env.DB, env.Cfg, nil)
 	wsChatSvc := services.NewWorkspaceChatService(env.DB)
 	api := env.Router.Group("/api")
 	RegisterAPIAdminRoutes(api, env.APIKeySvc, adminSvc, sysSvc, wsSvc, wsChatSvc, env.Cfg)

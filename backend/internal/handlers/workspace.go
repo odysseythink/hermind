@@ -54,13 +54,14 @@ func (h *WorkspaceHandler) GetWorkspace(c *gin.Context) {
 }
 
 func (h *WorkspaceHandler) UpdateWorkspace(c *gin.Context) {
+	user := c.MustGet("user").(*models.User)
 	ws := c.MustGet("workspace").(*models.Workspace)
 	var req dto.UpdateWorkspaceRequest
 	if err := c.ShouldBindJSON(&req); err != nil {
 		c.JSON(http.StatusBadRequest, dto.ErrorResponse{Error: err.Error()})
 		return
 	}
-	if err := h.wsSvc.Update(c.Request.Context(), ws.Slug, req); err != nil {
+	if err := h.wsSvc.Update(c.Request.Context(), ws.Slug, req, &user.ID); err != nil {
 		c.JSON(http.StatusInternalServerError, dto.ErrorResponse{Error: err.Error()})
 		return
 	}

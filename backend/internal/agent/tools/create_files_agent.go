@@ -67,19 +67,21 @@ func NewCreateFilesAgentSkill(tc *ToolContext) *tool.Entry {
 			}
 			dst := filepath.Join(tc.Cfg.AgentCreateFilesDir, uniqueName)
 
+			contentStr, ok := args.Content.(string)
+			if !ok {
+				return tool.Error("content must be a string for " + args.Format + " format"), nil
+			}
+
 			switch args.Format {
 			case "txt", "md":
-				contentStr, _ := args.Content.(string)
 				if err := os.WriteFile(dst, []byte(contentStr), 0o644); err != nil {
 					return tool.Error(err.Error()), nil
 				}
 			case "docx":
-				contentStr, _ := args.Content.(string)
 				if err := writeDocxFile(ctx, dst, contentStr, args.Filename); err != nil {
 					return tool.Error(err.Error()), nil
 				}
 			case "pdf":
-				contentStr, _ := args.Content.(string)
 				if err := writePDFFile(ctx, dst, contentStr, args.Filename); err != nil {
 					return tool.Error(err.Error()), nil
 				}
@@ -88,7 +90,6 @@ func NewCreateFilesAgentSkill(tc *ToolContext) *tool.Entry {
 					return tool.Error(err.Error()), nil
 				}
 			case "pptx":
-				contentStr, _ := args.Content.(string)
 				if err := writePptxFile(ctx, dst, contentStr, args.Filename); err != nil {
 					return tool.Error(err.Error()), nil
 				}

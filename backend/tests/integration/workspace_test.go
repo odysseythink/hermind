@@ -32,7 +32,7 @@ func setupWorkspaceRouter(t *testing.T) (*gin.Engine, string) {
 	enc, err := utils.NewEncryptionManager(cfg.StorageDir)
 	assert.NoError(t, err)
 	authSvc := services.NewAuthService(db, cfg, enc)
-	wsSvc := services.NewWorkspaceService(db, cfg)
+	wsSvc := services.NewWorkspaceService(db, cfg, nil)
 	searchSvc := services.NewSearchService(db)
 
 	authSvc.Register(nil, dto.RegisterRequest{Username: "alice", Password: "secret"})

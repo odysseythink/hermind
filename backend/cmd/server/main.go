@@ -28,6 +28,7 @@ import (
 	"github.com/odysseythink/hermind/backend/internal/reranker"
 	"github.com/odysseythink/hermind/backend/internal/services"
 	"github.com/odysseythink/hermind/backend/internal/tts"
+	"github.com/unidoc/unioffice/common/license"
 	"github.com/odysseythink/hermind/backend/internal/vectordb"
 	"github.com/odysseythink/hermind/backend/internal/workers"
 	"github.com/odysseythink/hermind/backend/pkg/utils"
@@ -83,11 +84,19 @@ func main() {
 		mlog.Fatal("failed to seed db", mlog.Err(err))
 	}
 
+	// unioffice license (pptx generation)
+	if cfg.UnidocMeteredKey != "" {
+		if err := license.SetMeteredKey(cfg.UnidocMeteredKey); err != nil {
+			mlog.Warning("failed to set unioffice metered key", mlog.Err(err))
+		}
+	}
+
 	authSvc := services.NewAuthService(db, cfg, enc)
 	eventLogSvc := services.NewEventLogService(db)
 	tempTokenSvc := services.NewTemporaryAuthTokenService(db)
 	sysSvc := services.NewSystemService(db)
-	wsSvc := services.NewWorkspaceService(db, cfg)
+	phSvc := services.NewPromptHistoryService(db)
+	wsSvc := services.NewWorkspaceService(db, cfg, phSvc)
 	searchSvc := services.NewSearchService(db)
 	vectorSvc := services.NewVectorService(cfg)
 	dbSettings, _ := sysSvc.GetAllSettings(context.Background())
@@ -239,6 +248,7 @@ func main() {
 		handlers.RegisterSystemRoutes(api, sysSvc, apiKeySvc, cfg, authSvc, adminSvc, fsSvc, coll, vectorSvc, promptPresetSvc, promptVariableSvc, wsChatSvc)
 		handlers.RegisterAuthRoutes(api, authSvc, cfg, eventLogSvc, tempTokenSvc)
 		handlers.RegisterWorkspaceRoutes(api, wsSvc, authSvc, db, searchSvc, vectorSearchSvc, docSvc, progressMgr)
+		handlers.RegisterPromptHistoryRoutes(api, phSvc, wsSvc, authSvc, db)
 		handlers.RegisterChatRoutes(api, chatSvc, authSvc, db)
 		handlers.RegisterTTSRoutes(api, ttsHandler, authSvc)
 		handlers.RegisterDocumentRoutes(api, docSvc, authSvc)

@@ -33,7 +33,7 @@ func setupThreadTest(t *testing.T) (*gin.Engine, *services.AuthService, string, 
 	enc, err := utils.NewEncryptionManager(cfg.StorageDir)
 	assert.NoError(t, err)
 	authSvc := services.NewAuthService(db, cfg, enc)
-	wsSvc := services.NewWorkspaceService(db, cfg)
+	wsSvc := services.NewWorkspaceService(db, cfg, nil)
 	searchSvc := services.NewSearchService(db)
 	threadSvc := services.NewThreadService(db)
 
