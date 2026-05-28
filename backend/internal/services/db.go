@@ -52,6 +52,8 @@ func AutoMigrate(db *gorm.DB) error {
 		&models.DocumentSyncQueue{},
 		&models.OutlookOAuthToken{},
 		&models.PromptHistory{},
+		&models.ScheduledJob{},
+		&models.ScheduledJobRun{},
 	)
 }
 
