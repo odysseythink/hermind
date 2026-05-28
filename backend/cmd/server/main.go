@@ -204,18 +204,21 @@ func main() {
 
 	contSvc := services.NewScheduledJobContinueService(db, sjSvc)
 
+	memSvc := services.NewMemoryService(db)
+	memInj := services.NewMemoryInjector(memSvc, sysSvc, rerankerSvc)
+	memExt := services.NewMemoryExtractor(memSvc, llmProv.LanguageModel(), "", "")
+
 	workerMgr := workers.NewManager(db, cfg)
 	workerMgr.Register(
 		workers.NewCleanupOrphanJob(db, cfg),
 		workers.NewCleanupGeneratedJob(db, cfg),
 		workers.NewSyncWatchedJob(db, cfg, coll),
 		workers.NewEmbedWorkerJob(db, cfg, emb, vectorDB),
+		workers.NewExtractMemoriesJob(db, memSvc, memExt, sysSvc),
 	)
 	if err := workerMgr.Start(); err != nil {
 		mlog.Fatal("failed to start worker manager", mlog.Err(err))
 	}
-	memSvc := services.NewMemoryService(db)
-	memInj := services.NewMemoryInjector(memSvc, sysSvc, rerankerSvc)
 	chatSvc := services.NewChatService(db, cfg, vectorSvc, llmProv, emb, agentRuntime, rerankerSvc, memInj)
 	progressMgr := services.NewEmbeddingProgressManager()
 

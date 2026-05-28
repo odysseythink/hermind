@@ -13,5 +13,6 @@ type WorkspaceChat struct {
 	APISessionID  *string   `json:"apiSessionId"`
 	CreatedAt     time.Time `json:"createdAt"`
 	LastUpdatedAt time.Time `json:"lastUpdatedAt"`
-	FeedbackScore *bool     `json:"feedbackScore"`
+	FeedbackScore   *bool     `json:"feedbackScore"`
+	MemoryProcessed *bool     `gorm:"index" json:"memoryProcessed,omitempty"`
 }
