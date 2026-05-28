@@ -3,6 +3,7 @@ package services
 import (
 	"context"
 	"encoding/json"
+	"sync"
 	"time"
 
 	"github.com/odysseythink/hermind/backend/internal/models"
@@ -11,6 +12,10 @@ import (
 
 type EventLogService struct {
 	db *gorm.DB
+
+	subInit     sync.Once
+	subMu       sync.RWMutex
+	subscribers map[string][]eventHandler
 }
 
 func NewEventLogService(db *gorm.DB) *EventLogService {
@@ -24,11 +29,16 @@ func (s *EventLogService) LogEvent(ctx context.Context, event string, metadata m
 		str := string(b)
 		metaStr = &str
 	}
+	now := time.Now()
 	log := models.EventLog{
 		Event:      event,
 		Metadata:   metaStr,
 		UserID:     userID,
-		OccurredAt: time.Now(),
+		OccurredAt: now,
 	}
-	return s.db.WithContext(ctx).Create(&log).Error
+	if err := s.db.WithContext(ctx).Create(&log).Error; err != nil {
+		return err
+	}
+	s.notifySubscribers(event, metaStr, userID, now)
+	return nil
 }
