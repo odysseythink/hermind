@@ -6,6 +6,7 @@ import (
 	"strconv"
 
 	"github.com/gin-gonic/gin"
+	"github.com/odysseythink/hermind/backend/internal/config"
 	"github.com/odysseythink/hermind/backend/internal/middleware"
 	"github.com/odysseythink/hermind/backend/internal/models"
 	"github.com/odysseythink/hermind/backend/internal/services"
@@ -13,20 +14,19 @@ import (
 
 type AgentSkillHandler struct {
 	sysSvc *services.SystemService
+	cfg    *config.Config
 }
 
-func NewAgentSkillHandler(sysSvc *services.SystemService) *AgentSkillHandler {
-	return &AgentSkillHandler{sysSvc: sysSvc}
+func NewAgentSkillHandler(sysSvc *services.SystemService, cfg *config.Config) *AgentSkillHandler {
+	return &AgentSkillHandler{sysSvc: sysSvc, cfg: cfg}
 }
 
 func (h *AgentSkillHandler) FileSystemAgentAvailable(c *gin.Context) {
-	// Go backend does not implement filesystem-agent plugin yet
-	c.JSON(http.StatusOK, gin.H{"available": false})
+	c.JSON(http.StatusOK, gin.H{"available": h.cfg.AgentFilesystemEnabled})
 }
 
 func (h *AgentSkillHandler) CreateFilesAgentAvailable(c *gin.Context) {
-	// Go backend does not implement create-files-agent plugin yet
-	c.JSON(http.StatusOK, gin.H{"available": false})
+	c.JSON(http.StatusOK, gin.H{"available": h.cfg.AgentCreateFilesEnabled})
 }
 
 func (h *AgentSkillHandler) AddToWhitelist(c *gin.Context) {
@@ -78,8 +78,8 @@ func (h *AgentSkillHandler) AddToWhitelist(c *gin.Context) {
 	c.JSON(http.StatusOK, gin.H{"success": true, "error": nil})
 }
 
-func RegisterAgentSkillRoutes(r *gin.RouterGroup, sysSvc *services.SystemService, authSvc *services.AuthService) {
-	h := NewAgentSkillHandler(sysSvc)
+func RegisterAgentSkillRoutes(r *gin.RouterGroup, sysSvc *services.SystemService, authSvc *services.AuthService, cfg *config.Config) {
+	h := NewAgentSkillHandler(sysSvc, cfg)
 	r.GET("/agent-skills/filesystem-agent/is-available",
 		middleware.ValidatedRequest(authSvc),
 		h.FileSystemAgentAvailable)

@@ -245,7 +245,7 @@ func main() {
 		handlers.RegisterAdminRoutes(api, adminSvc, sysSvc, wsSvc, apiKeySvc, authSvc)
 		handlers.RegisterThreadRoutes(api, threadSvc, authSvc, db)
 		handlers.RegisterAgentFlowRoutes(api, agentFlowSvc, authSvc)
-		handlers.RegisterAgentSkillRoutes(api, sysSvc, authSvc)
+		handlers.RegisterAgentSkillRoutes(api, sysSvc, authSvc, cfg)
 		handlers.RegisterMCPRoutes(api, authSvc, mcpSvc, eventLogSvc, cfg)
 		handlers.RegisterAgentTokenRoutes(api, tempTokenSvc, authSvc)
 		handlers.RegisterAgentRoutes(api, agentRuntime, authSvc, tempTokenSvc)
