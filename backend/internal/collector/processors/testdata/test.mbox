@@ -1,0 +1,14 @@
+From user@example.com Mon Jan 01 00:00:00 2024
+From: user@example.com
+To: recipient@example.com
+Subject: Test Message One
+
+This is the body of message one.
+It has multiple lines.
+
+From user@example.com Mon Jan 02 00:00:00 2024
+From: another@example.com
+To: recipient@example.com
+Subject: Test Message Two
+
+This is the body of message two.

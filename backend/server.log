@@ -1,0 +1,3 @@
+
+2026/05/23 11:26:28 [31;1mD:/go_work/go-anything-llm/go-server/internal/middleware/workspace.go:21 [35;1mrecord not found
+[0m[33m[0.499ms] [34;1m[rows:0][0m SELECT * FROM `workspaces` WHERE slug = "test" ORDER BY `workspaces`.`id` LIMIT 1
