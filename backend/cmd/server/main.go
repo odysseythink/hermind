@@ -214,7 +214,9 @@ func main() {
 	if err := workerMgr.Start(); err != nil {
 		mlog.Fatal("failed to start worker manager", mlog.Err(err))
 	}
-	chatSvc := services.NewChatService(db, cfg, vectorSvc, llmProv, emb, agentRuntime, rerankerSvc)
+	memSvc := services.NewMemoryService(db)
+	memInj := services.NewMemoryInjector(memSvc, sysSvc, rerankerSvc)
+	chatSvc := services.NewChatService(db, cfg, vectorSvc, llmProv, emb, agentRuntime, rerankerSvc, memInj)
 	progressMgr := services.NewEmbeddingProgressManager()
 
 	// Boot migration: encrypt plaintext secrets in SystemSetting
@@ -281,6 +283,7 @@ func main() {
 		handlers.RegisterEmbedManagementRoutes(api, embedSvc, authSvc, db)
 		handlers.RegisterAPIEmbedRoutes(api, embedSvc, apiKeySvc, db)
 		handlers.RegisterScheduledJobsRoutes(api, sjSvc, sched, contSvc, authSvc)
+		handlers.RegisterMemoryRoutes(api, memSvc, wsSvc, authSvc)
 
 		// API v1 routes (API key auth)
 		handlers.RegisterAPIAuthRoutes(api, apiKeySvc)

@@ -76,6 +76,12 @@ func (s *SystemService) GetAllSettings(ctx context.Context) (map[string]string, 
 	return result, nil
 }
 
+func (s *SystemService) MemoriesEnabled(ctx context.Context) bool {
+	v, err := s.GetSetting(ctx, "memories_enabled")
+	// Default: true. Explicit "false" disables.
+	return err == nil && v != "false"
+}
+
 func (s *SystemService) GetOnboardingStatus(ctx context.Context) (bool, error) {
 	val, err := s.GetSetting(ctx, "onboarding_complete")
 	if err != nil {

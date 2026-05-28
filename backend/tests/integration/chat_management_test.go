@@ -36,7 +36,7 @@ func setupChatMgmtTest(t *testing.T) (*gin.Engine, string, string, int) {
 	authSvc := services.NewAuthService(db, cfg, enc)
 	wsSvc := services.NewWorkspaceService(db, cfg, nil)
 	searchSvc := services.NewSearchService(db)
-	chatSvc := services.NewChatService(db, cfg, nil, nil, nil, nil, nil)
+	chatSvc := services.NewChatService(db, cfg, nil, nil, nil, nil, nil, nil)
 
 	_, err = authSvc.Register(nil, dto.RegisterRequest{Username: "alice", Password: "secret"})
 	assert.NoError(t, err)

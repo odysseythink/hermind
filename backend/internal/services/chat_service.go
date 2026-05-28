@@ -29,10 +29,11 @@ type ChatService struct {
 	embedder     embedder.Embedder
 	agentInvoker AgentInvoker
 	reranker     reranker.Reranker
+	memInj       *MemoryInjector
 }
 
-func NewChatService(db *gorm.DB, cfg *config.Config, vectorSvc *VectorService, llmProv providers.LLMProvider, embedder embedder.Embedder, agentInvoker AgentInvoker, reranker reranker.Reranker) *ChatService {
-	return &ChatService{db: db, cfg: cfg, vectorSvc: vectorSvc, llmProv: llmProv, embedder: embedder, agentInvoker: agentInvoker, reranker: reranker}
+func NewChatService(db *gorm.DB, cfg *config.Config, vectorSvc *VectorService, llmProv providers.LLMProvider, embedder embedder.Embedder, agentInvoker AgentInvoker, reranker reranker.Reranker, memInj *MemoryInjector) *ChatService {
+	return &ChatService{db: db, cfg: cfg, vectorSvc: vectorSvc, llmProv: llmProv, embedder: embedder, agentInvoker: agentInvoker, reranker: reranker, memInj: memInj}
 }
 
 func (s *ChatService) buildRAGContext(ctx context.Context, ws *models.Workspace, user *models.User, threadID *int, message string, systemPromptOverride *string, historyOverride []core.Message) (systemPrompt string, sources []any, history []core.Message, err error) {
@@ -55,6 +56,13 @@ func (s *ChatService) buildRAGContext(ctx context.Context, ws *models.Workspace,
 	} else if ws.OpenAiPrompt != nil {
 		systemPrompt = *ws.OpenAiPrompt
 	}
+
+	// Inject long-term memories (no-op when memInj is nil or disabled).
+	var userID *int
+	if user != nil {
+		userID = &user.ID
+	}
+	systemPrompt = s.memInj.PromptWithMemories(ctx, systemPrompt, userID, ws.ID, message, history)
 
 	if s.vectorSvc.provider != nil {
 		topN := 4

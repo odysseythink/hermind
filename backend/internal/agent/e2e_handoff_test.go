@@ -39,7 +39,7 @@ func newFullAgentE2EEnv(t *testing.T) *fullAgentE2EEnv {
 		DB: db, Cfg: cfg, TempTokenSvc: tempTokenSvc, AuthSvc: authSvc,
 	})
 	vec := services.NewVectorService(cfg)
-	chatSvc := services.NewChatService(db, cfg, vec, nil, nil, rt, nil)
+	chatSvc := services.NewChatService(db, cfg, vec, nil, nil, rt, nil, nil)
 
 	eng := gin.New()
 	api := eng.Group("/api")

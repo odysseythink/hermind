@@ -54,6 +54,7 @@ func AutoMigrate(db *gorm.DB) error {
 		&models.PromptHistory{},
 		&models.ScheduledJob{},
 		&models.ScheduledJobRun{},
+		&models.Memory{},
 	)
 }
 

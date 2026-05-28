@@ -47,7 +47,7 @@ func newChatSvcWithMock(t *testing.T, env *apiTestEnv, llmText string) *services
 	t.Helper()
 	cfg := env.Cfg
 	vec := services.NewVectorService(cfg)
-	return services.NewChatService(env.DB, cfg, vec, &mockLLM{text: llmText}, nil, nil, nil)
+	return services.NewChatService(env.DB, cfg, vec, &mockLLM{text: llmText}, nil, nil, nil, nil)
 }
 
 func TestAPIOpenAI_Models(t *testing.T) {
