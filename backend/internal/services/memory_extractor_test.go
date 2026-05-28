@@ -44,6 +44,50 @@ func (m *mockExtractLLM) Generate(_ context.Context, req *core.Request) (*core.R
 	return &core.Response{}, nil
 }
 
+func TestMemoryExtractor_EmptyCandidates(t *testing.T) {
+	db := newMemTestDB(t)
+	require.NoError(t, db.AutoMigrate(&models.WorkspaceChat{}, &models.Workspace{}))
+	memSvc := NewMemoryService(db)
+	uid, wid := 1, 1
+
+	llm := &mockExtractLLM{
+		observerResp:  `{"facts":[]}`,
+		reflectorResp: `{"memories":[]}`,
+	}
+	ext := NewMemoryExtractor(memSvc, llm, "", "")
+	err := ext.ProcessGroup(context.Background(), &uid, wid, []models.WorkspaceChat{
+		{WorkspaceID: wid, UserID: &uid, Prompt: "hi", Response: "hello"},
+	})
+	require.NoError(t, err)
+	assert.Equal(t, 1, llm.callCount) // only observer called
+}
+
+func TestMemoryExtractor_CapacityFull(t *testing.T) {
+	db := newMemTestDB(t)
+	require.NoError(t, db.AutoMigrate(&models.WorkspaceChat{}, &models.Workspace{}))
+	memSvc := NewMemoryService(db)
+	uid, wid := 1, 1
+	// Fill both scopes to limit
+	for i := 0; i < models.WorkspaceMemoryLimit; i++ {
+		_, _ = memSvc.Create(context.Background(), &uid, &wid, models.MemoryScopeWorkspace, "x")
+	}
+	for i := 0; i < models.GlobalMemoryLimit; i++ {
+		_, _ = memSvc.Create(context.Background(), &uid, nil, models.MemoryScopeGlobal, "g")
+	}
+
+	llm := &mockExtractLLM{
+		observerResp:  `{"facts":[{"content":"overflow","confidence":0.9,"reasoning":"test"}]}`,
+		reflectorResp: `{"memories":[{"content":"overflow","scope":"GLOBAL","action":"create","reasoning":"test"}]}`,
+	}
+	ext := NewMemoryExtractor(memSvc, llm, "", "")
+	err := ext.ProcessGroup(context.Background(), &uid, wid, []models.WorkspaceChat{
+		{WorkspaceID: wid, UserID: &uid, Prompt: "hi", Response: "hello"},
+	})
+	require.NoError(t, err)
+	// Should short-circuit before calling reflector
+	assert.Equal(t, 1, llm.callCount)
+}
+
 func TestMemoryExtractor_RoundTrip(t *testing.T) {
 	db := newMemTestDB(t)
 	require.NoError(t, db.AutoMigrate(&models.WorkspaceChat{}, &models.Workspace{}))

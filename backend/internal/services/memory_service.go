@@ -3,6 +3,7 @@ package services
 import (
 	"context"
 	"errors"
+	"strings"
 	"time"
 
 	"github.com/odysseythink/hermind/backend/internal/models"
@@ -34,7 +35,11 @@ type ApplyResult struct {
 }
 
 func (s *MemoryService) countForScope(ctx context.Context, userID *int, workspaceID *int, scope string) (int64, error) {
-	q := s.db.WithContext(ctx).Model(&models.Memory{}).Where("scope = ?", scope)
+	return countForScopeTx(s.db.WithContext(ctx), userID, workspaceID, scope)
+}
+
+func countForScopeTx(tx *gorm.DB, userID *int, workspaceID *int, scope string) (int64, error) {
+	q := tx.Model(&models.Memory{}).Where("scope = ?", scope)
 	q = applyUser(q, userID)
 	if scope == models.MemoryScopeWorkspace {
 		q = applyWorkspace(q, workspaceID)
@@ -58,6 +63,9 @@ func applyWorkspace(q *gorm.DB, wsID *int) *gorm.DB {
 }
 
 func (s *MemoryService) Create(ctx context.Context, userID *int, workspaceID *int, scope, content string) (*models.Memory, error) {
+	if strings.TrimSpace(content) == "" {
+		return nil, errors.New("content cannot be empty")
+	}
 	if scope != models.MemoryScopeWorkspace && scope != models.MemoryScopeGlobal {
 		return nil, errors.New("invalid scope")
 	}
@@ -88,6 +96,9 @@ func (s *MemoryService) Create(ctx context.Context, userID *int, workspaceID *in
 }
 
 func (s *MemoryService) Update(ctx context.Context, id int, content string) (*models.Memory, error) {
+	if strings.TrimSpace(content) == "" {
+		return nil, errors.New("content cannot be empty")
+	}
 	if err := s.db.WithContext(ctx).Model(&models.Memory{}).
 		Where("id = ?", id).
 		Updates(map[string]any{"content": content, "updated_at": time.Now()}).Error; err != nil {
@@ -213,11 +224,36 @@ func (s *MemoryService) ReplaceWorkspace(ctx context.Context, userID *int, works
 }
 
 // ApplyExtracted atomically applies a batch of Observer/Reflector decisions.
+// It re-counts inside the transaction to guard against concurrent changes.
 func (s *MemoryService) ApplyExtracted(ctx context.Context, userID *int, workspaceID int, actions []ExtractedAction, globalSlots int) (ApplyResult, error) {
 	var result ApplyResult
-	// Split + cap
-	wsCreates, glCreates, updates := splitActions(actions, globalSlots)
 	err := s.db.WithContext(ctx).Transaction(func(tx *gorm.DB) error {
+		// Re-count inside transaction to guard against concurrent changes.
+		wsCount, err := countForScopeTx(tx, userID, &workspaceID, models.MemoryScopeWorkspace)
+		if err != nil {
+			return err
+		}
+		glCount, err := countForScopeTx(tx, userID, nil, models.MemoryScopeGlobal)
+		if err != nil {
+			return err
+		}
+		actualGlobalSlots := globalSlots
+		if actualGlobalSlots > models.GlobalMemoryLimit-int(glCount) {
+			actualGlobalSlots = models.GlobalMemoryLimit - int(glCount)
+		}
+		if actualGlobalSlots < 0 {
+			actualGlobalSlots = 0
+		}
+		actualWSSlots := models.WorkspaceMemoryLimit - int(wsCount)
+		if actualWSSlots < 0 {
+			actualWSSlots = 0
+		}
+
+		wsCreates, glCreates, updates := splitActions(actions, actualGlobalSlots)
+		if len(wsCreates) > actualWSSlots {
+			wsCreates = wsCreates[:actualWSSlots]
+		}
+
 		for _, a := range wsCreates {
 			if err := tx.Create(&models.Memory{
 				UserID: userID, WorkspaceID: &workspaceID,
@@ -239,11 +275,14 @@ func (s *MemoryService) ApplyExtracted(ctx context.Context, userID *int, workspa
 				return err
 			}
 		}
+		result.WS = len(wsCreates)
+		result.Global = len(glCreates)
+		result.Updated = len(updates)
 		return nil
 	})
-	result.WS = len(wsCreates)
-	result.Global = len(glCreates)
-	result.Updated = len(updates)
+	if err != nil {
+		result = ApplyResult{} // zero on rollback
+	}
 	return result, err
 }
 

@@ -98,3 +98,38 @@ func TestMemoryService_ReplaceWorkspace_Transactional(t *testing.T) {
 	rows, _ := svc.ListWorkspace(context.Background(), &uid, wid)
 	assert.Len(t, rows, 2)
 }
+
+func TestMemoryService_CreateEmptyContent(t *testing.T) {
+	svc := NewMemoryService(newMemTestDB(t))
+	uid, wid := 1, 1
+	_, err := svc.Create(context.Background(), &uid, &wid, models.MemoryScopeWorkspace, "  ")
+	assert.ErrorContains(t, err, "content cannot be empty")
+}
+
+func TestMemoryService_UpdateEmptyContent(t *testing.T) {
+	svc := NewMemoryService(newMemTestDB(t))
+	uid, wid := 1, 1
+	m, _ := svc.Create(context.Background(), &uid, &wid, models.MemoryScopeWorkspace, "x")
+	_, err := svc.Update(context.Background(), m.ID, "   ")
+	assert.ErrorContains(t, err, "content cannot be empty")
+}
+
+func TestMemoryService_GetNotFound(t *testing.T) {
+	svc := NewMemoryService(newMemTestDB(t))
+	_, err := svc.Get(context.Background(), 9999)
+	assert.ErrorIs(t, err, ErrMemoryNotFound)
+}
+
+func TestMemoryService_ApplyExtractedRespectsLimits(t *testing.T) {
+	svc := NewMemoryService(newMemTestDB(t))
+	uid, wid := 1, 1
+	// Fill workspace to limit
+	for i := 0; i < models.WorkspaceMemoryLimit; i++ {
+		_, _ = svc.Create(context.Background(), &uid, &wid, models.MemoryScopeWorkspace, "x")
+	}
+	res, err := svc.ApplyExtracted(context.Background(), &uid, wid, []ExtractedAction{
+		{Action: "create", Scope: "WORKSPACE", Content: "overflow"},
+	}, models.GlobalMemoryLimit)
+	require.NoError(t, err)
+	assert.Equal(t, 0, res.WS) // capped by actual DB count inside tx
+}

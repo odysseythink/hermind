@@ -125,8 +125,16 @@ func (h *MemoryHandler) Promote(c *gin.Context) {
 }
 
 func (h *MemoryHandler) Demote(c *gin.Context) {
-	id, _ := strconv.Atoi(c.Param("id"))
-	wsID, _ := strconv.Atoi(c.Param("workspaceId"))
+	id, err := strconv.Atoi(c.Param("id"))
+	if err != nil {
+		c.JSON(http.StatusBadRequest, dto.ErrorResponse{Error: "bad id"})
+		return
+	}
+	wsID, err := strconv.Atoi(c.Param("workspaceId"))
+	if err != nil {
+		c.JSON(http.StatusBadRequest, dto.ErrorResponse{Error: "bad workspaceId"})
+		return
+	}
 	m, err := h.mem.DemoteToWorkspace(c.Request.Context(), id, wsID)
 	if err != nil {
 		if errors.Is(err, services.ErrMemoryLimitReached) {

@@ -33,13 +33,16 @@ func (j *ExtractMemoriesJob) Enabled(ctx context.Context) bool {
 	return v == "true"
 }
 
-type groupKey struct{ UserID *int; WorkspaceID int }
+// groupKey uses value-based UserID so that rows with the same user id group
+// together even when GORM allocates distinct *int pointers per scan.
+type groupKey struct{ UserID int; WorkspaceID int }
 
 func (j *ExtractMemoriesJob) Run(ctx context.Context) error {
 	var unprocessed []models.WorkspaceChat
 	if err := j.db.WithContext(ctx).
 		Where("(memory_processed IS NULL OR memory_processed = ?) AND include = ?", false, true).
 		Order("created_at ASC").
+		Limit(1000).
 		Find(&unprocessed).Error; err != nil {
 		return err
 	}
@@ -49,7 +52,11 @@ func (j *ExtractMemoriesJob) Run(ctx context.Context) error {
 
 	groups := map[groupKey][]models.WorkspaceChat{}
 	for _, c := range unprocessed {
-		k := groupKey{UserID: c.UserID, WorkspaceID: c.WorkspaceID}
+		uid := -1
+		if c.UserID != nil {
+			uid = *c.UserID
+		}
+		k := groupKey{UserID: uid, WorkspaceID: c.WorkspaceID}
 		groups[k] = append(groups[k], c)
 	}
 
@@ -61,7 +68,11 @@ func (j *ExtractMemoriesJob) Run(ctx context.Context) error {
 		if time.Since(chats[len(chats)-1].CreatedAt) < time.Duration(GroupIdleThresholdMS)*time.Millisecond {
 			continue
 		}
-		if err := j.extractor.ProcessGroup(ctx, k.UserID, k.WorkspaceID, chats); err != nil {
+		var userID *int
+		if k.UserID >= 0 {
+			userID = &k.UserID
+		}
+		if err := j.extractor.ProcessGroup(ctx, userID, k.WorkspaceID, chats); err != nil {
 			mlog.Warning("extract memories failed",
 				mlog.Int("workspace", k.WorkspaceID), mlog.Err(err))
 		}
@@ -79,9 +90,8 @@ func (j *ExtractMemoriesJob) markProcessed(ctx context.Context, ids []int) {
 	if len(ids) == 0 {
 		return
 	}
-	t := true
 	if err := j.db.WithContext(ctx).Model(&models.WorkspaceChat{}).
-		Where("id IN ?", ids).Update("memory_processed", &t).Error; err != nil {
+		Where("id IN ?", ids).Updates(map[string]any{"memory_processed": true}).Error; err != nil {
 		mlog.Warning("mark memory_processed failed", mlog.Err(err))
 	}
 }

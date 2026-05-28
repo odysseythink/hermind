@@ -39,8 +39,14 @@ func (mi *MemoryInjector) PromptWithMemories(ctx context.Context, base string,
 		return base
 	}
 
-	globals, _ := mi.memSvc.ListGlobal(ctx, userID)
-	wsMems, _ := mi.memSvc.ListWorkspace(ctx, userID, workspaceID)
+	globals, err := mi.memSvc.ListGlobal(ctx, userID)
+	if err != nil {
+		mlog.Warning("list global memories failed", mlog.Err(err))
+	}
+	wsMems, err := mi.memSvc.ListWorkspace(ctx, userID, workspaceID)
+	if err != nil {
+		mlog.Warning("list workspace memories failed", mlog.Err(err))
+	}
 	if len(globals) == 0 && len(wsMems) == 0 {
 		return base
 	}
@@ -103,7 +109,7 @@ func buildRerankQuery(currentMessage string, history []core.Message) string {
 		if m.Role != core.MESSAGE_ROLE_USER {
 			continue
 		}
-		// Best-effort text extraction; pantheon's text part lives in Content[0].TextPart.
+		// Best-effort text extraction; scan all content parts for TextPart.
 		for _, p := range m.Content {
 			if tp, ok := p.(core.TextPart); ok {
 				parts = append(parts, tp.Text)

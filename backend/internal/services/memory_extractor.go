@@ -5,6 +5,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"strings"
+	"unicode/utf8"
 
 	"github.com/odysseythink/hermind/backend/internal/models"
 	"github.com/odysseythink/mlog"
@@ -212,10 +213,11 @@ func renderConversation(chats []models.WorkspaceChat) string {
 }
 
 func truncateResp(s string) string {
-	if len(s) <= 600 {
+	if utf8.RuneCountInString(s) <= 600 {
 		return s
 	}
-	return s[:600] + "…"
+	runes := []rune(s)
+	return string(runes[:600]) + "…"
 }
 
 func renderMems(mems []models.Memory) string {
