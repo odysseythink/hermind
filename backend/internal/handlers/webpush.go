@@ -1,6 +1,7 @@
 package handlers
 
 import (
+	"errors"
 	"io"
 	"net/http"
 
@@ -32,7 +33,11 @@ func (h *WebPushHandler) Subscribe(c *gin.Context) {
 		return
 	}
 	if err := h.svc.RegisterSubscription(c.Request.Context(), u.ID, body); err != nil {
-		c.JSON(http.StatusInternalServerError, dto.ErrorResponse{Error: err.Error()})
+		status := http.StatusInternalServerError
+		if isBadRequestErr(err) {
+			status = http.StatusBadRequest
+		}
+		c.JSON(status, dto.ErrorResponse{Error: err.Error()})
 		return
 	}
 	c.JSON(http.StatusCreated, gin.H{})
@@ -40,6 +45,10 @@ func (h *WebPushHandler) Subscribe(c *gin.Context) {
 
 func (h *WebPushHandler) PubKey(c *gin.Context) {
 	c.JSON(http.StatusOK, gin.H{"publicKey": h.svc.PublicVAPIDKey()})
+}
+
+func isBadRequestErr(err error) bool {
+	return errors.Is(err, services.ErrInvalidSubscription)
 }
 
 func RegisterWebPushRoutes(r *gin.RouterGroup, svc *services.WebPushService, authSvc *services.AuthService) {

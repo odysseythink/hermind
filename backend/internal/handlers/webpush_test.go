@@ -23,7 +23,8 @@ func newWPHandlerEnv(t *testing.T) (*gin.Engine, *services.WebPushService, *gorm
 	db, err := gorm.Open(sqlite.Open(":memory:"), &gorm.Config{})
 	require.NoError(t, err)
 	require.NoError(t, db.AutoMigrate(&models.User{}, &models.SystemSetting{}))
-	enc, _ := utils.NewEncryptionManager(t.TempDir())
+	enc, err := utils.NewEncryptionManager(t.TempDir())
+	require.NoError(t, err)
 	sysSvc := services.NewSystemService(db)
 	wpSvc := services.NewWebPushService(db, sysSvc, enc, services.WebPushOptions{MailTo: "mailto:t@test"})
 	require.NoError(t, wpSvc.Init(t.Context()))
@@ -54,7 +55,7 @@ func TestWebPush_SubscribeEndpoint(t *testing.T) {
 	_, err = sqlDB.Exec("INSERT INTO users (id, password, role, created_at, last_updated_at) VALUES (0, '', 'admin', datetime('now'), datetime('now'))")
 	require.NoError(t, err)
 
-	sub := `{"endpoint":"https://e","keys":{"p256dh":"abc","auth":"def"}}`
+	sub := `{"endpoint":"https://example.com/x","keys":{"p256dh":"abc","auth":"def"}}`
 	w := httptest.NewRecorder()
 	req := httptest.NewRequest(http.MethodPost, "/api/web-push/subscribe", bytes.NewReader([]byte(sub)))
 	req.Header.Set("Content-Type", "application/json")

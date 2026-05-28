@@ -43,9 +43,8 @@ func TestEventLog_Subscribe_UnknownTypeIgnored(t *testing.T) {
 		atomic.AddInt32(&calls, 1)
 	})
 	_ = svc.LogEvent(context.Background(), "type-b", nil, nil)
-	// Wait briefly to ensure no false-positive call.
-	time.Sleep(150 * time.Millisecond)
-	assert.Zero(t, atomic.LoadInt32(&calls))
+	assert.Never(t, func() bool { return atomic.LoadInt32(&calls) > 0 },
+		300*time.Millisecond, 25*time.Millisecond)
 }
 
 func TestEventLog_Subscribe_SlowHandlerDoesNotBlock(t *testing.T) {

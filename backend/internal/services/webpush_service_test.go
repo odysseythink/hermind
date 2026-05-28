@@ -2,6 +2,7 @@ package services
 
 import (
 	"context"
+	"crypto/tls"
 	"net/http"
 	"net/http/httptest"
 	"testing"
@@ -44,7 +45,7 @@ func TestWebPushService_RegisterAndLoad(t *testing.T) {
 	user := &models.User{ID: 7}
 	require.NoError(t, db.Create(user).Error)
 
-	subJSON := `{"endpoint":"https://example/x","keys":{"p256dh":"abc","auth":"def"}}`
+	subJSON := `{"endpoint":"https://example.com/x","keys":{"p256dh":"abc","auth":"def"}}`
 	require.NoError(t, svc.RegisterSubscription(context.Background(), user.ID, []byte(subJSON)))
 
 	// Reload service to confirm DB persistence works
@@ -60,7 +61,7 @@ func TestWebPushService_Boot_FiresOnJobCompleted(t *testing.T) {
 
 	// Stub push receiver — assert headers + body shape via test server.
 	received := make(chan struct{}, 1)
-	stub := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+	stub := httptest.NewTLSServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		select {
 		case received <- struct{}{}:
 		default:
@@ -69,7 +70,14 @@ func TestWebPushService_Boot_FiresOnJobCompleted(t *testing.T) {
 	}))
 	defer stub.Close()
 
-	svc := NewWebPushService(db, sys, enc, WebPushOptions{MailTo: "mailto:t@t"})
+	insecureClient := &http.Client{Transport: &http.Transport{
+		TLSClientConfig: &tls.Config{InsecureSkipVerify: true},
+	}}
+	oldValidate := validatePushEndpointFn
+	validatePushEndpointFn = func(string) error { return nil }
+	defer func() { validatePushEndpointFn = oldValidate }()
+
+	svc := NewWebPushService(db, sys, enc, WebPushOptions{MailTo: "mailto:t@t", HTTPClient: insecureClient})
 	require.NoError(t, svc.Init(context.Background()))
 
 	user := &models.User{ID: 5}

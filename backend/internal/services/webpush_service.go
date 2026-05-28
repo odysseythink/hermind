@@ -4,9 +4,16 @@ import (
 	"context"
 	"encoding/json"
 	"errors"
+	"fmt"
+	"io"
+	"math"
+	"net"
 	"net/http"
+	"net/url"
 	"strconv"
+	"strings"
 	"sync"
+	"unicode/utf8"
 
 	webpush "github.com/SherClockHolmes/webpush-go"
 	"github.com/odysseythink/hermind/backend/internal/models"
@@ -15,7 +22,10 @@ import (
 	"gorm.io/gorm"
 )
 
-var ErrNoSubscription = errors.New("no push subscription for user")
+var (
+	ErrNoSubscription      = errors.New("no push subscription for user")
+	ErrInvalidSubscription = errors.New("invalid subscription")
+)
 
 const (
 	settingVAPIDPub  = "webpush_vapid_public_key"
@@ -23,8 +33,9 @@ const (
 )
 
 type WebPushOptions struct {
-	MailTo string // RFC 8292 Subscriber, e.g. "mailto:admin@example.com"
-	TTL    int    // seconds; default 60
+	MailTo     string       // RFC 8292 Subscriber, e.g. "mailto:admin@example.com"
+	TTL        int          // seconds; default 60
+	HTTPClient *http.Client // optional custom HTTP client for push delivery
 }
 
 func (o *WebPushOptions) fill() {
@@ -54,6 +65,8 @@ type WebPushService struct {
 	vapidPub  string
 	vapidPriv string
 	subs      sync.Map // userID(int) -> *webpush.Subscription
+
+	bootOnce sync.Once
 }
 
 func NewWebPushService(db *gorm.DB, sys *SystemService, enc *utils.EncryptionManager, opts WebPushOptions) *WebPushService {
@@ -72,7 +85,8 @@ func (s *WebPushService) HasSubscription(userID int) (*webpush.Subscription, boo
 	if !ok {
 		return nil, false
 	}
-	return v.(*webpush.Subscription), true
+	sub, ok := v.(*webpush.Subscription)
+	return sub, ok
 }
 
 // Init bootstraps VAPID keys (generates on first run) and loads existing
@@ -134,6 +148,7 @@ func (s *WebPushService) loadSubscriptions(ctx context.Context) error {
 		}
 		var sub webpush.Subscription
 		if err := json.Unmarshal([]byte(plain), &sub); err != nil {
+			mlog.Warning("webpush: unmarshal subscription failed", mlog.Int("user", u.ID), mlog.Err(err))
 			continue
 		}
 		s.subs.Store(u.ID, &sub)
@@ -147,7 +162,16 @@ func (s *WebPushService) loadSubscriptions(ctx context.Context) error {
 func (s *WebPushService) RegisterSubscription(ctx context.Context, userID int, subJSON []byte) error {
 	var sub webpush.Subscription
 	if err := json.Unmarshal(subJSON, &sub); err != nil {
-		return err
+		return fmt.Errorf("%w: %v", ErrInvalidSubscription, err)
+	}
+	if sub.Endpoint == "" {
+		return fmt.Errorf("%w: subscription endpoint is required", ErrInvalidSubscription)
+	}
+	if sub.Keys.P256dh == "" || sub.Keys.Auth == "" {
+		return fmt.Errorf("%w: subscription keys p256dh and auth are required", ErrInvalidSubscription)
+	}
+	if err := validatePushEndpointFn(sub.Endpoint); err != nil {
+		return fmt.Errorf("%w: %v", ErrInvalidSubscription, err)
 	}
 	encrypted, err := s.enc.Encrypt(string(subJSON))
 	if err != nil {
@@ -175,30 +199,38 @@ func (s *WebPushService) Send(ctx context.Context, userID int, payload WebPushPa
 	pub, priv, mailTo, ttl := s.vapidPub, s.vapidPriv, s.opts.MailTo, s.opts.TTL
 	s.mu.RUnlock()
 
-	resp, err := webpush.SendNotification(body, sub, &webpush.Options{
+	resp, err := webpush.SendNotificationWithContext(ctx, body, sub, &webpush.Options{
 		Subscriber:      mailTo,
 		VAPIDPublicKey:  pub,
 		VAPIDPrivateKey: priv,
 		TTL:             ttl,
+		HTTPClient:      s.opts.HTTPClient,
 	})
 	if err != nil {
 		return err
 	}
-	defer resp.Body.Close()
+	defer func() {
+		_, _ = io.Copy(io.Discard, resp.Body)
+		_ = resp.Body.Close()
+	}()
 	if resp.StatusCode == http.StatusGone || resp.StatusCode == http.StatusNotFound {
 		s.subs.Delete(userID)
-		_ = s.db.WithContext(ctx).Model(&models.User{}).
-			Where("id = ?", userID).Update("web_push_subscription_config", nil).Error
+		if err := s.db.WithContext(ctx).Model(&models.User{}).
+			Where("id = ?", userID).Update("web_push_subscription_config", nil).Error; err != nil {
+			mlog.Warning("webpush: failed to clear stale subscription", mlog.Int("user", userID), mlog.Err(err))
+		}
 	}
 	return nil
 }
 
-// Boot registers handlers for scheduled-job events. Safe to call multiple
-// times — handlers are appended.
+// Boot registers handlers for scheduled-job events. Called once at server
+// startup; subsequent calls are no-ops.
 func (s *WebPushService) Boot(eventLog *EventLogService) {
-	eventLog.Subscribe("scheduled_job_completed", s.onJobCompleted)
-	eventLog.Subscribe("scheduled_job_failed", s.onJobFailed)
-	eventLog.Subscribe("scheduled_job_timed_out", s.onJobFailed) // same payload
+	s.bootOnce.Do(func() {
+		eventLog.Subscribe("scheduled_job_completed", s.onJobCompleted)
+		eventLog.Subscribe("scheduled_job_failed", s.onJobFailed)
+		eventLog.Subscribe("scheduled_job_timed_out", s.onJobFailed) // same payload
+	})
 }
 
 func (s *WebPushService) onJobCompleted(ctx context.Context, e EventEnvelope) {
@@ -212,14 +244,16 @@ func (s *WebPushService) onJobCompleted(ctx context.Context, e EventEnvelope) {
 	if body == "" {
 		body = "Your scheduled job finished."
 	}
-	_ = s.Send(ctx, *e.UserID, WebPushPayload{
+	if err := s.Send(ctx, *e.UserID, WebPushPayload{
 		Title: "Scheduled job finished",
 		Body:  body,
 		Data: map[string]any{
 			"onClickUrl": "/workspace/scheduled-jobs?run=" + itoa(runID),
 			"jobId":      jobID, "runId": runID,
 		},
-	})
+	}); err != nil && !errors.Is(err, ErrNoSubscription) {
+		mlog.Warning("webpush: send failed", mlog.Int("user", *e.UserID), mlog.Err(err))
+	}
 }
 
 func (s *WebPushService) onJobFailed(ctx context.Context, e EventEnvelope) {
@@ -231,14 +265,16 @@ func (s *WebPushService) onJobFailed(ctx context.Context, e EventEnvelope) {
 		msg = "Scheduled job failed."
 	}
 	runID, _ := pickInt(e.Metadata, "runId")
-	_ = s.Send(ctx, *e.UserID, WebPushPayload{
+	if err := s.Send(ctx, *e.UserID, WebPushPayload{
 		Title: "Scheduled job failed",
 		Body:  truncate(msg, 200),
 		Data: map[string]any{
 			"onClickUrl": "/workspace/scheduled-jobs?run=" + itoa(runID),
 			"runId":      runID,
 		},
-	})
+	}); err != nil && !errors.Is(err, ErrNoSubscription) {
+		mlog.Warning("webpush: send failed", mlog.Int("user", *e.UserID), mlog.Err(err))
+	}
 }
 
 func pickInt(m map[string]any, key string) (int, bool) {
@@ -249,7 +285,7 @@ func pickInt(m map[string]any, key string) (int, bool) {
 		case int64:
 			return int(n), true
 		case float64:
-			return int(n), true
+			return int(math.Round(n)), true
 		}
 	}
 	return 0, false
@@ -265,12 +301,49 @@ func stringFromMeta(m map[string]any, key string) string {
 }
 
 func truncate(s string, n int) string {
-	if len(s) <= n {
+	if utf8.RuneCountInString(s) <= n {
 		return s
 	}
-	return s[:n] + "…"
+	runes := []rune(s)
+	return string(runes[:n]) + "…"
 }
 
 func itoa(i int) string {
 	return strconv.Itoa(i)
+}
+
+// validatePushEndpoint ensures the endpoint is a public HTTPS URL suitable for
+// web push delivery. It rejects non-HTTPS schemes, localhost, and private IPs
+// to prevent SSRF.
+// validatePushEndpointFn is overridable in tests to bypass DNS/SSRF checks.
+var validatePushEndpointFn = validatePushEndpoint
+
+func validatePushEndpoint(endpoint string) error {
+	u, err := url.Parse(endpoint)
+	if err != nil {
+		return fmt.Errorf("invalid URL: %w", err)
+	}
+	if u.Scheme != "https" {
+		return fmt.Errorf("only https scheme allowed (got %q)", u.Scheme)
+	}
+	host := u.Hostname()
+	if strings.EqualFold(host, "localhost") {
+		return fmt.Errorf("private host blocked: localhost")
+	}
+	if ip := net.ParseIP(host); ip != nil {
+		if ip.IsLoopback() || ip.IsPrivate() || ip.IsLinkLocalUnicast() || ip.IsLinkLocalMulticast() {
+			return fmt.Errorf("private IP blocked: %s", host)
+		}
+	} else {
+		ips, err := net.LookupIP(host)
+		if err != nil {
+			return fmt.Errorf("DNS lookup failed for %s: %w", host, err)
+		}
+		for _, ip := range ips {
+			if ip.IsLoopback() || ip.IsPrivate() || ip.IsLinkLocalUnicast() || ip.IsLinkLocalMulticast() {
+				return fmt.Errorf("private IP blocked: %s (%s)", host, ip)
+			}
+		}
+	}
+	return nil
 }

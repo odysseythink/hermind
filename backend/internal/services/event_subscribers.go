@@ -4,6 +4,8 @@ import (
 	"context"
 	"encoding/json"
 	"time"
+
+	"github.com/odysseythink/mlog"
 )
 
 // EventEnvelope is what subscribers receive — a parsed view of the row that
@@ -44,7 +46,9 @@ func (s *EventLogService) notifySubscribers(eventType string, metaJSON *string, 
 	}
 	var meta map[string]any
 	if metaJSON != nil {
-		_ = json.Unmarshal([]byte(*metaJSON), &meta)
+		if err := json.Unmarshal([]byte(*metaJSON), &meta); err != nil {
+			mlog.Warning("eventlog: failed to unmarshal metadata for notify", mlog.Err(err))
+		}
 	}
 	env := EventEnvelope{Event: eventType, Metadata: meta, UserID: userID, OccurredAt: occurredAt}
 	for _, h := range handlers {
