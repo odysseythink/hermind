@@ -2,7 +2,10 @@ package services
 
 import (
 	"context"
+	"net/http"
+	"net/http/httptest"
 	"testing"
+	"time"
 
 	"github.com/odysseythink/hermind/backend/internal/models"
 	"github.com/odysseythink/hermind/backend/pkg/utils"
@@ -49,4 +52,41 @@ func TestWebPushService_RegisterAndLoad(t *testing.T) {
 	require.NoError(t, svc2.Init(context.Background()))
 	_, ok := svc2.HasSubscription(user.ID)
 	assert.True(t, ok)
+}
+
+func TestWebPushService_Boot_FiresOnJobCompleted(t *testing.T) {
+	db, enc, sys := newWebPushTestEnv(t)
+	require.NoError(t, db.AutoMigrate(&models.EventLog{}))
+
+	// Stub push receiver — assert headers + body shape via test server.
+	received := make(chan struct{}, 1)
+	stub := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		select {
+		case received <- struct{}{}:
+		default:
+		}
+		w.WriteHeader(http.StatusCreated)
+	}))
+	defer stub.Close()
+
+	svc := NewWebPushService(db, sys, enc, WebPushOptions{MailTo: "mailto:t@t"})
+	require.NoError(t, svc.Init(context.Background()))
+
+	user := &models.User{ID: 5}
+	require.NoError(t, db.Create(user).Error)
+	sub := `{"endpoint":"` + stub.URL + `","keys":{"p256dh":"BNcRdreALRFXTkOOUHK1EtK2wtaz5Ry4YfYCA_0QTpQtUbVlUls0VJXg7A8u-Ts1XbjhazAkj7I99e8QcYP7DkM=","auth":"tBHItJI5svbpez7KI4CCXg=="}}`
+	require.NoError(t, svc.RegisterSubscription(context.Background(), user.ID, []byte(sub)))
+
+	evt := NewEventLogService(db)
+	svc.Boot(evt)
+
+	uid := user.ID
+	require.NoError(t, evt.LogEvent(context.Background(), "scheduled_job_completed",
+		map[string]any{"jobId": 1, "runId": 2, "resultText": "yay"}, &uid))
+
+	select {
+	case <-received:
+	case <-time.After(3 * time.Second):
+		t.Fatal("push provider never received the notification")
+	}
 }

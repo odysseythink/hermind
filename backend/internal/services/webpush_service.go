@@ -5,6 +5,7 @@ import (
 	"encoding/json"
 	"errors"
 	"net/http"
+	"strconv"
 	"sync"
 
 	webpush "github.com/SherClockHolmes/webpush-go"
@@ -190,4 +191,86 @@ func (s *WebPushService) Send(ctx context.Context, userID int, payload WebPushPa
 			Where("id = ?", userID).Update("web_push_subscription_config", nil).Error
 	}
 	return nil
+}
+
+// Boot registers handlers for scheduled-job events. Safe to call multiple
+// times — handlers are appended.
+func (s *WebPushService) Boot(eventLog *EventLogService) {
+	eventLog.Subscribe("scheduled_job_completed", s.onJobCompleted)
+	eventLog.Subscribe("scheduled_job_failed", s.onJobFailed)
+	eventLog.Subscribe("scheduled_job_timed_out", s.onJobFailed) // same payload
+}
+
+func (s *WebPushService) onJobCompleted(ctx context.Context, e EventEnvelope) {
+	jobID, _ := pickInt(e.Metadata, "jobId")
+	runID, _ := pickInt(e.Metadata, "runId")
+	if e.UserID == nil {
+		// Phase 2 jobs are not user-owned; nothing to deliver.
+		return
+	}
+	body := truncate(stringFromMeta(e.Metadata, "resultText"), 200)
+	if body == "" {
+		body = "Your scheduled job finished."
+	}
+	_ = s.Send(ctx, *e.UserID, WebPushPayload{
+		Title: "Scheduled job finished",
+		Body:  body,
+		Data: map[string]any{
+			"onClickUrl": "/workspace/scheduled-jobs?run=" + itoa(runID),
+			"jobId":      jobID, "runId": runID,
+		},
+	})
+}
+
+func (s *WebPushService) onJobFailed(ctx context.Context, e EventEnvelope) {
+	if e.UserID == nil {
+		return
+	}
+	msg := stringFromMeta(e.Metadata, "error")
+	if msg == "" {
+		msg = "Scheduled job failed."
+	}
+	runID, _ := pickInt(e.Metadata, "runId")
+	_ = s.Send(ctx, *e.UserID, WebPushPayload{
+		Title: "Scheduled job failed",
+		Body:  truncate(msg, 200),
+		Data: map[string]any{
+			"onClickUrl": "/workspace/scheduled-jobs?run=" + itoa(runID),
+			"runId":      runID,
+		},
+	})
+}
+
+func pickInt(m map[string]any, key string) (int, bool) {
+	if v, ok := m[key]; ok {
+		switch n := v.(type) {
+		case int:
+			return n, true
+		case int64:
+			return int(n), true
+		case float64:
+			return int(n), true
+		}
+	}
+	return 0, false
+}
+
+func stringFromMeta(m map[string]any, key string) string {
+	if v, ok := m[key]; ok {
+		if s, ok := v.(string); ok {
+			return s
+		}
+	}
+	return ""
+}
+
+func truncate(s string, n int) string {
+	if len(s) <= n {
+		return s
+	}
+	return s[:n] + "…"
+}
+
+func itoa(i int) string {
+	return strconv.Itoa(i)
 }

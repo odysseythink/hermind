@@ -104,6 +104,7 @@ func main() {
 	if err := webpushSvc.Init(context.Background()); err != nil {
 		mlog.Fatal("webpush init failed", mlog.Err(err))
 	}
+	webpushSvc.Boot(eventLogSvc)
 	phSvc := services.NewPromptHistoryService(db)
 	wsSvc := services.NewWorkspaceService(db, cfg, phSvc)
 	searchSvc := services.NewSearchService(db)
