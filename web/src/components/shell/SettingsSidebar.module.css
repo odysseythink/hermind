@@ -1,7 +1,0 @@
-.sidebar {
-  padding: var(--space-2) 0;
-  background: var(--surface);
-  border-right: 1px solid var(--border);
-  overflow-y: auto;
-  height: 100%;
-}
