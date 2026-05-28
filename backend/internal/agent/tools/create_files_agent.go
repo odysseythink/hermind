@@ -43,10 +43,8 @@ func NewCreateFilesAgentSkill(tc *ToolContext) *tool.Entry {
 			}
 
 			switch args.Format {
-			case "txt", "md", "docx", "pdf", "xlsx":
+			case "txt", "md", "docx", "pdf", "pptx", "xlsx":
 				// ok
-			case "pptx":
-				return tool.Error("pptx format not supported (no permissive-licensed library); please use docx instead"), nil
 			default:
 				return tool.Error("unknown format: " + args.Format), nil
 			}
@@ -87,6 +85,11 @@ func NewCreateFilesAgentSkill(tc *ToolContext) *tool.Entry {
 				}
 			case "xlsx":
 				if err := writeXLSXFile(ctx, dst, args.Content); err != nil {
+					return tool.Error(err.Error()), nil
+				}
+			case "pptx":
+				contentStr, _ := args.Content.(string)
+				if err := writePptxFile(ctx, dst, contentStr, args.Filename); err != nil {
 					return tool.Error(err.Error()), nil
 				}
 			}
