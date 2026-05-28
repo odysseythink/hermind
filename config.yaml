@@ -1,0 +1,110 @@
+# Server
+SERVER_PORT: "3002"
+STORAGE_DIR: "./storage"
+
+# Security
+JWT_SECRET: "change-me-in-production"
+SIG_KEY: "change-me-in-production"
+SIG_SALT: "change-me-in-production"
+AUTH_TOKEN: ""
+
+# Database
+DATABASE_URL: ""
+
+# LLM
+LLM_PROVIDER: "openai"
+LLM_MODEL: "gpt-4o-mini"
+OPEN_AI_KEY: ""
+
+# Embeddings
+EMBEDDING_ENGINE: "openai"
+EMBEDDING_MODEL: "text-embedding-3-small"
+
+# TTS (Text-to-Speech)
+# Provider: native | elevenlabs | openai | openai-generic
+TTS_PROVIDER: "native"
+
+# ElevenLabs TTS
+ELEVENLABS_API_KEY: ""
+ELEVENLABS_VOICE_ID: "21m00Tcm4TlvDq8ikWAM"
+ELEVENLABS_MODEL: "eleven_monolingual_v1"
+
+# OpenAI TTS (reuses OPEN_AI_KEY for authentication)
+OPEN_AI_TTS_MODEL: "tts-1"
+OPEN_AI_TTS_VOICE: "alloy"
+
+# OpenAI-Compatible TTS (e.g. LocalAI, LiteLLM)
+TTS_OPEN_AI_COMPATIBLE_KEY: ""
+TTS_OPEN_AI_COMPATIBLE_ENDPOINT: ""
+TTS_OPEN_AI_COMPATIBLE_MODEL: "tts-1"
+TTS_OPEN_AI_COMPATIBLE_VOICE: "alloy"
+
+# Collector microservice
+COLLECTOR_URL: "http://localhost:8888"
+COMMUNICATION_KEY: "hermind"
+
+# Features
+MULTI_USER_MODE: false
+DEBUG_MODE: false
+ENABLE_HTTPS: false
+
+# Public base URL (used for OAuth callbacks)
+PUBLIC_BASE_URL: "http://localhost:3001"
+
+# Outlook OAuth authority: "common" | "consumers" | <tenant-id>
+OUTLOOK_AUTHORITY: "common"
+
+# === Pantheon-only LLM providers ===
+MINIMAX_API_KEY: ""
+MINIMAX_MODEL_PREF: ""
+QWEN_API_KEY: ""
+QWEN_MODEL_PREF: ""
+WENXIN_API_KEY: ""
+WENXIN_MODEL_PREF: ""
+ZHIPU_API_KEY: ""
+ZHIPU_MODEL_PREF: ""
+
+# === Embedding ===
+EMBEDDING_BASE_PATH: ""
+
+# === Reranker ===
+RERANK_PROVIDER: ""
+RERANK_API_KEY: ""
+RERANK_MODEL: "rerank-english-v3.0"
+
+# Vector Database Provider
+VECTOR_DB: "lancedb"
+
+# Pinecone (when VECTOR_DB=pinecone)
+PINECONE_API_KEY: ""
+PINECONE_INDEX: ""
+
+# Qdrant (when VECTOR_DB=qdrant)
+QDRANT_ENDPOINT: ""
+QDRANT_API_KEY: ""
+
+# Chroma / ChromaCloud (when VECTOR_DB=chroma or chromacloud)
+CHROMA_ENDPOINT: ""
+CHROMA_API_HEADER: "X-Api-Key"
+CHROMA_API_KEY: ""
+
+# Weaviate (when VECTOR_DB=weaviate)
+WEAVIATE_ENDPOINT: ""
+WEAVIATE_API_KEY: ""
+
+# Milvus (when VECTOR_DB=milvus)
+MILVUS_ADDRESS: ""
+MILVUS_USERNAME: ""
+MILVUS_PASSWORD: ""
+
+# Zilliz (when VECTOR_DB=zilliz)
+ZILLIZ_ENDPOINT: ""
+ZILLIZ_API_TOKEN: ""
+
+# Astra DB (when VECTOR_DB=astra)
+ASTRA_DB_APPLICATION_TOKEN: ""
+ASTRA_DB_ENDPOINT: ""
+
+# === Agent Flow ===
+# Allow agent flows to call private IPs (dangerous; only enable in trusted networks)
+AGENT_FLOW_ALLOW_PRIVATE_IPS: false

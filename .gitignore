@@ -43,3 +43,5 @@ desktop/.qtcreator/CMakeLists.txt.user.bak
 desktop/.qtcreator/CMakeLists.txt.user*
 frontend/node_modules/
 backend/bin/
+*.log
+storage/

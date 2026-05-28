@@ -1,3 +1,56 @@
+[2026-05-28 18:06:45.424142][I][  26192][llm.go NewLLMProvider:48] NewLLMProvider: provider=openai model=gpt-4o-mini
+[2026-05-28 18:06:45.430347][E][  26192][llm.go NewLLMProvider:58] NewLLMProvider: builder failed for openai: no OpenAI API key configured
+[2026-05-28 18:06:45.483738][W][  26192][main.go main:114] embedder init failed, continuing without embedding support{error 6 0  openai embedder: no API key}
+[2026-05-28 18:06:45.483738][W][  26192][main.go main:149] lancedb connect failed: lancedb: stub build
+[2026-05-28 18:06:45.483738][I][  26192][manager.go Start:69] worker job scheduled{job 3 0 cleanup-orphan-documents <nil>} {schedule 3 0 0 */12 * * * <nil>}
+[2026-05-28 18:06:45.483738][I][  26192][manager.go Start:69] worker job scheduled{job 3 0 cleanup-generated-files <nil>} {schedule 3 0 0 */8 * * * <nil>}
+[2026-05-28 18:06:45.483738][I][  26192][manager.go Start:69] worker job scheduled{job 3 0 sync-watched-documents <nil>} {schedule 3 0 0 * * * * <nil>}
+[2026-05-28 18:06:45.483738][I][  26192][manager.go Start:62] worker job registered (on-demand){job 3 0 embed-worker <nil>}
+[2026-05-28 18:06:45.483738][I][  26192][manager.go Start:74] worker manager started{jobs 1 4  <nil>}
+[2026-05-28 18:06:45.484730][I][  26192][main.go func3:307] server starting{addr 3 0 :3001 <nil>}
 
-2026/05/23 11:26:28 [31;1mD:/go_work/go-hermind/go-server/internal/middleware/workspace.go:21 [35;1mrecord not found
-[0m[33m[0.499ms] [34;1m[rows:0][0m SELECT * FROM `workspaces` WHERE slug = "test" ORDER BY `workspaces`.`id` LIMIT 1
+2026/05/28 18:06:45 [31;1mD:/workspace/go_work/hermind/backend/internal/services/system_service.go:26 [35;1mrecord not found
+[0m[33m[0.000ms] [34;1m[rows:0][0m SELECT * FROM `system_settings` WHERE key = "outlook_agent_config" ORDER BY `system_settings`.`id` LIMIT 1
+
+2026/05/28 18:06:45 [31;1mD:/workspace/go_work/hermind/backend/internal/services/system_service.go:26 [35;1mrecord not found
+[0m[33m[0.000ms] [34;1m[rows:0][0m SELECT * FROM `system_settings` WHERE key = "gmail_agent_config" ORDER BY `system_settings`.`id` LIMIT 1
+
+2026/05/28 18:06:45 [31;1mD:/workspace/go_work/hermind/backend/internal/services/system_service.go:26 [35;1mrecord not found
+[0m[33m[0.000ms] [34;1m[rows:0][0m SELECT * FROM `system_settings` WHERE key = "google_calendar_agent_config" ORDER BY `system_settings`.`id` LIMIT 1
+[2026-05-28 18:06:45.485731][F][  26192][main.go func3:309] server failed{error 6 0  listen tcp :3001: bind: Only one usage of each socket address (protocol/network address/port) is normally permitted.}
+
+goroutine 52 [running]:
+github.com/odysseythink/mlog.Fatal({0x278d05b000c0, 0x2, 0x2})
+	C:/Users/hkb819/go/pkg/mod/github.com/odysseythink/mlog@v0.2.3/mlog.go:1009 +0x6e
+main.main.func3()
+	D:/workspace/go_work/hermind/backend/cmd/server/main.go:309 +0x206
+created by main.main in goroutine 1
+	D:/workspace/go_work/hermind/backend/cmd/server/main.go:306 +0x2e2c
+
+[2026-05-28 18:06:45.485731][E][  26192][mlog.go flushAndAbort:991] abortProcess returned unexpectedly: not supported by windows
+goroutine profile: total 5
+1 @ 0x7ff7e5331331 0x7ff7e539ab78 0x7ff7e56a2ef3 0x7ff7e53a0941
+#	0x7ff7e539ab77	os/signal.signal_recv+0x97	D:/workspace/go_work/Go/src/runtime/sigqueue.go:152
+#	0x7ff7e56a2ef2	os/signal.loop+0x12		D:/workspace/go_work/Go/src/os/signal/signal_unix.go:23
+
+1 @ 0x7ff7e53594f1 0x7ff7e53977bd 0x7ff7e58da111 0x7ff7e58d9f45 0x7ff7e58d6dc9 0x7ff7e58f4653 0x7ff7e58f4513 0x7ff7e58f47b9 0x7ff7e58f477f 0x7ff7e58f46ee 0x7ff7e6d06b26 0x7ff7e53a0941
+#	0x7ff7e58da110	runtime/pprof.writeRuntimeProfile+0xb0		D:/workspace/go_work/Go/src/runtime/pprof/pprof.go:851
+#	0x7ff7e58d9f44	runtime/pprof.writeGoroutine+0x44		D:/workspace/go_work/Go/src/runtime/pprof/pprof.go:784
+#	0x7ff7e58d6dc8	runtime/pprof.(*Profile).WriteTo+0x148		D:/workspace/go_work/Go/src/runtime/pprof/pprof.go:408
+#	0x7ff7e58f4652	github.com/odysseythink/mlog.flushAndAbort+0xd2	C:/Users/hkb819/go/pkg/mod/github.com/odysseythink/mlog@v0.2.3/mlog.go:993
+#	0x7ff7e58f4512	github.com/odysseythink/mlog.ctxfatalf+0x52	C:/Users/hkb819/go/pkg/mod/github.com/odysseythink/mlog@v0.2.3/mlog.go:982
+#	0x7ff7e58f47b8	github.com/odysseythink/mlog.fatalf+0x98	C:/Users/hkb819/go/pkg/mod/github.com/odysseythink/mlog@v0.2.3/mlog.go:998
+#	0x7ff7e58f477e	github.com/odysseythink/mlog.FatalDepth+0x5e	C:/Users/hkb819/go/pkg/mod/github.com/odysseythink/mlog@v0.2.3/mlog.go:1020
+#	0x7ff7e58f46ed	github.com/odysseythink/mlog.Fatal+0x6d		C:/Users/hkb819/go/pkg/mod/github.com/odysseythink/mlog@v0.2.3/mlog.go:1009
+#	0x7ff7e6d06b25	main.main.func3+0x205				D:/workspace/go_work/hermind/backend/cmd/server/main.go:309
+
+1 @ 0x7ff7e5398a0e 0x7ff7e532b5ae 0x7ff7e532b0d2 0x7ff7e6d0638d 0x7ff7e5365687 0x7ff7e53a0941
+#	0x7ff7e6d0638c	main.main+0x2eac	D:/workspace/go_work/hermind/backend/cmd/server/main.go:315
+#	0x7ff7e5365686	runtime.main+0x2c6	D:/workspace/go_work/Go/src/runtime/proc.go:290
+
+1 @ 0x7ff7e5398a0e 0x7ff7e5377bc5 0x7ff7e592d989 0x7ff7e53a0941
+#	0x7ff7e592d988	database/sql.(*DB).connectionOpener+0x88	D:/workspace/go_work/Go/src/database/sql/sql.go:1261
+
+1 @ 0x7ff7e5398a0e 0x7ff7e5377bc5 0x7ff7e6cfa5ff 0x7ff7e53a0941
+#	0x7ff7e6cfa5fe	github.com/robfig/cron/v3.(*Cron).run+0x4de	C:/Users/hkb819/go/pkg/mod/github.com/robfig/cron/v3@v3.0.1/cron.go:263
+

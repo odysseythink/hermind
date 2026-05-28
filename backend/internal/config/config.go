@@ -8,6 +8,7 @@ import (
 	"time"
 
 	"github.com/caarlos0/env/v11"
+	"gopkg.in/yaml.v3"
 )
 
 type Config struct {
@@ -314,6 +315,16 @@ type Config struct {
 
 func Load() (*Config, error) {
 	var cfg Config
+
+	// Load YAML config file if present (env vars take precedence).
+	configFile := os.Getenv("CONFIG_FILE")
+	if configFile != "" {
+		_ = loadYAMLConfig(configFile)
+	} else {
+		_ = loadYAMLConfig("config.yaml")
+		_ = loadYAMLConfig("../config.yaml")
+	}
+
 	if err := env.Parse(&cfg); err != nil {
 		return nil, fmt.Errorf("parse config: %w", err)
 	}
@@ -336,4 +347,40 @@ func Load() (*Config, error) {
 	_ = os.MkdirAll(cfg.AgentFilesystemRoot, 0755)
 	_ = os.MkdirAll(cfg.AgentCreateFilesDir, 0755)
 	return &cfg, nil
+}
+
+// loadYAMLConfig reads a flat YAML file and injects its keys into the
+// process environment.  Existing environment variables are never overwritten,
+// so env vars always take precedence over the config file.
+func loadYAMLConfig(path string) error {
+	data, err := os.ReadFile(path)
+	if err != nil {
+		return err
+	}
+
+	var values map[string]interface{}
+	if err := yaml.Unmarshal(data, &values); err != nil {
+		return err
+	}
+
+	for key, value := range values {
+		if os.Getenv(key) != "" {
+			continue
+		}
+		switch v := value.(type) {
+		case string:
+			os.Setenv(key, v)
+		case bool:
+			os.Setenv(key, fmt.Sprintf("%t", v))
+		case int:
+			os.Setenv(key, fmt.Sprintf("%d", v))
+		case int64:
+			os.Setenv(key, fmt.Sprintf("%d", v))
+		case float64:
+			os.Setenv(key, fmt.Sprintf("%v", v))
+		default:
+			os.Setenv(key, fmt.Sprintf("%v", v))
+		}
+	}
+	return nil
 }
