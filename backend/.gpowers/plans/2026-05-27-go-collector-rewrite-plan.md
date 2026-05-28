@@ -1890,7 +1890,7 @@ func NewLocalCollector(storageDir string, cfg any) (*Client, error) {
 }
 
 func parseBrowserArgs() []string {
-    if args := os.Getenv("ANYTHINGLLM_CHROMIUM_ARGS"); args != "" {
+    if args := os.Getenv("hermind_CHROMIUM_ARGS"); args != "" {
         return strings.Split(args, ",")
     }
     return nil

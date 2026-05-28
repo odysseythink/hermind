@@ -94,7 +94,7 @@ func (t *stdioTransport) Connect(ctx context.Context) error {
 
 	initReq := mcp.InitializeRequest{}
 	initReq.Params.ProtocolVersion = mcp.LATEST_PROTOCOL_VERSION
-	initReq.Params.ClientInfo = mcp.Implementation{Name: "anythingllm", Version: "1.0.0"}
+	initReq.Params.ClientInfo = mcp.Implementation{Name: "hermind", Version: "1.0.0"}
 	if _, err := c.Initialize(ctx, initReq); err != nil {
 		_ = c.Close()
 		t.kill()

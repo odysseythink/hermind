@@ -26,14 +26,14 @@ func newTestHypervisor(t *testing.T) (*Hypervisor, string) {
 
 func writeRawConfig(t *testing.T, storage, body string) {
 	t.Helper()
-	path := filepath.Join(storage, "plugins", "anythingllm_mcp_servers.json")
+	path := filepath.Join(storage, "plugins", "hermind_mcp_servers.json")
 	require.NoError(t, os.MkdirAll(filepath.Dir(path), 0755))
 	require.NoError(t, os.WriteFile(path, []byte(body), 0644))
 }
 
 func writeConfig(t *testing.T, storage string, servers []ServerConfig) {
 	t.Helper()
-	path := filepath.Join(storage, "plugins", "anythingllm_mcp_servers.json")
+	path := filepath.Join(storage, "plugins", "hermind_mcp_servers.json")
 	require.NoError(t, os.MkdirAll(filepath.Dir(path), 0755))
 	c := NewConfig(storage)
 	require.NoError(t, c.Write(servers))
@@ -136,7 +136,7 @@ func TestHypervisor_ToggleTool_Suppress(t *testing.T) {
 
 func TestHypervisor_ToggleTool_Unsuppress(t *testing.T) {
 	h, tmp := newTestHypervisor(t)
-	writeRawConfig(t, tmp, `{"mcpServers":{"echo":{"command":"node","anythingllm":{"suppressedTools":["danger"]}}}}`)
+	writeRawConfig(t, tmp, `{"mcpServers":{"echo":{"command":"node","hermind":{"suppressedTools":["danger"]}}}}`)
 	out, err := h.ToggleTool(context.Background(), "echo", "danger", true)
 	require.NoError(t, err)
 	assert.Empty(t, out)
@@ -226,7 +226,7 @@ func TestHypervisor_Boot_StartsAutoStartServer(t *testing.T) {
 
 func TestHypervisor_Boot_SkipsAutoStartFalse(t *testing.T) {
 	h, tmp := newTestHypervisor(t)
-	seedEchoConfig(t, tmp, func(s *ServerConfig) { autoStart := false; s.AnythingLLM = &AnythingLLMOptions{AutoStart: &autoStart} })
+	seedEchoConfig(t, tmp, func(s *ServerConfig) { autoStart := false; s.Hermind = &HermindOptions{AutoStart: &autoStart} })
 
 	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
 	defer cancel()
@@ -304,7 +304,7 @@ func TestHypervisor_Servers_AfterBoot(t *testing.T) {
 
 func TestHypervisor_Servers_FiltersSuppressedTools(t *testing.T) {
 	h, tmp := newTestHypervisor(t)
-	seedEchoConfig(t, tmp, func(s *ServerConfig) { s.AnythingLLM = &AnythingLLMOptions{SuppressedTools: []string{"add"}} })
+	seedEchoConfig(t, tmp, func(s *ServerConfig) { s.Hermind = &HermindOptions{SuppressedTools: []string{"add"}} })
 
 	ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
 	defer cancel()
@@ -340,7 +340,7 @@ func TestHypervisor_ToggleServer_Off(t *testing.T) {
 
 func TestHypervisor_ToggleServer_On(t *testing.T) {
 	h, tmp := newTestHypervisor(t)
-	seedEchoConfig(t, tmp, func(s *ServerConfig) { autoStart := false; s.AnythingLLM = &AnythingLLMOptions{AutoStart: &autoStart} })
+	seedEchoConfig(t, tmp, func(s *ServerConfig) { autoStart := false; s.Hermind = &HermindOptions{AutoStart: &autoStart} })
 
 	ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
 	defer cancel()
@@ -647,7 +647,7 @@ func TestHypervisor_Servers_HTTPSuppressionFilters(t *testing.T) {
 		Name: "http-mock",
 		URL:  m.URL,
 		Type: "http",
-		AnythingLLM: &AnythingLLMOptions{
+		Hermind: &HermindOptions{
 			SuppressedTools: []string{"add"},
 		},
 	}})

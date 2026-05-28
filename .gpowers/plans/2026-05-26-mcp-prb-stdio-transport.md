@@ -40,7 +40,7 @@ Stdio MCP server = a child process spawned via `exec.Command(command, args...)` 
 | # | Owner | Behaviour change |
 |---|---|---|
 | 1 | `mcp.shellEnv(ctx) map[string]string` *(new)* | Runs `$SHELL -ic env` (5s timeout), parses, falls back to `os.Environ()` on error / Windows / docker-sans-shell |
-| 2 | `mcp.buildServerEnv(srv, baseEnv) []string` *(new)* | Layered merge: shell env → docker overrides (if `ANYTHING_LLM_RUNTIME=docker`) → user's `srv.Env` (highest priority); returns `KEY=VAL` slice for `exec.Cmd.Env` |
+| 2 | `mcp.buildServerEnv(srv, baseEnv) []string` *(new)* | Layered merge: shell env → docker overrides (if `HERMIND_RUNTIME=docker`) → user's `srv.Env` (highest priority); returns `KEY=VAL` slice for `exec.Cmd.Env` |
 | 3 | `mcp.stdioTransport` *(new struct)* | Implements `Transport` interface via chosen MCP SDK |
 | 4 | `mcp.newTransport(srv)` *(replace)* | Dispatch by `parseServerType()` — stdio is real, others still `ErrTransportNotImplemented` |
 | 5 | `mcp.Hypervisor.Boot(ctx)` *(replace)* | Iterate configs, skip `autoStart=false`, start each with 30s timeout, store results in `mcpLoadingResults` |
@@ -163,7 +163,7 @@ Tests reference the binary via `os.Getenv("MCP_ECHO_BIN")` and pass it as `Serve
   - `TestParseEnvOutput_MultilineValue` — env can produce multi-line values via `\n` escape; for now assert the simple case (single `=` per line).
   - `TestParseEnvOutput_SkipEmpty` — input with blank lines is tolerated.
   - `TestBuildServerEnv_UserEnvOverridesShell` — shell env `PATH=/usr/bin`, server `Env={"PATH":"/custom/bin"}`, assert returned slice has `PATH=/custom/bin`.
-  - `TestBuildServerEnv_DockerOverrides` — `ANYTHING_LLM_RUNTIME=docker`, shell env empty, assert `PATH` defaulted to `/usr/local/bin:/usr/bin:/bin` and `NODE_PATH=/usr/local/lib/node_modules`.
+  - `TestBuildServerEnv_DockerOverrides` — `HERMIND_RUNTIME=docker`, shell env empty, assert `PATH` defaulted to `/usr/local/bin:/usr/bin:/bin` and `NODE_PATH=/usr/local/lib/node_modules`.
   - `TestBuildServerEnv_PassthroughOSEnv` — server has no `Env`, assert returned slice contains all caller's env vars (transitively from `os.Environ`).
 - [ ] Run tests — expect compile errors.
 - [ ] **Implement** `shell_env.go`:
@@ -228,7 +228,7 @@ Tests reference the binary via `os.Getenv("MCP_ECHO_BIN")` and pass it as `Serve
 
   // buildServerEnv produces the KEY=VAL slice for exec.Cmd.Env, layering:
   // 1. base shell environment (or os.Environ on fallback)
-  // 2. docker hardcoded defaults (if ANYTHING_LLM_RUNTIME=docker)
+  // 2. docker hardcoded defaults (if HERMIND_RUNTIME=docker)
   // 3. user-specified server.Env (highest priority)
   func buildServerEnv(srv *ServerConfig) []string {
       base := shellEnv(context.Background())
@@ -238,7 +238,7 @@ Tests reference the binary via `os.Getenv("MCP_ECHO_BIN")` and pass it as `Serve
       if base["NODE_PATH"] == "" {
           base["NODE_PATH"] = "/usr/local/lib/node_modules"
       }
-      if os.Getenv("ANYTHING_LLM_RUNTIME") == "docker" {
+      if os.Getenv("HERMIND_RUNTIME") == "docker" {
           if base["NODE_PATH"] == "" {
               base["NODE_PATH"] = "/usr/local/lib/node_modules"
           }
@@ -552,11 +552,11 @@ Tests reference the binary via `os.Getenv("MCP_ECHO_BIN")` and pass it as `Serve
 - [ ] **Remove** the `booted bool` field added in PR-A; use `len(h.mcps) > 0` as the boot signal.
 - [ ] **Write failing integration tests** in `hypervisor_test.go`:
   - `TestHypervisor_Boot_StartsAutoStartServer` — seed config with `{command: $MCP_ECHO_BIN}`; `Boot(ctx)` → `len(h.mcps)==1`, `mcpLoadingResults["echo"].Status=="success"`.
-  - `TestHypervisor_Boot_SkipsAutoStartFalse` — seed `{anythingllm:{autoStart:false}}`; `Boot(ctx)` → `mcps` empty, `mcpLoadingResults["echo"].Status=="failed"` with message containing `"autoStart"`.
+  - `TestHypervisor_Boot_SkipsAutoStartFalse` — seed `{hermind:{autoStart:false}}`; `Boot(ctx)` → `mcps` empty, `mcpLoadingResults["echo"].Status=="failed"` with message containing `"autoStart"`.
   - `TestHypervisor_Boot_FailureContinuesOthers` — seed two servers, one with bogus command; `Boot(ctx)` returns nil; one success, one failed in results.
   - `TestHypervisor_Boot_30sTimeoutOnHangingServer` — seed a `sleep 60` server; use modified timeout (or wait 30s if test budget allows; otherwise inject a smaller timeout via a test hook).
   - `TestHypervisor_Servers_AfterBoot` — boot echo, `Servers(ctx)` returns view with `Running:true, Tools:[echo, add, slow_echo], Process.PID > 0, Error: nil`.
-  - `TestHypervisor_Servers_FiltersSuppressedTools` — seed `{anythingllm:{suppressedTools:["add"]}}`; boot; `Servers(ctx)` returns tools `[echo, slow_echo]` (add filtered).
+  - `TestHypervisor_Servers_FiltersSuppressedTools` — seed `{hermind:{suppressedTools:["add"]}}`; boot; `Servers(ctx)` returns tools `[echo, slow_echo]` (add filtered).
   - `TestHypervisor_ToggleServer_Off` — boot echo, `ToggleServer(ctx, "echo")` returns `(true, nil)`, child process gone, `mcps["echo"]` absent.
   - `TestHypervisor_ToggleServer_On` — start with autoStart=false, `ToggleServer(ctx, "echo")` returns `(true, nil)`, child running.
   - `TestHypervisor_ToggleServer_UnknownName` — `ToggleServer(ctx, "ghost")` returns `(false, error)` wrapping `ErrServerNotFound`.
@@ -584,10 +584,10 @@ Tests reference the binary via `os.Getenv("MCP_ECHO_BIN")` and pass it as `Serve
       if err != nil { return err }
       for i := range servers {
           srv := &servers[i]
-          if srv.AnythingLLM != nil && srv.AnythingLLM.AutoStart != nil && !*srv.AnythingLLM.AutoStart {
+          if srv.Hermind != nil && srv.Hermind.AutoStart != nil && !*srv.Hermind.AutoStart {
               h.results[srv.Name] = LoadResult{
                   Status:  "failed",
-                  Message: fmt.Sprintf("MCP server %s has anythingllm.autoStart=false, boot skipped", srv.Name),
+                  Message: fmt.Sprintf("MCP server %s has hermind.autoStart=false, boot skipped", srv.Name),
               }
               continue
           }
@@ -719,7 +719,7 @@ Tests reference the binary via `os.Getenv("MCP_ECHO_BIN")` and pass it as `Serve
       return m
   }
   ```
-  > Add a `SuppressedTools()` helper on `ServerConfig` returning `c.AnythingLLM.SuppressedTools` (nil-safe) — keeps `Servers()` readable.
+  > Add a `SuppressedTools()` helper on `ServerConfig` returning `c.Hermind.SuppressedTools` (nil-safe) — keeps `Servers()` readable.
 
 - [ ] **Make the 30s timeout injectable** for tests:
   ```go
@@ -790,7 +790,7 @@ Tests reference the binary via `os.Getenv("MCP_ECHO_BIN")` and pass it as `Serve
   STORAGE_DIR=/tmp/mcp-smoke go run ./cmd/server
   # Wait for "server starting"
   # In another terminal, seed a config:
-  cat > /tmp/mcp-smoke/plugins/anythingllm_mcp_servers.json <<'EOF'
+  cat > /tmp/mcp-smoke/plugins/hermind_mcp_servers.json <<'EOF'
   {"mcpServers": {"echo": {"command": "/path/to/echo-mcp"}}}
   EOF
   # Trigger a reload via API to boot it

@@ -1,6 +1,6 @@
 # Gmail Apps Script Bridge
 
-This Google Apps Script provides the backend for the `gmail-agent` skill in AnythingLLM Go server.
+This Google Apps Script provides the backend for the `gmail-agent` skill in Hermind Go server.
 
 ## Deployment Steps
 
@@ -13,7 +13,7 @@ This Google Apps Script provides the backend for the `gmail-agent` skill in Anyt
    - **Who has access**: Anyone with the link
 6. Click **Deploy**. You may need to authorize Gmail scopes on first run.
 7. Copy the **Deployment ID** from the URL (the long string after `/macros/s/`).
-8. In AnythingLLM, set the system setting `gmail_agent_config` to:
+8. In Hermind, set the system setting `gmail_agent_config` to:
    ```json
    {"deploymentId":"YOUR_DEPLOYMENT_ID","apiKey":"YOUR_API_KEY"}
    ```

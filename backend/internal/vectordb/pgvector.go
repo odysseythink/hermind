@@ -10,7 +10,7 @@ import (
 	"github.com/jackc/pgx/v5/pgxpool"
 )
 
-const pgvectorTableName = "anythingllm_vectors"
+const pgvectorTableName = "hermind_vectors"
 
 type PGVector struct {
 	pool    *pgxpool.Pool

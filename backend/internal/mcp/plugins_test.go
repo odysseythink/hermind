@@ -88,7 +88,7 @@ func TestHypervisor_ActiveServers_AutoStartFalseExcluded(t *testing.T) {
 	h, tmp := newTestHypervisor(t)
 	seedEchoConfig(t, tmp, func(s *ServerConfig) {
 		autoStart := false
-		s.AnythingLLM = &AnythingLLMOptions{AutoStart: &autoStart}
+		s.Hermind = &HermindOptions{AutoStart: &autoStart}
 	})
 
 	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
@@ -156,7 +156,7 @@ func TestHypervisor_ToolsAsPlugins_ReturnsAllTools(t *testing.T) {
 func TestHypervisor_ToolsAsPlugins_FiltersSuppressed(t *testing.T) {
 	h, tmp := newTestHypervisor(t)
 	seedEchoConfig(t, tmp, func(s *ServerConfig) {
-		s.AnythingLLM = &AnythingLLMOptions{SuppressedTools: []string{"add"}}
+		s.Hermind = &HermindOptions{SuppressedTools: []string{"add"}}
 	})
 
 	ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
@@ -177,7 +177,7 @@ func TestHypervisor_ToolsAsPlugins_FiltersSuppressed(t *testing.T) {
 func TestHypervisor_ToolsAsPlugins_AllToolsSuppressed_EmptyNotNil(t *testing.T) {
 	h, tmp := newTestHypervisor(t)
 	seedEchoConfig(t, tmp, func(s *ServerConfig) {
-		s.AnythingLLM = &AnythingLLMOptions{SuppressedTools: []string{"echo", "add", "slow_echo"}}
+		s.Hermind = &HermindOptions{SuppressedTools: []string{"echo", "add", "slow_echo"}}
 	})
 
 	ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)

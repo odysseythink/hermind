@@ -203,7 +203,7 @@ type Config struct {
 	EmbeddingApiKey        string `env:"EMBEDDING_API_KEY"`
 	DatabaseURL            string `env:"DATABASE_URL"`
 	CollectorURL           string `env:"COLLECTOR_URL" envDefault:"http://localhost:8888"`
-	CommunicationKey       string `env:"COMMUNICATION_KEY" envDefault:"anything-llm"`
+	CommunicationKey       string `env:"COMMUNICATION_KEY" envDefault:"hermind"`
 	DisableViewChatHistory bool   `env:"DISABLE_VIEW_CHAT_HISTORY" envDefault:"false"`
 	SimpleSSOEnabled       bool   `env:"SIMPLE_SSO_ENABLED" envDefault:"false"`
 	SimpleSSONoLogin       bool   `env:"SIMPLE_SSO_NO_LOGIN" envDefault:"false"`
@@ -270,15 +270,15 @@ type Config struct {
 	EmbeddingBasePath string `env:"EMBEDDING_BASE_PATH"`
 
 	// === TTS ===
-	ElevenLabsAPIKey         string `env:"ELEVENLABS_API_KEY"`
-	ElevenLabsVoiceID        string `env:"ELEVENLABS_VOICE_ID" envDefault:"21m00Tcm4TlvDq8ikWAM"`
-	ElevenLabsModel          string `env:"ELEVENLABS_MODEL" envDefault:"eleven_monolingual_v1"`
-	OpenAITTSModel           string `env:"OPEN_AI_TTS_MODEL" envDefault:"tts-1"`
-	OpenAITTSVoice           string `env:"OPEN_AI_TTS_VOICE" envDefault:"alloy"`
-	TTSOpenAICompatKey       string `env:"TTS_OPEN_AI_COMPATIBLE_KEY"`
-	TTSOpenAICompatEndpoint  string `env:"TTS_OPEN_AI_COMPATIBLE_ENDPOINT"`
-	TTSOpenAICompatModel     string `env:"TTS_OPEN_AI_COMPATIBLE_MODEL" envDefault:"tts-1"`
-	TTSOpenAICompatVoice     string `env:"TTS_OPEN_AI_COMPATIBLE_VOICE" envDefault:"alloy"`
+	ElevenLabsAPIKey        string `env:"ELEVENLABS_API_KEY"`
+	ElevenLabsVoiceID       string `env:"ELEVENLABS_VOICE_ID" envDefault:"21m00Tcm4TlvDq8ikWAM"`
+	ElevenLabsModel         string `env:"ELEVENLABS_MODEL" envDefault:"eleven_monolingual_v1"`
+	OpenAITTSModel          string `env:"OPEN_AI_TTS_MODEL" envDefault:"tts-1"`
+	OpenAITTSVoice          string `env:"OPEN_AI_TTS_VOICE" envDefault:"alloy"`
+	TTSOpenAICompatKey      string `env:"TTS_OPEN_AI_COMPATIBLE_KEY"`
+	TTSOpenAICompatEndpoint string `env:"TTS_OPEN_AI_COMPATIBLE_ENDPOINT"`
+	TTSOpenAICompatModel    string `env:"TTS_OPEN_AI_COMPATIBLE_MODEL" envDefault:"tts-1"`
+	TTSOpenAICompatVoice    string `env:"TTS_OPEN_AI_COMPATIBLE_VOICE" envDefault:"alloy"`
 
 	// === Reranker ===
 	RerankProvider  string `env:"RERANK_PROVIDER" envDefault:""` // "" = noop
@@ -287,7 +287,7 @@ type Config struct {
 
 	// === Agent Skills ===
 	AgentFilesystemEnabled  bool   `env:"AGENT_FILESYSTEM_ENABLED" envDefault:"true"`
-	AgentFilesystemRoot     string `env:"AGENT_FILESYSTEM_ROOT"` // empty → <StorageDir>/anythingllm-fs
+	AgentFilesystemRoot     string `env:"AGENT_FILESYSTEM_ROOT"` // empty → <StorageDir>/hermind-fs
 	AgentCreateFilesEnabled bool   `env:"AGENT_CREATE_FILES_ENABLED" envDefault:"true"`
 	AgentCreateFilesDir     string `env:"AGENT_CREATE_FILES_DIR"` // empty → <StorageDir>/generated-files
 
@@ -321,7 +321,7 @@ func Load() (*Config, error) {
 		return nil, fmt.Errorf("create storage dir: %w", err)
 	}
 	if cfg.AgentFilesystemRoot == "" {
-		cfg.AgentFilesystemRoot = filepath.Join(cfg.StorageDir, "anythingllm-fs")
+		cfg.AgentFilesystemRoot = filepath.Join(cfg.StorageDir, "hermind-fs")
 	}
 	if cfg.AgentCreateFilesDir == "" {
 		cfg.AgentCreateFilesDir = filepath.Join(cfg.StorageDir, "generated-files")

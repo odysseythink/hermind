@@ -15,7 +15,7 @@ type Config struct {
 }
 
 func NewConfig(storageDir string) *Config {
-	return &Config{Path: filepath.Join(storageDir, "plugins", "anythingllm_mcp_servers.json")}
+	return &Config{Path: filepath.Join(storageDir, "plugins", "hermind_mcp_servers.json")}
 }
 
 type rawFile struct {
@@ -132,16 +132,16 @@ func (c *Config) UpdateSuppressedTools(serverName, toolName string, enabled bool
 		if servers[i].Name != serverName {
 			continue
 		}
-		if servers[i].AnythingLLM == nil {
-			servers[i].AnythingLLM = &AnythingLLMOptions{}
+		if servers[i].Hermind == nil {
+			servers[i].Hermind = &HermindOptions{}
 		}
-		suppressed := servers[i].AnythingLLM.SuppressedTools
+		suppressed := servers[i].Hermind.SuppressedTools
 		if enabled {
 			suppressed = removeString(suppressed, toolName)
 		} else if !containsString(suppressed, toolName) {
 			suppressed = append(suppressed, toolName)
 		}
-		servers[i].AnythingLLM.SuppressedTools = suppressed
+		servers[i].Hermind.SuppressedTools = suppressed
 		if err := c.writeLocked(servers); err != nil {
 			return nil, err
 		}
@@ -159,13 +159,13 @@ func (c *Config) GetSuppressedTools(serverName string) []string {
 		if s.Name != serverName {
 			continue
 		}
-		if s.AnythingLLM == nil {
+		if s.Hermind == nil {
 			return []string{}
 		}
-		if s.AnythingLLM.SuppressedTools == nil {
+		if s.Hermind.SuppressedTools == nil {
 			return []string{}
 		}
-		return s.AnythingLLM.SuppressedTools
+		return s.Hermind.SuppressedTools
 	}
 	return []string{}
 }

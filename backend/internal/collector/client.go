@@ -269,7 +269,7 @@ func attachOptions() Options {
 	}
 
 	var browserLaunchArgs []string
-	if args := os.Getenv("ANYTHINGLLM_CHROMIUM_ARGS"); args != "" {
+	if args := os.Getenv("hermind_CHROMIUM_ARGS"); args != "" {
 		for _, arg := range strings.Split(args, ",") {
 			browserLaunchArgs = append(browserLaunchArgs, strings.TrimSpace(arg))
 		}

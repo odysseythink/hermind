@@ -58,7 +58,7 @@ func parseEnvOutput(s string) map[string]string {
 
 // buildServerEnv produces the KEY=VAL slice for exec.Cmd.Env, layering:
 // 1. base shell environment (or os.Environ on fallback)
-// 2. docker hardcoded defaults (if ANYTHING_LLM_RUNTIME=docker)
+// 2. docker hardcoded defaults (if HERMIND_RUNTIME=docker)
 // 3. user-specified server.Env (highest priority)
 func buildServerEnv(srv *ServerConfig) []string {
 	base := shellEnv(context.Background())
@@ -68,7 +68,7 @@ func buildServerEnv(srv *ServerConfig) []string {
 	if base["NODE_PATH"] == "" {
 		base["NODE_PATH"] = "/usr/local/lib/node_modules"
 	}
-	if os.Getenv("ANYTHING_LLM_RUNTIME") == "docker" {
+	if os.Getenv("HERMIND_RUNTIME") == "docker" {
 		if base["NODE_PATH"] == "" {
 			base["NODE_PATH"] = "/usr/local/lib/node_modules"
 		}

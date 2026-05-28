@@ -2,7 +2,7 @@
 
 > **For agentic workers:** REQUIRED SUB-SKILL: Use `gpowers:subagent-driven-development` (recommended) or `gpowers:executing-plans` to implement this plan task-by-task. Steps use checkbox (`- [ ]`) syntax for tracking.
 
-**Goal:** Land the streamable HTTP and SSE MCP transports. After PR-C, `newTransport()` dispatches all three Node-supported transports (stdio from PR-B, HTTP + SSE from PR-C). The Hypervisor lifecycle and REST routes need no further changes — they already consume the `Transport` interface generically. Operators can now configure MCP servers via `{url, type:"streamable"}`, `{url, type:"http"}`, `{url, type:"sse"}`, or `{url}` (SSE default) in `anythingllm_mcp_servers.json` and they Just Work.
+**Goal:** Land the streamable HTTP and SSE MCP transports. After PR-C, `newTransport()` dispatches all three Node-supported transports (stdio from PR-B, HTTP + SSE from PR-C). The Hypervisor lifecycle and REST routes need no further changes — they already consume the `Transport` interface generically. Operators can now configure MCP servers via `{url, type:"streamable"}`, `{url, type:"http"}`, `{url, type:"sse"}`, or `{url}` (SSE default) in `hermind_mcp_servers.json` and they Just Work.
 
 **Architecture:** Two new files — `internal/mcp/transport_http.go` (streamable HTTP) and `internal/mcp/transport_sse.go` (SSE) — each implementing the `Transport` interface. Both use the MCP Go SDK chosen in PR-B's Task 0; if the SDK's HTTP/SSE client surface is incomplete, hand-roll using `net/http` (a 200-300 line cost, documented decision). Tests use `httptest.NewServer` with JSON-RPC and SSE event-stream mock handlers in a shared `internal/mcp/testutil/` package.
 

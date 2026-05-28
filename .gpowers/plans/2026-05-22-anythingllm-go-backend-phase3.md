@@ -1,4 +1,4 @@
-# AnythingLLM Go Backend — Phase 3 Implementation Plan
+# Hermind Go Backend — Phase 3 Implementation Plan
 
 > **For agentic workers:** REQUIRED SUB-SKILL: Use gpowers:subagent-driven-development (recommended) or gpowers:executing-plans to implement this plan task-by-task. Steps use checkbox (`- [ ]`) syntax for tracking.
 

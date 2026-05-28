@@ -227,7 +227,7 @@ func (h *SystemHandler) PromptVariables(c *gin.Context) {
 }
 
 func (h *SystemHandler) IsDefaultLogo(c *gin.Context) {
-	const defaultLogo = "anything-llm.png"
+	const defaultLogo = "hermind.png"
 	currentLogo, _ := h.sysSvc.GetSetting(c.Request.Context(), "logo_filename")
 	isDefault := currentLogo == "" || currentLogo == defaultLogo
 	c.JSON(http.StatusOK, gin.H{"isDefaultLogo": isDefault})
@@ -768,8 +768,8 @@ func (h *SystemHandler) RemovePfp(c *gin.Context) {
 
 // Logo serves the current logo (custom or default).
 func (h *SystemHandler) Logo(c *gin.Context) {
-	const defaultLogo = "anything-llm.png"
-	const defaultLogoDark = "anything-llm-dark.png"
+	const defaultLogo = "hermind.png"
+	const defaultLogoDark = "hermind-dark.png"
 
 	darkMode := c.Query("theme") == "" || c.Query("theme") == "default"
 	defaultFilename := defaultLogoDark
@@ -830,7 +830,7 @@ func (h *SystemHandler) UploadLogo(c *gin.Context) {
 
 	// Remove old custom logo if exists
 	currentLogo, _ := h.sysSvc.GetSetting(c.Request.Context(), "logo_filename")
-	if currentLogo != "" && currentLogo != "anything-llm.png" && currentLogo != "anything-llm-dark.png" {
+	if currentLogo != "" && currentLogo != "hermind.png" && currentLogo != "hermind-dark.png" {
 		oldPath := filepath.Join(h.fsSvc.AssetsDir(), currentLogo)
 		if h.fsSvc.IsWithin(h.fsSvc.AssetsDir(), oldPath) {
 			_ = h.fsSvc.RemoveAsset(oldPath)
@@ -848,14 +848,14 @@ func (h *SystemHandler) UploadLogo(c *gin.Context) {
 // RemoveLogo removes the custom logo and resets to default.
 func (h *SystemHandler) RemoveLogo(c *gin.Context) {
 	currentLogo, _ := h.sysSvc.GetSetting(c.Request.Context(), "logo_filename")
-	if currentLogo != "" && currentLogo != "anything-llm.png" && currentLogo != "anything-llm-dark.png" {
+	if currentLogo != "" && currentLogo != "hermind.png" && currentLogo != "hermind-dark.png" {
 		oldPath := filepath.Join(h.fsSvc.AssetsDir(), currentLogo)
 		if h.fsSvc.IsWithin(h.fsSvc.AssetsDir(), oldPath) {
 			_ = h.fsSvc.RemoveAsset(oldPath)
 		}
 	}
 
-	if err := h.sysSvc.SetSetting(c.Request.Context(), "logo_filename", "anything-llm.png"); err != nil {
+	if err := h.sysSvc.SetSetting(c.Request.Context(), "logo_filename", "hermind.png"); err != nil {
 		c.JSON(http.StatusInternalServerError, gin.H{"message": "Failed to remove logo."})
 		return
 	}

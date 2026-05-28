@@ -395,7 +395,7 @@ Each task lands as **one commit**. Failing test → impl → green → full suit
       req, err := http.NewRequestWithContext(ctx, "POST", url, bytes.NewReader(payload))
       if err != nil { return nil, fmt.Errorf("build request: %w", err) }
       req.Header.Set("Content-Type", "application/json")
-      req.Header.Set("X-AnythingLLM-UA", "AnythingLLM-Agent-Go/1.0")
+      req.Header.Set("X-Hermind-UA", "Hermind-Agent-Go/1.0")
 
       resp, err := b.http.Do(req)
       if err != nil { return nil, fmt.Errorf("bridge call: %w", err) }
@@ -1536,7 +1536,7 @@ Each task lands as **one commit**. Failing test → impl → green → full suit
 | Apps Script deployment fails because of OAuth consent screen | README walks through "Execute as: Me" + "Who has access: Anyone with the link"; first request triggers consent |
 | Apps Script quota exceeded (script.google.com daily limit) | Documented in README; user-visible failure shows envelope error |
 | OAuth state HMAC secret rotates (JWT secret rotation) | In-flight OAuth flow fails (10min window); document "stop OAuth flows before JWT rotation" |
-| `refresh_token` encryption key changes (`STORAGE_DIR` move) | Decryption fails → user must reconnect; existing AnythingLLM behavior |
+| `refresh_token` encryption key changes (`STORAGE_DIR` move) | Decryption fails → user must reconnect; existing Hermind behavior |
 | Microsoft revokes refresh token after long idle | `ValidAccessToken` returns error; user re-authorizes; tool surface temporarily hidden by CheckFn |
 | `graph.microsoft.com` outage | Tool returns error envelope; agent loop continues; user retries |
 | Concurrent agent sessions racing on refresh | `sync.Mutex` in `OutlookOAuth` serializes — bounded by single-user concurrency |

@@ -49,7 +49,7 @@ func (t *httpTransport) Connect(ctx context.Context) error {
 	initReq := mcp.InitializeRequest{
 		Params: mcp.InitializeParams{
 			ProtocolVersion: mcp.LATEST_PROTOCOL_VERSION,
-			ClientInfo:      mcp.Implementation{Name: "anythingllm", Version: "1.0.0"},
+			ClientInfo:      mcp.Implementation{Name: "hermind", Version: "1.0.0"},
 		},
 	}
 	if _, err := t.client.Initialize(ctx, initReq); err != nil {

@@ -74,7 +74,7 @@ func TestBuildServerEnv_UserEnvOverridesShell(t *testing.T) {
 }
 
 func TestBuildServerEnv_DockerOverrides(t *testing.T) {
-	t.Setenv("ANYTHING_LLM_RUNTIME", "docker")
+	t.Setenv("HERMIND_RUNTIME", "docker")
 	// Start from empty shell env by using a server with no env.
 	srv := &ServerConfig{Env: map[string]string{}}
 	out := buildServerEnv(srv)

@@ -853,7 +853,7 @@ cd backend && go run ./cmd/server
 TOKEN=$(curl -sX POST http://localhost:3001/api/workspace/<slug>/agent-token \
   -H 'Authorization: Bearer <session-jwt>' | jq -r .token)
 UUID=$(... # CreateInvocation will be triggered from chat in PR-AR-4; for PR-AR-1 smoke, insert directly via sqlite)
-sqlite3 storage/anythingllm.db "INSERT INTO workspace_agent_invocations (uuid, workspace_id, prompt) VALUES ('manual-test', 1, '@agent hi');"
+sqlite3 storage/hermind.db "INSERT INTO workspace_agent_invocations (uuid, workspace_id, prompt) VALUES ('manual-test', 1, '@agent hi');"
 websocat "ws://localhost:3001/api/agent-invocation/manual-test?token=$TOKEN"
 # expect welcome frame, then any line you type → echoed as __unhandled
 ```

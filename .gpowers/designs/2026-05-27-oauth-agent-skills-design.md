@@ -13,7 +13,7 @@
 
 > Node 团队把这三个 skill 起名"OAuth 三件套"是**误导**: 实际只有 1 个真 OAuth + 2 个 Apps Script 桥接。
 
-| Skill | Node 真实架构 | AnythingLLM 持有的凭据 | Go 复刻成本 |
+| Skill | Node 真实架构 | Hermind 持有的凭据 | Go 复刻成本 |
 |---|---|---|---|
 | **gmail** | Google Apps Script 桥接 | `deploymentId + apiKey` (HTTP POST → script.google.com) | ~4h |
 | **google-calendar** | 同款 Apps Script 桥接 | `deploymentId + apiKey` | ~3h |
@@ -24,7 +24,7 @@
 ```http
 POST https://script.google.com/macros/s/<deploymentId>/exec
 Content-Type: application/json
-X-AnythingLLM-UA: AnythingLLM-Gmail-Agent/1.0
+X-Hermind-UA: Hermind-Gmail-Agent/1.0
 
 {"key": "<apiKey>", "action": "search", "query": "is:inbox", "limit": 10}
 ```
@@ -35,7 +35,7 @@ X-AnythingLLM-UA: AnythingLLM-Gmail-Agent/1.0
 {"status": "ok"|"error", "data": {...}, "error": "..." }
 ```
 
-> Apps Script 那一侧是一段 Google 内运行的 JavaScript,持有部署者的 Google 身份(GmailApp.* / CalendarApp.*),AnythingLLM 服务器**不持有任何 Google access_token / refresh_token**。这就是为什么 Gmail/GCal 实现成本只有 outlook 的 1/4。
+> Apps Script 那一侧是一段 Google 内运行的 JavaScript,持有部署者的 Google 身份(GmailApp.* / CalendarApp.*),Hermind 服务器**不持有任何 Google access_token / refresh_token**。这就是为什么 Gmail/GCal 实现成本只有 outlook 的 1/4。
 
 ---
 
@@ -207,7 +207,7 @@ func NewGmailAgentSkill(tc *ToolContext, deps BuilderDeps) *tool.Entry {
 | Endpoint | `https://script.google.com/macros/s/<deploymentId>/exec` |
 | Method | POST |
 | Content-Type | `application/json` |
-| UA Header | `X-AnythingLLM-UA: AnythingLLM-<Skill>-Agent-Go/1.0` |
+| UA Header | `X-Hermind-UA: Hermind-<Skill>-Agent-Go/1.0` |
 | Body | `{"key": "<apiKey>", "action": "<name>", ...params}` |
 | Response | `{"status":"ok","data":{...}}` 或 `{"status":"error","error":"..."}` |
 | Timeout | 30s |
@@ -260,7 +260,7 @@ func (b *BridgeClient) Call(ctx context.Context, deploymentID, apiKey, action st
 
     req, _ := http.NewRequestWithContext(ctx, "POST", url, bytes.NewReader(payload))
     req.Header.Set("Content-Type", "application/json")
-    req.Header.Set("X-AnythingLLM-UA", "AnythingLLM-Agent-Go/1.0")
+    req.Header.Set("X-Hermind-UA", "Hermind-Agent-Go/1.0")
 
     resp, err := b.httpClient.Do(req)
     if err != nil { return nil, fmt.Errorf("bridge call: %w", err) }
@@ -572,12 +572,12 @@ function jsonResponse(obj) {
 2. 粘贴 Code.gs 全部内容
 3. Project Settings → Script Properties → 添加 `API_KEY` = <自己生成的随机字符串>
 4. Deploy → New Deployment → Web app
-   - Description: AnythingLLM Gmail Bridge
+   - Description: Hermind Gmail Bridge
    - Execute as: Me
    - Who has access: Anyone with the link
 5. Authorize when prompted (会弹一次 Google OAuth 让脚本拿到你的 Gmail 权限)
 6. 复制 deployment ID(URL 形如 .../macros/s/<deploymentID>/exec)
-7. 回到 AnythingLLM → Agent Settings → Gmail Agent
+7. 回到 Hermind → Agent Settings → Gmail Agent
    - Deployment ID: <粘贴>
    - API Key: <粘贴第 3 步的随机字符串>
 8. Test → 在 @agent 对话里说 "@agent search my inbox for emails from boss"

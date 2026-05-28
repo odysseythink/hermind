@@ -2,7 +2,7 @@
 
 > **For agentic workers:** REQUIRED SUB-SKILL: Use `gpowers:subagent-driven-development` (recommended) or `gpowers:executing-plans` to implement this plan task-by-task. Steps use checkbox (`- [ ]`) syntax for tracking.
 
-**Goal:** Land the 4 OpenAI-compatible API v1 routes in `api_openai.go` so that LangChain Python, `openai>=1.0`, and OpenAI JS SDK clients can use AnythingLLM as a drop-in OpenAI replacement. Includes one small `ChatService` DTO extension (`HistoryOverride`) so OpenAI clients can supply their own history without being polluted by DB-stored chat rows.
+**Goal:** Land the 4 OpenAI-compatible API v1 routes in `api_openai.go` so that LangChain Python, `openai>=1.0`, and OpenAI JS SDK clients can use Hermind as a drop-in OpenAI replacement. Includes one small `ChatService` DTO extension (`HistoryOverride`) so OpenAI clients can supply their own history without being polluted by DB-stored chat rows.
 
 **Architecture:** New handler file `api_openai.go` follows the same `api_embed.go` pattern (one handler struct, one method per route, `RegisterAPI*Routes` registers absolute `/v1/...` paths under the existing `api` group). Streaming uses **raw SSE `data:` frames** (NOT `c.SSEvent`) per design §6.3, to keep openai-python and LangChain SDKs happy.
 
@@ -46,7 +46,7 @@
 
 ### Out of scope (explicit)
 
-- **`extractAttachments` (image_url base64)** — Node maps `image_url` content parts into AnythingLLM `Attachment` shape. PR5 v1 ignores image_url content; only text parts are extracted. File as a "multimodal attachments" follow-up. (Most OpenAI client integrations send text-only at first; image support is a separate hardening PR.)
+- **`extractAttachments` (image_url base64)** — Node maps `image_url` content parts into Hermind `Attachment` shape. PR5 v1 ignores image_url content; only text parts are extracted. File as a "multimodal attachments" follow-up. (Most OpenAI client integrations send text-only at first; image support is a separate hardening PR.)
 - **`Telemetry.sendTelemetry("sent_chat", ...)`** — deferred.
 - **`EventLogs.logEvent("api_sent_chat", ...)`** — deferred.
 - **`TemperatureOverride` honored at LLM call site** — PR2 plumbed the DTO field; PR5 reads it from the OpenAI request but `providers.LLMProvider.Complete/Stream` does not yet accept a per-call temperature. File as a known gap; behavior: temperature is silently dropped on the LLM call (workspace default applies).

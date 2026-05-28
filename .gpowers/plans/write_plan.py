@@ -1,9 +1,9 @@
 import os
 
-plan_path = "d:/workspace/go_work/go-anything-llm/.gpowers/plans/2026-05-22-anythingllm-go-backend-phase2.md"
+plan_path = "d:/workspace/go_work/go-hermind/.gpowers/plans/2026-05-22-hermind-go-backend-phase2.md"
 
 # Part 1: Header + Milestone 1 Tasks 1-2
-part1 = """# AnythingLLM Go Backend — Phase 2 Implementation Plan
+part1 = """# Hermind Go Backend — Phase 2 Implementation Plan
 
 > **For agentic workers:** REQUIRED SUB-SKILL: Use gpowers:subagent-driven-development (recommended) or gpowers:executing-plans to implement this plan task-by-task. Steps use checkbox (`- [ ]`) syntax for tracking.
 

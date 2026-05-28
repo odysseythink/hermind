@@ -4,7 +4,7 @@ import Sidebar from "@/components/SettingsSidebar";
 import { isMobile } from "react-device-detect";
 import System from "@/models/system";
 import showToast from "@/utils/toast";
-import AnythingLLMIcon from "@/media/logo/anything-llm-icon.png";
+import HermindIcon from "@/media/logo/hermind-icon.png";
 import OpenAiLogo from "@/media/llmprovider/openai.png";
 import GenericOpenAiLogo from "@/media/llmprovider/generic-openai.png";
 import AzureOpenAiLogo from "@/media/llmprovider/azure.png";
@@ -90,8 +90,8 @@ import CTAButton from "@/components/lib/CTAButton";
 export const AVAILABLE_LLM_PROVIDERS = [
   {
     name: "Model Router",
-    value: "anythingllm-router",
-    logo: AnythingLLMIcon,
+    value: "hermind-router",
+    logo: HermindIcon,
     options: (settings) => <ModelRouterOptions settings={settings} />,
     description:
       "Route messages to different LLM providers based on rules you define.",
@@ -623,7 +623,7 @@ export default function GeneralLLMPreference() {
                   >
                     <div className="flex gap-x-4 items-center">
                       <img
-                        src={selectedLLMObject?.logo || AnythingLLMIcon}
+                        src={selectedLLMObject?.logo || HermindIcon}
                         alt={`${selectedLLMObject?.name} logo`}
                         className="w-10 h-10 rounded-md"
                       />

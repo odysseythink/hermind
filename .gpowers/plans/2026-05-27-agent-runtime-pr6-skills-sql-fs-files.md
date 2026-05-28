@@ -7,8 +7,8 @@
 **Architecture:**
 - Each skill is a single `tool.Entry` registered in `tools/builder.go` Source 1 (default skills) — same shape as PR-AR-3's four existing skills. Skill registration is **gated by `CheckFn`** so an unconfigured environment doesn't expose the tool to the LLM.
 - **sql-agent** runs as **one fat tool** with `action` enum (`list_databases`/`list_tables`/`get_schema`/`query`) — same as rag-memory's two-action shape. Connections come from `SystemSetting{key: "agent_sql_connections"}` (Node-compatible JSON). Drivers reuse already-imported `lib/pq`, `mattn/go-sqlite3`; **MSSQL via new `github.com/microsoft/go-mssqldb`** (the only new dep).
-- **filesystem-agent** runs as one fat tool with `action` enum (`list_dir`/`read_file`/`write_file`/`edit_file`/`move_file`/`copy_file`/`search_files`/`get_info`/`create_dir`). Sandboxed under `STORAGE_DIR/anythingllm-fs/` by default; root is overridable via `cfg.AgentFilesystemRoot`. **All paths go through a `safeJoin(root, userPath)` guard** that defends against `..` traversal + symlink escape.
-- **create-files-agent** runs as one tool with `format` enum (`txt`/`md`/`docx`/`pdf`/`pptx`/`xlsx`). `txt`/`md` are stdlib; the rest pull in **`github.com/unidoc/unioffice`** (commercial but free for AGPL — already used by some Go AnythingLLM forks; needs decision artefact) **OR** stub three formats to "coming-in-PR-AR-6.1" and ship only `txt`/`md` in this PR. **Decision deferred to Task 0**; recommendation = ship `txt`/`md` only, defer the four binary formats to a follow-up.
+- **filesystem-agent** runs as one fat tool with `action` enum (`list_dir`/`read_file`/`write_file`/`edit_file`/`move_file`/`copy_file`/`search_files`/`get_info`/`create_dir`). Sandboxed under `STORAGE_DIR/hermind-fs/` by default; root is overridable via `cfg.AgentFilesystemRoot`. **All paths go through a `safeJoin(root, userPath)` guard** that defends against `..` traversal + symlink escape.
+- **create-files-agent** runs as one tool with `format` enum (`txt`/`md`/`docx`/`pdf`/`pptx`/`xlsx`). `txt`/`md` are stdlib; the rest pull in **`github.com/unidoc/unioffice`** (commercial but free for AGPL — already used by some Go Hermind forks; needs decision artefact) **OR** stub three formats to "coming-in-PR-AR-6.1" and ship only `txt`/`md` in this PR. **Decision deferred to Task 0**; recommendation = ship `txt`/`md` only, defer the four binary formats to a follow-up.
 - All three skills are tagged `approval-required` in `Builder.addWithApproval` — even though they're "default skills" (not MCP/Flow), the destructive nature (DB writes inadvertently allowed, file writes, generated artifacts) warrants the gate. **Or**: only `sql-query` mutations and `filesystem.write/edit/move/copy/create_dir` + all `create-files` actions get the gate; read-only actions bypass. **Pick at Task 1 (the second, finer-grained approach is cleaner).**
 
 **Tech Stack:** Go 1.25.5; new deps `github.com/microsoft/go-mssqldb` (sql-server driver). Stdlib only for filesystem-agent. `txt`/`md` only for create-files in this PR (other formats deferred). All pantheon + gorilla deps already in `go.mod`.
@@ -188,7 +188,7 @@ Each task lands as **one commit**. Failing test → impl → green → full suit
   ```go
   // === Agent skills ===
   AgentFilesystemEnabled  bool   `env:"AGENT_FILESYSTEM_ENABLED" envDefault:"true"`
-  AgentFilesystemRoot     string `env:"AGENT_FILESYSTEM_ROOT"` // empty → <StorageDir>/anythingllm-fs
+  AgentFilesystemRoot     string `env:"AGENT_FILESYSTEM_ROOT"` // empty → <StorageDir>/hermind-fs
   AgentCreateFilesEnabled bool   `env:"AGENT_CREATE_FILES_ENABLED" envDefault:"true"`
   AgentCreateFilesDir     string `env:"AGENT_CREATE_FILES_DIR"` // empty → <StorageDir>/generated-files
   ```
@@ -196,7 +196,7 @@ Each task lands as **one commit**. Failing test → impl → green → full suit
   In `Load()`, after `MkdirAll(cfg.StorageDir)`:
   ```go
   if cfg.AgentFilesystemRoot == "" {
-      cfg.AgentFilesystemRoot = filepath.Join(cfg.StorageDir, "anythingllm-fs")
+      cfg.AgentFilesystemRoot = filepath.Join(cfg.StorageDir, "hermind-fs")
   }
   if cfg.AgentCreateFilesDir == "" {
       cfg.AgentCreateFilesDir = filepath.Join(cfg.StorageDir, "generated-files")
@@ -238,7 +238,7 @@ Each task lands as **one commit**. Failing test → impl → green → full suit
 
   **Date**: 2026-05-27
   **Status**: Adopted
-  **Context**: Node's `filesystem-agent.isToolAvailable()` returns true only when `NODE_ENV=development` or `ANYTHING_LLM_RUNTIME=docker`. We don't replicate this.
+  **Context**: Node's `filesystem-agent.isToolAvailable()` returns true only when `NODE_ENV=development` or `HERMIND_RUNTIME=docker`. We don't replicate this.
 
   **Decision**: Go skill is enabled in any deployment, gated by `cfg.AgentFilesystemEnabled` (default true) and a strict `safeJoin` sandbox under `cfg.AgentFilesystemRoot`.
 
@@ -1259,7 +1259,7 @@ Each task lands as **one commit**. Failing test → impl → green → full suit
 | safeJoin race condition (TOCTOU): check path → symlink swap → open file | `filepath.EvalSymlinks` runs after Clean, mitigating most cases. For absolute safety, use `os.OpenFile` with `O_NOFOLLOW` on Unix — but cross-platform complexity. Acceptable for v1; doc the caveat |
 | `edit_file` with `\r\n` vs `\n` mismatch returns "not found" on Windows-edited files | Document; LLM can read first, edit by exact content slice |
 | sql driver registration is package-init side effect — affects unrelated tests | Already true for `lib/pq` and `sqlite3` elsewhere; one more is fine |
-| `AGENT_FILESYSTEM_ROOT` pointing at an existing directory with user data | Default is `<StorageDir>/anythingllm-fs`; admins overriding must opt-in consciously. Document in `.env.example` |
+| `AGENT_FILESYSTEM_ROOT` pointing at an existing directory with user data | Default is `<StorageDir>/hermind-fs`; admins overriding must opt-in consciously. Document in `.env.example` |
 | `create-files-agent` filename collisions | Timestamp + UUID8 suffix; collision prob ~0 |
 | 100-row SQL cap silently truncates important queries | `limit_hit` field in response signals truncation; LLM can paginate via LIMIT/OFFSET if needed |
 | MSSQL driver adds 4MB to binary | Acceptable; gated by `agent_sql_connections` having an mssql entry |

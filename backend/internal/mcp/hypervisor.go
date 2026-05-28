@@ -73,10 +73,10 @@ func (h *Hypervisor) Boot(ctx context.Context) error {
 	}
 	for i := range servers {
 		srv := &servers[i]
-		if srv.AnythingLLM != nil && srv.AnythingLLM.AutoStart != nil && !*srv.AnythingLLM.AutoStart {
+		if srv.Hermind != nil && srv.Hermind.AutoStart != nil && !*srv.Hermind.AutoStart {
 			h.results[srv.Name] = LoadResult{
 				Status:  "failed",
-				Message: fmt.Sprintf("MCP server %s has anythingllm.autoStart=false, boot skipped", srv.Name),
+				Message: fmt.Sprintf("MCP server %s has hermind.autoStart=false, boot skipped", srv.Name),
 			}
 			continue
 		}
@@ -117,8 +117,8 @@ func (h *Hypervisor) startServerLocked(parent context.Context, srv *ServerConfig
 		tools:        tools,
 		schemaByName: schemaByName,
 	}
-	if srv.AnythingLLM != nil && srv.AnythingLLM.MaxConcurrency != nil {
-		h.limiter.SetOverride(srv.Name, *srv.AnythingLLM.MaxConcurrency)
+	if srv.Hermind != nil && srv.Hermind.MaxConcurrency != nil {
+		h.limiter.SetOverride(srv.Name, *srv.Hermind.MaxConcurrency)
 	}
 	h.results[srv.Name] = LoadResult{Status: "success", Message: fmt.Sprintf("Successfully connected to MCP server: %s", srv.Name)}
 }

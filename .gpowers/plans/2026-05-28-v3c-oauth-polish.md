@@ -212,7 +212,7 @@ backend/cmd/server/main.go     # MODIFY — wire whitelist svc + boot migration
 
 - [ ] 先验证 `collector.ParseInMemory` 是否存在:
   ```bash
-  grep -nE "ParseInMemory|ParseDocument|ParseUpload" /Users/ranwei/workspace/go_work/go-anything-llm/backend/internal/collector/*.go
+  grep -nE "ParseInMemory|ParseDocument|ParseUpload" /Users/ranwei/workspace/go_work/go-hermind/backend/internal/collector/*.go
   ```
   若不存在,在 `internal/collector/` 加一个签名为 `func (c *Client) ParseInMemory(ctx, filename string, data []byte) (string, error)` 的方法(可以 wrap 已有的 ParseUpload — 写入临时文件 → Parse → 删除)。
 

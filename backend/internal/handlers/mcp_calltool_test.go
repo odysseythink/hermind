@@ -140,7 +140,7 @@ func TestMCPHandler_CallTool_ConcurrencyLimit(t *testing.T) {
 	e := newMCPTestEnv(t)
 	maxOne := 1
 	bootEcho(t, e, func(s *mcp.ServerConfig) {
-		s.AnythingLLM = &mcp.AnythingLLMOptions{MaxConcurrency: &maxOne}
+		s.Hermind = &mcp.HermindOptions{MaxConcurrency: &maxOne}
 	})
 
 	var wg sync.WaitGroup

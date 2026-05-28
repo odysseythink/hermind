@@ -98,7 +98,7 @@ function TelemetryLogs({ settings }) {
             based information. To see the list of event tags collected you can
             look on{" "}
             <a
-              href="https://github.com/search?q=repo%3AMintplex-Labs%2Fanything-llm%20.sendTelemetry(&type=code"
+              href="https://github.com/search?q=repo%3AMintplex-Labs%2Fhermind%20.sendTelemetry(&type=code"
               className="underline text-blue-400"
               target="_blank"
               rel="noreferrer"
@@ -112,7 +112,7 @@ function TelemetryLogs({ settings }) {
             dedicated to building the best solution for integrating AI and
             documents privately and securely. If you do decide to turn off
             telemetry all we ask is to consider sending us feedback and thoughts
-            so that we can continue to improve AnythingLLM for you.{" "}
+            so that we can continue to improve Hermind for you.{" "}
             <a
               href="mailto:team@mintplexlabs.com"
               className="underline text-blue-400"

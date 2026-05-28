@@ -6,7 +6,7 @@
 
 ## 1. Goals
 
-- Provide external programmatic access to AnythingLLM via API Key authentication.
+- Provide external programmatic access to Hermind via API Key authentication.
 - Achieve 100% route parity with Node.js API v1 layer.
 - Enable OpenAI-compatible drop-in replacement for existing integrations.
 - Reuse existing service layer to minimize code duplication and maintenance burden.

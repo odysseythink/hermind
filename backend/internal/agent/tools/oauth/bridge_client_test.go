@@ -123,7 +123,7 @@ func TestBridgeClient_NonJSONResponse_ReturnsError(t *testing.T) {
 func TestBridgeClient_SetsHeaders(t *testing.T) {
 	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		require.Equal(t, "application/json", r.Header.Get("Content-Type"))
-		require.Equal(t, "AnythingLLM-Agent-Go/1.0", r.Header.Get("X-AnythingLLM-UA"))
+		require.Equal(t, "Hermind-Agent-Go/1.0", r.Header.Get("X-Hermind-UA"))
 		w.Header().Set("Content-Type", "application/json")
 		_ = json.NewEncoder(w).Encode(map[string]any{"status": "ok", "data": nil})
 	}))

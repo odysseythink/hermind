@@ -1348,13 +1348,13 @@ func (c *Chroma) normalize(input string) string {
 	normalized := regexp.MustCompile(`[^a-zA-Z0-9_-]`).ReplaceAllString(input, "-")
 	normalized = regexp.MustCompile(`\.+`).ReplaceAllString(normalized, ".")
 	if len(normalized) > 0 && !regexp.MustCompile(`^[a-zA-Z0-9]$`).MatchString(normalized[:1]) {
-		normalized = "anythingllm-" + normalized[1:]
+		normalized = "hermind-" + normalized[1:]
 	}
 	if len(normalized) > 0 && !regexp.MustCompile(`^[a-zA-Z0-9]$`).MatchString(normalized[len(normalized)-1:]) {
 		normalized = normalized[:len(normalized)-1]
 	}
 	if len(normalized) < 3 {
-		normalized = "anythingllm-" + normalized
+		normalized = "hermind-" + normalized
 	}
 	if len(normalized) > 63 {
 		normalized = c.normalize(normalized[:63])
@@ -1531,7 +1531,7 @@ func (m *Milvus) Name() string { return "milvus" }
 func (m *Milvus) normalize(input string) string {
 	normalized := regexp.MustCompile(`[^a-zA-Z0-9_]`).ReplaceAllString(input, "_")
 	if len(normalized) == 0 || !regexp.MustCompile(`^[a-zA-Z_]`).MatchString(normalized) {
-		normalized = "anythingllm_" + normalized
+		normalized = "hermind_" + normalized
 	}
 	return normalized
 }

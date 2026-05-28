@@ -1,8 +1,8 @@
-# AnythingLLM Go Backend Phase 1 — Implementation Plan
+# Hermind Go Backend Phase 1 — Implementation Plan
 
 > **For agentic workers:** REQUIRED SUB-SKILL: Use gpowers:subagent-driven-development (recommended) or gpowers:executing-plans to implement this plan task-by-task. Steps use checkbox (`- [ ]`) syntax for tracking.
 
-**Goal:** Rewrite the AnythingLLM Node.js/Express backend to Go (Gin + GORM + Pantheon + mlog), producing a single self-contained binary with 100% API compatibility for Phase 1 endpoints (Auth, System, Workspace, Chat SSE, Document, Admin).
+**Goal:** Rewrite the Hermind Node.js/Express backend to Go (Gin + GORM + Pantheon + mlog), producing a single self-contained binary with 100% API compatibility for Phase 1 endpoints (Auth, System, Workspace, Chat SSE, Document, Admin).
 
 **Architecture:** Layered architecture matching existing Express structure — `handlers/` (HTTP layer), `services/` (business logic), `models/` (GORM data layer), `middleware/` (auth/RBAC/workspace validation), `vectordb/` (pluggable vector DB interface). Frontend served via `//go:embed` with SPA fallback.
 
@@ -163,7 +163,7 @@ build-frontend:
 
 build-server: build-frontend
 	cp -r ../frontend/dist ./frontend/dist
-	go build $(GOFLAGS) -o ../anything-llm ./cmd/server/
+	go build $(GOFLAGS) -o ../hermind ./cmd/server/
 
 dev:
 	go run $(GOFLAGS) ./cmd/server/ -logtostderr
@@ -192,12 +192,12 @@ package main
 import "fmt"
 
 func main() {
-	fmt.Println("AnythingLLM Go server starting...")
+	fmt.Println("Hermind Go server starting...")
 }
 ```
 
 Run: `cd backend && go run ./cmd/server/`
-Expected: `AnythingLLM Go server starting...`
+Expected: `Hermind Go server starting...`
 
 - [ ] **Step 5: Commit**
 
@@ -247,7 +247,7 @@ type Config struct {
 	OpenAiKey        string `env:"OPEN_AI_KEY"`
 	DatabaseURL      string `env:"DATABASE_URL"`
 	CollectorURL     string `env:"COLLECTOR_URL" envDefault:"http://localhost:8888"`
-	CommunicationKey string `env:"COMMUNICATION_KEY" envDefault:"anything-llm"`
+	CommunicationKey string `env:"COMMUNICATION_KEY" envDefault:"hermind"`
 }
 
 func Load() (*Config, error) {
@@ -2605,7 +2605,7 @@ git commit -m "test: add auth, workspace, and system integration tests"
 
 ## Execution Handoff
 
-**Plan complete and saved to `.gpowers/plans/2026-05-22-anythingllm-go-backend-phase1.md`.**
+**Plan complete and saved to `.gpowers/plans/2026-05-22-hermind-go-backend-phase1.md`.**
 
 **Two execution options:**
 

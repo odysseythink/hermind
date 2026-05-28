@@ -1,5 +1,5 @@
 // Package tools provides the default agent skills, MCP/AgentFlow projection
-// adapters, and the Registry Builder for the AnythingLLM agent runtime.
+// adapters, and the Registry Builder for the Hermind agent runtime.
 package tools
 
 import (

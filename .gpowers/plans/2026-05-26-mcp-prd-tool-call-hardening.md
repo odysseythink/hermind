@@ -93,11 +93,11 @@ Add **only** these two fields to `config.Config`:
 | `MCPCallTimeoutDefault` | `MCP_CALL_TIMEOUT_DEFAULT` | `30s` | Default per-call deadline; query param can override within bounds |
 | `MCPCallConcurrencyPerServer` | `MCP_CALL_CONCURRENCY_PER_SERVER` | `4` | Per-server semaphore size |
 
-Per-server override lives in the existing JSON config under `anythingllm.maxConcurrency`:
+Per-server override lives in the existing JSON config under `hermind.maxConcurrency`:
 ```json
 {
   "mcpServers": {
-    "heavy-server": { "command": "...", "anythingllm": { "maxConcurrency": 1 } }
+    "heavy-server": { "command": "...", "hermind": { "maxConcurrency": 1 } }
   }
 }
 ```
@@ -506,9 +506,9 @@ Each task follows: write failing test → run + confirm fail → implement → r
 - [ ] **Wire into Hypervisor**:
   - Add `limiter *concurrencyLimiter` field on `Hypervisor`.
   - In `newHypervisor(cfg)`: `h.limiter = newConcurrencyLimiter(cfg.MCPCallConcurrencyPerServer)`.
-  - In `startServerLocked` after success: if `srv.AnythingLLM != nil && srv.AnythingLLM.MaxConcurrency != nil`, call `h.limiter.SetOverride(srv.Name, *srv.AnythingLLM.MaxConcurrency)`.
+  - In `startServerLocked` after success: if `srv.Hermind != nil && srv.Hermind.MaxConcurrency != nil`, call `h.limiter.SetOverride(srv.Name, *srv.Hermind.MaxConcurrency)`.
   - In `pruneServerLocked`: `h.limiter.ClearOverride(name)`.
-  - Add to `AnythingLLMOptions`:
+  - Add to `HermindOptions`:
     ```go
     MaxConcurrency *int `json:"maxConcurrency,omitempty"`
     ```

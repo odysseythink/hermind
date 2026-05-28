@@ -213,7 +213,7 @@ git commit -m "feat(phase4c): add file system and misc system routes"
 
 - `Logo`（改进已有 stub）— 根据 query.theme 选择默认logo；读取自定义logo文件；返回图片数据及 X-Is-Custom-Logo header；找不到返回 204
 - `UploadLogo` — multipart 上传；保存到 `assets/`；删除旧 logo；调用 `sysSvc.SetSetting("logo_filename", filename)`
-- `RemoveLogo` — 删除当前自定义 logo；调用 `sysSvc.SetSetting("logo_filename", "anything-llm.png")`
+- `RemoveLogo` — 删除当前自定义 logo；调用 `sysSvc.SetSetting("logo_filename", "hermind.png")`
 
 ### Step 3: 注册路由
 

@@ -900,7 +900,7 @@ Expected: Clean.
 
 ```bash
 # Go routes
-cd /Users/ranwei/workspace/go_work/go-anything-llm
+cd /Users/ranwei/workspace/go_work/go-hermind
 grep -E "r\.(GET|POST|PUT|DELETE|PATCH)" backend/internal/handlers/auth.go | sed -E 's/.*r\.(GET|POST|PUT|DELETE|PATCH)\("([^"]+)".*/\1 \2/' | sort
 
 # Node routes

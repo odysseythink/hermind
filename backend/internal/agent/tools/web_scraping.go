@@ -50,7 +50,7 @@ func NewWebScrapingSkill(tc *ToolContext) *tool.Entry {
 
 			client := &http.Client{Timeout: wsHTTPTimeout}
 			req, _ := http.NewRequestWithContext(ctx, "GET", args.URL, nil)
-			req.Header.Set("User-Agent", "AnythingLLM-Agent/1.0")
+			req.Header.Set("User-Agent", "Hermind-Agent/1.0")
 			resp, err := client.Do(req)
 			if err != nil {
 				return tool.Error("fetch: " + err.Error()), nil

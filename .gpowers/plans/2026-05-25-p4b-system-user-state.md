@@ -277,7 +277,7 @@ func TestFilterUserFields(t *testing.T) {
 - [ ] **Step 2: Run tests, confirm failures**
 
 ```bash
-cd /Users/ranwei/workspace/go_work/go-anything-llm/backend
+cd /Users/ranwei/workspace/go_work/go-hermind/backend
 go test ./internal/services -run 'TestValidateUsername|TestValidateBio|TestCheckPasswordComplexity|TestFilterUserFields' -v
 ```
 
@@ -718,7 +718,7 @@ var _ = json.Marshal
 - [ ] **Step 2: Run tests, confirm failures**
 
 ```bash
-cd /Users/ranwei/workspace/go_work/go-anything-llm/backend
+cd /Users/ranwei/workspace/go_work/go-hermind/backend
 go test ./tests/integration -run TestSystem_CheckToken -v
 ```
 
@@ -1305,7 +1305,7 @@ feat(system): POST /system/user (self-update username/password/bio)
 - [ ] **Step 1: Run all integration + service tests**
 
 ```bash
-cd /Users/ranwei/workspace/go_work/go-anything-llm/backend
+cd /Users/ranwei/workspace/go_work/go-hermind/backend
 go vet ./...
 go build ./...
 go test ./internal/services -v

@@ -109,7 +109,7 @@ backend/internal/providers/
 | 1 | `providers.LLMProvider` | `LanguageModel() core.LanguageModel` | new interface method; returns nil for `noopLLM` |
 | 2 | `agent` (unexported) | `buildLanguageModel(ws *models.Workspace, settings map[string]string, cfg *config.Config) (core.LanguageModel, error)` | resolves provider+model from workspace → settings → cfg |
 | 3 | `agent.Runtime` | `(*Runtime) languageModelFor(ws *models.Workspace) (core.LanguageModel, error)` | wraps `buildLanguageModel` with a `sync.Map` cache keyed `provider+":"+model` |
-| 4 | `agent` (unexported) | `resolveSystemPrompt(ws *models.Workspace, user *models.User) string` | workspace.OpenAiPrompt > defaults.AnythingLLMSystemPrompt |
+| 4 | `agent` (unexported) | `resolveSystemPrompt(ws *models.Workspace, user *models.User) string` | workspace.OpenAiPrompt > defaults.HermindSystemPrompt |
 | 5 | `agent` (unexported) | `newWSConn(conn *websocket.Conn) *wsConn` | wraps + starts writer goroutine |
 | 6 | `agent.*wsConn` | `Send(frame ServerFrame) error` | non-blocking enqueue with 8-slot buffer; on overflow returns ErrSlowReader |
 | 7 | `agent.*wsConn` | `Close()` | closes writer chan, signals shutdown; idempotent |

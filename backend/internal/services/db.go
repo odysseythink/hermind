@@ -19,7 +19,7 @@ func NewDB(cfg *config.Config) (*gorm.DB, error) {
 		}
 		return db, nil
 	}
-	dbPath := filepath.Join(cfg.StorageDir, "anythingllm.db")
+	dbPath := filepath.Join(cfg.StorageDir, "hermind.db")
 	db, err := gorm.Open(sqlite.Open(dbPath), &gorm.Config{})
 	if err != nil {
 		return nil, fmt.Errorf("open sqlite: %w", err)

@@ -81,13 +81,13 @@ func (c *Chroma) normalize(input string) string {
 	normalized := chromaInvalidCharRegex.ReplaceAllString(input, "-")
 	normalized = chromaDotRegex.ReplaceAllString(normalized, ".")
 	if len(normalized) > 0 && !chromaStartEndCharRegex.MatchString(normalized[:1]) {
-		normalized = "anythingllm-" + normalized[1:]
+		normalized = "hermind-" + normalized[1:]
 	}
 	if len(normalized) > 0 && !chromaStartEndCharRegex.MatchString(normalized[len(normalized)-1:]) {
 		normalized = normalized[:len(normalized)-1]
 	}
 	if len(normalized) < 3 {
-		normalized = "anythingllm-" + normalized
+		normalized = "hermind-" + normalized
 	}
 	if len(normalized) > 63 {
 		normalized = c.normalize(normalized[:63])

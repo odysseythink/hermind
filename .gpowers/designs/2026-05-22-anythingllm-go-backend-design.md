@@ -1,4 +1,4 @@
-# AnythingLLM Go 后端重写设计文档
+# Hermind Go 后端重写设计文档
 
 > 日期: 2026-05-22  
 > 主题: 将 Node.js/Express 后端完全重写为 Go/Gin  
@@ -9,7 +9,7 @@
 
 ## 1. 概述
 
-将 AnythingLLM v1.12.1 的 Node.js/Express 后端（415 个 JS 文件、约 8.7 万行代码）完全重写为 Go。前端保持零改动，API 契约 100% 兼容。
+将 Hermind v1.12.1 的 Node.js/Express 后端（415 个 JS 文件、约 8.7 万行代码）完全重写为 Go。前端保持零改动，API 契约 100% 兼容。
 
 ### 1.1 当前后端规模
 
@@ -609,7 +609,7 @@ build-frontend:
 	cd frontend && yarn build
 
 build-server: build-frontend
-	cd backend && go build -o ../anything-llm ./cmd/server/
+	cd backend && go build -o ../hermind ./cmd/server/
 
 dev-frontend:
 	cd frontend && yarn dev
@@ -805,8 +805,8 @@ cd backend && go run ./cmd/server/ -logtostderr
 # 一键构建
 make build
 
-# 输出: ./anything-llm（单二进制文件，包含前端）
-# 运行: ./anything-llm
+# 输出: ./hermind（单二进制文件，包含前端）
+# 运行: ./hermind
 ```
 
 ### 14.3 Docker
@@ -823,13 +823,13 @@ WORKDIR /app/backend
 COPY backend/ .
 COPY --from=frontend /app/frontend/dist ./frontend/dist
 RUN go mod download
-RUN CGO_ENABLED=1 go build -o /app/anything-llm ./cmd/server/
+RUN CGO_ENABLED=1 go build -o /app/hermind ./cmd/server/
 
 FROM debian:bookworm-slim
 RUN apt-get update && apt-get install -y ca-certificates
-COPY --from=builder /app/anything-llm /usr/local/bin/anything-llm
+COPY --from=builder /app/hermind /usr/local/bin/hermind
 EXPOSE 3001
-CMD ["anything-llm"]
+CMD ["hermind"]
 ```
 
 ---

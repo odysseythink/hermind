@@ -497,7 +497,7 @@ type Context struct {
       fc.Emit("Scraping " + rawURL)
 
       req, _ := http.NewRequestWithContext(ctx, "GET", rawURL, nil)
-      req.Header.Set("User-Agent", "AnythingLLM-AgentFlow/1.0")
+      req.Header.Set("User-Agent", "Hermind-AgentFlow/1.0")
       resp, err := fc.HTTPClient.Do(req)
       if err != nil { return "", fmt.Errorf("scrape: %w", err) }
       defer resp.Body.Close()

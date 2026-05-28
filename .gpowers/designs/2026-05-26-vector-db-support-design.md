@@ -153,7 +153,7 @@ default:
 |-----|------|
 | SDK | `github.com/milvus-io/milvus-sdk-go/v2` |
 | 连接 | `client.NewClient(ctx, milvus.Config{Address, Username, Password})` |
-| Namespace | collection name（normalize：字母/数字/下划线，`anythingllm_` 前缀） |
+| Namespace | collection name（normalize：字母/数字/下划线，`hermind_` 前缀） |
 | AddVectors | `CreateCollection`（id varchar PK, vector floatVector, metadata JSON）→ `CreateIndex`（AUTOINDEX + COSINE）→ `LoadCollection` → `Insert` |
 | SimilaritySearch | `client.Search(ctx, collection, vectors, metricType, topK, sp)` |
 | DeleteVectors | `client.DeleteByPks(ctx, collection, partition, vectorIds)` |

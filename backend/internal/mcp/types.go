@@ -37,25 +37,25 @@ var (
 )
 
 type ServerConfig struct {
-	Name        string              `json:"-"`
-	Command     string              `json:"command,omitempty"`
-	Args        []string            `json:"args,omitempty"`
-	Env         map[string]string   `json:"env,omitempty"`
-	URL         string              `json:"url,omitempty"`
-	Type        string              `json:"type,omitempty"`
-	Headers     map[string]string   `json:"headers,omitempty"`
-	AnythingLLM *AnythingLLMOptions `json:"anythingllm,omitempty"`
+	Name    string            `json:"-"`
+	Command string            `json:"command,omitempty"`
+	Args    []string          `json:"args,omitempty"`
+	Env     map[string]string `json:"env,omitempty"`
+	URL     string            `json:"url,omitempty"`
+	Type    string            `json:"type,omitempty"`
+	Headers map[string]string `json:"headers,omitempty"`
+	Hermind *HermindOptions   `json:"hermind,omitempty"`
 }
 
 // SuppressedTools returns the suppressed tool names for this server, nil-safe.
 func (c *ServerConfig) SuppressedTools() []string {
-	if c.AnythingLLM == nil {
+	if c.Hermind == nil {
 		return nil
 	}
-	return c.AnythingLLM.SuppressedTools
+	return c.Hermind.SuppressedTools
 }
 
-type AnythingLLMOptions struct {
+type HermindOptions struct {
 	AutoStart       *bool    `json:"autoStart,omitempty"`
 	SuppressedTools []string `json:"suppressedTools,omitempty"`
 	MaxConcurrency  *int     `json:"maxConcurrency,omitempty"`

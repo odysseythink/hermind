@@ -24,7 +24,7 @@
 - `handlers/mcp.go` (60 lines, stub) — to be **completely rewritten** in Task 5. All 5 current handlers return hard-coded empty JSON. RegisterMCPRoutes signature is `(api *gin.RouterGroup, authSvc *services.AuthService)`; this must change to also accept `*services.MCPService`.
 - `middleware.ValidatedRequest(authSvc)` (`middleware/auth.go:14`) — sets `c.Set("user", *models.User)`. In single-user mode (`AuthToken == "" || JWTSecret == ""`) auto-admin bypass; tests can leave config zero-valued.
 - `middleware.FlexUserRoleValid([]string{"admin"})` (`middleware/rbac.go:12`) — gates by `user.Role`. Auto-bypass admin user from `ValidatedRequest` satisfies this.
-- `config.Config.StorageDir` (`config/config.go:12`) — defaults `./storage`, ensures `os.MkdirAll` at load time. MCP config lives at `<StorageDir>/plugins/anythingllm_mcp_servers.json`.
+- `config.Config.StorageDir` (`config/config.go:12`) — defaults `./storage`, ensures `os.MkdirAll` at load time. MCP config lives at `<StorageDir>/plugins/hermind_mcp_servers.json`.
 - Test scaffolding `apiTestEnv` (`handlers/api_setup_test.go:15`) is API-key oriented; MCP routes are session-auth not API-key. **Do not reuse `apiTestEnv` for MCP tests** — write a small purpose-built helper (see §Test setup).
 - `dto.ErrorResponse` (`dto/`) — `{ "error": "..." }`. Node MCP returns richer shape `{ success: bool, error: string|null, ... }`; **do not** use `dto.ErrorResponse` here.
 
@@ -94,7 +94,7 @@ backend/internal/handlers/
   "config": {
     "command": "node",
     "args": ["echo-server.js"],
-    "anythingllm": {"autoStart": true, "suppressedTools": []}
+    "hermind": {"autoStart": true, "suppressedTools": []}
   },
   "running": false,
   "tools": [],
@@ -115,10 +115,10 @@ backend/internal/handlers/
 
 ### Data invariants
 
-- Config file path: `filepath.Join(cfg.StorageDir, "plugins", "anythingllm_mcp_servers.json")`. **Do not** read `NODE_ENV`; Go has no equivalent — always use `StorageDir`.
+- Config file path: `filepath.Join(cfg.StorageDir, "plugins", "hermind_mcp_servers.json")`. **Do not** read `NODE_ENV`; Go has no equivalent — always use `StorageDir`.
 - JSON top-level shape: `{"mcpServers": { "<name>": { ... } }}`. An empty file (zero bytes) is treated as `{"mcpServers":{}}` (Node has same fallback via `safeJsonParse`).
 - A server entry name is its JSON object key (e.g. `"docker-mcp"`); the `Name` field on `ServerConfig` is set by us at load time, never serialised.
-- `anythingllm.suppressedTools` is the only field we write back besides server-add/delete. Other fields (command/args/env/url/headers/type/anythingllm.autoStart) are **owned by the user** — never modify them.
+- `hermind.suppressedTools` is the only field we write back besides server-add/delete. Other fields (command/args/env/url/headers/type/hermind.autoStart) are **owned by the user** — never modify them.
 - Atomic write convention: `os.WriteFile(path+".tmp", data, 0644)` then `os.Rename(path+".tmp", path)`. On Windows, `os.Rename` over an existing file fails — use `os.WriteFile` directly there (acceptable race, no concurrent Node writer in dev).
 - Reserved names: none. Any name in the JSON is a valid server; `DeleteServer("not-found")` returns `(false, nil)` *with no error* (Node returns `{success:false, error:"MCP server X not found in config file."}`).
 
@@ -157,7 +157,7 @@ func newMCPTestEnv(t *testing.T) *mcpTestEnv {
 
 func (e *mcpTestEnv) writeRawConfig(t *testing.T, body string) {
     t.Helper()
-    path := filepath.Join(e.Storage, "plugins", "anythingllm_mcp_servers.json")
+    path := filepath.Join(e.Storage, "plugins", "hermind_mcp_servers.json")
     require.NoError(t, os.MkdirAll(filepath.Dir(path), 0755))
     require.NoError(t, os.WriteFile(path, []byte(body), 0644))
 }
@@ -201,10 +201,10 @@ func (e *mcpTestEnv) writeRawConfig(t *testing.T, body string) {
       URL         string              `json:"url,omitempty"`
       Type        string              `json:"type,omitempty"`
       Headers     map[string]string   `json:"headers,omitempty"`
-      AnythingLLM *AnythingLLMOptions `json:"anythingllm,omitempty"`
+      Hermind *HermindOptions `json:"hermind,omitempty"`
   }
 
-  type AnythingLLMOptions struct {
+  type HermindOptions struct {
       AutoStart       *bool    `json:"autoStart,omitempty"`
       SuppressedTools []string `json:"suppressedTools,omitempty"`
   }
@@ -275,7 +275,7 @@ func (e *mcpTestEnv) writeRawConfig(t *testing.T, body string) {
 ### Steps
 
 - [ ] **Write failing test** `config_test.go` with cases:
-  - `TestConfig_Ensure_CreatesFileIfMissing` — fresh tempdir, `Ensure()` creates `plugins/anythingllm_mcp_servers.json` with `{"mcpServers":{}}`.
+  - `TestConfig_Ensure_CreatesFileIfMissing` — fresh tempdir, `Ensure()` creates `plugins/hermind_mcp_servers.json` with `{"mcpServers":{}}`.
   - `TestConfig_Ensure_NoopIfPresent` — pre-write garbage; `Ensure()` does not overwrite.
   - `TestConfig_Load_EmptyFile` — pre-write `""`; `Load()` returns `[]ServerConfig{}` no error.
   - `TestConfig_Load_MalformedJSON` — pre-write `"{bad"`; `Load()` returns `[]ServerConfig{}` no error (Node parity via `safeJsonParse`).
@@ -289,7 +289,7 @@ func (e *mcpTestEnv) writeRawConfig(t *testing.T, body string) {
   - `TestConfig_UpdateSuppressedTools_Idempotent_Add` — suppress same tool twice → still single entry.
   - `TestConfig_UpdateSuppressedTools_Idempotent_Remove` — unsuppress an already-enabled tool → no change.
   - `TestConfig_UpdateSuppressedTools_ServerNotFound` — returns `[]` + non-nil error wrapping `ErrServerNotFound`.
-  - `TestConfig_GetSuppressedTools_Default` — server with no anythingllm block → empty slice.
+  - `TestConfig_GetSuppressedTools_Default` — server with no hermind block → empty slice.
 - [ ] Run `go test ./internal/mcp/ -run TestConfig` — expect compile errors (Config type not defined yet).
 - [ ] **Implement** `config.go`:
   ```go
@@ -310,7 +310,7 @@ func (e *mcpTestEnv) writeRawConfig(t *testing.T, body string) {
   }
 
   func NewConfig(storageDir string) *Config {
-      return &Config{Path: filepath.Join(storageDir, "plugins", "anythingllm_mcp_servers.json")}
+      return &Config{Path: filepath.Join(storageDir, "plugins", "hermind_mcp_servers.json")}
   }
 
   type rawFile struct {
@@ -426,16 +426,16 @@ func (e *mcpTestEnv) writeRawConfig(t *testing.T, body string) {
           if servers[i].Name != serverName {
               continue
           }
-          if servers[i].AnythingLLM == nil {
-              servers[i].AnythingLLM = &AnythingLLMOptions{}
+          if servers[i].Hermind == nil {
+              servers[i].Hermind = &HermindOptions{}
           }
-          suppressed := servers[i].AnythingLLM.SuppressedTools
+          suppressed := servers[i].Hermind.SuppressedTools
           if enabled {
               suppressed = removeString(suppressed, toolName)
           } else if !containsString(suppressed, toolName) {
               suppressed = append(suppressed, toolName)
           }
-          servers[i].AnythingLLM.SuppressedTools = suppressed
+          servers[i].Hermind.SuppressedTools = suppressed
           if err := c.writeLocked(servers); err != nil {
               return nil, err
           }
@@ -453,10 +453,10 @@ func (e *mcpTestEnv) writeRawConfig(t *testing.T, body string) {
           if s.Name != serverName {
               continue
           }
-          if s.AnythingLLM == nil {
+          if s.Hermind == nil {
               return nil
           }
-          return s.AnythingLLM.SuppressedTools
+          return s.Hermind.SuppressedTools
       }
       return nil
   }
@@ -484,7 +484,7 @@ func (e *mcpTestEnv) writeRawConfig(t *testing.T, body string) {
 - All 14 unit tests pass.
 - `os.WriteFile(path+".tmp") + os.Rename` atomic write.
 - Malformed JSON is silently treated as empty (Node parity).
-- Empty `anythingllm` block is materialised on first suppression write.
+- Empty `hermind` block is materialised on first suppression write.
 
 ---
 
@@ -986,7 +986,7 @@ func (e *mcpTestEnv) writeRawConfig(t *testing.T, body string) {
   STORAGE_DIR=/tmp/mcp-test go run ./cmd/server &
   curl -s http://localhost:3001/api/mcp-servers/list | jq .
   # Expect: {"success":true,"servers":[]}
-  ls /tmp/mcp-test/plugins/anythingllm_mcp_servers.json
+  ls /tmp/mcp-test/plugins/hermind_mcp_servers.json
   # Expect: file exists with content {"mcpServers":{}}
   ```
 - [ ] Commit: `feat(mcp): wire singleton + service into main`.
@@ -996,7 +996,7 @@ func (e *mcpTestEnv) writeRawConfig(t *testing.T, body string) {
 - `go build ./...` succeeds.
 - `go test ./...` all green.
 - `go vet ./...` clean.
-- Cold-start of backend creates `<StorageDir>/plugins/anythingllm_mcp_servers.json` with `{"mcpServers":{}}`.
+- Cold-start of backend creates `<StorageDir>/plugins/hermind_mcp_servers.json` with `{"mcpServers":{}}`.
 - `GET /api/mcp-servers/list` returns `{success:true, servers:[]}`.
 
 ---

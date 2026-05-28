@@ -61,14 +61,14 @@ func newMCPTestEnv(t *testing.T) *mcpTestEnv {
 
 func (e *mcpTestEnv) writeRawConfig(t *testing.T, body string) {
 	t.Helper()
-	path := filepath.Join(e.Storage, "plugins", "anythingllm_mcp_servers.json")
+	path := filepath.Join(e.Storage, "plugins", "hermind_mcp_servers.json")
 	require.NoError(t, os.MkdirAll(filepath.Dir(path), 0755))
 	require.NoError(t, os.WriteFile(path, []byte(body), 0644))
 }
 
 func (e *mcpTestEnv) writeConfig(t *testing.T, servers []mcp.ServerConfig) {
 	t.Helper()
-	path := filepath.Join(e.Storage, "plugins", "anythingllm_mcp_servers.json")
+	path := filepath.Join(e.Storage, "plugins", "hermind_mcp_servers.json")
 	require.NoError(t, os.MkdirAll(filepath.Dir(path), 0755))
 	c := mcp.NewConfig(e.Storage)
 	require.NoError(t, c.Write(servers))
@@ -203,7 +203,7 @@ func TestMCPHandler_ToggleTool_Suppress(t *testing.T) {
 
 func TestMCPHandler_ToggleTool_Unsuppress(t *testing.T) {
 	e := newMCPTestEnv(t)
-	e.writeRawConfig(t, `{"mcpServers":{"echo":{"command":"node","anythingllm":{"suppressedTools":["danger"]}}}}`)
+	e.writeRawConfig(t, `{"mcpServers":{"echo":{"command":"node","hermind":{"suppressedTools":["danger"]}}}}`)
 	body, _ := json.Marshal(map[string]any{"serverName": "echo", "toolName": "danger", "enabled": true})
 	w := httptest.NewRecorder()
 	req, _ := http.NewRequest("POST", "/api/mcp-servers/toggle-tool", bytes.NewReader(body))

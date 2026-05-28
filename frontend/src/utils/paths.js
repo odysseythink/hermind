@@ -55,22 +55,22 @@ export default {
     },
   },
   github: () => {
-    return "https://github.com/Mintplex-Labs/anything-llm";
+    return "https://github.com/Mintplex-Labs/hermind";
   },
   discord: () => {
     return "https://discord.com/invite/6UyHPeGZAC";
   },
   docs: (path = "") => {
-    return `https://docs.anythingllm.com${path}`;
+    return `https://docs.hermind.com${path}`;
   },
   chatModes: () => {
-    return "https://docs.anythingllm.com/features/chat-modes";
+    return "https://docs.hermind.com/features/chat-modes";
   },
   mailToMintplex: () => {
     return "mailto:team@mintplexlabs.com";
   },
   hosting: () => {
-    return "https://my.mintplexlabs.com/aio-checkout?product=anythingllm";
+    return "https://my.mintplexlabs.com/aio-checkout?product=hermind";
   },
   workspace: {
     chat: (slug, options = {}) => {
@@ -209,7 +209,7 @@ export default {
     website: () => {
       return import.meta.env.DEV
         ? `http://localhost:5173`
-        : `https://hub.anythingllm.com`;
+        : `https://hub.hermind.com`;
     },
     /**
      * View more items of a given type on the community hub.
@@ -236,17 +236,17 @@ export default {
       return `${this.website()}/me`;
     },
     noPrivateItems: () => {
-      return "https://docs.anythingllm.com/community-hub/faq#no-private-items";
+      return "https://docs.hermind.com/community-hub/faq#no-private-items";
     },
   },
 
-  // TODO: Migrate all docs.anythingllm.com links to the new docs.
+  // TODO: Migrate all docs.hermind.com links to the new docs.
   documentation: {
     mobileIntroduction: () => {
-      return "https://docs.anythingllm.com/mobile/overview";
+      return "https://docs.hermind.com/mobile/overview";
     },
     contextWindows: () => {
-      return "https://docs.anythingllm.com/chatting-with-documents/introduction#you-exceed-the-context-window---what-now";
+      return "https://docs.hermind.com/chatting-with-documents/introduction#you-exceed-the-context-window---what-now";
     },
   },
 

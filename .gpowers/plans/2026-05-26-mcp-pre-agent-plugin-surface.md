@@ -28,7 +28,7 @@
 - `mcp.Hypervisor.mcps[name].tools []ToolSchema` — populated by `startServerLocked` after `Connect` succeeds. PR-E reads this; no further population needed.
 - `mcp.Hypervisor.mcps[name].schemaByName map[string]json.RawMessage` — same source; PR-E can use either field (preferring `tools` since it carries `Description`).
 - `mcp.ToolSchema {Name, Description, InputSchema}` — already a clean value type; PR-E's `ToolPlugin` embeds equivalent fields.
-- `mcp.ServerConfig.AnythingLLM.SuppressedTools []string` — filter source. The same filter logic used by `Servers()` in PR-C must be applied here so plugin lists match what Admin UI shows.
+- `mcp.ServerConfig.Hermind.SuppressedTools []string` — filter source. The same filter logic used by `Servers()` in PR-C must be applied here so plugin lists match what Admin UI shows.
 - `mcp.Hypervisor.CallTool(ctx, server, tool, args)` — the dispatch primitive. `ToolPlugin.Call` is a thin closure around it.
 - No `services.MCPService.ActiveServers/ToolsAsPlugins` exist yet — PR-E adds them.
 

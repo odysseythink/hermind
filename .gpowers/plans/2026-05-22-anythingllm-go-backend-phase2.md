@@ -1,4 +1,4 @@
-# AnythingLLM Go Backend — Phase 2 Implementation Plan
+# Hermind Go Backend — Phase 2 Implementation Plan
 
 > **For agentic workers:** REQUIRED SUB-SKILL: Use gpowers:subagent-driven-development (recommended) or gpowers:executing-plans to implement this plan task-by-task. Steps use checkbox (`- [ ]`) syntax for tracking.
 
@@ -351,7 +351,7 @@ Files:
 
 Modify internal/vectordb/pgvector.go:
 - Connect: ensure CREATE EXTENSION IF NOT EXISTS vector, create table if missing
-- Table schema: anythingllm_vectors (or PGVECTOR_TABLE_NAME env) with id UUID PRIMARY KEY, namespace TEXT, embedding vector(N), metadata JSONB, created_at TIMESTAMP
+- Table schema: hermind_vectors (or PGVECTOR_TABLE_NAME env) with id UUID PRIMARY KEY, namespace TEXT, embedding vector(N), metadata JSONB, created_at TIMESTAMP
 - AddVectors: BEGIN transaction, INSERT for each chunk, COMMIT
 - SimilaritySearch: SELECT embedding <=> $1 AS _distance, metadata FROM ... WHERE namespace = $2 ORDER BY _distance ASC LIMIT $3, filter by threshold
 - DeleteVectors: DELETE WHERE id IN (vectorIds from document_vectors mapping)

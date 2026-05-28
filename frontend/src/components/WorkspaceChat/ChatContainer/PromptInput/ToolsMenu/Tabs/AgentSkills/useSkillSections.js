@@ -151,7 +151,7 @@ export default function useSkillSections({
     // MCP Servers
     for (const server of mcpServers) {
       if (!server.running || server.tools.length === 0) continue;
-      const suppressedTools = server.config?.anythingllm?.suppressedTools || [];
+      const suppressedTools = server.config?.hermind?.suppressedTools || [];
       const items = server.tools.map((tool) => ({
         id: `mcp::${server.name}::${tool.name}`,
         name: tool.name,

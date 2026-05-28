@@ -1,4 +1,4 @@
-# AnythingLLM Go Backend — Phase 2 Design
+# Hermind Go Backend — Phase 2 Design
 
 **Date:** 2026-05-22
 **Topic:** Pantheon SDK Integration, Vector Search + RAG, Collector Pipeline
@@ -22,7 +22,7 @@ All changes must preserve 100% API compatibility with the existing React fronten
 
 ```
 ┌─────────────────────────────────────────────────────────────────────┐
-│                        AnythingLLM Go Backend                        │
+│                        Hermind Go Backend                        │
 ├─────────────────────────────────────────────────────────────────────┤
 │  API Layer          │  /document/upload → save to hotdir            │
 │  (Gin handlers)     │  /workspace/:slug/stream-chat → SSE stream    │
@@ -213,7 +213,7 @@ Using `github.com/lancedb/lancedb-go`:
 ### 5.6 PGVector Implementation
 
 Using raw SQL on existing `*pgxpool.Pool`:
-- Schema: `anythingllm_vectors` (or `PGVECTOR_TABLE_NAME`)
+- Schema: `hermind_vectors` (or `PGVECTOR_TABLE_NAME`)
   - `id UUID PRIMARY KEY, namespace TEXT, embedding vector(N), metadata JSONB, created_at TIMESTAMP`
 - `Connect`: ensure `CREATE EXTENSION IF NOT EXISTS vector`, create table if missing
 - `AddVectors`: transaction with `INSERT INTO ... (id, namespace, embedding, metadata)`

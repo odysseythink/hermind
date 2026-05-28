@@ -58,7 +58,7 @@ func (b *BridgeClient) Call(ctx context.Context, deploymentID, apiKey, action st
 		return nil, fmt.Errorf("build request: %w", err)
 	}
 	req.Header.Set("Content-Type", "application/json")
-	req.Header.Set("X-AnythingLLM-UA", "AnythingLLM-Agent-Go/1.0")
+	req.Header.Set("X-Hermind-UA", "Hermind-Agent-Go/1.0")
 
 	resp, err := b.http.Do(req)
 	if err != nil {

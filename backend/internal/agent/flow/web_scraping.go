@@ -26,7 +26,7 @@ func ExecuteWebScraping(ctx context.Context, fc *Context, config map[string]any)
 	if err != nil {
 		return "", err
 	}
-	req.Header.Set("User-Agent", "AnythingLLM-AgentFlow/1.0")
+	req.Header.Set("User-Agent", "Hermind-AgentFlow/1.0")
 	resp, err := fc.HTTPClient.Do(req)
 	if err != nil {
 		return "", fmt.Errorf("scrape: %w", err)

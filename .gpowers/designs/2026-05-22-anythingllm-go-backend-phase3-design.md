@@ -1,4 +1,4 @@
-# AnythingLLM Go Backend — Phase 3 Design Document
+# Hermind Go Backend — Phase 3 Design Document
 
 > **Date:** 2026-05-22  
 > **Topic:** Chat-focused core completion — workspace threads, threaded chat streaming, chat management, onboarding, password reset, invite system  
