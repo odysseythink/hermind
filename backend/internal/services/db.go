@@ -55,6 +55,7 @@ func AutoMigrate(db *gorm.DB) error {
 		&models.ScheduledJob{},
 		&models.ScheduledJobRun{},
 		&models.Memory{},
+		&models.ExternalCommunicationConnector{},
 	)
 }
 
