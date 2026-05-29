@@ -5,8 +5,9 @@ set GOFLAGS=-tags="fts5"
 
 if "%~1"=="" goto :usage
 
-if /I "%~1"=="build-frontend" goto :build-frontend
-if /I "%~1"=="build-server" goto :build-server
+if /I "%~1"=="frontend" goto :build-frontend
+if /I "%~1"=="backend" goto :build-backend
+if /I "%~1"=="all" goto :build-all
 if /I "%~1"=="dev" goto :dev
 if /I "%~1"=="test" goto :test
 if /I "%~1"=="lint" goto :lint
@@ -24,8 +25,7 @@ if errorlevel 1 exit /b 1
 popd
 goto :eof
 
-:build-server
-call :build-frontend
+:build-backend
 if errorlevel 1 exit /b 1
 
 echo === Building server ===
@@ -41,6 +41,13 @@ move /Y cmd\server\frontend\dist\_index.html cmd\server\frontend\dist\index.html
 go build %GOFLAGS% -o bin\hermind.exe .\cmd\server\
 if errorlevel 1 exit /b 1
 popd
+
+echo === Build complete: backend\bin\hermind.exe ===
+goto :eof
+
+:build-all
+call :build-frontend
+call :build-backend
 
 echo === Build complete: backend\bin\hermind.exe ===
 goto :eof
@@ -69,5 +76,5 @@ popd
 goto :eof
 
 :usage
-echo Usage: %~nx0 [build-frontend ^| build-server ^| dev ^| test ^| lint]
+echo Usage: %~nx0 [frontend ^| backend ^| all ^| dev ^| test ^| lint]
 exit /b 1
