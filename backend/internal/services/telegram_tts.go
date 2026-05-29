@@ -42,7 +42,8 @@ func (s *TelegramBotService) sendVoice(chatID int64, audio []byte, contentType s
 	_ = audio
 	_ = contentType
 	_ = chatID
-	// TODO: use tgbotapi.NewAudioShare or tgbotapi.NewVoiceUpload when media group APIs are wired
+	// TODO(PR5-followup): use tgbotapi.NewAudioShare or tgbotapi.NewVoiceUpload
+	// See plan: .gpowers/plans/2026-05-28-telegram-integration.md
 	mlog.Info("telegram: would send voice message, length=", len(audio))
 	return nil
 }

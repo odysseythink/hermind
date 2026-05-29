@@ -10,6 +10,7 @@ import (
 	"sync"
 	"time"
 
+	"github.com/google/uuid"
 	tgbotapi "github.com/go-telegram-bot-api/telegram-bot-api/v5"
 	"github.com/odysseythink/hermind/backend/internal/config"
 	"github.com/odysseythink/hermind/backend/internal/models"
@@ -219,6 +220,11 @@ func (s *TelegramBotService) pollLoop() {
 		default:
 		}
 
+		if s.cfg.MultiUserMode {
+			s.selfCleanup(context.Background())
+			return
+		}
+
 		u := tgbotapi.NewUpdate(s.offset)
 		u.Timeout = 30
 		updates, err := s.bot.GetUpdates(u)
@@ -282,9 +288,11 @@ func (s *TelegramBotService) handleCallback(query *tgbotapi.CallbackQuery) {
 	if handler, ok := s.approvalHandlers.Load(chatID); ok {
 		var requestID string
 		var approved bool
-		if _, err := fmt.Sscanf(data, "tool:approve:%s", &requestID); err == nil {
+		if reqID, ok := strings.CutPrefix(data, "tool:approve:"); ok {
+			requestID = reqID
 			approved = true
-		} else if _, err := fmt.Sscanf(data, "tool:deny:%s", &requestID); err == nil {
+		} else if reqID, ok := strings.CutPrefix(data, "tool:deny:"); ok {
+			requestID = reqID
 			approved = false
 		} else {
 			return
@@ -303,10 +311,21 @@ func (s *TelegramBotService) sendText(chatID int64, text string) error {
 	return err
 }
 
+func escapeMarkdownV2(s string) string {
+	replacer := strings.NewReplacer(
+		"_", "\\_", "*", "\\*", "[", "\\[", "]", "\\]",
+		"(", "\\(", ")", "\\)", "~", "\\~", "`", "\\`",
+		">", "\\>", "#", "\\#", "+", "\\+", "-", "\\-",
+		"=", "\\=", "|", "\\|", "{", "\\{", "}", "\\}",
+		".", "\\.", "!", "\\!",
+	)
+	return replacer.Replace(s)
+}
+
 func (s *TelegramBotService) sendApprovalReq(chatID int64, requestID, skillName, description string, timeoutMs int) error {
-	text := fmt.Sprintf("🔧 *Tool Approval Required*\n\nThe agent wants to execute: `%s`\n\n%s", skillName, description)
+	text := fmt.Sprintf("🔧 *Tool Approval Required*\\n\\nThe agent wants to execute: `%s`\\n\\n%s", escapeMarkdownV2(skillName), escapeMarkdownV2(description))
 	msg := tgbotapi.NewMessage(chatID, text)
-	msg.ParseMode = tgbotapi.ModeMarkdown
+	msg.ParseMode = tgbotapi.ModeMarkdownV2
 	msg.ReplyMarkup = tgbotapi.NewInlineKeyboardMarkup(
 		tgbotapi.NewInlineKeyboardRow(
 			tgbotapi.NewInlineKeyboardButtonData("✅ Approve", fmt.Sprintf("tool:approve:%s", requestID)),
@@ -327,7 +346,7 @@ func (s *TelegramBotService) UnregisterApprovalHandler(chatID string) {
 
 func (s *TelegramBotService) createAgentInvocation(ctx context.Context, ws *models.Workspace, threadID *int, prompt string) (string, error) {
 	inv := &models.WorkspaceAgentInvocation{
-		UUID:        fmt.Sprintf("%d", rand.Int63()),
+		UUID:        uuid.NewString(),
 		WorkspaceID: ws.ID,
 		Prompt:      prompt,
 	}

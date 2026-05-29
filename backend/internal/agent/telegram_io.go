@@ -2,15 +2,12 @@ package agent
 
 import (
 	"context"
-	"sync"
 )
 
 // TelegramAgentIO implements AgentIO for Telegram.
 type TelegramAgentIO struct {
 	sendTextFn     func(text string) error
 	sendApprovalFn func(requestID, skillName, description string, timeoutMs int) error
-	mu             sync.Mutex
-	lastText       string
 }
 
 func NewTelegramAgentIO(sendText func(text string) error, sendApproval func(requestID, skillName, description string, timeoutMs int) error) *TelegramAgentIO {
@@ -37,9 +34,6 @@ func (t *TelegramAgentIO) Send(frame ServerFrame) error {
 		if frame.Content == "" {
 			return nil
 		}
-		t.mu.Lock()
-		t.lastText = frame.Content
-		t.mu.Unlock()
 		return t.sendTextInChunks(frame.Content)
 	}
 	return nil

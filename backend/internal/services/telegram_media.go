@@ -9,6 +9,7 @@ import (
 	"net/http"
 	"strconv"
 	"strings"
+	"time"
 
 	tgbotapi "github.com/go-telegram-bot-api/telegram-bot-api/v5"
 	"github.com/odysseythink/hermind/backend/internal/dto"
@@ -145,11 +146,13 @@ func (s *TelegramBotService) handleDocument(ctx context.Context, ws *models.Work
 	return nil
 }
 
+var telegramHTTPClient = &http.Client{Timeout: 30 * time.Second}
+
 func (s *TelegramBotService) downloadFile(url string) ([]byte, error) {
 	if !strings.HasPrefix(url, "https://api.telegram.org/file/") {
 		return nil, fmt.Errorf("invalid file URL: not from Telegram API")
 	}
-	resp, err := http.Get(url)
+	resp, err := telegramHTTPClient.Get(url)
 	if err != nil {
 		return nil, err
 	}
