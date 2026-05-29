@@ -68,7 +68,7 @@ func (q *messageQueue) process(u tgbotapi.Update) {
 	// Pairing check
 	if !q.isApproved(chatIDStr) {
 		if msg.IsCommand() && msg.Command() == "start" {
-			q.handleStart(msg)
+			q.svc.handleStart(msg)
 		} else {
 			_ = q.svc.sendText(q.chatID, "Please send /start to begin pairing.")
 		}
@@ -93,4 +93,9 @@ func (q *messageQueue) process(u tgbotapi.Update) {
 func (q *messageQueue) isApproved(chatIDStr string) bool {
 	_, ok := q.svc.approved.Load(chatIDStr)
 	return ok
+}
+
+// Stub for PR5 media handling.
+func (q *messageQueue) handleMedia(msg *tgbotapi.Message) {
+	_ = q.svc.sendText(msg.Chat.ID, "❌ Media processing is not yet available.")
 }
