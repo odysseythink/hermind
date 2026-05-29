@@ -51,7 +51,7 @@ type Session struct {
 	systemPrompt string
 	pAgent       *pantheonAgent.Agent
 
-	wsConn     *wsConn
+	io         AgentIO
 	ctx        context.Context
 	cancel     context.CancelFunc
 	feedbackCh chan feedbackMsg
@@ -82,7 +82,7 @@ type feedbackMsg struct {
 }
 
 func newSession(parentCtx context.Context, uuid string, ws *models.Workspace, user *models.User,
-	lm core.LanguageModel, systemPrompt string, reg *tool.Registry, conn *wsConn, approvalTTL time.Duration, eventLog eventLogger) *Session {
+	lm core.LanguageModel, systemPrompt string, reg *tool.Registry, io AgentIO, approvalTTL time.Duration, eventLog eventLogger) *Session {
 
 	ctx, cancel := context.WithCancel(parentCtx)
 	s := &Session{
@@ -90,7 +90,7 @@ func newSession(parentCtx context.Context, uuid string, ws *models.Workspace, us
 		WorkspaceID:  ws.ID,
 		lm:           lm,
 		systemPrompt: systemPrompt,
-		wsConn:       conn,
+		io:           io,
 		ctx:          ctx,
 		cancel:       cancel,
 		feedbackCh:   make(chan feedbackMsg, 1),
@@ -127,8 +127,8 @@ func newSession(parentCtx context.Context, uuid string, ws *models.Workspace, us
 
 // NewSessionForTesting creates a Session for unit tests. Test-only.
 func NewSessionForTesting(parentCtx context.Context, uuid string, ws *models.Workspace, user *models.User,
-	lm core.LanguageModel, systemPrompt string, reg *tool.Registry, conn *wsConn) *Session {
-	return newSession(parentCtx, uuid, ws, user, lm, systemPrompt, reg, conn, 2*time.Minute, nil)
+	lm core.LanguageModel, systemPrompt string, reg *tool.Registry, io AgentIO) *Session {
+	return newSession(parentCtx, uuid, ws, user, lm, systemPrompt, reg, io, 2*time.Minute, nil)
 }
 
 // PantheonAgent returns the underlying pantheon agent for test introspection. Test-only.
@@ -152,7 +152,7 @@ func (s *Session) Continue(feedback string, attachments []any) {
 
 func (s *Session) Abort(reason string) {
 	if reason != "" {
-		_ = s.wsConn.Send(ServerFrame{Type: FrameWSSFailure, Content: reason})
+		_ = s.io.Send(ServerFrame{Type: FrameWSSFailure, Content: reason})
 	}
 	s.cancelAllApprovals(reason)
 	s.cancel()

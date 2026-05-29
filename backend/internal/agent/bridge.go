@@ -13,7 +13,7 @@ func installEventBridges(s *Session) {
 		if s.muteUser && chat.From == participantUser {
 			return
 		}
-		_ = s.wsConn.Send(ServerFrame{
+		_ = s.io.Send(ServerFrame{
 			From:    chat.From,
 			To:      chat.To,
 			Content: chat.Content,
@@ -26,14 +26,14 @@ func installEventBridges(s *Session) {
 		if errors.Is(err, context.DeadlineExceeded) || content == "context deadline exceeded" {
 			content = "Session reached maximum duration. Ending now."
 		}
-		_ = s.wsConn.Send(ServerFrame{
+		_ = s.io.Send(ServerFrame{
 			Type:    FrameWSSFailure,
 			Content: content,
 		})
 		s.cancel()
 	})
 	s.conv.OnInterrupt(func(route conversation.Route, _ *conversation.Conversation) {
-		_ = s.wsConn.Send(ServerFrame{
+		_ = s.io.Send(ServerFrame{
 			Type:     FrameWaitingOnInput,
 			Question: fmt.Sprintf("Provide feedback to %s as %s.", route.To, route.From),
 		})

@@ -126,7 +126,7 @@ func (r *Runtime) HandleWS(c *gin.Context) {
 	_ = wc.Send(ServerFrame{Type: FrameStatusResponse, Content: "@agent runtime ready"})
 
 	// reader is a separate goroutine; main goroutine runs the conversation
-	go sess.readerLoop()
+	go sess.readerLoopWithInput(&wsInput{conn: wc})
 	runErr = sess.Run(inv.Prompt)
 	if runErr != nil && !errors.Is(runErr, context.Canceled) {
 		content := runErr.Error()

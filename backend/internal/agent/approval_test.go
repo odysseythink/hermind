@@ -19,7 +19,7 @@ func TestSession_RequestApproval_UserApproves_ReturnsTrue(t *testing.T) {
 	ws := &models.Workspace{ID: 1}
 	sess := newSession(context.Background(), "test-uuid", ws, nil, mock, "You are helpful.", nil, wc, 2*time.Minute, nil)
 
-	go sess.readerLoop()
+	go sess.readerLoopWithInput(&wsInput{conn: wc})
 
 	// Fire approval request in background
 	result := make(chan struct {
@@ -60,7 +60,7 @@ func TestSession_RequestApproval_UserRejects_ReturnsFalse(t *testing.T) {
 	ws := &models.Workspace{ID: 1}
 	sess := newSession(context.Background(), "test-uuid", ws, nil, mock, "You are helpful.", nil, wc, 2*time.Minute, nil)
 
-	go sess.readerLoop()
+	go sess.readerLoopWithInput(&wsInput{conn: wc})
 
 	result := make(chan struct {
 		approved bool
@@ -152,7 +152,7 @@ func TestSession_RequestApproval_ConcurrentRequests_RoutedByRequestID(t *testing
 	ws := &models.Workspace{ID: 1}
 	sess := newSession(context.Background(), "test-uuid", ws, nil, mock, "You are helpful.", nil, wc, 2*time.Minute, nil)
 
-	go sess.readerLoop()
+	go sess.readerLoopWithInput(&wsInput{conn: wc})
 
 	const n = 5
 	resultCh := make(chan struct {

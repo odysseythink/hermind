@@ -39,7 +39,7 @@ func (s *Session) RequestApproval(ctx context.Context, skillName string, args an
 	if ttl <= 0 {
 		ttl = 2 * time.Minute
 	}
-	if err := s.wsConn.Send(ServerFrame{
+	if err := s.io.Send(ServerFrame{
 		Type:        FrameToolApprovalReq,
 		RequestID:   requestID,
 		SkillName:   skillName,

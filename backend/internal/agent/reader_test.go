@@ -50,7 +50,7 @@ func TestReader_BailCommands_AbortSession(t *testing.T) {
 			ws := &models.Workspace{ID: 1}
 			sess := newSession(context.Background(), "test-uuid", ws, nil, mock, "You are helpful.", nil, wc, 2*time.Minute, nil)
 
-			go sess.readerLoop()
+			go sess.readerLoopWithInput(&wsInput{conn: wc})
 
 			// wait for reader to start
 			time.Sleep(10 * time.Millisecond)
@@ -78,7 +78,7 @@ func TestReader_AwaitingFeedback_ForwardsToSession(t *testing.T) {
 	ws := &models.Workspace{ID: 1}
 	sess := newSession(context.Background(), "test-uuid", ws, nil, mock, "You are helpful.", nil, wc, 2*time.Minute, nil)
 
-	go sess.readerLoop()
+	go sess.readerLoopWithInput(&wsInput{conn: wc})
 
 	done := make(chan error, 1)
 	go func() {
@@ -114,7 +114,7 @@ func TestReader_InvalidJSONIsIgnored(t *testing.T) {
 	ws := &models.Workspace{ID: 1}
 	sess := newSession(context.Background(), "test-uuid", ws, nil, mock, "You are helpful.", nil, wc, 2*time.Minute, nil)
 
-	go sess.readerLoop()
+	go sess.readerLoopWithInput(&wsInput{conn: wc})
 	go func() { _ = sess.Run("@agent hi") }()
 
 	time.Sleep(10 * time.Millisecond)
@@ -140,7 +140,7 @@ func TestReader_BinaryFramesIgnored(t *testing.T) {
 	ws := &models.Workspace{ID: 1}
 	sess := newSession(context.Background(), "test-uuid", ws, nil, mock, "You are helpful.", nil, wc, 2*time.Minute, nil)
 
-	go sess.readerLoop()
+	go sess.readerLoopWithInput(&wsInput{conn: wc})
 	go func() { _ = sess.Run("@agent hi") }()
 
 	time.Sleep(10 * time.Millisecond)
@@ -162,7 +162,7 @@ func TestReader_ToolApprovalResp_WakesPendingApproval(t *testing.T) {
 	ws := &models.Workspace{ID: 1}
 	sess := newSession(context.Background(), "test-uuid", ws, nil, mock, "You are helpful.", nil, wc, 2*time.Minute, nil)
 
-	go sess.readerLoop()
+	go sess.readerLoopWithInput(&wsInput{conn: wc})
 
 	// Fire an approval request in the background
 	result := make(chan bool, 1)
@@ -193,7 +193,7 @@ func TestReader_SetAutoApprove_TogglesSession(t *testing.T) {
 	ws := &models.Workspace{ID: 1}
 	sess := newSession(context.Background(), "test-uuid", ws, nil, mock, "You are helpful.", nil, wc, 2*time.Minute, nil)
 
-	go sess.readerLoop()
+	go sess.readerLoopWithInput(&wsInput{conn: wc})
 
 	require.False(t, sess.AutoApprove())
 
@@ -215,7 +215,7 @@ func TestReader_ApprovalResp_UnknownRequestID_Ignored(t *testing.T) {
 	ws := &models.Workspace{ID: 1}
 	sess := newSession(context.Background(), "test-uuid", ws, nil, mock, "You are helpful.", nil, wc, 2*time.Minute, nil)
 
-	go sess.readerLoop()
+	go sess.readerLoopWithInput(&wsInput{conn: wc})
 
 	// Send approval response for unknown requestID — should not panic or deadlock
 	require.NoError(t, clientConn.WriteJSON(ClientFrame{

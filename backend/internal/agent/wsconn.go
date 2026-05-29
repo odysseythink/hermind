@@ -64,7 +64,7 @@ func (w *wsConn) Send(f ServerFrame) error {
 	}
 }
 
-func (w *wsConn) Close() {
+func (w *wsConn) Close() error {
 	w.closeOnce.Do(func() {
 		close(w.done)
 		// wait briefly for writer to drain, then force-close conn
@@ -77,6 +77,7 @@ func (w *wsConn) Close() {
 			time.Now().Add(time.Second))
 		_ = w.conn.Close()
 	})
+	return nil
 }
 
 func (w *wsConn) ReadMessage() (int, []byte, error) {

@@ -51,6 +51,19 @@ func (s *spaFileSystem) Open(name string) (http.File, error) {
 	return f, nil
 }
 
+// telegramApprovalAdapter bridges Telegram inline-keyboard callbacks to AgentInput.
+type telegramApprovalAdapter struct {
+	input *agent.TelegramInput
+}
+
+func (a *telegramApprovalAdapter) HandleApproval(requestID string, approved bool) {
+	a.input.Submit(agent.InputAction{
+		Type:      agent.InputToolApprovalResponse,
+		RequestID: requestID,
+		Approved:  approved,
+	})
+}
+
 func main() {
 	flag.Parse()
 
@@ -229,7 +242,19 @@ func main() {
 		mlog.Fatal("failed to start worker manager", mlog.Err(err))
 	}
 	chatSvc := services.NewChatService(db, cfg, vectorSvc, llmProv, emb, agentRuntime, rerankerSvc, memInj)
-		telegramSvc := services.NewTelegramBotService(db, cfg, sysSvc, enc, chatSvc)
+	telegramSvc := services.NewTelegramBotService(db, cfg, sysSvc, enc, chatSvc)
+		if err := telegramSvc.Boot(context.Background()); err != nil {
+			mlog.Warning("telegram boot failed", mlog.Err(err))
+		}
+		// Bridge agent.Runtime → TelegramBotService without import cycle
+		telegramSvc.SetAgentCallback(func(ctx context.Context, invUUID string, chatID int64, sendText func(text string) error, sendApprovalReq func(requestID, skillName, description string, timeoutMs int) error) error {
+			io := agent.NewTelegramAgentIO(sendText, sendApprovalReq)
+			input := agent.NewTelegramInput()
+			chatIDStr := fmt.Sprintf("%d", chatID)
+			telegramSvc.RegisterApprovalHandler(chatIDStr, &telegramApprovalAdapter{input: input})
+			defer telegramSvc.UnregisterApprovalHandler(chatIDStr)
+			return agentRuntime.RunAgentDirectly(ctx, invUUID, io, input)
+		})
 	progressMgr := services.NewEmbeddingProgressManager()
 
 	// Boot migration: encrypt plaintext secrets in SystemSetting

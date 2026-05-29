@@ -2,6 +2,7 @@ package agent
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"sync"
 	"time"
@@ -13,7 +14,10 @@ import (
 	"github.com/odysseythink/hermind/backend/internal/mcp"
 	"github.com/odysseythink/hermind/backend/internal/models"
 	"github.com/odysseythink/hermind/backend/internal/services"
+	pantheonAgent "github.com/odysseythink/pantheon/agent"
+	"github.com/odysseythink/pantheon/conversation"
 	"github.com/odysseythink/pantheon/core"
+	"github.com/odysseythink/pantheon/tool"
 	"gorm.io/gorm"
 )
 
@@ -113,4 +117,103 @@ func (r *Runtime) LanguageModelFor(ws *models.Workspace, settings map[string]str
 	}
 	r.lmCache.Store(key, lm)
 	return lm, nil
+}
+
+// RunAgentDirectly is the non-WS entrypoint for Telegram (and future Discord/Slack).
+func (r *Runtime) RunAgentDirectly(ctx context.Context, invUUID string, io AgentIO, input AgentInput) error {
+	inv, err := r.GetInvocation(ctx, invUUID)
+	if err != nil {
+		return err
+	}
+
+	var ws models.Workspace
+	if err := r.deps.DB.WithContext(ctx).First(&ws, inv.WorkspaceID).Error; err != nil {
+		return err
+	}
+	var user *models.User
+	if inv.UserID != nil {
+		user = &models.User{ID: *inv.UserID}
+	}
+
+	var settings map[string]string
+	if r.deps.SysSvc != nil {
+		settings, _ = r.deps.SysSvc.GetAllSettings(ctx)
+	}
+	lm, err := r.LanguageModelFor(&ws, settings)
+	if err != nil {
+		_ = io.Send(ServerFrame{Type: FrameWSSFailure, Content: "agent: " + err.Error()})
+		return err
+	}
+	systemPrompt := resolveSystemPrompt(&ws, user)
+
+	ttl := r.deps.Cfg.AgentToolApprovalTimeout
+	if ttl <= 0 {
+		ttl = 2 * time.Minute
+	}
+	sessTTL := r.deps.Cfg.AgentSessionMaxDuration
+	if sessTTL <= 0 {
+		sessTTL = 30 * time.Minute
+	}
+	sessCtx, sessCancel := context.WithTimeout(ctx, sessTTL)
+	defer sessCancel()
+
+	sess := newSession(sessCtx, inv.UUID, &ws, user, lm, systemPrompt, tool.NewRegistry(), io, ttl, r.deps.EventLog)
+
+	reg, err := buildSessionRegistry(ctx, r.deps, &ws, user, lm, settings, nil, sess.RequestApproval)
+	if err != nil {
+		_ = io.Send(ServerFrame{Type: FrameWSSFailure, Content: "tools: " + err.Error()})
+		return err
+	}
+	sess.pAgent = pantheonAgent.New(lm,
+		pantheonAgent.WithRegistry(reg),
+		pantheonAgent.WithMaxSteps(10),
+	)
+	sess.conv.RegisterParticipant(&conversation.Participant{
+		Name:  participantAgent,
+		Role:  systemPrompt,
+		Agent: sess.pAgent,
+	})
+
+	r.sessions.Store(inv.UUID, sess)
+	var userID *int
+	if user != nil {
+		userID = &user.ID
+	}
+	logChatStarted(r.deps.EventLog, userID, inv.UUID, ws.ID, lm.Provider(), lm.Model())
+
+	var runErr error
+	defer func() {
+		duration := time.Since(sess.startedAt)
+		reason := "normal"
+		if runErr != nil {
+			if errors.Is(runErr, context.DeadlineExceeded) {
+				reason = "timeout"
+			} else if errors.Is(runErr, context.Canceled) {
+				reason = "cancelled"
+			} else {
+				reason = "error"
+			}
+		}
+		logChatTerminated(r.deps.EventLog, userID, inv.UUID, reason, duration)
+		r.sessions.Delete(inv.UUID)
+		_ = r.CloseInvocation(context.Background(), inv.UUID)
+		io.Close()
+	}()
+
+	_ = io.Send(ServerFrame{Type: FrameStatusResponse, Content: "@agent runtime ready"})
+
+	go sess.readerLoopWithInput(input)
+	runErr = sess.Run(inv.Prompt)
+	if runErr != nil && !errors.Is(runErr, context.Canceled) {
+		content := runErr.Error()
+		if errors.Is(runErr, context.DeadlineExceeded) || content == "context deadline exceeded" {
+			content = "Session reached maximum duration (" + sessTTL.String() + "). Ending now."
+		}
+		_ = io.Send(ServerFrame{Type: FrameWSSFailure, Content: content})
+	}
+	select {
+	case <-sess.terminated:
+	case <-sess.ctx.Done():
+	}
+	return runErr
 }
