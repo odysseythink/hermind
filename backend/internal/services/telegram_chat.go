@@ -11,7 +11,7 @@ import (
 	"github.com/odysseythink/mlog"
 )
 
-func (s *TelegramBotService) handleChatMessage(ctx context.Context, msg *tgbotapi.Message, chatID int64, chatIDStr string) {
+func (s *TelegramBotService) handleChatMessage(ctx context.Context, msg *tgbotapi.Message, chatID int64, chatIDStr string, forceVoice bool) {
 	user := s.getApprovedUser(chatIDStr)
 	if user == nil {
 		_ = s.sendText(chatID, "❌ Not authorized.")
@@ -54,6 +54,7 @@ func (s *TelegramBotService) handleChatMessage(ctx context.Context, msg *tgbotap
 		return
 	}
 	_ = s.sendText(chatID, resp.TextResponse)
+	s.maybeSendVoiceReply(chatID, resp.TextResponse, forceVoice)
 }
 
 func (s *TelegramBotService) getApprovedUser(chatIDStr string) *TelegramUser {

@@ -13,6 +13,7 @@ import (
 	tgbotapi "github.com/go-telegram-bot-api/telegram-bot-api/v5"
 	"github.com/odysseythink/hermind/backend/internal/config"
 	"github.com/odysseythink/hermind/backend/internal/models"
+	"github.com/odysseythink/hermind/backend/internal/tts"
 	"github.com/odysseythink/hermind/backend/pkg/utils"
 	"github.com/odysseythink/mlog"
 	"gorm.io/gorm"
@@ -21,11 +22,12 @@ import (
 const maxActiveQueues = 1000
 
 type TelegramBotService struct {
-	db      *gorm.DB
-	cfg     *config.Config
-	sysSvc  *SystemService
-	enc     *utils.EncryptionManager
-	chatSvc *ChatService
+	db          *gorm.DB
+	cfg         *config.Config
+	sysSvc      *SystemService
+	enc         *utils.EncryptionManager
+	chatSvc     *ChatService
+	ttsProvider tts.Provider
 
 	configSvc *TelegramConfigService
 	config    *TelegramConfig
@@ -59,15 +61,16 @@ type ApprovalHandler interface {
 // TelegramAgentCallback is the bridge to agent.Runtime. Set by main.go to avoid import cycles.
 type TelegramAgentCallback func(ctx context.Context, invUUID string, chatID int64, sendText func(text string) error, sendApprovalReq func(requestID, skillName, description string, timeoutMs int) error) error
 
-func NewTelegramBotService(db *gorm.DB, cfg *config.Config, sysSvc *SystemService, enc *utils.EncryptionManager, chatSvc *ChatService) *TelegramBotService {
+func NewTelegramBotService(db *gorm.DB, cfg *config.Config, sysSvc *SystemService, enc *utils.EncryptionManager, chatSvc *ChatService, ttsProvider tts.Provider) *TelegramBotService {
 	return &TelegramBotService{
-		db:        db,
-		cfg:       cfg,
-		sysSvc:    sysSvc,
-		enc:       enc,
-		chatSvc:   chatSvc,
-		configSvc: NewTelegramConfigService(db, enc),
-		stopCh:    make(chan struct{}),
+		db:          db,
+		cfg:         cfg,
+		sysSvc:      sysSvc,
+		enc:         enc,
+		chatSvc:     chatSvc,
+		ttsProvider: ttsProvider,
+		configSvc:   NewTelegramConfigService(db, enc),
+		stopCh:      make(chan struct{}),
 	}
 }
 

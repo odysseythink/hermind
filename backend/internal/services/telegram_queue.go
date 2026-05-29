@@ -87,7 +87,7 @@ func (q *messageQueue) process(u tgbotapi.Update) {
 	}
 
 	// Regular text
-	q.svc.handleChatMessage(context.Background(), msg, q.chatID, chatIDStr)
+	q.svc.handleChatMessage(context.Background(), msg, q.chatID, chatIDStr, false)
 }
 
 func (q *messageQueue) isApproved(chatIDStr string) bool {
@@ -95,7 +95,4 @@ func (q *messageQueue) isApproved(chatIDStr string) bool {
 	return ok
 }
 
-// Stub for PR5 media handling.
-func (q *messageQueue) handleMedia(msg *tgbotapi.Message) {
-	_ = q.svc.sendText(msg.Chat.ID, "❌ Media processing is not yet available.")
-}
+

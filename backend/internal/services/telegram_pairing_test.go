@@ -9,7 +9,7 @@ import (
 )
 
 func TestTelegramBotService_PairingFlow(t *testing.T) {
-	svc := NewTelegramBotService(nil, nil, nil, nil, nil)
+	svc := NewTelegramBotService(nil, nil, nil, nil, nil, nil)
 
 	// Simulate /start
 	svc.pending.Store("123", &pendingPairing{Code: "000123", Username: "alice", FirstName: "Alice"})

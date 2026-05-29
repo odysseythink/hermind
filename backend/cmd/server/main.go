@@ -242,19 +242,6 @@ func main() {
 		mlog.Fatal("failed to start worker manager", mlog.Err(err))
 	}
 	chatSvc := services.NewChatService(db, cfg, vectorSvc, llmProv, emb, agentRuntime, rerankerSvc, memInj)
-	telegramSvc := services.NewTelegramBotService(db, cfg, sysSvc, enc, chatSvc)
-		if err := telegramSvc.Boot(context.Background()); err != nil {
-			mlog.Warning("telegram boot failed", mlog.Err(err))
-		}
-		// Bridge agent.Runtime → TelegramBotService without import cycle
-		telegramSvc.SetAgentCallback(func(ctx context.Context, invUUID string, chatID int64, sendText func(text string) error, sendApprovalReq func(requestID, skillName, description string, timeoutMs int) error) error {
-			io := agent.NewTelegramAgentIO(sendText, sendApprovalReq)
-			input := agent.NewTelegramInput()
-			chatIDStr := fmt.Sprintf("%d", chatID)
-			telegramSvc.RegisterApprovalHandler(chatIDStr, &telegramApprovalAdapter{input: input})
-			defer telegramSvc.UnregisterApprovalHandler(chatIDStr)
-			return agentRuntime.RunAgentDirectly(ctx, invUUID, io, input)
-		})
 	progressMgr := services.NewEmbeddingProgressManager()
 
 	// Boot migration: encrypt plaintext secrets in SystemSetting
@@ -289,6 +276,19 @@ func main() {
 
 	ttsProvider := tts.NewProvider(cfg, dbSettings)
 	ttsHandler := handlers.NewTTSHandler(chatSvc, ttsProvider)
+		telegramSvc := services.NewTelegramBotService(db, cfg, sysSvc, enc, chatSvc, ttsProvider)
+		if err := telegramSvc.Boot(context.Background()); err != nil {
+			mlog.Warning("telegram boot failed", mlog.Err(err))
+		}
+		// Bridge agent.Runtime → TelegramBotService without import cycle
+		telegramSvc.SetAgentCallback(func(ctx context.Context, invUUID string, chatID int64, sendText func(text string) error, sendApprovalReq func(requestID, skillName, description string, timeoutMs int) error) error {
+			io := agent.NewTelegramAgentIO(sendText, sendApprovalReq)
+			input := agent.NewTelegramInput()
+			chatIDStr := fmt.Sprintf("%d", chatID)
+			telegramSvc.RegisterApprovalHandler(chatIDStr, &telegramApprovalAdapter{input: input})
+			defer telegramSvc.UnregisterApprovalHandler(chatIDStr)
+			return agentRuntime.RunAgentDirectly(ctx, invUUID, io, input)
+		})
 
 	if !cfg.DebugMode {
 		gin.SetMode(gin.ReleaseMode)
