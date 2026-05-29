@@ -5,7 +5,6 @@ import System from "@/models/system";
 import { useModal } from "@/hooks/useModal";
 import AddPresetModal from "./SlashPresets/AddPresetModal";
 import EditPresetModal from "./SlashPresets/EditPresetModal";
-import PublishEntityModal from "@/components/CommunityHub/PublishEntityModal";
 import showToast from "@/utils/toast";
 import { PROMPT_INPUT_EVENT } from "@/components/WorkspaceChat/ChatContainer/PromptInput";
 import useToolsMenuItems from "../../useToolsMenuItems";
@@ -212,12 +211,6 @@ export default function SlashCommandsTab({
           preset={selectedPreset}
         />
       )}
-      <PublishEntityModal
-        show={isPublishModalOpen}
-        onClose={closePublishModal}
-        entityType="slash-command"
-        entity={presetToPublish}
-      />
     </>
   );
 }

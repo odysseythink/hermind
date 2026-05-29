@@ -327,6 +327,30 @@ func (h *AdminHandler) UpdateSystemPreferences(c *gin.Context) {
 			}
 			b, _ := json.Marshal(arr)
 			strVal = string(b)
+		case "default_agent_skills", "disabled_agent_skills",
+			"disabled_filesystem_skills", "disabled_create_files_skills",
+			"disabled_gmail_skills", "disabled_google_calendar_skills",
+			"disabled_outlook_skills":
+			// Frontend sends comma-separated strings (e.g. "a,b,c"); store as JSON array.
+			switch v := val.(type) {
+			case string:
+				parts := strings.Split(v, ",")
+				var arr []string
+				for _, p := range parts {
+					p = strings.TrimSpace(p)
+					if p != "" {
+						arr = append(arr, p)
+					}
+				}
+				b, _ := json.Marshal(arr)
+				strVal = string(b)
+			case []any:
+				b, _ := json.Marshal(v)
+				strVal = string(b)
+			default:
+				b, _ := json.Marshal(v)
+				strVal = string(b)
+			}
 		case "text_splitter_chunk_size", "text_splitter_chunk_overlap":
 			switch v := val.(type) {
 			case float64:

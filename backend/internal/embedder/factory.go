@@ -49,6 +49,8 @@ func NewEmbedder(cfg *config.Config, settings map[string]string) (Embedder, erro
 		}
 		opts := []openai.Option{}
 		if baseURL != "" {
+			baseURL = strings.TrimSuffix(baseURL, "/")
+			baseURL = strings.TrimSuffix(baseURL, "/v1")
 			opts = append(opts, openai.WithBaseURL(baseURL))
 		}
 		prov, err = openai.New(apiKey, opts...)

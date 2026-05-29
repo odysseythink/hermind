@@ -1,6 +1,7 @@
 package config
 
 import (
+	_ "embed"
 	"fmt"
 	"os"
 	"path/filepath"
@@ -11,8 +12,11 @@ import (
 	"gopkg.in/yaml.v3"
 )
 
+//go:embed default_config.yaml
+var defaultConfigYAML []byte
+
 type Config struct {
-	ServerPort      string  `env:"SERVER_PORT" envDefault:"3001"`
+	ServerPort      string  `env:"SERVER_PORT" envDefault:"33472"`
 	StorageDir      string  `env:"STORAGE_DIR" envDefault:"./storage"`
 	JWTSecret       string  `env:"JWT_SECRET" envDefault:"dev-secret-change-me"`
 	SigKey          string  `env:"SIG_KEY" envDefault:"dev-sig-key"`
@@ -325,12 +329,25 @@ func Load() (*Config, error) {
 	var cfg Config
 
 	// Load YAML config file if present (env vars take precedence).
+	// If no config file exists, create a default one in .hermind/.
 	configFile := os.Getenv("CONFIG_FILE")
 	if configFile != "" {
 		_ = loadYAMLConfig(configFile)
 	} else {
-		_ = loadYAMLConfig("config.yaml")
-		_ = loadYAMLConfig("../config.yaml")
+		loaded := false
+		for _, path := range []string{".hermind/config.yaml", "../.hermind/config.yaml"} {
+			if _, err := os.Stat(path); err == nil {
+				_ = loadYAMLConfig(path)
+				loaded = true
+				break
+			}
+		}
+		if !loaded {
+			defaultPath := "../.hermind/config.yaml"
+			if err := createDefaultConfig(defaultPath); err == nil {
+				_ = loadYAMLConfig(defaultPath)
+			}
+		}
 	}
 
 	if err := env.Parse(&cfg); err != nil {
@@ -391,4 +408,12 @@ func loadYAMLConfig(path string) error {
 		}
 	}
 	return nil
+}
+
+// createDefaultConfig writes the embedded default YAML to disk.
+func createDefaultConfig(path string) error {
+	if err := os.MkdirAll(filepath.Dir(path), 0755); err != nil {
+		return err
+	}
+	return os.WriteFile(path, defaultConfigYAML, 0644)
 }

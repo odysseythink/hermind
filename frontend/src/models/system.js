@@ -864,10 +864,6 @@ const System = {
       .catch(() => false);
   },
 
-  experimentalFeatures: {
-    liveSync: LiveDocumentSync,
-    agentPlugins: AgentPlugins,
-  },
   promptVariables: SystemPromptVariable,
 };
 

@@ -6,7 +6,6 @@ import Highlighter from "react-highlight-words";
 import { Link, useSearchParams } from "react-router-dom";
 import paths from "@/utils/paths";
 import ChatPromptHistory from "./ChatPromptHistory";
-import PublishEntityModal from "@/components/CommunityHub/PublishEntityModal";
 import { useModal } from "@/hooks/useModal";
 import System from "@/models/system";
 
@@ -241,12 +240,6 @@ export default function ChatPromptSettings({
           </div>
         </div>
       </div>
-      <PublishEntityModal
-        show={showPublishModal}
-        onClose={closePublishModal}
-        entityType="system-prompt"
-        entity={prompt}
-      />
     </>
   );
 }

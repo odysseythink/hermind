@@ -48,10 +48,6 @@ export default function ImportedSkillConfig({
 
   async function toggleSkill() {
     const updatedConfig = { ...selectedSkill, active: !config.active };
-    await System.experimentalFeatures.agentPlugins.updatePluginConfig(
-      config.hubId,
-      { active: !config.active }
-    );
     setImportedSkills((prev) =>
       prev.map((s) => (s.hubId === config.hubId ? updatedConfig : s))
     );
@@ -86,10 +82,6 @@ export default function ImportedSkillConfig({
       return;
     }
 
-    await System.experimentalFeatures.agentPlugins.updatePluginConfig(
-      config.hubId,
-      updatedConfig
-    );
     setConfig(updatedConfig);
     setImportedSkills((prev) =>
       prev.map((skill) =>
@@ -200,16 +192,6 @@ function ManageSkillMenu({ config, setImportedSkills }) {
       )
     )
       return;
-    const success = await System.experimentalFeatures.agentPlugins.deletePlugin(
-      config.hubId
-    );
-    if (success) {
-      setImportedSkills((prev) => prev.filter((s) => s.hubId !== config.hubId));
-      showToast("Skill deleted successfully.", "success");
-      setOpen(false);
-    } else {
-      showToast("Failed to delete skill.", "error");
-    }
   }
 
   useEffect(() => {

@@ -55,7 +55,7 @@ export default {
     },
   },
   github: () => {
-    return "https://github.com/Mintplex-Labs/hermind";
+    return "https://github.com/odysseythink/hermind";
   },
   discord: () => {
     return "https://discord.com/invite/6UyHPeGZAC";
@@ -176,13 +176,10 @@ export default {
       return `/settings/browser-extension`;
     },
     mobile: () => {
-      return `/settings/mobile-connections`;
+      return `/settings/mobile-app`;
     },
     experimental: () => {
       return `/settings/beta-features`;
-    },
-    mobileConnections: () => {
-      return `/settings/mobile-connections`;
     },
     telegram: () => {
       return `/settings/external-connections/telegram`;
@@ -203,40 +200,6 @@ export default {
     },
     editAgent: (uuid) => {
       return `/settings/agents/builder/${uuid}`;
-    },
-  },
-  communityHub: {
-    website: () => {
-      return import.meta.env.DEV
-        ? `http://localhost:5173`
-        : `https://hub.hermind.com`;
-    },
-    /**
-     * View more items of a given type on the community hub.
-     * @param {string} type - The type of items to view more of. Should be kebab-case.
-     * @returns {string} The path to view more items of the given type.
-     */
-    viewMoreOfType: function (type) {
-      return `${this.website()}/list/${type}`;
-    },
-    viewItem: function (type, id) {
-      return `${this.website()}/i/${type}/${id}`;
-    },
-    trending: () => {
-      return `/settings/community-hub/trending`;
-    },
-    authentication: () => {
-      return `/settings/community-hub/authentication`;
-    },
-    importItem: (importItemId) => {
-      return `/settings/community-hub/import-item${importItemId ? `?id=${importItemId}` : ""}`;
-    },
-    profile: function (username) {
-      if (username) return `${this.website()}/u/${username}`;
-      return `${this.website()}/me`;
-    },
-    noPrivateItems: () => {
-      return "https://docs.hermind.com/community-hub/faq#no-private-items";
     },
   },
 

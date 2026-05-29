@@ -1,6 +1,6 @@
 # Server
-SERVER_PORT: "3002"
-STORAGE_DIR: "./storage"
+SERVER_PORT: "33472"
+STORAGE_DIR: "./.hermind/storage"
 
 # Security
 JWT_SECRET: "change-me-in-production"
@@ -49,7 +49,7 @@ DEBUG_MODE: false
 ENABLE_HTTPS: false
 
 # Public base URL (used for OAuth callbacks)
-PUBLIC_BASE_URL: "http://localhost:3001"
+PUBLIC_BASE_URL: "http://localhost:33472"
 
 # Outlook OAuth authority: "common" | "consumers" | <tenant-id>
 OUTLOOK_AUTHORITY: "common"

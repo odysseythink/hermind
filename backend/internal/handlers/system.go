@@ -346,6 +346,13 @@ func (h *SystemHandler) CustomModels(c *gin.Context) {
 			return
 		}
 		c.JSON(http.StatusOK, gin.H{"models": models, "error": nil})
+	case "localai", "lmstudio", "generic-openai", "openai", "openrouter", "togetherai":
+		models, err := h.openaiCompatibleModels(req.BasePath, req.APIKey)
+		if err != nil {
+			c.JSON(http.StatusOK, gin.H{"models": []any{}, "error": err.Error()})
+			return
+		}
+		c.JSON(http.StatusOK, gin.H{"models": models, "error": nil})
 	default:
 		c.JSON(http.StatusOK, gin.H{"models": []any{}, "error": nil})
 	}
@@ -402,6 +409,60 @@ func (h *SystemHandler) ollamaModels(basePath *string, authToken *string) ([]gin
 	models := make([]gin.H, 0, len(result.Models))
 	for _, m := range result.Models {
 		models = append(models, gin.H{"id": m.Name})
+	}
+	return models, nil
+}
+
+func (h *SystemHandler) openaiCompatibleModels(basePath *string, apiKey *string) ([]gin.H, error) {
+	urlStr := ""
+	if basePath != nil && *basePath != "" {
+		urlStr = *basePath
+	}
+	if urlStr == "" {
+		return nil, fmt.Errorf("no base path provided")
+	}
+	if strings.HasSuffix(urlStr, "/") {
+		urlStr = strings.TrimSuffix(urlStr, "/")
+	}
+	if !strings.HasSuffix(urlStr, "/v1") {
+		urlStr = urlStr + "/v1"
+	}
+
+	req, err := http.NewRequest(http.MethodGet, urlStr+"/models", nil)
+	if err != nil {
+		return nil, err
+	}
+	if apiKey != nil && *apiKey != "" {
+		req.Header.Set("Authorization", "Bearer "+*apiKey)
+	}
+
+	resp, err := http.DefaultClient.Do(req)
+	if err != nil {
+		return nil, err
+	}
+	defer resp.Body.Close()
+
+	if resp.StatusCode != http.StatusOK {
+		return nil, fmt.Errorf("could not reach server: %d", resp.StatusCode)
+	}
+
+	body, err := io.ReadAll(resp.Body)
+	if err != nil {
+		return nil, err
+	}
+
+	var result struct {
+		Data []struct {
+			ID string `json:"id"`
+		} `json:"data"`
+	}
+	if err := json.Unmarshal(body, &result); err != nil {
+		return nil, err
+	}
+
+	models := make([]gin.H, 0, len(result.Data))
+	for _, m := range result.Data {
+		models = append(models, gin.H{"id": m.ID})
 	}
 	return models, nil
 }

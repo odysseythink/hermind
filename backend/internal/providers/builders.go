@@ -201,6 +201,7 @@ func buildLMStudio(ctx context.Context, cfg *config.Config, settings map[string]
 		return nil, fmt.Errorf("no LMStudio base path configured")
 	}
 	baseURL = strings.TrimSuffix(baseURL, "/")
+	baseURL = strings.TrimSuffix(baseURL, "/v1")
 
 	p, err := pantheonLMStudio.New("", pantheonLMStudio.WithBaseURL(baseURL))
 	if err != nil {
@@ -218,6 +219,7 @@ func buildLocalAI(ctx context.Context, cfg *config.Config, settings map[string]s
 		return nil, fmt.Errorf("no LocalAI base path configured")
 	}
 	baseURL = strings.TrimSuffix(baseURL, "/")
+	baseURL = strings.TrimSuffix(baseURL, "/v1")
 
 	apiKey := firstNonEmpty(
 		settings["LocalAiApiKey"],
@@ -393,6 +395,7 @@ func buildKoboldCPP(ctx context.Context, cfg *config.Config, settings map[string
 		return nil, fmt.Errorf("no KoboldCPP base path configured")
 	}
 	baseURL = strings.TrimSuffix(baseURL, "/")
+	baseURL = strings.TrimSuffix(baseURL, "/v1")
 
 	apiKey := firstNonEmpty(
 		settings["KoboldCPPApiKey"],
@@ -416,6 +419,7 @@ func buildTextGenWebUI(ctx context.Context, cfg *config.Config, settings map[str
 		return nil, fmt.Errorf("no TextGenWebUI base path configured")
 	}
 	baseURL = strings.TrimSuffix(baseURL, "/")
+	baseURL = strings.TrimSuffix(baseURL, "/v1")
 
 	apiKey := firstNonEmpty(
 		settings["TextGenWebUIAPIKey"],
@@ -456,6 +460,7 @@ func buildLiteLLM(ctx context.Context, cfg *config.Config, settings map[string]s
 		return nil, fmt.Errorf("no LiteLLM base path configured")
 	}
 	baseURL = strings.TrimSuffix(baseURL, "/")
+	baseURL = strings.TrimSuffix(baseURL, "/v1")
 
 	apiKey := firstNonEmpty(
 		settings["LiteLLMApiKey"],
@@ -480,6 +485,7 @@ func buildGenericOpenAI(ctx context.Context, cfg *config.Config, settings map[st
 		return nil, fmt.Errorf("no GenericOpenAI base path configured")
 	}
 	baseURL = strings.TrimSuffix(baseURL, "/")
+	baseURL = strings.TrimSuffix(baseURL, "/v1")
 
 	apiKey := firstNonEmpty(
 		settings["GenericOpenAiKey"],
@@ -586,6 +592,7 @@ func buildNvidiaNIM(ctx context.Context, cfg *config.Config, settings map[string
 		return nil, fmt.Errorf("no NVIDIA NIM base path configured")
 	}
 	baseURL = strings.TrimSuffix(baseURL, "/")
+	baseURL = strings.TrimSuffix(baseURL, "/v1")
 
 	p, err := pantheonNvidiaNIM.New("", pantheonNvidiaNIM.WithBaseURL(baseURL))
 	if err != nil {
@@ -619,6 +626,7 @@ func buildDellPro(ctx context.Context, cfg *config.Config, settings map[string]s
 		return nil, fmt.Errorf("no Dell Pro AI Studio base path configured")
 	}
 	baseURL = strings.TrimSuffix(baseURL, "/")
+	baseURL = strings.TrimSuffix(baseURL, "/v1")
 
 	apiKey := firstNonEmpty(
 		settings["DellProApiKey"],
@@ -674,6 +682,7 @@ func buildFoundry(ctx context.Context, cfg *config.Config, settings map[string]s
 		return nil, fmt.Errorf("no Foundry base path configured")
 	}
 	baseURL = strings.TrimSuffix(baseURL, "/")
+	baseURL = strings.TrimSuffix(baseURL, "/v1")
 
 	p, err := pantheonFoundry.New("", pantheonFoundry.WithBaseURL(baseURL))
 	if err != nil {
@@ -723,6 +732,7 @@ func buildDockerModelRunner(ctx context.Context, cfg *config.Config, settings ma
 		return nil, fmt.Errorf("no Docker Model Runner base path configured")
 	}
 	baseURL = strings.TrimSuffix(baseURL, "/")
+	baseURL = strings.TrimSuffix(baseURL, "/v1")
 
 	apiKey := firstNonEmpty(
 		settings["DockerModelRunnerApiKey"],
@@ -746,6 +756,7 @@ func buildPrivateMode(ctx context.Context, cfg *config.Config, settings map[stri
 		return nil, fmt.Errorf("no PrivateMode base path configured")
 	}
 	baseURL = strings.TrimSuffix(baseURL, "/")
+	baseURL = strings.TrimSuffix(baseURL, "/v1")
 
 	apiKey := firstNonEmpty(
 		settings["PrivateModeApiKey"],
@@ -785,6 +796,7 @@ func buildLemonade(ctx context.Context, cfg *config.Config, settings map[string]
 		return nil, fmt.Errorf("no Lemonade base path configured")
 	}
 	baseURL = strings.TrimSuffix(baseURL, "/")
+	baseURL = strings.TrimSuffix(baseURL, "/v1")
 
 	apiKey := firstNonEmpty(
 		settings["LemonadeLLMApiKey"],

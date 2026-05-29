@@ -194,24 +194,7 @@ const WatchForChanges = memo(({ workspace, docPath, item }) => {
     try {
       e.stopPropagation();
       if (!watched) window.dispatchEvent(watchEvent);
-      const success =
-        await System.experimentalFeatures.liveSync.setWatchStatusForDocument(
-          workspace.slug,
-          docPath,
-          !watched
-        );
-
-      if (!success) {
-        showToast(
-          `Failed to ${!watched ? "watch" : "unwatch"} document.`,
-          "error",
-          {
-            clear: true,
-          }
-        );
-        return;
-      }
-
+      
       showToast(
         `Document ${
           !watched
