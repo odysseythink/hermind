@@ -229,6 +229,7 @@ func main() {
 		mlog.Fatal("failed to start worker manager", mlog.Err(err))
 	}
 	chatSvc := services.NewChatService(db, cfg, vectorSvc, llmProv, emb, agentRuntime, rerankerSvc, memInj)
+		telegramSvc := services.NewTelegramBotService(db, cfg, sysSvc, enc, chatSvc)
 	progressMgr := services.NewEmbeddingProgressManager()
 
 	// Boot migration: encrypt plaintext secrets in SystemSetting
@@ -289,7 +290,7 @@ func main() {
 		handlers.RegisterOAuthRoutes(api, oauthHandler, authSvc)
 		whitelistHandler := handlers.NewAgentSkillWhitelistHandler(whitelistSvc)
 		handlers.RegisterAgentSkillWhitelistRoutes(api, whitelistHandler, authSvc)
-		handlers.RegisterTelegramRoutes(api, cfg, authSvc)
+		handlers.RegisterTelegramRoutes(api, cfg, authSvc, telegramSvc)
 		handlers.RegisterBrowserExtensionRoutes(api, authSvc)
 		handlers.RegisterEmbedRoutes(api, embedSvc, db)
 		handlers.RegisterEmbedManagementRoutes(api, embedSvc, authSvc, db)
