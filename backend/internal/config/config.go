@@ -27,6 +27,7 @@ type Config struct {
 	LLMModel        string  `env:"LLM_MODEL" envDefault:"gpt-4o-mini"`
 	EmbeddingEngine string  `env:"EMBEDDING_ENGINE" envDefault:"openai"`
 	EmbeddingModel  string  `env:"EMBEDDING_MODEL" envDefault:"text-embedding-3-small"`
+	NativeEmbeddingModel string  `env:"NATIVE_EMBEDDING_MODEL" envDefault:"sentence-transformers/all-MiniLM-L6-v2"`
 	TTSProvider     string  `env:"TTS_PROVIDER" envDefault:"native"`
 	EnableHTTPS     bool    `env:"ENABLE_HTTPS" envDefault:"false"`
 	MultiUserMode   bool    `env:"MULTI_USER_MODE" envDefault:"false"`
