@@ -79,7 +79,7 @@ func (h *BrowserExtensionHandler) EmbedContent(c *gin.Context) {
 	}
 
 	ws, err := h.wsSvc.GetByID(c.Request.Context(), req.WorkspaceID)
-	if err != nil {
+	if err != nil || ws == nil {
 		c.JSON(http.StatusNotFound, gin.H{"success": false, "error": "Workspace not found"})
 		return
 	}

@@ -1,4 +1,4 @@
-.PHONY: build build-frontend build-server dev test lint
+.PHONY: build build-frontend build-server build-extension build-all dev test lint
 
 FRONTEND_DIST := frontend/dist
 GOFLAGS := -tags="fts5"
@@ -14,6 +14,11 @@ endif
 
 build-frontend:
 	cd frontend && yarn install && yarn build
+
+build-extension:
+	cd browser-extension && yarn install && yarn build
+
+build-all: build-extension build-server
 
 build-server: build-frontend
 	cd backend && \

@@ -119,6 +119,16 @@ yarn build    # Production build
 yarn lint     # ESLint with auto-fix
 ```
 
+### Browser Extension Development
+
+```bash
+# Build the browser extension (React + Vite)
+make build-extension
+
+# Build everything (frontend + server + extension)
+make build-all
+```
+
 ## Configuration
 
 Configuration is driven entirely by environment variables. See `backend/internal/config/config.go` for the full struct. Key variables:
@@ -264,6 +274,13 @@ When investigating a bug and you are uncertain which hypothesis is correct, **pr
 1. Implement the skill logic in `backend/internal/agent/` or as an MCP tool.
 2. Register it in the agent runtime initialization.
 3. Update the global disable list handling in `services.AgentSkillWhitelistService` if needed.
+
+### Adding Browser Extension Features
+
+1. Backend changes go under `backend/internal/handlers/browser_extension.go` and `backend/internal/services/browser_extension.go`.
+2. Extension client changes go under `browser-extension/src/` and `browser-extension/public/`.
+3. Build the extension with `make build-extension`.
+4. Test the extension by loading `browser-extension/dist/` as an unpacked extension in Chrome.
 
 ## Notes
 

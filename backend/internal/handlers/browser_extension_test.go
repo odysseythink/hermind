@@ -3,6 +3,7 @@ package handlers
 import (
 	"bytes"
 	"encoding/json"
+	"fmt"
 	"net/http"
 	"net/http/httptest"
 	"testing"
@@ -155,4 +156,85 @@ func TestBrowserExtensionHandler_Disconnect(t *testing.T) {
 	rec = httptest.NewRecorder()
 	r.ServeHTTP(rec, req)
 	require.Equal(t, http.StatusForbidden, rec.Code)
+}
+
+func TestBrowserExtensionHandler_EmbedContent_InvalidWorkspace(t *testing.T) {
+	r, _, extSvc, _, _ := newBrowserExtensionTestEnv(t)
+	key, err := extSvc.CreateKey(t.Context(), nil)
+	require.NoError(t, err)
+
+	payload, _ := json.Marshal(map[string]any{
+		"workspaceId": 99999,
+		"textContent": "embed me",
+		"metadata": map[string]string{
+			"title": "Embed Title",
+			"url":   "http://example.com",
+		},
+	})
+	req := httptest.NewRequest("POST", "/api/browser-extension/embed-content", bytes.NewReader(payload))
+	req.Header.Set("Authorization", "Bearer "+key.Key)
+	req.Header.Set("Content-Type", "application/json")
+	rec := httptest.NewRecorder()
+	r.ServeHTTP(rec, req)
+
+	require.Equal(t, http.StatusNotFound, rec.Code)
+	var body map[string]any
+	require.NoError(t, json.Unmarshal(rec.Body.Bytes(), &body))
+	assert.Equal(t, false, body["success"])
+}
+
+func TestBrowserExtensionHandler_EmbedContent_EmptyText(t *testing.T) {
+	r, _, extSvc, wsSvc, _ := newBrowserExtensionTestEnv(t)
+	key, err := extSvc.CreateKey(t.Context(), nil)
+	require.NoError(t, err)
+
+	ws, err := wsSvc.Create(t.Context(), 0, dto.CreateWorkspaceRequest{Name: "Embed WS"})
+	require.NoError(t, err)
+	require.NotNil(t, ws)
+
+	payload, _ := json.Marshal(map[string]any{
+		"workspaceId": ws.ID,
+		"textContent": "",
+		"metadata": map[string]string{
+			"title": "Embed Title",
+			"url":   "http://example.com",
+		},
+	})
+	req := httptest.NewRequest("POST", "/api/browser-extension/embed-content", bytes.NewReader(payload))
+	req.Header.Set("Authorization", "Bearer "+key.Key)
+	req.Header.Set("Content-Type", "application/json")
+	rec := httptest.NewRecorder()
+	r.ServeHTTP(rec, req)
+
+	require.Equal(t, http.StatusBadRequest, rec.Code)
+	var body map[string]any
+	require.NoError(t, json.Unmarshal(rec.Body.Bytes(), &body))
+	assert.Equal(t, false, body["success"])
+}
+
+func TestBrowserExtensionHandler_GenerateApiKey(t *testing.T) {
+	r, _, _, _, _ := newBrowserExtensionTestEnv(t)
+	req := httptest.NewRequest("POST", "/api/browser-extension/api-keys/new", nil)
+	rec := httptest.NewRecorder()
+	r.ServeHTTP(rec, req)
+	require.Equal(t, http.StatusOK, rec.Code)
+	var body map[string]any
+	require.NoError(t, json.Unmarshal(rec.Body.Bytes(), &body))
+	assert.Equal(t, true, body["success"])
+	assert.NotNil(t, body["apiKey"])
+}
+
+func TestBrowserExtensionHandler_DeleteApiKey(t *testing.T) {
+	r, _, extSvc, _, _ := newBrowserExtensionTestEnv(t)
+	key, err := extSvc.CreateKey(t.Context(), nil)
+	require.NoError(t, err)
+
+	req := httptest.NewRequest("DELETE", fmt.Sprintf("/api/browser-extension/api-keys/%d", key.ID), nil)
+	rec := httptest.NewRecorder()
+	r.ServeHTTP(rec, req)
+	require.Equal(t, http.StatusOK, rec.Code)
+
+	// Verify deleted
+	_, err = extSvc.Validate(t.Context(), key.Key)
+	assert.Error(t, err)
 }
