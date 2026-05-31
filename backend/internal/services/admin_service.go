@@ -32,6 +32,9 @@ func (s *AdminService) ListUsers(ctx context.Context) ([]models.User, error) {
 }
 
 func (s *AdminService) DeleteUser(ctx context.Context, id int) error {
+	if err := NewBrowserExtensionService(s.db).DeleteAllForUser(ctx, id); err != nil {
+		return fmt.Errorf("cleanup browser extension keys: %w", err)
+	}
 	return s.db.Delete(&models.User{}, id).Error
 }
 
