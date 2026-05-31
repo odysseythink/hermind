@@ -344,6 +344,10 @@ func (s *ChatService) saveChatResponse(ctx context.Context, ws *models.Workspace
 	}
 	if err := s.db.Create(&chat).Error; err != nil {
 		mlog.Error("save chat failed: ", err)
+		return
+	}
+	if err := s.db.Exec("INSERT INTO workspace_chat_fts(rowid, prompt, response) VALUES (?, ?, ?)", chat.ID, chat.Prompt, chat.Response).Error; err != nil {
+		mlog.Error("save chat fts5 failed: ", err)
 	}
 }
 
@@ -360,7 +364,39 @@ func (s *ChatService) GetSuggestedMessages(ctx context.Context, ws *models.Works
 }
 
 func (s *ChatService) DeleteWorkspaceChats(ctx context.Context, workspaceID int) error {
+	var ids []int
+	if err := s.db.WithContext(ctx).Model(&models.WorkspaceChat{}).Where("workspace_id = ? AND thread_id IS NULL", workspaceID).Pluck("id", &ids).Error; err != nil {
+		return err
+	}
+	for _, id := range ids {
+		if err := s.db.Exec("INSERT INTO workspace_chat_fts(workspace_chat_fts) VALUES('delete', ?)", id).Error; err != nil {
+			mlog.Error("delete chat fts5 failed: ", err)
+		}
+	}
 	return s.db.Where("workspace_id = ? AND thread_id IS NULL", workspaceID).Delete(&models.WorkspaceChat{}).Error
+}
+
+func (s *ChatService) SearchWorkspaceChatsFTS5(ctx context.Context, workspaceID int, query string, limit int) ([]models.WorkspaceChat, error) {
+	if limit <= 0 {
+		limit = 5
+	}
+	if limit > 20 {
+		limit = 20
+	}
+
+	var chats []models.WorkspaceChat
+	err := s.db.WithContext(ctx).Raw(`
+		SELECT c.id, c.workspace_id, c.prompt, c.response, c.include, c.user_id, c.thread_id, c.api_session_id, c.created_at, c.last_updated_at, c.feedback_score, c.memory_processed
+		FROM workspace_chat_fts f
+		JOIN workspace_chats c ON c.id = f.rowid
+		WHERE c.workspace_id = ? AND workspace_chat_fts MATCH ?
+		ORDER BY rank
+		LIMIT ?
+	`, workspaceID, query, limit).Scan(&chats).Error
+	if err != nil {
+		return nil, err
+	}
+	return chats, nil
 }
 
 func (s *ChatService) DeleteWorkspaceEditedChats(ctx context.Context, workspaceID int) error {

@@ -324,3 +324,35 @@ func TestChatService_WithNoopReranker_ReturnsOriginalOrder(t *testing.T) {
 	assert.Equal(t, "d2", sources[1].(map[string]any)["docId"])
 	assert.Equal(t, "d3", sources[2].(map[string]any)["docId"])
 }
+
+func TestChatService_SearchWorkspaceChatsFTS5(t *testing.T) {
+	db, err := gorm.Open(sqlite.Open(":memory:?_pragma=foreign_keys(1)"), &gorm.Config{})
+	require.NoError(t, err)
+
+	err = db.AutoMigrate(&models.WorkspaceChat{})
+	require.NoError(t, err)
+	err = models.InitFTS5(db)
+	require.NoError(t, err)
+
+	cfg := &config.Config{}
+	svc := NewChatService(db, cfg, nil, nil, nil, nil, nil, nil)
+
+	// Seed chats
+	chats := []models.WorkspaceChat{
+		{WorkspaceID: 1, Prompt: "How do I deploy to Kubernetes?", Response: `{"text":"Use kubectl apply"}`, Include: true},
+		{WorkspaceID: 1, Prompt: "Best practices for Go testing", Response: `{"text":"Use table-driven tests"}`, Include: true},
+		{WorkspaceID: 2, Prompt: "Kubernetes deployment tips", Response: `{"text":"Different workspace"}`, Include: true},
+	}
+	for i := range chats {
+		err := db.Create(&chats[i]).Error
+		require.NoError(t, err)
+		// Manually sync FTS5 since saveChatResponse is not used here
+		err = db.Exec("INSERT INTO workspace_chat_fts(rowid, prompt, response) VALUES (?, ?, ?)", chats[i].ID, chats[i].Prompt, chats[i].Response).Error
+		require.NoError(t, err)
+	}
+
+	results, err := svc.SearchWorkspaceChatsFTS5(context.Background(), 1, "Kubernetes", 5)
+	require.NoError(t, err)
+	assert.Len(t, results, 1)
+	assert.Contains(t, results[0].Prompt, "Kubernetes")
+}
