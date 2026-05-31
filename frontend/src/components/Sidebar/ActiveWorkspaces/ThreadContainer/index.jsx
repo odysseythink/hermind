@@ -37,6 +37,16 @@ export default function ThreadContainer({
   }, []);
 
   useEffect(() => {
+    const refreshHandler = async () => {
+      if (!workspace.slug) return;
+      const { threads } = await Workspace.threads.all(workspace.slug);
+      setThreads(threads);
+    };
+    window.addEventListener("refreshThreads", refreshHandler);
+    return () => window.removeEventListener("refreshThreads", refreshHandler);
+  }, [workspace.slug]);
+
+  useEffect(() => {
     async function fetchThreads() {
       if (!workspace.slug) return;
       const { threads } = await Workspace.threads.all(workspace.slug);

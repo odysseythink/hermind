@@ -30,10 +30,11 @@ type ChatService struct {
 	agentInvoker AgentInvoker
 	reranker     reranker.Reranker
 	memInj       *MemoryInjector
+	autoTitleSvc *AutoTitleService
 }
 
-func NewChatService(db *gorm.DB, cfg *config.Config, vectorSvc *VectorService, llmProv providers.LLMProvider, embedder embedder.Embedder, agentInvoker AgentInvoker, reranker reranker.Reranker, memInj *MemoryInjector) *ChatService {
-	return &ChatService{db: db, cfg: cfg, vectorSvc: vectorSvc, llmProv: llmProv, embedder: embedder, agentInvoker: agentInvoker, reranker: reranker, memInj: memInj}
+func NewChatService(db *gorm.DB, cfg *config.Config, vectorSvc *VectorService, llmProv providers.LLMProvider, embedder embedder.Embedder, agentInvoker AgentInvoker, reranker reranker.Reranker, memInj *MemoryInjector, autoTitleSvc *AutoTitleService) *ChatService {
+	return &ChatService{db: db, cfg: cfg, vectorSvc: vectorSvc, llmProv: llmProv, embedder: embedder, agentInvoker: agentInvoker, reranker: reranker, memInj: memInj, autoTitleSvc: autoTitleSvc}
 }
 
 func (s *ChatService) buildRAGContext(ctx context.Context, ws *models.Workspace, user *models.User, threadID *int, message string, systemPromptOverride *string, historyOverride []core.Message) (systemPrompt string, sources []any, history []core.Message, err error) {
@@ -348,6 +349,10 @@ func (s *ChatService) saveChatResponse(ctx context.Context, ws *models.Workspace
 	}
 	if err := s.db.Exec("INSERT INTO workspace_chat_fts(rowid, prompt, response) VALUES (?, ?, ?)", chat.ID, chat.Prompt, chat.Response).Error; err != nil {
 		mlog.Error("save chat fts5 failed: ", err)
+	}
+	// Trigger async auto-title generation for new threads on their first exchange.
+	if threadID != nil && s.autoTitleSvc != nil {
+		s.autoTitleSvc.MaybeGenerate(ctx, *threadID, prompt, response)
 	}
 }
 

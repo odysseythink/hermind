@@ -30,7 +30,7 @@ func TestBuildRAGContext_OverrideTakesPrecedence(t *testing.T) {
 	db := setupChatDB(t)
 	cfg := &config.Config{}
 	vec := NewVectorService(cfg) // nil provider — RAG section skipped
-	svc := NewChatService(db, cfg, vec, nil, nil, nil, nil, nil)
+	svc := NewChatService(db, cfg, vec, nil, nil, nil, nil, nil, nil)
 
 	wsPrompt := "default prompt"
 	ws := &models.Workspace{
@@ -50,7 +50,7 @@ func TestBuildRAGContext_NilOverrideFallsBackToWorkspacePrompt(t *testing.T) {
 	db := setupChatDB(t)
 	cfg := &config.Config{}
 	vec := NewVectorService(cfg)
-	svc := NewChatService(db, cfg, vec, nil, nil, nil, nil, nil)
+	svc := NewChatService(db, cfg, vec, nil, nil, nil, nil, nil, nil)
 
 	wsPrompt := "default prompt"
 	ws := &models.Workspace{Name: "ws", Slug: "ws", OpenAiPrompt: &wsPrompt}
@@ -65,7 +65,7 @@ func TestBuildRAGContext_EmptyOverrideStringFallsBackToWorkspacePrompt(t *testin
 	db := setupChatDB(t)
 	cfg := &config.Config{}
 	vec := NewVectorService(cfg)
-	svc := NewChatService(db, cfg, vec, nil, nil, nil, nil, nil)
+	svc := NewChatService(db, cfg, vec, nil, nil, nil, nil, nil, nil)
 
 	wsPrompt := "default prompt"
 	ws := &models.Workspace{Name: "ws", Slug: "ws", OpenAiPrompt: &wsPrompt}
@@ -83,7 +83,7 @@ func TestBuildRAGContext_HistoryOverride_BypassesDBLookup(t *testing.T) {
 	db := setupChatDB(t)
 	cfg := &config.Config{}
 	vec := NewVectorService(cfg)
-	svc := NewChatService(db, cfg, vec, nil, nil, nil, nil, nil)
+	svc := NewChatService(db, cfg, vec, nil, nil, nil, nil, nil, nil)
 
 	ws := &models.Workspace{Name: "ws", Slug: "ws"}
 	require.NoError(t, db.Create(ws).Error)
@@ -110,7 +110,7 @@ func TestBuildRAGContext_HistoryOverride_BypassesDBLookup(t *testing.T) {
 func TestBuildRAGContext_NilHistoryOverride_PullsFromDB(t *testing.T) {
 	db := setupChatDB(t)
 	cfg := &config.Config{}
-	svc := NewChatService(db, cfg, NewVectorService(cfg), nil, nil, nil, nil, nil)
+	svc := NewChatService(db, cfg, NewVectorService(cfg), nil, nil, nil, nil, nil, nil)
 
 	ws := &models.Workspace{Name: "ws", Slug: "ws"}
 	require.NoError(t, db.Create(ws).Error)
@@ -164,7 +164,7 @@ func TestChatService_Stream_NoAgentInvoker_FallsThrough(t *testing.T) {
 	db := setupChatDB(t)
 	cfg := &config.Config{}
 	vec := NewVectorService(cfg)
-	svc := NewChatService(db, cfg, vec, &stubLLMProv{}, nil, nil, nil, nil)
+	svc := NewChatService(db, cfg, vec, &stubLLMProv{}, nil, nil, nil, nil, nil)
 
 	ws := &models.Workspace{Name: "ws", Slug: "ws"}
 	require.NoError(t, db.Create(ws).Error)
@@ -189,7 +189,7 @@ func TestChatService_Stream_NotAgentMessage_FallsThrough(t *testing.T) {
 	cfg := &config.Config{}
 	vec := NewVectorService(cfg)
 	mockInv := &mockAgentInvoker{isAgentRet: false}
-	svc := NewChatService(db, cfg, vec, &stubLLMProv{}, nil, mockInv, nil, nil)
+	svc := NewChatService(db, cfg, vec, &stubLLMProv{}, nil, mockInv, nil, nil, nil)
 
 	ws := &models.Workspace{Name: "ws", Slug: "ws"}
 	require.NoError(t, db.Create(ws).Error)
@@ -214,7 +214,7 @@ func TestChatService_Stream_AgentMessage_EmitsTwoChunks(t *testing.T) {
 		isAgentRet: true,
 		handoffRet: &AgentHandoff{UUID: "uid-1", WSToken: "tok-1"},
 	}
-	svc := NewChatService(db, cfg, vec, nil, nil, mockInv, nil, nil)
+	svc := NewChatService(db, cfg, vec, nil, nil, mockInv, nil, nil, nil)
 
 	ws := &models.Workspace{Name: "ws", Slug: "ws"}
 	require.NoError(t, db.Create(ws).Error)
@@ -247,7 +247,7 @@ func TestChatService_Stream_AgentMessage_HandoffError_EmitsAbort(t *testing.T) {
 		isAgentRet: true,
 		handoffErr: assert.AnError,
 	}
-	svc := NewChatService(db, cfg, vec, nil, nil, mockInv, nil, nil)
+	svc := NewChatService(db, cfg, vec, nil, nil, mockInv, nil, nil, nil)
 
 	ws := &models.Workspace{Name: "ws", Slug: "ws"}
 	require.NoError(t, db.Create(ws).Error)
@@ -274,7 +274,7 @@ func TestChatService_Stream_AgentMessage_SkipsRAG(t *testing.T) {
 		isAgentRet: true,
 		handoffRet: &AgentHandoff{UUID: "uid-1", WSToken: "tok-1"},
 	}
-	svc := NewChatService(db, cfg, vec, nil, nil, mockInv, nil, nil)
+	svc := NewChatService(db, cfg, vec, nil, nil, mockInv, nil, nil, nil)
 
 	ws := &models.Workspace{Name: "ws", Slug: "ws"}
 	require.NoError(t, db.Create(ws).Error)
@@ -312,7 +312,7 @@ func TestChatService_WithNoopReranker_ReturnsOriginalOrder(t *testing.T) {
 	}
 	vec.SetProvider(mockDB)
 
-	svc := NewChatService(db, cfg, vec, nil, &mockEmbedderForSearch{}, nil, &reranker.NoopReranker{}, nil)
+	svc := NewChatService(db, cfg, vec, nil, &mockEmbedderForSearch{}, nil, &reranker.NoopReranker{}, nil, nil)
 
 	ws := &models.Workspace{Name: "ws", Slug: "ws"}
 	require.NoError(t, db.Create(ws).Error)
@@ -335,7 +335,7 @@ func TestChatService_SearchWorkspaceChatsFTS5(t *testing.T) {
 	require.NoError(t, err)
 
 	cfg := &config.Config{}
-	svc := NewChatService(db, cfg, nil, nil, nil, nil, nil, nil)
+	svc := NewChatService(db, cfg, nil, nil, nil, nil, nil, nil, nil)
 
 	// Seed chats
 	chats := []models.WorkspaceChat{

@@ -246,7 +246,8 @@ func main() {
 	if err := workerMgr.Start(); err != nil {
 		mlog.Fatal("failed to start worker manager", mlog.Err(err))
 	}
-	chatSvc := services.NewChatService(db, cfg, vectorSvc, llmProv, emb, agentRuntime, rerankerSvc, memInj)
+	autoTitleSvc := services.NewAutoTitleService(db, llmProv)
+	chatSvc := services.NewChatService(db, cfg, vectorSvc, llmProv, emb, agentRuntime, rerankerSvc, memInj, autoTitleSvc)
 	agentRuntime.SetChatSearcher(chatSvc)
 	progressMgr := services.NewEmbeddingProgressManager()
 

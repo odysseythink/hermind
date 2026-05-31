@@ -86,7 +86,7 @@ func setupTestDB(t *testing.T) (*gin.Engine, *services.AuthService, *gorm.DB) {
 			{FinishReason: "stop"},
 		},
 	}
-	chatSvc := services.NewChatService(db, cfg, vectorSvc, llm, nil, nil, nil, nil)
+	chatSvc := services.NewChatService(db, cfg, vectorSvc, llm, nil, nil, nil, nil, nil)
 
 	ch := chunker.NewChunker(1000, 20, "")
 	fsSvc := services.NewFileSystemService(cfg.StorageDir)

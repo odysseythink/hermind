@@ -64,7 +64,7 @@ func setupChatTest(t *testing.T, llm providers.LLMProvider) (*gin.Engine, *servi
 	wsSvc := services.NewWorkspaceService(db, cfg, nil)
 	searchSvc := services.NewSearchService(db)
 	vectorSvc := services.NewVectorService(cfg)
-	chatSvc := services.NewChatService(db, cfg, vectorSvc, llm, nil, nil, nil, nil)
+	chatSvc := services.NewChatService(db, cfg, vectorSvc, llm, nil, nil, nil, nil, nil)
 
 	gin.SetMode(gin.TestMode)
 	r := gin.New()

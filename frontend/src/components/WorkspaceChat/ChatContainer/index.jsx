@@ -301,6 +301,10 @@ export default function ChatContainer({
           ),
         attachments,
       });
+      // Refresh thread list to pick up auto-generated titles.
+      if (threadSlug) {
+        window.dispatchEvent(new CustomEvent("refreshThreads"));
+      }
       return;
     }
     loadingResponse === true && fetchReply();
