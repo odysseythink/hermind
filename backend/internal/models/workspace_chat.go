@@ -1,6 +1,15 @@
 package models
 
-import "time"
+import (
+	"time"
+
+	"gorm.io/gorm"
+)
+
+// InitFTS5 creates the SQLite FTS5 virtual table for chat history search.
+func InitFTS5(db *gorm.DB) error {
+	return db.Exec(`CREATE VIRTUAL TABLE IF NOT EXISTS workspace_chat_fts USING fts5(prompt, response)`).Error
+}
 
 type WorkspaceChat struct {
 	ID            int       `gorm:"primaryKey;autoIncrement" json:"id"`
