@@ -23,6 +23,7 @@ import (
 	"github.com/odysseythink/hermind/backend/internal/config"
 	"github.com/odysseythink/hermind/backend/internal/embedder"
 	"github.com/odysseythink/hermind/backend/internal/handlers"
+	"github.com/odysseythink/hermind/backend/internal/models"
 	"github.com/odysseythink/hermind/backend/internal/mcp"
 	"github.com/odysseythink/hermind/backend/internal/providers"
 	"github.com/odysseythink/hermind/backend/internal/reranker"
@@ -93,6 +94,9 @@ func main() {
 	}
 	if err := services.AutoMigrate(db); err != nil {
 		mlog.Fatal("failed to migrate db", mlog.Err(err))
+	}
+	if err := models.InitFTS5(db); err != nil {
+		mlog.Fatal("init fts5 failed", mlog.Err(err))
 	}
 	if err := services.SeedDefaults(db); err != nil {
 		mlog.Fatal("failed to seed db", mlog.Err(err))
@@ -243,6 +247,7 @@ func main() {
 		mlog.Fatal("failed to start worker manager", mlog.Err(err))
 	}
 	chatSvc := services.NewChatService(db, cfg, vectorSvc, llmProv, emb, agentRuntime, rerankerSvc, memInj)
+	agentRuntime.SetChatSearcher(chatSvc)
 	progressMgr := services.NewEmbeddingProgressManager()
 
 	// Boot migration: encrypt plaintext secrets in SystemSetting

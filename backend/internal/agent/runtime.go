@@ -9,6 +9,7 @@ import (
 
 	"github.com/gorilla/websocket"
 	"github.com/odysseythink/hermind/backend/internal/agent/flow"
+	"github.com/odysseythink/hermind/backend/internal/agent/tools"
 	"github.com/odysseythink/hermind/backend/internal/agent/tools/oauth"
 	"github.com/odysseythink/hermind/backend/internal/config"
 	"github.com/odysseythink/hermind/backend/internal/mcp"
@@ -38,6 +39,7 @@ type Deps struct {
 	OutlookOAuth    *oauth.OutlookOAuth
 	OutlookStore    *oauth.TokenStore
 	WhitelistSvc    *services.AgentSkillWhitelistService
+	ChatSearcher    tools.ChatSearcher
 }
 
 type Runtime struct {
@@ -97,6 +99,13 @@ func (r *Runtime) Sessions() *sync.Map {
 // the cache and the buildLanguageModel factory. Test-only.
 func (r *Runtime) SetTestLanguageModelOverride(m core.LanguageModel) {
 	r.lmOverride = m
+}
+
+// SetChatSearcher injects the chat search service after runtime creation.
+// Required because ChatService depends on the runtime (AgentInvoker) and
+// the runtime needs ChatService for the session-search tool.
+func (r *Runtime) SetChatSearcher(cs tools.ChatSearcher) {
+	r.deps.ChatSearcher = cs
 }
 
 // LanguageModelFor returns a LanguageModel for the given workspace, using a

@@ -165,6 +165,7 @@ func buildSessionRegistry(ctx context.Context, deps Deps, ws *models.Workspace, 
 		OutlookOAuth:    deps.OutlookOAuth,
 		OutlookStore:    deps.OutlookStore,
 		WhitelistSvc:    deps.WhitelistSvc,
+		ChatSearcher:    deps.ChatSearcher,
 	}
 	// Avoid assigning a nil concrete pointer to an interface (Go nil-interface trap).
 	if deps.MCPHv != nil {
