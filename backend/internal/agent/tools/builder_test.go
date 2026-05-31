@@ -26,7 +26,8 @@ func TestBuilder_RegistersDefaultSkills(t *testing.T) {
 	entries := reg.Entries(nil)
 	// rag-memory, document-summarizer, sql-agent, filesystem-agent, create-files-agent
 	// are filtered by CheckFn when services/config are nil.
-	require.Len(t, entries, 2)
+	// session-search has no CheckFn so it always appears.
+	require.Len(t, entries, 3)
 
 	names := make(map[string]bool)
 	for _, e := range entries {
@@ -36,6 +37,7 @@ func TestBuilder_RegistersDefaultSkills(t *testing.T) {
 	require.False(t, names["document-summarizer"])
 	require.True(t, names["web-scraping"])
 	require.True(t, names["rechart"])
+	require.True(t, names["session-search"])
 	require.False(t, names["sql-agent"])
 	require.False(t, names["filesystem-agent"])
 	require.False(t, names["create-files-agent"])
@@ -48,14 +50,15 @@ func TestBuilder_RespectsDisabledFilter(t *testing.T) {
 	require.NoError(t, err)
 
 	entries := reg.Entries(nil)
-	// Only rechart remains (document-summarizer filtered by CheckFn, rag-memory/web-scraping disabled)
-	require.Len(t, entries, 1)
+	// rechart and session-search remain (document-summarizer filtered by CheckFn, rag-memory/web-scraping disabled)
+	require.Len(t, entries, 2)
 
 	names := make(map[string]bool)
 	for _, e := range entries {
 		names[e.Name] = true
 	}
 	require.True(t, names["rechart"])
+	require.True(t, names["session-search"])
 	require.False(t, names["rag-memory"])
 	require.False(t, names["web-scraping"])
 	require.False(t, names["document-summarizer"])
@@ -79,7 +82,7 @@ func TestBuilder_DedupLastWins_FiresOverrideEventLog(t *testing.T) {
 
 	entries := reg.Entries(nil)
 	// document-summarizer is hidden by CheckFn (DocSvc nil).
-	require.Len(t, entries, 3)
+	require.Len(t, entries, 4)
 
 	var ragEntry *tool.Entry
 	for _, e := range entries {
@@ -366,7 +369,7 @@ func TestBuilder_AllSevenDefaultSkills_PresentInRegistry(t *testing.T) {
 	require.NoError(t, err)
 
 	entries := reg.Entries(nil)
-	require.Len(t, entries, 7)
+	require.Len(t, entries, 8)
 
 	names := make(map[string]bool)
 	for _, e := range entries {
@@ -379,6 +382,7 @@ func TestBuilder_AllSevenDefaultSkills_PresentInRegistry(t *testing.T) {
 	require.True(t, names["sql-agent"])
 	require.True(t, names["filesystem-agent"])
 	require.True(t, names["create-files-agent"])
+	require.True(t, names["session-search"])
 }
 
 func TestBuilder_AllTenDefaultSkillsRegistered_InSingleUserMode(t *testing.T) {
@@ -418,7 +422,7 @@ func TestBuilder_AllTenDefaultSkillsRegistered_InSingleUserMode(t *testing.T) {
 	require.NoError(t, err)
 
 	entries := reg.Entries(nil)
-	require.Len(t, entries, 10)
+	require.Len(t, entries, 11)
 
 	names := make(map[string]bool)
 	for _, e := range entries {
@@ -434,6 +438,7 @@ func TestBuilder_AllTenDefaultSkillsRegistered_InSingleUserMode(t *testing.T) {
 	require.True(t, names["gmail-agent"])
 	require.True(t, names["google-calendar-agent"])
 	require.True(t, names["outlook-agent"])
+	require.True(t, names["session-search"])
 }
 
 func TestBuilder_OAuthSkillsVisible_InMultiUserMode_WhenConfigured(t *testing.T) {
@@ -473,8 +478,8 @@ func TestBuilder_OAuthSkillsVisible_InMultiUserMode_WhenConfigured(t *testing.T)
 	require.NoError(t, err)
 
 	entries := reg.Entries(nil)
-	// All 10 skills (7 base + 3 OAuth) should appear when configured.
-	require.Len(t, entries, 10)
+	// All 11 skills (8 base + 3 OAuth) should appear when configured.
+	require.Len(t, entries, 11)
 
 	names := make(map[string]bool)
 	for _, e := range entries {
