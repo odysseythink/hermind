@@ -116,3 +116,15 @@ func TestNewPantheonEmbedder_DeprecatedStillWorks(t *testing.T) {
 	require.NoError(t, err)
 	assert.NotNil(t, emb)
 }
+
+func TestNewEmbedder_Native(t *testing.T) {
+	cfg := &config.Config{
+		StorageDir:           t.TempDir(),
+		EmbeddingEngine:      "native",
+		NativeEmbeddingModel: "sentence-transformers/all-MiniLM-L6-v2",
+	}
+	emb, err := NewEmbedder(cfg, nil)
+	require.NoError(t, err)
+	assert.NotNil(t, emb)
+	assert.Equal(t, 384, emb.Dimensions())
+}
