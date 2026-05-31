@@ -19,6 +19,7 @@ import (
 	"github.com/odysseythink/hermind/backend/internal/collector"
 	"github.com/odysseythink/hermind/backend/internal/config"
 	"github.com/odysseythink/hermind/backend/internal/dto"
+	"github.com/odysseythink/hermind/backend/internal/embedder"
 	"github.com/odysseythink/hermind/backend/internal/middleware"
 	"github.com/odysseythink/hermind/backend/internal/models"
 	"github.com/odysseythink/hermind/backend/internal/services"
@@ -352,6 +353,9 @@ func (h *SystemHandler) CustomModels(c *gin.Context) {
 			c.JSON(http.StatusOK, gin.H{"models": []any{}, "error": err.Error()})
 			return
 		}
+		c.JSON(http.StatusOK, gin.H{"models": models, "error": nil})
+	case "native-embedder":
+		models := embedder.AvailableModels()
 		c.JSON(http.StatusOK, gin.H{"models": models, "error": nil})
 	default:
 		c.JSON(http.StatusOK, gin.H{"models": []any{}, "error": nil})
