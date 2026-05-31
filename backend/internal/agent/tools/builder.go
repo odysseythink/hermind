@@ -38,6 +38,7 @@ type BuilderDeps struct {
 	OutlookStore    *oauth.TokenStore
 	Collector       *collector.Client // nil = attachment parsing unavailable
 	WhitelistSvc    *services.AgentSkillWhitelistService
+	ChatSearcher    ChatSearcher
 }
 
 // Builder composes a tool.Registry from multiple sources per session.
@@ -95,6 +96,7 @@ func (b *Builder) Build(ctx context.Context, ws *models.Workspace, user *models.
 		NewGmailAgentSkill(tc, b.deps),
 		NewGCalAgentSkill(tc, b.deps),
 		NewOutlookAgentSkill(tc, b.deps),
+		NewSessionSearchSkill(tc, b.deps.ChatSearcher),
 	} {
 		if isDisabled(e.Name, disabled) {
 			continue
