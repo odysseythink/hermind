@@ -42,6 +42,8 @@ func NewEmbedder(cfg *config.Config, settings map[string]string) (Embedder, erro
 		if modelID == "" {
 			modelID = "voyage-3"
 		}
+	case "native":
+		return NewNativeEmbedder(cfg)
 	default:
 		// openai-compat: openai, ollama, lmstudio, localai, litellm, openrouter, azure, mistral, gemini, lemonade, genericopenai, etc.
 		if apiKey == "" && requiresAPIKey(name) {
@@ -83,7 +85,7 @@ func pickStr(settings map[string]string, key, fallback string) string {
 
 func requiresAPIKey(name string) bool {
 	switch name {
-	case "ollama", "lmstudio", "localai", "litellm", "lemonade":
+	case "ollama", "lmstudio", "localai", "litellm", "lemonade", "native":
 		return false
 	}
 	return true
