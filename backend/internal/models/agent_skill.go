@@ -17,9 +17,9 @@ const (
 // recurring task types. Scoped per workspace.
 type AgentSkill struct {
 	ID            int        `gorm:"primaryKey;autoIncrement" json:"id"`
-	WorkspaceID   int        `gorm:"index;not null" json:"workspaceId"`
+	WorkspaceID   int        `gorm:"index:idx_ws_slug,unique;not null" json:"workspaceId"`
 	Name          string     `gorm:"not null" json:"name"`
-	Slug          string     `gorm:"not null" json:"slug"`
+	Slug          string     `gorm:"index:idx_ws_slug,unique;not null" json:"slug"`
 	Description   string     `json:"description"`
 	Category      string     `json:"category"`
 	Content       string     `gorm:"type:text" json:"content"`     // SKILL.md body after frontmatter
@@ -43,8 +43,8 @@ func (AgentSkill) TableName() string { return "agent_skills" }
 // (references/, templates/, scripts/, assets/).
 type AgentSkillFile struct {
 	ID        int       `gorm:"primaryKey;autoIncrement" json:"id"`
-	SkillID   int       `gorm:"index;not null" json:"skillId"`
-	FilePath  string    `gorm:"not null" json:"filePath"`
+	SkillID   int       `gorm:"index:idx_skill_path,unique;not null" json:"skillId"`
+	FilePath  string    `gorm:"index:idx_skill_path,unique;not null" json:"filePath"`
 	Content   string    `gorm:"type:text" json:"content"`
 	CreatedAt time.Time `json:"createdAt"`
 	UpdatedAt time.Time `json:"updatedAt"`

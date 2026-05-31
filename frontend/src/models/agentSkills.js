@@ -1,22 +1,30 @@
 import { API_BASE } from "@/utils/constants";
 import { baseHeaders } from "@/utils/request";
 
+async function handleResponse(res) {
+  if (!res.ok) {
+    const text = await res.text().catch(() => "");
+    throw new Error(`HTTP ${res.status}: ${text || res.statusText}`);
+  }
+  return res.json();
+}
+
 const AgentSkills = {
   list: async function (workspaceSlug, includeArchived = false) {
     const url = new URL(`${API_BASE}/workspace/${workspaceSlug}/agent-skills`, window.location.origin);
     if (includeArchived) url.searchParams.set("include_archived", "true");
     const res = await fetch(url.toString(), {
       headers: baseHeaders(),
-    }).then((r) => r.json());
-    return res;
+    });
+    return handleResponse(res);
   },
 
   get: async function (workspaceSlug, skillSlug) {
     const res = await fetch(
       `${API_BASE}/workspace/${workspaceSlug}/agent-skills/${skillSlug}`,
       { headers: baseHeaders() }
-    ).then((r) => r.json());
-    return res;
+    );
+    return handleResponse(res);
   },
 
   create: async function (workspaceSlug, data) {
@@ -27,8 +35,8 @@ const AgentSkills = {
         body: JSON.stringify(data),
         headers: baseHeaders(),
       }
-    ).then((r) => r.json());
-    return res;
+    );
+    return handleResponse(res);
   },
 
   update: async function (workspaceSlug, skillSlug, data) {
@@ -39,8 +47,8 @@ const AgentSkills = {
         body: JSON.stringify(data),
         headers: baseHeaders(),
       }
-    ).then((r) => r.json());
-    return res;
+    );
+    return handleResponse(res);
   },
 
   patch: async function (workspaceSlug, skillSlug, data) {
@@ -51,8 +59,8 @@ const AgentSkills = {
         body: JSON.stringify(data),
         headers: baseHeaders(),
       }
-    ).then((r) => r.json());
-    return res;
+    );
+    return handleResponse(res);
   },
 
   delete: async function (workspaceSlug, skillSlug) {
@@ -62,16 +70,16 @@ const AgentSkills = {
         method: "DELETE",
         headers: baseHeaders(),
       }
-    ).then((r) => r.json());
-    return res;
+    );
+    return handleResponse(res);
   },
 
   listFiles: async function (workspaceSlug, skillSlug) {
     const res = await fetch(
       `${API_BASE}/workspace/${workspaceSlug}/agent-skills/${skillSlug}/files`,
       { headers: baseHeaders() }
-    ).then((r) => r.json());
-    return res;
+    );
+    return handleResponse(res);
   },
 
   writeFile: async function (workspaceSlug, skillSlug, data) {
@@ -82,8 +90,8 @@ const AgentSkills = {
         body: JSON.stringify(data),
         headers: baseHeaders(),
       }
-    ).then((r) => r.json());
-    return res;
+    );
+    return handleResponse(res);
   },
 
   deleteFile: async function (workspaceSlug, skillSlug, filePath) {
@@ -93,8 +101,8 @@ const AgentSkills = {
         method: "DELETE",
         headers: baseHeaders(),
       }
-    ).then((r) => r.json());
-    return res;
+    );
+    return handleResponse(res);
   },
 };
 

@@ -35,10 +35,14 @@ export default function AgentCreatedSkillsPage() {
 
   useEffect(() => {
     async function fetchWorkspaces() {
-      const { workspaces: wss } = await Admin.workspaces();
-      setWorkspaces(wss || []);
-      if (wss?.length > 0) {
-        setSelectedWsSlug(wss[0].slug);
+      try {
+        const { workspaces: wss } = await Admin.workspaces();
+        setWorkspaces(wss || []);
+        if (wss?.length > 0) {
+          setSelectedWsSlug(wss[0].slug);
+        }
+      } catch (e) {
+        showToast("Failed to load workspaces", "error");
       }
       setLoading(false);
     }
@@ -48,8 +52,12 @@ export default function AgentCreatedSkillsPage() {
   useEffect(() => {
     if (!selectedWsSlug) return;
     async function fetchSkills() {
-      const res = await AgentSkills.list(selectedWsSlug, true);
-      setSkills(res.skills || []);
+      try {
+        const res = await AgentSkills.list(selectedWsSlug, true);
+        setSkills(res.skills || []);
+      } catch (e) {
+        showToast("Failed to load skills", "error");
+      }
     }
     fetchSkills();
   }, [selectedWsSlug]);
@@ -57,44 +65,52 @@ export default function AgentCreatedSkillsPage() {
   const handleDelete = async (skill) => {
     if (!window.confirm(`Delete skill "${skill.name}"? This cannot be undone.`))
       return;
-    const res = await AgentSkills.delete(selectedWsSlug, skill.slug);
-    if (res.success) {
+    try {
+      await AgentSkills.delete(selectedWsSlug, skill.slug);
       showToast("Skill deleted", "success");
       setSkills((prev) => prev.filter((s) => s.slug !== skill.slug));
-    } else {
-      showToast(res.error || "Failed to delete", "error");
+    } catch (e) {
+      showToast(e.message || "Failed to delete", "error");
     }
   };
 
   const handleTogglePin = async (skill) => {
-    const res = await AgentSkills.update(selectedWsSlug, skill.slug, {
-      pinned: !skill.pinned,
-    });
-    if (res.success) {
+    try {
+      await AgentSkills.update(selectedWsSlug, skill.slug, {
+        pinned: !skill.pinned,
+      });
       setSkills((prev) =>
         prev.map((s) =>
           s.slug === skill.slug ? { ...s, pinned: !s.pinned } : s
         )
       );
+    } catch (e) {
+      showToast(e.message || "Failed to update pin", "error");
     }
   };
 
   const handleToggleStatus = async (skill, newStatus) => {
-    const res = await AgentSkills.update(selectedWsSlug, skill.slug, {
-      status: newStatus,
-    });
-    if (res.success) {
+    try {
+      await AgentSkills.update(selectedWsSlug, skill.slug, {
+        status: newStatus,
+      });
       setSkills((prev) =>
         prev.map((s) =>
           s.slug === skill.slug ? { ...s, status: newStatus } : s
         )
       );
+    } catch (e) {
+      showToast(e.message || "Failed to update status", "error");
     }
   };
 
   const refreshSkills = async () => {
-    const res = await AgentSkills.list(selectedWsSlug, true);
-    setSkills(res.skills || []);
+    try {
+      const res = await AgentSkills.list(selectedWsSlug, true);
+      setSkills(res.skills || []);
+    } catch (e) {
+      showToast("Failed to refresh skills", "error");
+    }
   };
 
   return (
@@ -316,31 +332,30 @@ function SkillModal({ workspaceSlug, skill, onClose, onSaved }) {
 
   const handleSave = async () => {
     setSaving(true);
-    let res;
-    if (isEditing) {
-      res = await AgentSkills.update(workspaceSlug, skill.slug, {
-        name,
-        description,
-        category,
-        content,
-        frontmatter,
-      });
-    } else {
-      const fm = frontmatter || `name: ${name}\ndescription: ${description}\n`;
-      res = await AgentSkills.create(workspaceSlug, {
-        name,
-        description,
-        category,
-        content,
-        frontmatter: fm,
-      });
-    }
-    setSaving(false);
-    if (res.success) {
+    try {
+      if (isEditing) {
+        await AgentSkills.update(workspaceSlug, skill.slug, {
+          name,
+          description,
+          category,
+          content,
+          frontmatter,
+        });
+      } else {
+        const fm = frontmatter || `name: ${name}\ndescription: ${description}\n`;
+        await AgentSkills.create(workspaceSlug, {
+          name,
+          description,
+          category,
+          content,
+          frontmatter: fm,
+        });
+      }
       showToast(isEditing ? "Skill updated" : "Skill created", "success");
       onSaved();
-    } else {
-      showToast(res.error || "Failed to save", "error");
+    } catch (e) {
+      showToast(e.message || "Failed to save", "error");
+      setSaving(false);
     }
   };
 
@@ -441,8 +456,12 @@ function ViewDrawer({ workspaceSlug, skill, onClose }) {
 
   useEffect(() => {
     async function fetchFiles() {
-      const res = await AgentSkills.listFiles(workspaceSlug, skill.slug);
-      setFiles(res.files || []);
+      try {
+        const res = await AgentSkills.listFiles(workspaceSlug, skill.slug);
+        setFiles(res.files || []);
+      } catch (e) {
+        // silently ignore file list errors
+      }
     }
     fetchFiles();
   }, [workspaceSlug, skill.slug]);

@@ -1,6 +1,7 @@
 package handlers
 
 import (
+	"errors"
 	"net/http"
 	"strings"
 
@@ -9,6 +10,7 @@ import (
 	"github.com/odysseythink/hermind/backend/internal/middleware"
 	"github.com/odysseythink/hermind/backend/internal/models"
 	"github.com/odysseythink/hermind/backend/internal/services"
+	"github.com/odysseythink/mlog"
 	"gorm.io/gorm"
 )
 
@@ -20,6 +22,29 @@ func NewAgentSkillsHandler(skillSvc services.AgentSkillManager) *AgentSkillsHand
 	return &AgentSkillsHandler{skillSvc: skillSvc}
 }
 
+// ---------------------------------------------------------------------------
+// Error helper
+// ---------------------------------------------------------------------------
+
+func handleSkillError(c *gin.Context, err error) {
+	switch {
+	case errors.Is(err, services.ErrSkillNotFound):
+		c.JSON(http.StatusNotFound, dto.ErrorResponse{Error: err.Error()})
+	case errors.Is(err, services.ErrSkillNameExists),
+		errors.Is(err, services.ErrInvalidSkillName),
+		errors.Is(err, services.ErrInvalidCategory),
+		errors.Is(err, services.ErrInvalidFrontmatter),
+		errors.Is(err, services.ErrSkillContentTooLarge),
+		errors.Is(err, services.ErrInvalidFilePath),
+		errors.Is(err, services.ErrPatchNoMatch),
+		errors.Is(err, services.ErrPatchAmbiguous):
+		c.JSON(http.StatusBadRequest, dto.ErrorResponse{Error: err.Error()})
+	default:
+		mlog.Error("agent-skills handler error: %v", err)
+		c.JSON(http.StatusInternalServerError, dto.ErrorResponse{Error: "internal server error"})
+	}
+}
+
 // ListSkills lists all skills for a workspace.
 func (h *AgentSkillsHandler) ListSkills(c *gin.Context) {
 	ws := c.MustGet("workspace").(*models.Workspace)
@@ -27,7 +52,8 @@ func (h *AgentSkillsHandler) ListSkills(c *gin.Context) {
 
 	skills, err := h.skillSvc.List(c.Request.Context(), ws.ID, includeArchived)
 	if err != nil {
-		c.JSON(http.StatusInternalServerError, dto.ErrorResponse{Error: err.Error()})
+		mlog.Error("failed to list skills: %v", err)
+		c.JSON(http.StatusInternalServerError, dto.ErrorResponse{Error: "failed to list skills"})
 		return
 	}
 
@@ -56,7 +82,7 @@ func (h *AgentSkillsHandler) GetSkill(c *gin.Context) {
 
 	skill, err := h.skillSvc.GetBySlug(c.Request.Context(), ws.ID, skillSlug)
 	if err != nil {
-		c.JSON(http.StatusNotFound, dto.ErrorResponse{Error: err.Error()})
+		handleSkillError(c, err)
 		return
 	}
 
@@ -74,7 +100,7 @@ func (h *AgentSkillsHandler) CreateSkill(c *gin.Context) {
 
 	skill, err := h.skillSvc.Create(c.Request.Context(), ws.ID, req)
 	if err != nil {
-		c.JSON(http.StatusBadRequest, dto.ErrorResponse{Error: err.Error()})
+		handleSkillError(c, err)
 		return
 	}
 
@@ -93,7 +119,7 @@ func (h *AgentSkillsHandler) UpdateSkill(c *gin.Context) {
 
 	skill, err := h.skillSvc.Update(c.Request.Context(), ws.ID, skillSlug, req)
 	if err != nil {
-		c.JSON(http.StatusBadRequest, dto.ErrorResponse{Error: err.Error()})
+		handleSkillError(c, err)
 		return
 	}
 
@@ -112,7 +138,7 @@ func (h *AgentSkillsHandler) PatchSkill(c *gin.Context) {
 
 	skill, err := h.skillSvc.Patch(c.Request.Context(), ws.ID, skillSlug, req)
 	if err != nil {
-		c.JSON(http.StatusBadRequest, dto.ErrorResponse{Error: err.Error()})
+		handleSkillError(c, err)
 		return
 	}
 
@@ -125,7 +151,7 @@ func (h *AgentSkillsHandler) DeleteSkill(c *gin.Context) {
 	skillSlug := c.Param("skillSlug")
 
 	if err := h.skillSvc.Delete(c.Request.Context(), ws.ID, skillSlug); err != nil {
-		c.JSON(http.StatusBadRequest, dto.ErrorResponse{Error: err.Error()})
+		handleSkillError(c, err)
 		return
 	}
 
@@ -143,7 +169,7 @@ func (h *AgentSkillsHandler) WriteSkillFile(c *gin.Context) {
 	}
 
 	if err := h.skillSvc.WriteFile(c.Request.Context(), ws.ID, skillSlug, req); err != nil {
-		c.JSON(http.StatusBadRequest, dto.ErrorResponse{Error: err.Error()})
+		handleSkillError(c, err)
 		return
 	}
 
@@ -157,7 +183,7 @@ func (h *AgentSkillsHandler) RemoveSkillFile(c *gin.Context) {
 	filePath := strings.TrimPrefix(c.Param("filePath"), "/")
 
 	if err := h.skillSvc.RemoveFile(c.Request.Context(), ws.ID, skillSlug, filePath); err != nil {
-		c.JSON(http.StatusBadRequest, dto.ErrorResponse{Error: err.Error()})
+		handleSkillError(c, err)
 		return
 	}
 
@@ -172,13 +198,13 @@ func (h *AgentSkillsHandler) GetSkillFile(c *gin.Context) {
 
 	skill, err := h.skillSvc.GetBySlug(c.Request.Context(), ws.ID, skillSlug)
 	if err != nil {
-		c.JSON(http.StatusNotFound, dto.ErrorResponse{Error: err.Error()})
+		handleSkillError(c, err)
 		return
 	}
 
 	file, err := h.skillSvc.GetFile(c.Request.Context(), skill.ID, filePath)
 	if err != nil {
-		c.JSON(http.StatusNotFound, dto.ErrorResponse{Error: err.Error()})
+		handleSkillError(c, err)
 		return
 	}
 
@@ -195,13 +221,14 @@ func (h *AgentSkillsHandler) ListSkillFiles(c *gin.Context) {
 
 	skill, err := h.skillSvc.GetBySlug(c.Request.Context(), ws.ID, skillSlug)
 	if err != nil {
-		c.JSON(http.StatusNotFound, dto.ErrorResponse{Error: err.Error()})
+		handleSkillError(c, err)
 		return
 	}
 
 	files, err := h.skillSvc.ListFiles(c.Request.Context(), skill.ID)
 	if err != nil {
-		c.JSON(http.StatusInternalServerError, dto.ErrorResponse{Error: err.Error()})
+		mlog.Error("failed to list skill files: %v", err)
+		c.JSON(http.StatusInternalServerError, dto.ErrorResponse{Error: "failed to list files"})
 		return
 	}
 

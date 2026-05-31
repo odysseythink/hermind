@@ -35,14 +35,15 @@ func NewSkillViewSkill(tc *ToolContext, skillSvc services.AgentSkillManager) *to
 			}
 
 			wsID := tc.Workspace.ID
+			skillSlug := slugifyForLookup(args.Name)
 
-			// Bump view telemetry
-			_ = skillSvc.BumpView(ctx, wsID, args.Name)
-
-			skill, err := skillSvc.GetBySlug(ctx, wsID, args.Name)
+			skill, err := skillSvc.GetBySlug(ctx, wsID, skillSlug)
 			if err != nil {
 				return tool.Error(fmt.Sprintf("Skill '%s' not found.", args.Name)), nil
 			}
+
+			// Bump view telemetry only after confirming skill exists
+			_ = skillSvc.BumpView(ctx, wsID, skillSlug)
 
 			// If file_path is provided, load supporting file
 			if args.FilePath != "" {
@@ -61,10 +62,10 @@ func NewSkillViewSkill(tc *ToolContext, skillSvc services.AgentSkillManager) *to
 					}), nil
 				}
 				return tool.Result(map[string]any{
-					"success":  true,
-					"name":     skill.Name,
+					"success":   true,
+					"name":      skill.Name,
 					"file_path": file.FilePath,
-					"content":  file.Content,
+					"content":   file.Content,
 				}), nil
 			}
 

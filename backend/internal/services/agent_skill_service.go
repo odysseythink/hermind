@@ -16,26 +16,27 @@ import (
 )
 
 var (
-	ErrSkillNotFound      = errors.New("skill not found")
-	ErrSkillNameExists    = errors.New("skill name already exists in this workspace")
-	ErrInvalidSkillName   = errors.New("invalid skill name")
-	ErrInvalidCategory    = errors.New("invalid category")
-	ErrInvalidFrontmatter = errors.New("invalid SKILL.md frontmatter")
+	ErrSkillNotFound        = errors.New("skill not found")
+	ErrSkillNameExists      = errors.New("skill name already exists in this workspace")
+	ErrInvalidSkillName     = errors.New("invalid skill name")
+	ErrInvalidCategory      = errors.New("invalid category")
+	ErrInvalidFrontmatter   = errors.New("invalid SKILL.md frontmatter")
 	ErrSkillContentTooLarge = errors.New("skill content exceeds maximum size")
-	ErrInvalidFilePath    = errors.New("invalid file path")
-	ErrPatchNoMatch       = errors.New("patch old_string not found")
-	ErrPatchAmbiguous     = errors.New("patch old_string matches multiple locations")
+	ErrInvalidFilePath      = errors.New("invalid file path")
+	ErrPatchNoMatch         = errors.New("patch old_string not found")
+	ErrPatchAmbiguous       = errors.New("patch old_string matches multiple locations")
 )
 
 const (
 	MaxSkillNameLength        = 64
 	MaxSkillDescriptionLength = 1024
 	MaxSkillContentChars      = 100_000
+	MaxSkillFrontmatterChars  = 10_000
 	MaxSkillFileBytes         = 1_048_576 // 1 MiB
 )
 
 var (
-	validNameRE = regexp.MustCompile(`^[a-z0-9][a-z0-9._-]*$`)
+	validNameRE    = regexp.MustCompile(`^[a-z0-9][a-z0-9._-]*$`)
 	allowedSubdirs = map[string]bool{
 		"references": true,
 		"templates":  true,
@@ -63,6 +64,7 @@ type AgentSkillManager interface {
 	ListActiveByWorkspace(ctx context.Context, workspaceID int) ([]models.AgentSkill, error)
 	Update(ctx context.Context, workspaceID int, skillSlug string, req dto.UpdateAgentSkillRequest) (*models.AgentSkill, error)
 	Patch(ctx context.Context, workspaceID int, skillSlug string, req dto.PatchAgentSkillRequest) (*models.AgentSkill, error)
+	PatchFile(ctx context.Context, workspaceID int, skillSlug string, req dto.PatchSkillFileRequest) (*models.AgentSkillFile, error)
 	Delete(ctx context.Context, workspaceID int, skillSlug string) error
 	WriteFile(ctx context.Context, workspaceID int, skillSlug string, req dto.WriteSkillFileRequest) error
 	RemoveFile(ctx context.Context, workspaceID int, skillSlug string, filePath string) error
@@ -121,6 +123,9 @@ func validateCategory(category string) error {
 func validateFrontmatter(frontmatter string) (map[string]any, error) {
 	if frontmatter == "" {
 		return nil, fmt.Errorf("%w: frontmatter is required", ErrInvalidFrontmatter)
+	}
+	if len(frontmatter) > MaxSkillFrontmatterChars {
+		return nil, fmt.Errorf("%w: exceeds %d characters", ErrInvalidFrontmatter, MaxSkillFrontmatterChars)
 	}
 	var fm map[string]any
 	if err := yaml.Unmarshal([]byte(frontmatter), &fm); err != nil {
@@ -205,17 +210,6 @@ func (s *AgentSkillService) Create(ctx context.Context, workspaceID int, req dto
 
 	skillSlug := makeSkillSlug(req.Name)
 
-	// Check uniqueness per workspace
-	var existing int64
-	if err := s.db.WithContext(ctx).Model(&models.AgentSkill{}).
-		Where("workspace_id = ? AND slug = ?", workspaceID, skillSlug).
-		Count(&existing).Error; err != nil {
-		return nil, err
-	}
-	if existing > 0 {
-		return nil, ErrSkillNameExists
-	}
-
 	createdBy := req.CreatedBy
 	if createdBy == "" {
 		createdBy = models.AgentSkillCreatedByAgent
@@ -235,6 +229,9 @@ func (s *AgentSkillService) Create(ctx context.Context, workspaceID int, req dto
 		UpdatedAt:   time.Now(),
 	}
 	if err := s.db.WithContext(ctx).Create(&skill).Error; err != nil {
+		if isUniqueViolation(err) {
+			return nil, ErrSkillNameExists
+		}
 		return nil, fmt.Errorf("create skill: %w", err)
 	}
 	return &skill, nil
@@ -294,6 +291,7 @@ func (s *AgentSkillService) Update(ctx context.Context, workspaceID int, skillSl
 	}
 
 	updates := map[string]any{}
+	finalSlug := skillSlug
 	if req.Name != "" {
 		if err := validateSkillName(req.Name); err != nil {
 			return nil, err
@@ -311,6 +309,7 @@ func (s *AgentSkillService) Update(ctx context.Context, workspaceID int, skillSl
 				return nil, ErrSkillNameExists
 			}
 			updates["slug"] = newSlug
+			finalSlug = newSlug
 		}
 	}
 	if req.Description != "" {
@@ -354,7 +353,7 @@ func (s *AgentSkillService) Update(ctx context.Context, workspaceID int, skillSl
 	if err := s.db.WithContext(ctx).Model(skill).Updates(updates).Error; err != nil {
 		return nil, err
 	}
-	return s.GetBySlug(ctx, workspaceID, skillSlug)
+	return s.GetBySlug(ctx, workspaceID, finalSlug)
 }
 
 func (s *AgentSkillService) Patch(ctx context.Context, workspaceID int, skillSlug string, req dto.PatchAgentSkillRequest) (*models.AgentSkill, error) {
@@ -388,6 +387,49 @@ func (s *AgentSkillService) Patch(ctx context.Context, workspaceID int, skillSlu
 		return nil, err
 	}
 	return s.GetBySlug(ctx, workspaceID, skillSlug)
+}
+
+func (s *AgentSkillService) PatchFile(ctx context.Context, workspaceID int, skillSlug string, req dto.PatchSkillFileRequest) (*models.AgentSkillFile, error) {
+	if err := validateFilePath(req.FilePath); err != nil {
+		return nil, err
+	}
+	if req.OldString == "" {
+		return nil, errors.New("old_string is required")
+	}
+
+	skill, err := s.GetBySlug(ctx, workspaceID, skillSlug)
+	if err != nil {
+		return nil, err
+	}
+
+	file, err := s.GetFile(ctx, skill.ID, req.FilePath)
+	if err != nil {
+		return nil, err
+	}
+
+	newContent, err := patchContent(file.Content, req.OldString, req.NewString, req.ReplaceAll)
+	if err != nil {
+		return nil, err
+	}
+	if len(newContent) > MaxSkillFileBytes {
+		return nil, fmt.Errorf("%w: %d bytes (limit: %d)", ErrSkillContentTooLarge, len(newContent), MaxSkillFileBytes)
+	}
+
+	now := time.Now()
+	file.Content = newContent
+	file.UpdatedAt = now
+	if err := s.db.WithContext(ctx).Save(file).Error; err != nil {
+		return nil, err
+	}
+
+	// Bump skill patch count since this is a content mutation
+	_ = s.db.WithContext(ctx).Model(skill).Updates(map[string]any{
+		"updated_at":      now,
+		"patch_count":     gorm.Expr("patch_count + 1"),
+		"last_patched_at": now,
+	}).Error
+
+	return file, nil
 }
 
 func patchContent(content, oldStr, newStr string, replaceAll bool) (string, error) {
@@ -438,38 +480,40 @@ func (s *AgentSkillService) WriteFile(ctx context.Context, workspaceID int, skil
 		return err
 	}
 
-	var existing models.AgentSkillFile
-	err = s.db.WithContext(ctx).Where("skill_id = ? AND file_path = ?", skill.ID, req.FilePath).First(&existing).Error
-	if err != nil && !errors.Is(err, gorm.ErrRecordNotFound) {
-		return err
-	}
-
-	now := time.Now()
-	if errors.Is(err, gorm.ErrRecordNotFound) {
-		file := models.AgentSkillFile{
-			SkillID:   skill.ID,
-			FilePath:  req.FilePath,
-			Content:   req.Content,
-			CreatedAt: now,
-			UpdatedAt: now,
-		}
-		if err := s.db.WithContext(ctx).Create(&file).Error; err != nil {
+	return s.db.WithContext(ctx).Transaction(func(tx *gorm.DB) error {
+		var existing models.AgentSkillFile
+		err := tx.Where("skill_id = ? AND file_path = ?", skill.ID, req.FilePath).First(&existing).Error
+		if err != nil && !errors.Is(err, gorm.ErrRecordNotFound) {
 			return err
 		}
-	} else {
-		existing.Content = req.Content
-		existing.UpdatedAt = now
-		if err := s.db.WithContext(ctx).Save(&existing).Error; err != nil {
-			return err
-		}
-	}
 
-	// Bump patch count since this is a content mutation
-	return s.db.WithContext(ctx).Model(skill).Updates(map[string]any{
-		"updated_at":      now,
-		"patch_count":     gorm.Expr("patch_count + 1"),
-		"last_patched_at": now,
-	}).Error
+		now := time.Now()
+		if errors.Is(err, gorm.ErrRecordNotFound) {
+			file := models.AgentSkillFile{
+				SkillID:   skill.ID,
+				FilePath:  req.FilePath,
+				Content:   req.Content,
+				CreatedAt: now,
+				UpdatedAt: now,
+			}
+			if err := tx.Create(&file).Error; err != nil {
+				return err
+			}
+		} else {
+			existing.Content = req.Content
+			existing.UpdatedAt = now
+			if err := tx.Save(&existing).Error; err != nil {
+				return err
+			}
+		}
+
+		// Bump patch count since this is a content mutation
+		return tx.Model(skill).Updates(map[string]any{
+			"updated_at":      now,
+			"patch_count":     gorm.Expr("patch_count + 1"),
+			"last_patched_at": now,
+		}).Error
+	})
 }
 
 func (s *AgentSkillService) RemoveFile(ctx context.Context, workspaceID int, skillSlug string, filePath string) error {
@@ -517,9 +561,9 @@ func (s *AgentSkillService) BumpUse(ctx context.Context, workspaceID int, skillS
 	return s.db.WithContext(ctx).Model(&models.AgentSkill{}).
 		Where("workspace_id = ? AND slug = ?", workspaceID, skillSlug).
 		Updates(map[string]any{
-			"use_count":      gorm.Expr("use_count + 1"),
-			"last_used_at":   time.Now(),
-			"updated_at":     time.Now(),
+			"use_count":    gorm.Expr("use_count + 1"),
+			"last_used_at": time.Now(),
+			"updated_at":   time.Now(),
 		}).Error
 }
 
@@ -527,9 +571,9 @@ func (s *AgentSkillService) BumpView(ctx context.Context, workspaceID int, skill
 	return s.db.WithContext(ctx).Model(&models.AgentSkill{}).
 		Where("workspace_id = ? AND slug = ?", workspaceID, skillSlug).
 		Updates(map[string]any{
-			"view_count":      gorm.Expr("view_count + 1"),
-			"last_viewed_at":  time.Now(),
-			"updated_at":      time.Now(),
+			"view_count":     gorm.Expr("view_count + 1"),
+			"last_viewed_at": time.Now(),
+			"updated_at":     time.Now(),
 		}).Error
 }
 
@@ -553,66 +597,75 @@ func (s *AgentSkillService) ApplyCuratorTransitions(ctx context.Context, staleDa
 	staleCutoff := time.Now().AddDate(0, 0, -staleDays)
 	archiveCutoff := time.Now().AddDate(0, 0, -archiveDays)
 
-	var skills []models.AgentSkill
-	if err := s.db.WithContext(ctx).Where("status IN ?", []string{models.AgentSkillStatusActive, models.AgentSkillStatusStale}).
-		Find(&skills).Error; err != nil {
-		return nil, err
-	}
+	batchSize := 500
+	offset := 0
 
-	for _, skill := range skills {
-		counts["checked"]++
-		if skill.Pinned {
-			continue
+	for {
+		var batch []models.AgentSkill
+		if err := s.db.WithContext(ctx).Where("status IN ?", []string{models.AgentSkillStatusActive, models.AgentSkillStatusStale}).
+			Limit(batchSize).Offset(offset).Find(&batch).Error; err != nil {
+			return nil, err
 		}
+		if len(batch) == 0 {
+			break
+		}
+		offset += len(batch)
 
-		// Activity anchor: last_used_at > last_viewed_at > last_patched_at > created_at
-		anchor := skill.CreatedAt
-		if skill.LastUsedAt != nil && skill.LastUsedAt.After(anchor) {
-			anchor = *skill.LastUsedAt
-		}
-		if skill.LastViewedAt != nil && skill.LastViewedAt.After(anchor) {
-			anchor = *skill.LastViewedAt
-		}
-		if skill.LastPatchedAt != nil && skill.LastPatchedAt.After(anchor) {
-			anchor = *skill.LastPatchedAt
-		}
-
-		switch skill.Status {
-		case models.AgentSkillStatusActive:
-			if anchor.Before(archiveCutoff) {
-				if err := s.db.WithContext(ctx).Model(&skill).Updates(map[string]any{
-					"status":     models.AgentSkillStatusArchived,
-					"updated_at": time.Now(),
-				}).Error; err != nil {
-					return counts, err
-				}
-				counts["archived"]++
-			} else if anchor.Before(staleCutoff) {
-				if err := s.db.WithContext(ctx).Model(&skill).Updates(map[string]any{
-					"status":     models.AgentSkillStatusStale,
-					"updated_at": time.Now(),
-				}).Error; err != nil {
-					return counts, err
-				}
-				counts["marked_stale"]++
+		for _, skill := range batch {
+			counts["checked"]++
+			if skill.Pinned {
+				continue
 			}
-		case models.AgentSkillStatusStale:
-			if anchor.Before(archiveCutoff) {
-				if err := s.db.WithContext(ctx).Model(&skill).Updates(map[string]any{
-					"status":     models.AgentSkillStatusArchived,
-					"updated_at": time.Now(),
-				}).Error; err != nil {
-					return counts, err
+
+			// Activity anchor: last_used_at > last_viewed_at > last_patched_at > created_at
+			anchor := skill.CreatedAt
+			if skill.LastUsedAt != nil && skill.LastUsedAt.After(anchor) {
+				anchor = *skill.LastUsedAt
+			}
+			if skill.LastViewedAt != nil && skill.LastViewedAt.After(anchor) {
+				anchor = *skill.LastViewedAt
+			}
+			if skill.LastPatchedAt != nil && skill.LastPatchedAt.After(anchor) {
+				anchor = *skill.LastPatchedAt
+			}
+
+			switch skill.Status {
+			case models.AgentSkillStatusActive:
+				if anchor.Before(archiveCutoff) {
+					if err := s.db.WithContext(ctx).Model(&skill).Updates(map[string]any{
+						"status":     models.AgentSkillStatusArchived,
+						"updated_at": time.Now(),
+					}).Error; err != nil {
+						return counts, err
+					}
+					counts["archived"]++
+				} else if anchor.Before(staleCutoff) {
+					if err := s.db.WithContext(ctx).Model(&skill).Updates(map[string]any{
+						"status":     models.AgentSkillStatusStale,
+						"updated_at": time.Now(),
+					}).Error; err != nil {
+						return counts, err
+					}
+					counts["marked_stale"]++
 				}
-				counts["archived"]++
-			} else if anchor.After(staleCutoff) {
-				if err := s.db.WithContext(ctx).Model(&skill).Updates(map[string]any{
-					"status":     models.AgentSkillStatusActive,
-					"updated_at": time.Now(),
-				}).Error; err != nil {
-					return counts, err
+			case models.AgentSkillStatusStale:
+				if anchor.Before(archiveCutoff) {
+					if err := s.db.WithContext(ctx).Model(&skill).Updates(map[string]any{
+						"status":     models.AgentSkillStatusArchived,
+						"updated_at": time.Now(),
+					}).Error; err != nil {
+						return counts, err
+					}
+					counts["archived"]++
+				} else if anchor.After(staleCutoff) {
+					if err := s.db.WithContext(ctx).Model(&skill).Updates(map[string]any{
+						"status":     models.AgentSkillStatusActive,
+						"updated_at": time.Now(),
+					}).Error; err != nil {
+						return counts, err
+					}
+					counts["reactivated"]++
 				}
-				counts["reactivated"]++
 			}
 		}
 	}
@@ -630,4 +683,14 @@ func getString(m map[string]any, key string) string {
 		return ""
 	}
 	return v
+}
+
+func isUniqueViolation(err error) bool {
+	if err == nil {
+		return false
+	}
+	msg := strings.ToLower(err.Error())
+	return strings.Contains(msg, "unique constraint failed") ||
+		strings.Contains(msg, "duplicate entry") ||
+		strings.Contains(msg, "constraint failed")
 }

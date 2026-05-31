@@ -22,9 +22,16 @@ type UpdateAgentSkillRequest struct {
 }
 
 type PatchAgentSkillRequest struct {
-	OldString   string `json:"old_string"`
-	NewString   string `json:"new_string"`
-	ReplaceAll  bool   `json:"replace_all,omitempty"`
+	OldString  string `json:"old_string"`
+	NewString  string `json:"new_string"`
+	ReplaceAll bool   `json:"replace_all,omitempty"`
+}
+
+type PatchSkillFileRequest struct {
+	FilePath   string `json:"file_path"`
+	OldString  string `json:"old_string"`
+	NewString  string `json:"new_string"`
+	ReplaceAll bool   `json:"replace_all,omitempty"`
 }
 
 type WriteSkillFileRequest struct {

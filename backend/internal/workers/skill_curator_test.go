@@ -50,3 +50,52 @@ func TestSkillCuratorJob_Run(t *testing.T) {
 	pinned, _ := skillSvc.GetBySlug(ctx, 1, s3.Slug)
 	assert.Equal(t, models.AgentSkillStatusActive, pinned.Status)
 }
+
+func TestSkillCuratorJob_StaleTransition(t *testing.T) {
+	db, err := gorm.Open(sqlite.Open(":memory:"), &gorm.Config{})
+	require.NoError(t, err)
+	require.NoError(t, db.AutoMigrate(&models.AgentSkill{}, &models.SystemSetting{}))
+
+	skillSvc := services.NewAgentSkillService(db)
+	ctx := context.Background()
+
+	// Create a skill that is 45 days old — should go stale (between 30 and 90)
+	skill, _ := skillSvc.Create(ctx, 1, dto.CreateAgentSkillRequest{Name: "aging-skill", Content: "..."})
+	db.Model(skill).Update("created_at", db.Raw("datetime('now', '-45 days')"))
+
+	counts, err := skillSvc.ApplyCuratorTransitions(ctx, 30, 90)
+	require.NoError(t, err)
+	assert.Equal(t, 1, counts["checked"])
+	assert.Equal(t, 1, counts["marked_stale"])
+	assert.Equal(t, 0, counts["archived"])
+
+	updated, _ := skillSvc.GetBySlug(ctx, 1, skill.Slug)
+	assert.Equal(t, models.AgentSkillStatusStale, updated.Status)
+}
+
+func TestSkillCuratorJob_Reactivation(t *testing.T) {
+	db, err := gorm.Open(sqlite.Open(":memory:"), &gorm.Config{})
+	require.NoError(t, err)
+	require.NoError(t, db.AutoMigrate(&models.AgentSkill{}, &models.SystemSetting{}))
+
+	skillSvc := services.NewAgentSkillService(db)
+	ctx := context.Background()
+
+	// Create a stale skill
+	skill, _ := skillSvc.Create(ctx, 1, dto.CreateAgentSkillRequest{Name: "stale-skill", Content: "..."})
+	db.Model(skill).Updates(map[string]any{
+		"status":     models.AgentSkillStatusStale,
+		"created_at": db.Raw("datetime('now', '-45 days')"),
+	})
+
+	// Simulate recent activity
+	_ = skillSvc.BumpUse(ctx, 1, skill.Slug)
+
+	counts, err := skillSvc.ApplyCuratorTransitions(ctx, 30, 90)
+	require.NoError(t, err)
+	assert.Equal(t, 1, counts["checked"])
+	assert.Equal(t, 1, counts["reactivated"])
+
+	updated, _ := skillSvc.GetBySlug(ctx, 1, skill.Slug)
+	assert.Equal(t, models.AgentSkillStatusActive, updated.Status)
+}

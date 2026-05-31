@@ -40,6 +40,7 @@ func NewSkillsListSkill(tc *ToolContext, skillSvc services.AgentSkillManager) *t
 				}
 				items = append(items, map[string]any{
 					"name":        s.Name,
+					"slug":        s.Slug,
 					"description": s.Description,
 					"category":    s.Category,
 					"status":      s.Status,

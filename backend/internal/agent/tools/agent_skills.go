@@ -98,13 +98,17 @@ func skillManageCreate(ctx context.Context, tc *ToolContext, skillSvc services.A
 		return tool.Error("Failed to create skill: " + err.Error()), nil
 	}
 
-	return tool.Result(map[string]any{
-		"success":     true,
-		"message":     fmt.Sprintf("Skill '%s' created.", skill.Name),
-		"slug":        skill.Slug,
-		"category":    skill.Category,
-		"hint":        "To add reference files, templates, or scripts, use skill_manage(action='write_file', name='" + skill.Name + "', file_path='references/example.md', file_content='...')",
-	}), nil
+	result := map[string]any{
+		"success":  true,
+		"message":  fmt.Sprintf("Skill '%s' created.", skill.Name),
+		"slug":     skill.Slug,
+		"category": skill.Category,
+		"hint":     "To add reference files, templates, or scripts, use skill_manage(action='write_file', name='" + skill.Name + "', file_path='references/example.md', file_content='...')",
+	}
+	if frontmatter == "" {
+		result["warning"] = "No YAML frontmatter detected in content. A minimal frontmatter was auto-generated. For best results, include '---\nname: ...\ndescription: ...\n---' at the start of your content."
+	}
+	return tool.Result(result), nil
 }
 
 func skillManageEdit(ctx context.Context, tc *ToolContext, skillSvc services.AgentSkillManager, wsID int, args skillManageArgs) (string, error) {
@@ -137,11 +141,15 @@ func skillManageEdit(ctx context.Context, tc *ToolContext, skillSvc services.Age
 
 	_ = skillSvc.BumpPatch(ctx, wsID, skill.Slug)
 
-	return tool.Result(map[string]any{
+	result := map[string]any{
 		"success": true,
 		"message": fmt.Sprintf("Skill '%s' updated.", skill.Name),
 		"slug":    skill.Slug,
-	}), nil
+	}
+	if frontmatter == "" {
+		result["warning"] = "No YAML frontmatter detected in content. Existing frontmatter was preserved. For best results, include '---\nname: ...\ndescription: ...\n---' at the start of your content."
+	}
+	return tool.Result(result), nil
 }
 
 func skillManagePatch(ctx context.Context, tc *ToolContext, skillSvc services.AgentSkillManager, wsID int, args skillManageArgs) (string, error) {
@@ -151,7 +159,26 @@ func skillManagePatch(ctx context.Context, tc *ToolContext, skillSvc services.Ag
 
 	tc.Emit(fmt.Sprintf("Patching skill '%s'...", args.Name))
 
-	skill, err := skillSvc.Patch(ctx, wsID, slugifyForLookup(args.Name), dto.PatchAgentSkillRequest{
+	skillSlug := slugifyForLookup(args.Name)
+
+	if args.FilePath != "" {
+		file, err := skillSvc.PatchFile(ctx, wsID, skillSlug, dto.PatchSkillFileRequest{
+			FilePath:   args.FilePath,
+			OldString:  args.OldString,
+			NewString:  args.NewString,
+			ReplaceAll: args.ReplaceAll,
+		})
+		if err != nil {
+			return tool.Error("Failed to patch file: " + err.Error()), nil
+		}
+		return tool.Result(map[string]any{
+			"success":   true,
+			"message":   fmt.Sprintf("Patched file '%s' in skill '%s'.", file.FilePath, args.Name),
+			"file_path": file.FilePath,
+		}), nil
+	}
+
+	skill, err := skillSvc.Patch(ctx, wsID, skillSlug, dto.PatchAgentSkillRequest{
 		OldString:  args.OldString,
 		NewString:  args.NewString,
 		ReplaceAll: args.ReplaceAll,

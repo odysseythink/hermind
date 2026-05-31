@@ -25,8 +25,9 @@ func setupAgentSkillsHandler(t *testing.T) (*AgentSkillsHandler, *gin.Engine, *g
 	err = db.AutoMigrate(&models.AgentSkill{}, &models.AgentSkillFile{}, &models.Workspace{}, &models.User{})
 	require.NoError(t, err)
 
-	// Seed a workspace
+	// Seed workspaces
 	db.Create(&models.Workspace{Slug: "test-ws", Name: "Test Workspace"})
+	db.Create(&models.Workspace{Slug: "other-ws", Name: "Other Workspace"})
 
 	svc := services.NewAgentSkillService(db)
 	h := NewAgentSkillsHandler(svc)
@@ -59,8 +60,8 @@ func TestAgentSkillsHandler_CRUD(t *testing.T) {
 	assert.Equal(t, http.StatusOK, w.Code)
 
 	var createRes struct {
-		Success bool                `json:"success"`
-		Skill   models.AgentSkill   `json:"skill"`
+		Success bool              `json:"success"`
+		Skill   models.AgentSkill `json:"skill"`
 	}
 	err := json.Unmarshal(w.Body.Bytes(), &createRes)
 	require.NoError(t, err)
@@ -157,4 +158,29 @@ func TestAgentSkillsHandler_Files(t *testing.T) {
 	req, _ = http.NewRequest("DELETE", "/api/workspace/test-ws/agent-skills/file-skill/files/references/guide.md", nil)
 	r.ServeHTTP(w, req)
 	assert.Equal(t, http.StatusOK, w.Code)
+}
+
+func TestAgentSkillsHandler_WorkspaceIsolation(t *testing.T) {
+	_, r, db := setupAgentSkillsHandler(t)
+
+	// Create a skill in test-ws via service directly (to ensure workspace scoping)
+	svc := services.NewAgentSkillService(db)
+	ctx := gin.CreateTestContextOnly(httptest.NewRecorder(), gin.Default())
+	_, err := svc.Create(ctx, 1, dto.CreateAgentSkillRequest{
+		Name:    "isolated-skill",
+		Content: "...",
+	})
+	require.NoError(t, err)
+
+	// Access from same workspace should succeed
+	w := httptest.NewRecorder()
+	req, _ := http.NewRequest("GET", "/api/workspace/test-ws/agent-skills/isolated-skill", nil)
+	r.ServeHTTP(w, req)
+	assert.Equal(t, http.StatusOK, w.Code)
+
+	// Access from different workspace should 404
+	w = httptest.NewRecorder()
+	req, _ = http.NewRequest("GET", "/api/workspace/other-ws/agent-skills/isolated-skill", nil)
+	r.ServeHTTP(w, req)
+	assert.Equal(t, http.StatusNotFound, w.Code)
 }
