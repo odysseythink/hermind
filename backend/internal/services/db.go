@@ -57,6 +57,8 @@ func AutoMigrate(db *gorm.DB) error {
 		&models.Memory{},
 		&models.ExternalCommunicationConnector{},
 		&models.BrowserExtensionApiKey{},
+		&models.AgentSkill{},
+		&models.AgentSkillFile{},
 	)
 }
 

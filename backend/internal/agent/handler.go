@@ -53,7 +53,11 @@ func (r *Runtime) HandleWS(c *gin.Context) {
 		c.AbortWithStatusJSON(http.StatusServiceUnavailable, gin.H{"error": "agent: " + err.Error()})
 		return
 	}
-	systemPrompt := resolveSystemPrompt(&ws, user)
+	var skills []models.AgentSkill
+	if r.deps.AgentSkillSvc != nil {
+		skills, _ = r.deps.AgentSkillSvc.ListActiveByWorkspace(c.Request.Context(), ws.ID)
+	}
+	systemPrompt := resolveSystemPrompt(&ws, user, skills)
 
 	conn, err := r.upgrader.Upgrade(c.Writer, c.Request, nil)
 	if err != nil {
@@ -166,6 +170,7 @@ func buildSessionRegistry(ctx context.Context, deps Deps, ws *models.Workspace, 
 		OutlookStore:    deps.OutlookStore,
 		WhitelistSvc:    deps.WhitelistSvc,
 		ChatSearcher:    deps.ChatSearcher,
+		AgentSkillSvc:   deps.AgentSkillSvc,
 	}
 	// Avoid assigning a nil concrete pointer to an interface (Go nil-interface trap).
 	if deps.MCPHv != nil {

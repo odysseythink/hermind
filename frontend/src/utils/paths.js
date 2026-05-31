@@ -150,6 +150,9 @@ export default {
     agentSkills: () => {
       return "/settings/agents";
     },
+    agentCreatedSkills: () => {
+      return "/settings/agent-created-skills";
+    },
     chat: () => {
       return "/settings/chat";
     },

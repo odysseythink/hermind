@@ -52,4 +52,5 @@ type ToolContext struct {
 	Emit            StatusEmitter
 	Approval        ApprovalFn // nil = no gate (test default)
 	Cfg             *config.Config
+	AgentSkillSvc   services.AgentSkillManager
 }

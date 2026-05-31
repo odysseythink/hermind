@@ -40,6 +40,7 @@ type Deps struct {
 	OutlookStore    *oauth.TokenStore
 	WhitelistSvc    *services.AgentSkillWhitelistService
 	ChatSearcher    tools.ChatSearcher
+	AgentSkillSvc   services.AgentSkillManager
 }
 
 type Runtime struct {
@@ -153,7 +154,11 @@ func (r *Runtime) RunAgentDirectly(ctx context.Context, invUUID string, io Agent
 		_ = io.Send(ServerFrame{Type: FrameWSSFailure, Content: "agent: " + err.Error()})
 		return err
 	}
-	systemPrompt := resolveSystemPrompt(&ws, user)
+	var skills []models.AgentSkill
+	if r.deps.AgentSkillSvc != nil {
+		skills, _ = r.deps.AgentSkillSvc.ListActiveByWorkspace(ctx, ws.ID)
+	}
+	systemPrompt := resolveSystemPrompt(&ws, user, skills)
 
 	ttl := r.deps.Cfg.AgentToolApprovalTimeout
 	if ttl <= 0 {

@@ -134,6 +134,15 @@ const router = createBrowserRouter([
         },
       },
       {
+        path: "/settings/agent-created-skills",
+        lazy: async () => {
+          const { default: AgentCreatedSkillsPage } = await import(
+            "@/pages/Admin/AgentCreatedSkillsPage"
+          );
+          return { element: <AdminRoute Component={AgentCreatedSkillsPage} /> };
+        },
+      },
+      {
         path: "/settings/agents/builder",
         lazy: async () => {
           const { default: AgentBuilder } = await import(

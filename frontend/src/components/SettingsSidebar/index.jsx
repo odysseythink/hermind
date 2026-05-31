@@ -308,10 +308,22 @@ const SidebarOptions = ({ user = null, t }) => (
               className="h-5 w-5 flex-shrink-0 light:invert"
             />
           }
-          href={paths.settings.agentSkills()}
           user={user}
-          flex={true}
           roles={["admin"]}
+          childOptions={[
+            {
+              btnText: "Skill Configuration",
+              href: paths.settings.agentSkills(),
+              flex: true,
+              roles: ["admin"],
+            },
+            {
+              btnText: "Agent-Created Skills",
+              href: paths.settings.agentCreatedSkills(),
+              flex: true,
+              roles: ["admin"],
+            },
+          ]}
         />
         <Option
           btnText={t("settings.customization")}

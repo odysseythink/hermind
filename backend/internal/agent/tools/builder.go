@@ -39,6 +39,7 @@ type BuilderDeps struct {
 	Collector       *collector.Client // nil = attachment parsing unavailable
 	WhitelistSvc    *services.AgentSkillWhitelistService
 	ChatSearcher    ChatSearcher
+	AgentSkillSvc   services.AgentSkillManager
 }
 
 // Builder composes a tool.Registry from multiple sources per session.
@@ -82,6 +83,7 @@ func (b *Builder) Build(ctx context.Context, ws *models.Workspace, user *models.
 		Emit:            emit,
 		Approval:        b.deps.Approval,
 		Cfg:             b.deps.Cfg,
+		AgentSkillSvc:   b.deps.AgentSkillSvc,
 	}
 
 	// Source 1: default skills
@@ -102,6 +104,17 @@ func (b *Builder) Build(ctx context.Context, ws *models.Workspace, user *models.
 			continue
 		}
 		b.addWithApproval(reg, seen, e, "default", false, globalAutoApprove, whitelist)
+	}
+
+	// Meta-skills: skill management tools — always enabled, not subject to disabled_skills list
+	if b.deps.AgentSkillSvc != nil {
+		for _, e := range []*tool.Entry{
+			NewSkillManageSkill(tc, b.deps.AgentSkillSvc),
+			NewSkillsListSkill(tc, b.deps.AgentSkillSvc),
+			NewSkillViewSkill(tc, b.deps.AgentSkillSvc),
+		} {
+			b.addWithApproval(reg, seen, e, "default", false, globalAutoApprove, whitelist)
+		}
 	}
 
 	// Source 2: MCP (requires approval)

@@ -185,6 +185,7 @@ func main() {
 	adminSvc := services.NewAdminService(db)
 	extSvc := services.NewBrowserExtensionService(db)
 	threadSvc := services.NewThreadService(db)
+	agentSkillSvc := services.NewAgentSkillService(db)
 	agentFlowSvc := services.NewAgentFlowService(cfg.StorageDir)
 	apiKeySvc := services.NewAPIKeyService(db)
 	promptPresetSvc := services.NewPromptPresetService(db)
@@ -218,6 +219,7 @@ func main() {
 		OutlookOAuth:    outlookOAuth,
 		OutlookStore:    tokenStore,
 		WhitelistSvc:    whitelistSvc,
+		AgentSkillSvc:   agentSkillSvc,
 	})
 	sjSvc := services.NewScheduledJobService(db)
 	agentRunner := scheduler.NewRuntimeAgentRunner(agentRuntime, eventLogSvc)
@@ -242,6 +244,7 @@ func main() {
 		workers.NewSyncWatchedJob(db, cfg, coll),
 		workers.NewEmbedWorkerJob(db, cfg, emb, vectorDB),
 		workers.NewExtractMemoriesJob(db, memSvc, memExt, sysSvc),
+		workers.NewSkillCuratorJob(db, agentSkillSvc, sysSvc),
 	)
 	if err := workerMgr.Start(); err != nil {
 		mlog.Fatal("failed to start worker manager", mlog.Err(err))
@@ -316,6 +319,7 @@ func main() {
 		handlers.RegisterThreadRoutes(api, threadSvc, authSvc, db)
 		handlers.RegisterAgentFlowRoutes(api, agentFlowSvc, authSvc)
 		handlers.RegisterAgentSkillRoutes(api, sysSvc, authSvc, cfg)
+		handlers.RegisterAgentSkillsRoutes(api, agentSkillSvc, authSvc, db)
 		handlers.RegisterMCPRoutes(api, authSvc, mcpSvc, eventLogSvc, cfg)
 		handlers.RegisterAgentTokenRoutes(api, tempTokenSvc, authSvc)
 		handlers.RegisterAgentRoutes(api, agentRuntime, authSvc, tempTokenSvc)
