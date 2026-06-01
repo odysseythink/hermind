@@ -29,14 +29,18 @@
 - **校准**：内嵌 model→context-length 映射表 + workspace 级覆盖
 - **脱敏调优**：去掉 bare-hex 与 email 正则，避免误杀 git SHA / 邮件等合法内容
 - **开关**：全局 `SystemSetting "context_compress_enabled"`（默认 OFF / opt-in）+ per-workspace 覆盖
-- **上游 Pantheon 补缺口（本轮做）**：per-tool 摘要模板、摘要输入截断、fallback 模型重试、summary-prefix 结束标记、`PreviousSummary()`/`SetPreviousSummary()` accessor
+- **上游 Pantheon 补缺口（本轮做）**：per-tool 摘要模板、摘要输入截断、fallback 模型重试、summary-prefix 结束标记、`PreviousSummary()`/`SetPreviousSummary()`/`LastFallbackUsed()` accessor、agent loop 回喂 `UpdateFromResponse`
+- **`/compress <topic>` 手动压缩端点**（详见 §18.1）`[C:USER]`
+- **跨 thread handoff**：`WorkspaceThread.ParentThreadID` + 创建子 thread 时种子拷贝父摘要 + Pantheon MemoryProvider（详见 §18.2）`[C:USER]`
+- **实时 usage 校准**：捕获 `LLMChunk.Usage` / agent step usage 回喂引擎，替代纯静态估算（详见 §18.3）`[C:USER]`
+- **per-workspace 覆盖前端 UI**：工作区设置页压缩开关/阈值/ctxLen 覆盖表单（详见 §18.4）`[C:USER]`
+- **失败冷却 600s 第三级**（上游 `state.go`，详见 §18.5）`[C:USER]`
 
-### 1.2 Out（V2+，已确认延后）`[C:DEFERRED]`
+### 1.2 Out（V2+）`[C:DEFERRED]`
 
-- `/compress <topic>` 用户命令 / HTTP endpoint —— 引擎 `focusTopic` 参数已存在，V1 仅不暴露 UI
-- MemoryProvider `OnSessionSwitch` 跨 thread handoff
-- `update_from_response` 实时 usage 校准 —— V1 用静态映射表
-- per-workspace 覆盖的前端 UI —— V1 仅做后端字段，前端 V2
+经用户确认，原延后项全部并入 V1（见 §18）。当前 V2+ 仅剩：
+- 子代理（subagent）并行隔离 —— 与本压缩功能正交，独立设计
+- 压缩摘要的多代历史浏览 UI —— `thread_compactions` 已存多行，前端浏览器 V2
 
 ### 1.3 非目标
 
@@ -173,6 +177,22 @@ type ThreadCompaction struct {
 - 查询「最新摘要」：`WHERE workspace_id=? AND thread_id <=> ? ORDER BY id DESC LIMIT 1`
 - 复用 `WorkspaceChat.Include`（已存在 `gorm:"default:true"`）作软删标志，`buildChatHistory` 已按 `include = ?` 过滤（`chat_service.go:308`），无需改过滤条件，仅需新增「id > up_to_chat_id」与摘要合成行
 
+**WorkspaceThread 新增字段（支撑 §18.2 跨 thread handoff）**：
+
+```go
+// internal/models/workspace_thread.go — 新增字段
+ParentThreadID *int `gorm:"index" json:"parentThreadId"` // nil=根 thread；非 nil=从该父 thread fork，创建时种子拷贝父摘要
+```
+
+**Workspace 新增字段（支撑 §5 开关 / §6 覆盖 / §18.4 UI）**：
+
+```go
+// internal/models/workspace.go — 新增可空字段（nil 回落全局/默认）
+CompressEnabled    *bool    `json:"compressEnabled"`    // per-workspace 开关覆盖
+CompressThreshold  *float64 `json:"compressThreshold"`  // per-workspace 阈值覆盖（nil 用分路径默认）
+CompressContextLen *int     `json:"compressContextLen"` // per-workspace ctxLen 覆盖（喂 ContextLengthFor）
+```
+
 ---
 
 ## 5. 配置（分路径默认值）`[C:USER]`
@@ -298,6 +318,8 @@ var CompactionRedactPatterns = []*regexp.Regexp{
 **关键论断**：以下均为引擎真实缺口，因 hermind 本就 vendor Pantheon，直接上游补齐使两仓库一起变好。
 
 1. **Accessor**：`DefaultCompressor.PreviousSummary() string`、`SetPreviousSummary(string)`、`LastFallbackUsed() bool`（state.go）
+7. **agent loop 回喂 usage**：`agent.go`/`stream.go` 每 step 后 `if a.contextEngine != nil { a.contextEngine.UpdateFromResponse(resp.Usage) }`，使 `ShouldCompress` 用真实 prompt_tokens（支撑 §18.3）
+8. **600s 冷却第三级**：`state.go` `enterCooldown` 的 `CooldownMax` 提至 600s 并按 `ineffectiveCount` 分级 30/60/600（支撑 §18.5）
 2. **per-tool 摘要模板**：`summarizeToolResult` 按 tool name 分支（terminal/browser_navigate/create_files/web_scraping/session_search + 通用 fallback）（prune.go）
 3. **摘要输入截断**：`renderTranscript` 加 per-message 6000 字符截断（头 4000 + 尾 1500），tool args 1500（helpers.go / summary.go）
 4. **fallback 模型重试**：`generateSummaryWithFallback` 实现 Level 1（用 `cfg.FallbackModel` 构造实例重试）（state.go）
@@ -389,11 +411,90 @@ sess.pAgent = pantheonAgent.New(lm, opts...)
 
 ---
 
-## 12. API 端点 `[C:DEFERRED]`
+## 12. API 端点 `[C:USER]`
 
-V1 **不新增** HTTP/WS 端点。压缩对调用方透明。
-- `/compress <topic>` 手动压缩端点 → V2
+- **新增 `POST /api/workspaces/:slug/compress`**（详见 §18.1）：手动触发压缩 + 可选 focus topic
 - WS 新增**事件类型**（非端点）：`context.compressed`（§9），复用现有 `ws.SendEvent` 机制
+- `PUT /api/workspaces/:slug`（已存在）扩展：`UpdateWorkspaceRequest` 加压缩覆盖字段（§18.4）
+
+---
+
+## 18. V1 扩展项设计（原延后项，经确认并入）
+
+### 18.1 `/compress <topic>` 手动压缩端点 `[C:USER]`
+
+**路由**：`POST /api/workspaces/:slug/compress`
+**请求体**：`{ "threadId": int|null, "topic": string|"" }`
+**响应**：
+
+| 状态码 | body | 触发条件 |
+|---|---|---|
+| 200 | `{before, after, savedPct, summary, fallbackUsed}` | 压缩成功 |
+| 409 | `{error:"nothing to compress"}` | 历史过短（≤ head+3+1）或抗抖动/冷却中跳过 |
+| 503 | `{error:"summary model unavailable"}` | 辅助模型不可用且静态 fallback 也判定无意义 |
+
+**逻辑**（handler → chat_service 复用 §11.2 压缩块）：
+```go
+func (s *ChatService) CompressNow(ctx, ws, threadID *int, topic string) (CompactionResult, error) {
+    history := s.buildChatHistory(ctx, ws.ID, threadID, largeLimit) // 取全量（不截断）
+    if len(history) <= minForCompress { return _, ErrNothingToCompress }
+    comp := factory.NewForChat(s.llmProv.LanguageModel())
+    comp.UpdateModel(modelName, ctxLen)
+    if prev := s.compactionStore.LoadLatest(ctx, ws.ID, threadID); prev != nil { comp.SetPreviousSummary(prev.Summary) }
+    compressed, err := comp.CompressMessages(ctx, history, topic) // ← topic 透传 focusTopic
+    ... 落库 + 软删（同 §11.2）...
+    return CompactionResult{Before, After, SavedPct, comp.PreviousSummary(), comp.LastFallbackUsed()}, nil
+}
+```
+**关键论断**：手动端点与自动压缩共用同一引擎调用，唯一差异是 `topic` 透传与「不看阈值、强制压缩」。
+
+### 18.2 跨 thread handoff `[C:USER]`
+
+**机制**：两层。
+1. **服务层种子拷贝（V1 主路径）**：`ThreadService.Create`（thread_service.go:34）接收 `ParentThreadID`。若非 nil，读父 thread 最新 `ThreadCompaction`，为子 thread 写一条种子 `ThreadCompaction{ThreadID: child, Summary: parent.Summary, UpToChatID: 0}`。子 thread 首次 `buildChatHistory`/agent session 即带父摘要。
+2. **Pantheon MemoryProvider（agent 内部 session 切换）**：实现 hermind `compactionMemoryProvider`，经 `WithMemoryProviders` 注册：
+```go
+type compactionMemoryProvider struct{ store *CompactionStore; wsID int }
+func (p *compactionMemoryProvider) OnPreCompress(msgs []core.Message) ([]core.Message, error) { return msgs, nil }
+func (p *compactionMemoryProvider) OnSessionSwitch(newSessionID, parentSessionID string) error {
+    parent := p.store.LoadLatestBySession(parentSessionID)
+    if parent != nil { p.store.SeedForSession(newSessionID, parent.Summary) }
+    return nil
+}
+```
+**关键论断**：hermind 当前无 agent 内部 subagent 切换，所以 V1 的实际生效路径是「服务层种子拷贝」；MemoryProvider 是为未来 subagent 预埋的 Pantheon 级钩子，注册即可，不阻塞 V1。
+**dto 改动**：`dto.CreateThreadRequest` 加 `ParentThreadID *int`。
+
+### 18.3 实时 usage 校准 `[C:USER]`
+
+**关键论断**：用真实 `prompt_tokens` 替代字符估算，使阈值判定更准。
+
+- **Agent 路径**：依赖 §10 上游改动 #7 —— Pantheon agent loop 每 step 后 `contextEngine.UpdateFromResponse(resp.Usage)`。hermind 侧零改动（接入引擎即自动受益）。
+- **Chat 路径**：`ChatService.Stream` 消费 `LLMChunk` 时捕获末个 chunk 的 `Usage *core.Usage`（llm.go:17 已暴露），存入轻量 per-(ws,thread) 缓存（内存 map + 可选落 `thread_compactions.last_prompt_tokens` 字段）。下一轮 `buildRAGContext` 的压缩判定优先用 `lastPromptTokens` 而非 `estimateTokens(history)`。
+- **降级**：无 usage（首轮 / provider 不返回）时回落字符估算。
+
+**字段微调**：`ThreadCompaction` 加 `LastPromptTokens int`（可选，用于跨请求传递真实 usage）。
+
+### 18.4 per-workspace 覆盖前端 UI `[C:USER]`
+
+- **后端**：`dto.UpdateWorkspaceRequest` 加 `CompressEnabled *bool`、`CompressThreshold *float64`、`CompressContextLen *int`；`WorkspaceService.Update`（workspace_service.go:85）按现有 `OpenAiHistory` 模式写入 `updates` map。
+- **前端**：工作区设置页新增「上下文压缩」分区：
+  - 开关（三态：跟随全局 / 强制开 / 强制关 → 映射 `*bool`）
+  - 阈值滑块（0.3–0.95，空=分路径默认）
+  - ctxLen 覆盖输入框（空=用内嵌映射表）
+- **生效优先级**（§5/§6 已定）：workspace 覆盖 → 全局 SystemSetting → 分路径默认。
+
+### 18.5 失败冷却 600s 第三级 `[C:USER]`
+
+上游 §10 改动 #8。`state.go` `enterCooldown`：
+```go
+// 现状：CooldownBase=30s, CooldownMax=60s
+// 改为分级：ineffectiveCount 0→30s, 1→60s, ≥2→600s（CooldownMax 提至 600s）
+cooldowns := []time.Duration{30*time.Second, 60*time.Second, 600*time.Second}
+idx := min(c.state.ineffectiveCount, len(cooldowns)-1)
+c.state.summaryCooldownUntil = time.Now().Add(cooldowns[idx])
+```
+**关键论断**：贴齐 Hermes 的 30/60/600 三级语义；无可用 provider 等持续性故障最终落到 600s，避免高频无效重试。
 
 ---
 
@@ -408,6 +509,8 @@ V1 **不新增** HTTP/WS 端点。压缩对调用方透明。
 | 5 | thread_id=nil 的默认工作区会话摘要串话（多用户） | 低 | 高 | 查询始终带 `workspace_id`；MULTI_USER 下默认会话本就 workspace 隔离 |
 | 6 | 脱敏调优后密钥仍可能入摘要（去了 bare-hex） | 低 | 中 | 保留 key/token/bearer/AWS 显式规则；bare-hex 误杀代价 > 漏检收益（已与用户确认权衡） |
 | 7 | Agent 路径每 step 都跑 CompressMessages 增加延迟 | 中 | 低 | `ShouldCompress` 在阈值内直接返回原历史（已校准后成本极低，仅一次 token 估算） |
+| 8 | V1 范围因并入 5 项扩展近翻倍，工期与上游 PR 耦合加深 | 中 | 中 | §18 各项相互解耦，可按 §11 接入主体 → §18.1/18.4（hermind 独立）→ §18.2/18.3/18.5（含上游）顺序增量交付；MemoryProvider 注册即可（V1 无 subagent，不阻塞） |
+| 9 | `compactionMemoryProvider` V1 实际不触发（无 subagent），形成预埋未用代码 | 中 | 低 | 仅注册 + 服务层种子拷贝承担 V1 handoff；provider 由单测覆盖 OnSessionSwitch 行为，避免死代码 |
 
 ---
 
@@ -419,8 +522,12 @@ V1 **不新增** HTTP/WS 端点。压缩对调用方透明。
 - [ ] Chat 路径 `buildChatHistory` + 压缩判定改造
 - [ ] `SystemSetting "context_compress_enabled"` 默认值写入 `db.go` defaults
 - [ ] `Workspace.CompressEnabled *bool` + `CompressContextLen *int` 字段
-- [ ] 上游 Pantheon §10 六项改动（独立 PR）
+- [ ] 上游 Pantheon §10 **八项**改动（独立 PR）：accessor、per-tool 模板、输入截断、fallback 模型、summary-prefix、可注入脱敏集、`UpdateFromResponse` 回喂、600s 三级冷却
 - [ ] WS 事件 `context.compressed` + telemetry `compaction_finished`
+- [ ] §18.1 `POST /api/workspaces/:slug/compress` handler + `CompressNow` service
+- [ ] §18.2 `WorkspaceThread.ParentThreadID` + `CreateThreadRequest.ParentThreadID` + 种子拷贝 + `compactionMemoryProvider` 注册
+- [ ] §18.3 Chat 路径捕获 `LLMChunk.Usage` → `lastPromptTokens` 缓存 → 喂压缩判定
+- [ ] §18.4 `UpdateWorkspaceRequest` 三字段 + WorkspaceService.Update + 前端工作区设置「上下文压缩」分区
 - [ ] **测试命令全绿**：`cd backend && go test ./internal/agent/compression/... ./internal/services/... ./internal/agent/...`
 - [ ] **手测**：长 Agent 会话（>50% ctx）观察日志 `context compression triggered` + WS 收到 `context.compressed`；重连后摘要从 DB 回填（日志确认 `SetPreviousSummary`）
 - [ ] **手测**：长 Regular Chat（>75% ctx）观察 `chat compaction: N→M tokens` + UI 历史仍完整显示
@@ -437,7 +544,11 @@ V1 **不新增** HTTP/WS 端点。压缩对调用方透明。
 | `factory_test.go` | NewForAgent Threshold==0.50；NewForChat==0.75；其余默认一致 |
 | `chat_service_compaction_test.go` | history 超 0.75*ctx 触发压缩；buildChatHistory 含摘要合成行且仅读 id>UpToChatID；软删后 include=false；UI 查询不受影响 |
 | `agent_compaction_test.go` (e2e) | WithContextEngine 后长会话触发；step 后 SaveSummary 落库；重连 newSession 调 SetPreviousSummary；fallback 时 WS 收到警告 |
-| 上游 `pantheon/.../compressor_test.go` | PreviousSummary/SetPreviousSummary 往返；per-tool 模板输出含 tool name；renderTranscript 截断 >6000 字符；可注入 RedactPatterns 生效 |
+| 上游 `pantheon/.../compressor_test.go` | PreviousSummary/SetPreviousSummary 往返；per-tool 模板输出含 tool name；renderTranscript 截断 >6000 字符；可注入 RedactPatterns 生效；`UpdateFromResponse(usage)` 后 ShouldCompress 用真实 prompt_tokens；冷却第三级达 600s |
+| `compress_endpoint_test.go` (§18.1) | 历史过短→409；正常→200 含 summary；topic 透传到 focusTopic；强制压缩不看阈值 |
+| `thread_handoff_test.go` (§18.2) | ParentThreadID 非 nil→子 thread 种子摘要==父最新摘要；UpToChatID==0；根 thread 无种子 |
+| `usage_calibration_test.go` (§18.3) | 捕获末 chunk usage→lastPromptTokens；下一轮压缩判定优先用真实 usage；无 usage 回落估算 |
+| `workspace_compress_settings_test.go` (§18.4) | 三字段 nil→回落全局/默认；非 nil→覆盖生效；优先级 workspace>全局>分路径默认 |
 
 ---
 
@@ -452,6 +563,9 @@ V1 **不新增** HTTP/WS 端点。压缩对调用方透明。
 | 5 | 上游 §10 六项改动可独立 PR 且不破坏 Pantheon 现有调用方 | Medium | 需 fork/replace 兜底 | 改动均为新增/可选参数，向后兼容；提交 PR 跑 pantheon 全测 |
 | 6 | modelName 在接入点可获得（Agent: lm/ws 配置；Chat: ws 配置） | Medium | 校准取不到模型名 | 实现时从 `ws` 模型配置或 `buildLanguageModel` 入参取 |
 | 7 | 默认 contextLength=8192 对未知模型是安全保守值 | High | 偏小→过早压缩（可接受，风险#4） | 标准下限假设 |
+| 8 | `ChatService.Stream` 能从 `LLMChunk.Usage` 拿到末轮真实 usage（§18.3） | High | usage 校准回落字符估算 | 已读 llm.go:17/112 确认字段存在 |
+| 9 | Pantheon agent loop 加 `UpdateFromResponse` 调用不破坏现有行为（§10#7） | High | agent 路径 usage 校准失效，回落估算 | resp.Usage 已存在(agent.go:288)，仅多一次无副作用调用 |
+| 10 | 加 `WorkspaceThread.ParentThreadID` 不影响现有 thread 查询/迁移（§18.2） | Medium | 迁移需处理既有行（默认 nil 安全） | 可空字段 + AutoMigrate；既有行默认 NULL |
 
 ---
 
@@ -470,8 +584,9 @@ V1 **不新增** HTTP/WS 端点。压缩对调用方透明。
 10. 可观测 = WS 事件 + mlog + telemetry 全量 `[C:USER]`
 11. 失败降级 = 静态 fallback + 用户显式警告 `[C:USER]`
 12. Agent 摘要回填机制 = 上游加 accessor `[C:USER]`
+13. V1 范围扩展 = `/compress` 端点 + 跨 thread handoff + 实时 usage 校准 + per-workspace 前端 UI + 600s 冷却三级，全部并入 V1（§18）`[C:USER]`
 
-**延后（Deferred）**：`/compress <topic>` endpoint、MemoryProvider 跨 thread handoff、实时 usage 校准、per-workspace 覆盖前端 UI、失败冷却 600s 第三级。
+**延后（Deferred）**：subagent 并行隔离（与压缩正交）、压缩摘要多代历史浏览 UI。
 
 ---
 
