@@ -1,246 +1,550 @@
-# Context Compression Engine — 设计文档
+# Context Compression Engine — Design Document
 
-> 日期：2026-05-28  
-> 目标：将 Hermes Agent 的四阶段上下文压缩管道完整引入 Hermind，覆盖常规聊天和 Agent 双路径。
-
----
-
-## 1. 背景与现状
-
-### 1.1 Hermind 当前问题
-
-- **常规聊天路径**（`ChatService.Stream/Complete`）：无任何上下文压缩，仅通过 `OpenAiHistory`（默认20条消息数）截断历史。
-- **Agent 路径**（`agent/runtime.go`）：依赖 Pantheon 内置 `compression/compressor.go`，功能极简（固定保留头3条 + 尾20条 + LLM 中间摘要），无 token 预算计算、无工具输出清洗、无迭代更新。
-- **配置层面**：无任何压缩相关配置项。
-
-### 1.2 Hermes Agent 优秀设计
-
-`context_compressor.py`（1583行）实现了完整的四阶段管道：
-
-1. **Phase 1 — 工具输出清洗**：MD5去重、图片剥离、JSON安全截断、长度上限截断（零LLM成本）
-2. **Phase 2 — Token预算管理**：按模型最大context计算可用预算，划分head/middle/tail，保护工具调用对不拆散，锚定用户最后消息
-3. **Phase 3 — LLM结构化摘要**：强制模板输出（关键事实/用户意图/已完成操作/待决问题），支持迭代更新
-4. **Phase 4 — 消息组装**：角色冲突避免、孤儿tool_call修复、合法性校验
+> **功能**: 将 Hermes Agent 的上下文压缩引擎引入 Hermind
+> **日期**: 2026-05-28
+> **状态**: Approved
+> **方案**: A（统一 ContextCompressionService + 适配 Pantheon 接口）
 
 ---
 
-## 2. 架构设计
+## 1. 背景与目标
 
-### 2.1 模块位置
+### 1.1 问题
 
-```
-backend/internal/contextmanager/
-├── config.go               # 压缩配置
-├── tokenizer.go            # Token估算（增强版）
-├── model_registry.go       # 模型context长度映射
-├── pruner.go               # Phase 1: 工具输出清洗
-├── boundary.go             # Phase 2: Token预算 & 边界保护
-├── summarizer.go           # Phase 3: LLM结构化摘要
-├── assembler.go            # Phase 4: 消息组装
-├── fallback.go             # 降级策略
-├── pipeline.go             # 四阶段编排器
-└── *_test.go               # 各阶段单元测试 + 集成测试
-```
+Hermind 当前没有上下文压缩机制：
+- **Regular Chat**：仅通过 `Workspace.OpenAiHistory`（默认 20 条消息）限制历史长度，无 token 预算意识，长会话直接撞上下文上限
+- **Agent Chat**：Pantheon 内置 `compression.Compressor` 但过于简单（固定 head=3/tail=20，bullet-point 摘要），且 Hermind 当前未启用
 
-### 2.2 数据流
+### 1.2 目标
 
-```
-原始 []core.Message
-    ↓
-[Pipeline.Compress(ctx, messages, systemPrompt)]
-    ↓
-┌────────────────────────────────────────────┐
-│ Phase 1: Pruner                            │
-│ • MD5去重重复工具结果                        │
-│ • 剥离图片Base64 → [图片:已省略]              │
-│ • JSON工具结果安全截断（保留schema）          │
-│ • 单条工具结果长度上限截断                   │
-└────────────────────────────────────────────┘
-    ↓
-┌────────────────────────────────────────────┐
-│ Phase 2: Boundary Protector                │
-│ • 查询模型最大context长度                   │
-│ • 可用预算 = 上限×比例 − 系统提示 − 输入预留 − 缓冲 │
-│ • 划分 head + middle + tail                │
-│ • 工具调用对不拆散                         │
-│ • 用户最后一条消息锚定在tail                │
-└────────────────────────────────────────────┘
-    ↓
-┌────────────────────────────────────────────┐
-│ Phase 3: Summarizer（LLM调用）              │
-│ • middle部分结构化序列化                    │
-│ • 强制模板摘要提示                          │
-│ • 支持迭代更新（复用上轮摘要）              │
-│ • 解析模板输出                              │
-└────────────────────────────────────────────┘
-    ↓
-┌────────────────────────────────────────────┐
-│ Phase 4: Assembler                         │
-│ • head + summary + tail 组合               │
-│ • 修复角色冲突（相邻同角色）                │
-│ • 修复孤儿tool_call                        │
-│ • 最终合法性校验                            │
-└────────────────────────────────────────────┘
-    ↓
-压缩后的 []core.Message
-```
+引入 Hermes Agent 的**四阶段上下文压缩引擎**，覆盖 Regular Chat 和 Agent Chat 两条路径：
+- Phase 1：工具输出预剪枝（零 LLM 成本）
+- Phase 2：边界划定（Token 预算制尾保护）
+- Phase 3：结构化 LLM 摘要（迭代更新）
+- Phase 4：组装与完整性修复（角色冲突 + tool 对修复）
 
-### 2.3 集成点
+### 1.3 非目标
 
-| 路径 | 集成位置 | 方式 |
-|------|---------|------|
-| 常规聊天 | `ChatService.Stream()` / `Complete()` | 调用 `llmProv.Stream()` 前，先执行 `pipeline.Compress()` |
-| Agent | `agent/runtime.go` / `session.go` | 替换 Pantheon 内置 compressor，在 Agent 循环中注入 Pipeline |
+- 不实现 `/compress <topic>` 用户交互（Phase 1 预留 `focusTopic` 字段，后续可扩展）
+- 不实现模型元数据的自动更新（内嵌静态映射表，手动维护）
+- 不修改 Pantheon SDK 本身（通过适配器模式集成）
 
 ---
 
-## 3. 配置设计
+## 2. 架构概览
 
-### 3.1 新增环境变量
+### 2.1 新增包
+
+```
+backend/internal/agent/compression/
+├── compressor.go              # 主入口：HermesCompressor
+├── config.go                  # CompressionConfig
+├── phase1_pruner.go           # 工具输出预剪枝
+├── phase2_boundary.go         # 边界划定
+├── phase3_summarizer.go       # 结构化 LLM 摘要
+├── phase4_assembler.go        # 组装与完整性修复
+├── model_metadata.go          # 模型上下文长度映射
+├── token_estimator.go         # Token 估算
+├── redactor.go                # 敏感信息脱敏
+├── prompts/
+│   └── summary_template.txt   # 结构化摘要模板
+└── *_test.go
+```
+
+### 2.2 组件职责
+
+| 组件 | 职责 | 依赖 |
+|------|------|------|
+| `HermesCompressor` | 编排四阶段流水线，维护 per-session 状态，实现 Pantheon `compression.Compressor` 接口 | 全部 |
+| `ToolResultPruner` | Phase 1：MD5 去重、图片剥离、JSON 安全截断、单行摘要 | `TokenEstimator` |
+| `BoundaryAnalyzer` | Phase 2：Head 保护、Token 预算尾保护、边界对齐、用户消息锚定 | `TokenEstimator`, `ModelMetadata` |
+| `Summarizer` | Phase 3：结构化摘要生成、迭代更新、脱敏、失败冷却 | auxiliary `core.LanguageModel` |
+| `Assembler` | Phase 4：角色选择、SUMMARY_PREFIX、合并到尾部、tool 对修复 | — |
+| `ModelMetadata` | 模型名 → 上下文长度映射 + Workspace 覆盖 | — |
+| `TokenEstimator` | 多模态消息 token 估算（文本 + 图片 + tool 参数） | — |
+| `Redactor` | 敏感信息脱敏（API keys, tokens, passwords） | — |
+
+### 2.3 系统集成
+
+```
+┌─────────────────────────────────────────────────────────────────────────┐
+│                        Regular Chat (HTTP API)                          │
+│  ChatService.Stream() / Complete()                                      │
+│    ├─ buildRAGContext() → buildChatHistory()                            │
+│    ├─ 【新增】ContextCompression.CompressIfNeeded()                     │
+│    │   (load previous_summary from DB if threadID)                      │
+│    └─ llmProv.Stream(messages, systemPrompt)                            │
+└─────────────────────────────────────────────────────────────────────────┘
+                                    │
+                                    ▼
+┌─────────────────────────────────────────────────────────────────────────┐
+│                        Agent Chat (WebSocket)                           │
+│  Runtime.RunAgentDirectly() / HandleWS()                                │
+│    ├─ newSession()                                                      │
+│    ├─ buildCompressor(ws, lm) → HermesCompressor{per-session state}    │
+│    ├─ pantheonAgent.New(lm,                                            │
+│    │     WithRegistry(reg),                                             │
+│    │     WithMaxSteps(10),                                              │
+│    │     WithCompressor(compressor))  ← 每模型调用前自动触发           │
+│    └─ conv.Start() → Agent RunStream()                                  │
+└─────────────────────────────────────────────────────────────────────────┘
+```
+
+---
+
+## 3. 核心压缩引擎 — 四阶段流水线
+
+### 3.1 Phase 1：工具输出预剪枝（`phase1_pruner.go`）
+
+**输入**：`[]core.Message`，尾部 token 预算，最小尾部消息数
+**输出**：剪枝后的 `[]core.Message`，剪枝计数
+
+**处理逻辑**（从后向前保护尾部）：
+
+| 策略 | 触发条件 | 处理方式 |
+|------|---------|---------|
+| MD5 去重 | `ToolResultPart` 文本内容长度 > 200，且与后续消息内容 MD5 相同 | 替换为 `"[Duplicate tool output — same content as a more recent call]"` |
+| 图片剥离 | 消息包含 `ImagePart` | `ImagePart` 替换为 `TextPart{"[screenshot removed to save context]"}` |
+| JSON 安全截断 | `ToolCallPart.Arguments` 长度 > 500 | 解析 JSON，递归截断长字符串叶子节点，保证 JSON 合法性 |
+| 信息性单行摘要 | 旧 `ToolResultPart` 文本内容长度 > 200 | 按工具名生成摘要 |
+
+**工具摘要映射表**（覆盖 Hermind 当前工具集）：
+
+| 工具名 | 摘要格式 |
+|--------|---------|
+| `browser_navigate` / `click` / `snapshot` | `[browser_navigate] {url} ({len} chars)` |
+| `create_files` | `[create_files] wrote {path} ({lines} lines)` |
+| `web_scraping` | `[web_scraping] {url} ({len} chars result)` |
+| `session_search` | `[session_search] query='{q}' ({count} matches)` |
+| `terminal` | `[terminal] ran \`{cmd}\` -> exit {code}, {n} lines output` |
+| （通用 fallback） | `[{name}] {args_preview} ({len} chars result)` |
+
+### 3.2 Phase 2：边界划定（`phase2_boundary.go`）
+
+**算法**：
+
+1. **Head 保护**：`headEnd = (system ? 1 : 0) + protectHeadCount`
+2. **Tail Token 预算**（从尾部反向累加）：
+   - `minTail = max(3, len(messages) - headEnd - 1)`
+   - `softCeiling = tailTokenBudget * 1.5`
+   - 从后向前遍历，累加 `EstimateTokens(msg)`
+   - 当 `accumulated > softCeiling` 且已保护消息数 ≥ `minTail` 时停止
+3. **边界对齐 — 向后调整**（`_alignBoundaryBackward`）：
+   - 如果 `tailStart` 落在 tool result 群组中间，向后拉直到包含完整 `assistant(tool_calls) + tool(results)` 群组
+4. **用户消息锚定**（`_ensureLastUserMessageInTail`）：
+   - 如果最新的 user 消息不在 Tail 中，将 `tailStart` 向前拉以包含它（修复 Hermes Bug #10896）
+
+**Token 估算**（`token_estimator.go`）：
 
 ```go
-type CompressionConfig struct {
-    Enabled           bool    `env:"CONTEXT_COMPRESSION_ENABLED" envDefault:"true"`
-    TokenBudgetRatio  float64 `env:"CONTEXT_COMPRESSION_TOKEN_BUDGET_RATIO" envDefault:"0.7"`
-    AuxModelProvider  string  `env:"CONTEXT_COMPRESSION_MODEL_PROVIDER" envDefault:""`  // 空=使用主模型
-    AuxModelName      string  `env:"CONTEXT_COMPRESSION_MODEL_NAME" envDefault:""`      // 空=使用主模型
-    PruneToolsEnabled bool    `env:"CONTEXT_COMPRESSION_PRUNE_TOOLS" envDefault:"true"`
-    SummarizeEnabled  bool    `env:"CONTEXT_COMPRESSION_SUMMARIZE" envDefault:"true"`
-    HeadKeepCount     int     `env:"CONTEXT_COMPRESSION_HEAD_KEEP" envDefault:"3"`
-    TailKeepCount     int     `env:"CONTEXT_COMPRESSION_TAIL_KEEP" envDefault:"6"`
-    MaxToolResultLen  int     `env:"CONTEXT_COMPRESSION_MAX_TOOL_RESULT_LEN" envDefault:"4000"`
-    SummaryMaxTokens  int     `env:"CONTEXT_COMPRESSION_SUMMARY_MAX_TOKENS" envDefault:"1024"`
+func (e *TokenEstimator) EstimateMessage(msg core.Message) int {
+    tokens := 10  // role + metadata 开销
+    for _, part := range msg.Content {
+        switch p := part.(type) {
+        case core.TextPart:
+            tokens += estimateTextTokens(p.Text)  // (len + 3) / 4
+        case core.ImagePart:
+            tokens += 1600  // 统一按 1600 token 估算
+        case core.ToolCallPart:
+            tokens += estimateTextTokens(p.Arguments) / 4
+        case core.ToolResultPart:
+            for _, rp := range p.Content {
+                if tp, ok := rp.(core.TextPart); ok {
+                    tokens += estimateTextTokens(tp.Text)
+                }
+            }
+        }
+    }
+    return tokens
 }
 ```
 
-### 3.2 模型注册表
+### 3.3 Phase 3：结构化 LLM 摘要（`phase3_summarizer.go`）
 
-`model_registry.go` 内置约100个主流模型的 context 长度映射，同时读取 Hermind config 中的 provider token limit 作为 fallback。
-
----
-
-## 4. 接口设计
+**摘要预算**：
 
 ```go
-// Pipeline 是唯一直接对外暴露的入口
-type Pipeline struct { /* ... */ }
-
-func NewPipeline(cfg CompressionConfig, auxLLM core.LanguageModel) *Pipeline
-
-func (p *Pipeline) Compress(ctx context.Context, history []core.Message, systemPrompt string) ([]core.Message, error)
+func (s *Summarizer) ComputeBudget(turns []core.Message, contextLength int) int {
+    contentTokens := estimateMessagesTokens(turns)
+    budget := int(float64(contentTokens) * summaryRatio)
+    maxTokens := min(int(float64(contextLength)*0.05), summaryTokensCeiling)
+    return max(minSummaryTokens, min(budget, maxTokens))
+}
 ```
 
-各 Phase 内部接口见代码实现，不对外暴露。
+**默认值**：
+- `minSummaryTokens = 2000`
+- `summaryRatio = 0.20`
+- `summaryTokensCeiling = 12000`
 
----
-
-## 5. 关键算法
-
-### 5.1 Phase 1 — 工具输出清洗
-
-- 遍历所有 `ToolResultPart`，内容计算 MD5，重复替换为 `[重复结果，同上]`
-- `ImagePart` 替换为 `[图片内容已省略]`
-- JSON 内容且长度 > MaxToolResultLen：保留键名，截断数组/长字符串值
-- 非 JSON 长文本：保留前/后各 MaxToolResultLen/2，中间替换为 `...[省略N字符]...`
-
-### 5.2 Phase 2 — Token 预算划分
+**结构化模板**（12 sections）：
 
 ```
-模型上限 = ModelRegistry.Lookup(modelName) 或 Config.ProviderTokenLimit
-可用预算 = 模型上限 * TokenBudgetRatio − Estimate(systemPrompt) − Estimate(input) − safetyBuffer(200)
+## Active Task
+[逐字引用用户最新未完成任务]
 
-tailToken = Sum(Estimate(tail候选))
-若 tailToken >= 可用预算 * 0.4: 减少 tail 保留消息数
+## Goal
+[用户整体目标]
 
-headToken = Sum(Estimate(head候选))
-middleBudget = 可用预算 − headToken − tailToken
+## Constraints & Preferences
+[用户偏好、编码风格、约束]
+
+## Completed Actions
+[编号列表：动作 — 结果 [tool: name]]
+
+## Active State
+[当前工作状态]
+
+## In Progress
+[正在进行中的工作]
+
+## Blocked
+[未解决的阻塞/错误]
+
+## Key Decisions
+[关键决策及原因]
+
+## Resolved Questions
+[已回答的问题及答案]
+
+## Pending User Asks
+[未回答的用户问题]
+
+## Relevant Files
+[相关文件列表及备注]
+
+## Remaining Work
+[剩余工作]
+
+## Critical Context
+[必须保留的具体值、错误信息、配置]
 ```
 
-### 5.3 Phase 3 — 摘要提示模板
+**迭代更新**：
+- 如果 `previousSummary != ""`：Prompt 包含 `PREVIOUS SUMMARY` + `NEW TURNS TO INCORPORATE`，要求增量更新（保留已有信息，追加新动作）
+- 如果 `focusTopic != ""`：追加 FOCUS TOPIC 指令，优先保留相关内容（60-70% 预算）
 
-```
-你是一个对话摘要助手。请将以下对话历史压缩为摘要，严格按模板输出。
+**输入截断**（ summarizer 的上下文窗口保护）：
+- 单条消息总字符上限：`6000`
+- 保留头部：`4000` 字符
+- 保留尾部：`1500` 字符
+- Tool arguments 上限：`1500`，保留头部：`1200`
 
-[对话历史]
-{{messages}}
+**敏感信息脱敏**：
+- 输入序列化前调用 `redactSensitiveText()`
+- 摘要输出后再次调用 `redactSensitiveText()`
+- 正则匹配 API keys、tokens、passwords、connection strings，替换为 `[REDACTED]`
 
-[输出模板]
-## 关键事实
-- <bullet points>
+**失败处理**：
 
-## 用户意图演变
-- <bullet points>
-
-## 已完成的操作
-- <bullet points>
-
-## 待决问题
-- <bullet points>
-
-[约束]
-- 仅输出模板内容，不要添加任何其他文字
-- 若历史涉及文件/代码，保留文件路径和关键代码片段
-- 若历史涉及工具调用，保留工具名称和关键参数
-```
-
-### 5.4 Phase 4 — 组装校验
-
-- 相邻同角色消息：中间插入空 `user` 消息分隔
-- 孤儿 tool_call：补充 `ToolResultPart{Content: "[调用结果已在摘要中]"}`
-- 最终 token 估算超预算：递归截断 head 部分
-
----
-
-## 6. 错误处理与降级
-
-| 场景 | 处理 |
-|------|------|
-| Pipeline 未启用 | 直接返回原 history |
-| Phase 1 失败 | 跳过清洗，继续 Phase 2 |
-| Phase 2 失败 | Fallback 到消息数截断 |
-| Phase 3 LLM 失败/超时 | 尝试使用上次 summary；无则 fallback |
-| Phase 3 输出解析失败 | 重试1次；仍失败则 fallback |
-| Phase 4 组装失败 | Fallback |
-| 任何 panic | recover → fallback |
-
-**Fallback 行为：** 保留最近 `min(len(history), TailKeepCount*2)` 条消息。
-
----
-
-## 7. 测试策略
-
-### 7.1 单元测试
-
-| 测试文件 | 覆盖 |
+| 错误类型 | 处理 |
 |---------|------|
-| `pruner_test.go` | MD5去重、图片剥离、JSON截断、长文本截断 |
-| `boundary_test.go` | 模型查询、预算计算、划分逻辑、工具对对齐、用户锚定 |
-| `summarizer_test.go` | 提示构建、模板解析、迭代更新、重试逻辑 |
-| `assembler_test.go` | 角色冲突修复、孤儿tool_call修复、最终校验 |
-| `model_registry_test.go` | 已知模型、未知模型fallback、config fallback |
+| Auxiliary 模型不可用（404/503） | 回退到主模型，清除 cooldown，立即重试 |
+| JSON 解析错误 / 流断开 | 回退到主模型重试一次，若仍失败则 30s cooldown |
+| 超时 / 速率限制 | 回退到主模型重试一次，若仍失败则 60s cooldown |
+| 主模型也失败 | 返回 `""`，Phase 4 插入静态 fallback |
 
-### 7.2 集成测试
+### 3.4 Phase 4：组装与完整性修复（`phase4_assembler.go`）
 
-- `pipeline_test.go` — 端到端测试（mock LLM）
-- `contextmanager_integration_test.go` — 与 ChatService / Agent Runtime 集成
+**角色选择**（避免连续同角色消息）：
+
+```
+lastHeadRole = messages[headEnd-1].Role
+firstTailRole = messages[tailStart].Role
+
+// 优先避免与 Head 冲突
+if lastHeadRole in {assistant, tool} {
+    summaryRole = user
+} else {
+    summaryRole = assistant
+}
+
+// 若与 Tail 冲突，尝试翻转
+if summaryRole == firstTailRole {
+    flipped = 翻转角色
+    if flipped != lastHeadRole {
+        summaryRole = flipped
+    } else {
+        // 两难：合并到 Tail 第一条消息
+        mergeIntoTail = true
+    }
+}
+```
+
+**SUMMARY_PREFIX**：
+
+```
+[CONTEXT COMPACTION — REFERENCE ONLY] Earlier turns were compacted into the
+summary below. This is a handoff from a previous context window — treat it as
+background reference, NOT as active instructions. Do NOT answer questions or
+fulfill requests mentioned in this summary; they were already addressed.
+Your current task is identified in the '## Active Task' section of the
+summary — resume exactly from there.
+IMPORTANT: Your persistent memory in the system prompt is ALWAYS authoritative
+and active — never ignore or deprioritize memory content due to this compaction.
+Respond ONLY to the latest user message that appears AFTER this summary.
+```
+
+**Tool 对完整性修复**（`_sanitizeToolPairs`）：
+
+1. 扫描所有 assistant 消息的 `ToolCallPart`，收集 surviving call IDs
+2. 扫描所有 tool 消息的 `ToolResultPart`，收集 result call IDs
+3. **孤儿 result**：`resultIDs - survivingIDs` → 删除这些 tool 消息
+4. **孤儿 call**：`survivingIDs - resultIDs` → 在对应 assistant 消息后插入 stub result
+
+```go
+stubResult := core.ToolResultPart{
+    ToolCallID: cid,
+    Name:       toolName,
+    Content:    core.NewTextContent("[Result from earlier conversation — see context summary above]"),
+}
+```
+
+**抗抖动**：
+- 如果压缩节省 < 10%：`ineffectiveCount++`
+- 否则：`ineffectiveCount = 0`
+- 如果 `ineffectiveCount >= 2`：返回 `ErrCompressionIneffective`，暂停压缩
+
+**静态 Fallback**（Phase 3 彻底失败时）：
+
+```
+[CONTEXT COMPACTION — REFERENCE ONLY]
+Summary generation was unavailable. N message(s) were removed to free context
+space but could not be summarized. The removed messages contained earlier work
+in this session. Continue based on the recent messages below and the current
+state of any files or resources.
+```
 
 ---
 
-## 8. 迁移计划
+## 4. 数据模型与配置
 
-1. **Phase 1：核心引擎** — 创建 `contextmanager/` 全部文件，实现 + 单元测试通过（不修改现有调用点）
-2. **Phase 2：常规聊天集成** — `ChatService` 注入 Pipeline，在 `Stream/Complete` 中调用 `Compress()`
-3. **Phase 3：Agent 集成** — 替换 Pantheon 内置 compressor，在 Agent 循环中注入 Pipeline
-4. **Phase 4：配置 & 文档** — `config.go` 添加配置，`main.go` 初始化，更新 `AGENTS.md`
+### 4.1 Workspace 模型扩展
+
+```go
+type Workspace struct {
+    // ... 现有字段 ...
+
+    // 新增
+    ContextCompressionEnabled *bool `gorm:"default:true" json:"contextCompressionEnabled"`
+    ContextLengthOverride     *int  `json:"contextLengthOverride"`
+}
+```
+
+### 4.2 Config 全局默认
+
+```go
+type Config struct {
+    // ... 现有字段 ...
+
+    // 新增
+    ContextCompressionEnabled      bool    `env:"CONTEXT_COMPRESSION_ENABLED" envDefault:"true"`
+    ContextCompressionThresholdPct float64 `env:"CONTEXT_COMPRESSION_THRESHOLD_PCT" envDefault:"0.50"`
+    ContextCompressionSummaryRatio float64 `env:"CONTEXT_COMPRESSION_SUMMARY_RATIO" envDefault:"0.20"`
+    ContextCompressionProtectHead  int     `env:"CONTEXT_COMPRESSION_PROTECT_HEAD" envDefault:"3"`
+    ContextCompressionProtectTail  int     `env:"CONTEXT_COMPRESSION_PROTECT_TAIL" envDefault:"20"`
+    ContextCompressionAuxModel     string  `env:"CONTEXT_COMPRESSION_AUX_MODEL" envDefault:""`
+}
+```
+
+### 4.3 Thread 级状态持久化
+
+```go
+type ThreadContextSummary struct {
+    ID               int       `gorm:"primaryKey;autoIncrement"`
+    ThreadID         int       `gorm:"uniqueIndex"`
+    SummaryText      string    `gorm:"type:text"`
+    CompressionCount int
+    LastCompressedAt time.Time
+    CreatedAt        time.Time
+    UpdatedAt        time.Time
+}
+```
+
+- **用途**：Regular Chat 的请求-响应模式需要跨 HTTP 请求保持 `previous_summary`
+- **清理**：Thread 删除时级联删除；后台 cron 清理 90 天未更新记录
 
 ---
 
-## 9. 设计决策记录
+## 5. 模型上下文长度映射
 
-| 决策 | 理由 |
-|------|------|
-| 复用 Pantheon `core.Message` | 避免引入新消息格式，双路径统一适配 |
-| 辅助LLM通过 Provider 注册表获取 | 复用现有基础设施，支持任意模型 |
-| 内置模型注册表 + config fallback | 无需外部依赖，渐进式覆盖 |
-| 每阶段独立失败降级 | 最大化可用性，避免单点故障导致整个压缩失效 |
-| 强制模板输出 | 确保摘要结构稳定，便于下游解析和迭代更新 |
+### 5.1 内嵌映射表（`model_metadata.go`）
+
+覆盖主流模型（30+ 条目），格式：
+
+```go
+var builtInModelContextLengths = map[string]int{
+    "gpt-4o":           128_000,
+    "gpt-4o-mini":      128_000,
+    "gpt-4-turbo":      128_000,
+    "gpt-4":             8_192,
+    "claude-3-5-sonnet": 200_000,
+    "claude-3-5-haiku":  200_000,
+    "claude-3-opus":     200_000,
+    "gemini-1.5-pro":  1_000_000,
+    "gemini-1.5-flash":1_000_000,
+    // ... 等
+}
+```
+
+### 5.2 解析逻辑
+
+```go
+func (m *ModelMetadata) GetContextLength(modelID string, override *int) int {
+    if override != nil && *override > 0 {
+        return *override
+    }
+    if len, ok := builtInModelContextLengths[modelID]; ok {
+        return len
+    }
+    // 模糊匹配（前缀匹配）
+    for prefix, len := range builtInModelContextLengths {
+        if strings.HasPrefix(modelID, prefix) {
+            return len
+        }
+    }
+    return defaultContextLength  // 8_192
+}
+```
+
+---
+
+## 6. 两条路径的集成细节
+
+### 6.1 Agent Chat 路径
+
+**集成点**：`backend/internal/agent/session.go` 的 `newSession()`
+
+```go
+func newSession(...) *Session {
+    // ... 现有代码 ...
+
+    compressor := buildCompressor(ws, lm, cfg, sysSvc)
+
+    s.pAgent = pantheonAgent.New(lm,
+        pantheonAgent.WithRegistry(reg),
+        pantheonAgent.WithMaxSteps(10),
+        pantheonAgent.WithCompressor(compressor),
+    )
+    // ...
+}
+```
+
+**关键机制**：
+- Pantheon `RunStream()` 在每次模型调用前自动调用 `Compress()`
+- `HermesCompressor.Compress()` 内部先做 `ShouldCompress(tokenCount)` 判断，未达阈值直接 pass-through
+- Token 估算在 Compress 内部完成（遍历 history），成本极低
+
+### 6.2 Regular Chat 路径
+
+**集成点**：`backend/internal/services/chat_service.go` 的 `buildRAGContext()`
+
+```go
+func (s *ChatService) buildRAGContext(...) (string, []any, []core.Message, error) {
+    history, err = s.buildChatHistory(ctx, ws.ID, threadID, historyLimit)
+    if err != nil {
+        return "", nil, nil, err
+    }
+
+    if s.compressionSvc != nil && s.compressionSvc.IsEnabled(ws) {
+        var prevSummary string
+        if threadID != nil {
+            prevSummary, _ = s.compressionSvc.LoadThreadSummary(ctx, *threadID)
+        }
+
+        compressed, summary, err := s.compressionSvc.Compress(ctx, ws, history, prevSummary, lm)
+        if err == nil && summary != "" && threadID != nil {
+            _ = s.compressionSvc.SaveThreadSummary(ctx, *threadID, summary)
+        }
+        history = compressed
+    }
+
+    // ... 后续代码不变 ...
+}
+```
+
+**注意**：Regular Chat 的消息只有 user/assistant 文本对（无 tool calls），Phase 1 和 Phase 4 实际无操作。压缩引擎自适应处理。
+
+### 6.3 Auxiliary 模型构建
+
+```go
+func buildAuxiliaryLanguageModel(
+    ws *models.Workspace,
+    cfg *config.Config,
+    settings map[string]string,
+) (core.LanguageModel, error) {
+    auxModel := pick("ContextCompressionAuxModel", settings, cfg.ContextCompressionAuxModel)
+    if auxModel == "" {
+        return nil, nil  // 使用主模型
+    }
+    return buildLanguageModelWithOverride(ws, settings, cfg, auxModel)
+}
+```
+
+---
+
+## 7. 错误处理与降级策略
+
+| 场景 | 行为 | 用户感知 |
+|------|------|---------|
+| 压缩未触发（token < threshold） | 原样返回历史 | 无 |
+| Phase 1 剪枝成功，节省足够空间 | 可跳过 Phase 3（后续优化） | 无 |
+| Phase 3 摘要成功 | 返回压缩历史 + 摘要 | 无 |
+| Phase 3 失败，fallback 到主模型成功 | 返回压缩历史 + 摘要 | 日志警告 |
+| Phase 3 彻底失败 | 插入静态 fallback | 模型会看到提示 |
+| 连续 2 次压缩节省 < 10% | 暂停压缩，返回原历史 | 无 |
+| 进入 cooldown（30s/60s） | 返回原历史 | 无 |
+
+---
+
+## 8. 测试策略
+
+| 层级 | 内容 | 文件 |
+|------|------|------|
+| **单元测试** | Token 估算器（各种内容类型） | `token_estimator_test.go` |
+| | 工具剪枝（MD5 去重、图片剥离、JSON 截断） | `phase1_pruner_test.go` |
+| | 边界划定（token 预算、边界对齐、用户锚定） | `phase2_boundary_test.go` |
+| | 组装器（角色选择、tool 对修复） | `phase4_assembler_test.go` |
+| | 模型元数据（模型名解析、Workspace 覆盖） | `model_metadata_test.go` |
+| | 脱敏器（各种敏感模式） | `redactor_test.go` |
+| **集成测试** | 完整四阶段流水线端到端 | `compressor_test.go` |
+| | 与 ChatService 集成（Regular Chat） | `chat_service_test.go`（补充） |
+| | 与 Session 集成（Agent Chat） | `session_agent_test.go`（补充） |
+
+---
+
+## 9. 风险与缓解
+
+| 风险 | 影响 | 缓解 |
+|------|------|------|
+| Phase 3 LLM 摘要增加 API 成本 | 中 | Phase 1/2 先执行零成本剪枝；仅在高 token 时触发摘要；使用 auxiliary 廉价模型 |
+| 模型上下文长度映射不完整 | 低 | 模糊前缀匹配 + Workspace 覆盖 + 保守默认值 8K |
+| 压缩后摘要质量差导致模型行为异常 | 中 | 结构化模板强制输出；静态 fallback 明确告知模型上下文被截断；迭代更新保留信息 |
+| Thread 级状态持久化增加 DB 写入 | 低 | 仅在压缩触发时写入；轻量表结构；后台清理旧记录 |
+| 引入新包增加编译时间 | 低 | 包内模块化设计，按需引用 |
+
+---
+
+## 10. 附录
+
+### 10.1 Hermes 参考文件
+
+| 文件 | 大小 | 核心职责 |
+|------|------|---------|
+| `agent/context_compressor.py` | 213KB | 上下文压缩引擎完整实现 |
+| `agent/model_metadata.py` | 77KB | 模型元数据与上下文长度解析 |
+| `agent/context_engine.py` | 8KB | 上下文引擎抽象基类 |
+
+### 10.2 Hermind 修改文件清单
+
+| 文件 | 修改类型 |
+|------|---------|
+| `backend/internal/agent/compression/*.go` | 新增 |
+| `backend/internal/agent/compression/prompts/summary_template.txt` | 新增 |
+| `backend/internal/agent/session.go` | 修改（注入 compressor） |
+| `backend/internal/agent/llm_factory.go` | 修改（auxiliary 模型构建） |
+| `backend/internal/services/chat_service.go` | 修改（Regular Chat 集成） |
+| `backend/internal/models/workspace.go` | 修改（新增字段） |
+| `backend/internal/models/thread_context_summary.go` | 新增 |
+| `backend/internal/config/config.go` | 修改（新增配置） |
+| `backend/cmd/server/main.go` | 修改（初始化 compression service） |
