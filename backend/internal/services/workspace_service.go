@@ -4,6 +4,7 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"strconv"
 	"strings"
 	"time"
 
@@ -130,6 +131,34 @@ func (s *WorkspaceService) Update(ctx context.Context, slug string, req dto.Upda
 	}
 	if req.QueryRefusalResponse != nil {
 		updates["query_refusal_response"] = *req.QueryRefusalResponse
+	}
+	if req.CompressEnabled != nil {
+		switch *req.CompressEnabled {
+		case "true":
+			updates["compress_enabled"] = true
+		case "false":
+			updates["compress_enabled"] = false
+		default:
+			updates["compress_enabled"] = nil
+		}
+	}
+	if req.CompressThreshold != nil {
+		if *req.CompressThreshold == "" || *req.CompressThreshold == "default" {
+			updates["compress_threshold"] = nil
+		} else {
+			if v, err := strconv.ParseFloat(*req.CompressThreshold, 64); err == nil {
+				updates["compress_threshold"] = v
+			}
+		}
+	}
+	if req.CompressContextLen != nil {
+		if *req.CompressContextLen == "" || *req.CompressContextLen == "default" {
+			updates["compress_context_len"] = nil
+		} else {
+			if v, err := strconv.Atoi(*req.CompressContextLen); err == nil {
+				updates["compress_context_len"] = v
+			}
+		}
 	}
 	updates["last_updated_at"] = time.Now()
 	return s.db.Model(&ws).Updates(updates).Error

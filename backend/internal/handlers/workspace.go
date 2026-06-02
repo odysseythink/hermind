@@ -65,7 +65,12 @@ func (h *WorkspaceHandler) UpdateWorkspace(c *gin.Context) {
 		c.JSON(http.StatusInternalServerError, dto.ErrorResponse{Error: err.Error()})
 		return
 	}
-	c.JSON(http.StatusOK, gin.H{"success": true})
+	updated, err := h.wsSvc.GetBySlug(c.Request.Context(), ws.Slug)
+	if err != nil {
+		c.JSON(http.StatusOK, gin.H{"workspace": nil, "message": "Workspace updated"})
+		return
+	}
+	c.JSON(http.StatusOK, gin.H{"workspace": updated, "message": "Workspace updated"})
 }
 
 func (h *WorkspaceHandler) DeleteWorkspace(c *gin.Context) {

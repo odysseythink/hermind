@@ -77,6 +77,49 @@ func TestAPIWorkspace_GetBySlug(t *testing.T) {
 	assert.Equal(t, "w-slug", body.Workspace.Slug)
 }
 
+func TestAPIWorkspace_UpdateCompressionFields(t *testing.T) {
+	env := newAPITestEnv(t, nil)
+	require.NoError(t, env.DB.Create(&models.Workspace{Name: "w", Slug: "w"}).Error)
+	registerWorkspaceRoutesForTest(env)
+
+	// Set all three fields
+	payload := []byte(`{"compressEnabled":"true","compressThreshold":"0.60","compressContextLen":"64000"}`)
+	req := httptest.NewRequest("POST", "/api/v1/workspace/w/update", bytes.NewReader(payload))
+	req.Header.Set("Authorization", "Bearer "+env.APIKey)
+	req.Header.Set("Content-Type", "application/json")
+	rec := httptest.NewRecorder()
+	env.Router.ServeHTTP(rec, req)
+	require.Equal(t, http.StatusOK, rec.Code)
+
+	var body struct {
+		Workspace *models.Workspace `json:"workspace"`
+		Message   string            `json:"message"`
+	}
+	require.NoError(t, json.Unmarshal(rec.Body.Bytes(), &body))
+	require.NotNil(t, body.Workspace)
+	require.NotNil(t, body.Workspace.CompressEnabled)
+	assert.True(t, *body.Workspace.CompressEnabled)
+	require.NotNil(t, body.Workspace.CompressThreshold)
+	assert.InDelta(t, 0.60, *body.Workspace.CompressThreshold, 0.001)
+	require.NotNil(t, body.Workspace.CompressContextLen)
+	assert.Equal(t, 64000, *body.Workspace.CompressContextLen)
+
+	// Clear all three fields back to default
+	payload = []byte(`{"compressEnabled":"default","compressThreshold":"","compressContextLen":""}`)
+	req = httptest.NewRequest("POST", "/api/v1/workspace/w/update", bytes.NewReader(payload))
+	req.Header.Set("Authorization", "Bearer "+env.APIKey)
+	req.Header.Set("Content-Type", "application/json")
+	rec = httptest.NewRecorder()
+	env.Router.ServeHTTP(rec, req)
+	require.Equal(t, http.StatusOK, rec.Code)
+
+	var cleared models.Workspace
+	require.NoError(t, env.DB.Where("slug=?", "w").First(&cleared).Error)
+	assert.Nil(t, cleared.CompressEnabled)
+	assert.Nil(t, cleared.CompressThreshold)
+	assert.Nil(t, cleared.CompressContextLen)
+}
+
 func TestAPIWorkspace_Update(t *testing.T) {
 	env := newAPITestEnv(t, nil)
 	require.NoError(t, env.DB.Create(&models.Workspace{Name: "w", Slug: "w"}).Error)

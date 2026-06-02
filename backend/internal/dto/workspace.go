@@ -17,6 +17,10 @@ type UpdateWorkspaceRequest struct {
 	TopN                 *int     `json:"topN,omitempty"`
 	ChatMode             *string  `json:"chatMode,omitempty"`
 	QueryRefusalResponse *string  `json:"queryRefusalResponse,omitempty"`
+	// Compression overrides (string-typed to support three-state clearing via FormData)
+	CompressEnabled    *string `json:"compressEnabled,omitempty"`    // "true", "false", "default"
+	CompressThreshold  *string `json:"compressThreshold,omitempty"`  // "0.75", "", "default"
+	CompressContextLen *string `json:"compressContextLen,omitempty"` // "128000", "", "default"
 }
 
 type WorkspaceListResponse struct {
