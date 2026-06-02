@@ -3,6 +3,7 @@ package services
 import (
 	"context"
 	"encoding/json"
+	"fmt"
 	"testing"
 
 	"github.com/odysseythink/hermind/backend/internal/config"
@@ -323,6 +324,44 @@ func TestChatService_WithNoopReranker_ReturnsOriginalOrder(t *testing.T) {
 	assert.Equal(t, "d1", sources[0].(map[string]any)["docId"])
 	assert.Equal(t, "d2", sources[1].(map[string]any)["docId"])
 	assert.Equal(t, "d3", sources[2].(map[string]any)["docId"])
+}
+
+func TestBuildChatHistory_IncrementalRead(t *testing.T) {
+	db := setupChatDB(t)
+	cfg := &config.Config{}
+	svc := NewChatService(db, cfg, NewVectorService(cfg), nil, nil, nil, nil, nil, nil)
+
+	ws := &models.Workspace{Name: "ws", Slug: "ws"}
+	require.NoError(t, db.Create(ws).Error)
+
+	// Insert chats with sequential IDs
+	for i := 1; i <= 3; i++ {
+		require.NoError(t, db.Create(&models.WorkspaceChat{
+			WorkspaceID: ws.ID,
+			Prompt:      fmt.Sprintf("q%d", i),
+			Response:    fmt.Sprintf("a%d", i),
+			Include:     true,
+		}).Error)
+	}
+
+	// Normal read (afterChatID=0) returns all 3 chats → 6 messages
+	history, maxID, err := svc.buildChatHistory(context.Background(), ws.ID, nil, 20, 0)
+	require.NoError(t, err)
+	assert.Len(t, history, 6)
+	assert.Equal(t, 3, maxID)
+
+	// Incremental read after chat 1 returns chats 2 and 3 → 4 messages
+	history, maxID, err = svc.buildChatHistory(context.Background(), ws.ID, nil, 20, 1)
+	require.NoError(t, err)
+	assert.Len(t, history, 4)
+	assert.Equal(t, "q2", history[0].Text()) // first message is user prompt of chat 2
+	assert.Equal(t, 3, maxID)
+
+	// Incremental read after chat 3 returns nothing
+	history, maxID, err = svc.buildChatHistory(context.Background(), ws.ID, nil, 20, 3)
+	require.NoError(t, err)
+	assert.Len(t, history, 0)
+	assert.Equal(t, 0, maxID)
 }
 
 func TestChatService_SearchWorkspaceChatsFTS5(t *testing.T) {

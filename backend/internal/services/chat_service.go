@@ -45,7 +45,7 @@ func (s *ChatService) buildRAGContext(ctx context.Context, ws *models.Workspace,
 		if historyLimit <= 0 {
 			historyLimit = 20
 		}
-		history, err = s.buildChatHistory(ctx, ws.ID, threadID, historyLimit)
+		history, _, err = s.buildChatHistory(ctx, ws.ID, threadID, historyLimit, 0)
 		if err != nil {
 			return "", nil, nil, err
 		}
@@ -303,7 +303,7 @@ func (s *ChatService) Complete(ctx context.Context, ws *models.Workspace, user *
 	}, nil
 }
 
-func (s *ChatService) buildChatHistory(ctx context.Context, workspaceID int, threadID *int, limit int) ([]core.Message, error) {
+func (s *ChatService) buildChatHistory(ctx context.Context, workspaceID int, threadID *int, limit int, afterChatID int) ([]core.Message, int, error) {
 	var chats []models.WorkspaceChat
 	query := s.db.Where("workspace_id = ? AND include = ?", workspaceID, true)
 	if threadID != nil {
@@ -311,8 +311,11 @@ func (s *ChatService) buildChatHistory(ctx context.Context, workspaceID int, thr
 	} else {
 		query = query.Where("thread_id IS NULL")
 	}
+	if afterChatID > 0 {
+		query = query.Where("id > ?", afterChatID)
+	}
 	if err := query.Order("id DESC").Limit(limit).Find(&chats).Error; err != nil {
-		return nil, err
+		return nil, 0, err
 	}
 
 	history := make([]core.Message, 0, len(chats)*2)
@@ -321,7 +324,12 @@ func (s *ChatService) buildChatHistory(ctx context.Context, workspaceID int, thr
 		history = append(history, core.NewTextMessage(core.MESSAGE_ROLE_USER, c.Prompt))
 		history = append(history, core.NewTextMessage(core.MESSAGE_ROLE_ASSISTANT, c.Response))
 	}
-	return history, nil
+
+	maxChatID := 0
+	if len(chats) > 0 {
+		maxChatID = chats[0].ID // DESC order: first element has highest ID
+	}
+	return history, maxChatID, nil
 }
 
 func (s *ChatService) saveChatResponse(ctx context.Context, ws *models.Workspace, user *models.User, threadID *int, prompt, response string) {
