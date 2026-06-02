@@ -59,6 +59,7 @@ func AutoMigrate(db *gorm.DB) error {
 		&models.BrowserExtensionApiKey{},
 		&models.AgentSkill{},
 		&models.AgentSkillFile{},
+		&models.ThreadCompaction{},
 	)
 }
 
@@ -74,6 +75,7 @@ func SeedDefaults(db *gorm.DB) error {
 		{Key: "setup_complete", Value: strPtr("false")},
 		{Key: "llm_provider", Value: strPtr("openai")},
 		{Key: "vector_db", Value: strPtr("lancedb")},
+		{Key: "context_compress_enabled", Value: strPtr("false")},
 	}
 	for _, s := range defaults {
 		if err := db.Create(&s).Error; err != nil {
