@@ -8,6 +8,7 @@ import (
 	"time"
 
 	"github.com/google/uuid"
+	agentcompression "github.com/odysseythink/hermind/backend/internal/agent/compression"
 	"github.com/odysseythink/hermind/backend/internal/config"
 	"github.com/odysseythink/hermind/backend/internal/dto"
 	"github.com/odysseythink/hermind/backend/internal/embedder"
@@ -31,10 +32,12 @@ type ChatService struct {
 	reranker     reranker.Reranker
 	memInj       *MemoryInjector
 	autoTitleSvc *AutoTitleService
+	compStore    *agentcompression.CompactionStore
+	sysSvc       *SystemService
 }
 
-func NewChatService(db *gorm.DB, cfg *config.Config, vectorSvc *VectorService, llmProv providers.LLMProvider, embedder embedder.Embedder, agentInvoker AgentInvoker, reranker reranker.Reranker, memInj *MemoryInjector, autoTitleSvc *AutoTitleService) *ChatService {
-	return &ChatService{db: db, cfg: cfg, vectorSvc: vectorSvc, llmProv: llmProv, embedder: embedder, agentInvoker: agentInvoker, reranker: reranker, memInj: memInj, autoTitleSvc: autoTitleSvc}
+func NewChatService(db *gorm.DB, cfg *config.Config, vectorSvc *VectorService, llmProv providers.LLMProvider, embedder embedder.Embedder, agentInvoker AgentInvoker, reranker reranker.Reranker, memInj *MemoryInjector, autoTitleSvc *AutoTitleService, compStore *agentcompression.CompactionStore, sysSvc *SystemService) *ChatService {
+	return &ChatService{db: db, cfg: cfg, vectorSvc: vectorSvc, llmProv: llmProv, embedder: embedder, agentInvoker: agentInvoker, reranker: reranker, memInj: memInj, autoTitleSvc: autoTitleSvc, compStore: compStore, sysSvc: sysSvc}
 }
 
 func (s *ChatService) buildRAGContext(ctx context.Context, ws *models.Workspace, user *models.User, threadID *int, message string, systemPromptOverride *string, historyOverride []core.Message) (systemPrompt string, sources []any, history []core.Message, err error) {
@@ -45,9 +48,17 @@ func (s *ChatService) buildRAGContext(ctx context.Context, ws *models.Workspace,
 		if historyLimit <= 0 {
 			historyLimit = 20
 		}
-		history, _, err = s.buildChatHistory(ctx, ws.ID, threadID, historyLimit, 0)
+		var afterChatID int
+		var summary string
+		if s.compStore != nil {
+			summary, afterChatID, _ = s.compStore.SeedForSession(ws.ID, threadID)
+		}
+		history, _, err = s.buildChatHistory(ctx, ws.ID, threadID, historyLimit, afterChatID)
 		if err != nil {
 			return "", nil, nil, err
+		}
+		if summary != "" {
+			history = append([]core.Message{core.NewTextMessage(core.MESSAGE_ROLE_ASSISTANT, summary)}, history...)
 		}
 	}
 

@@ -16,6 +16,7 @@ import (
 
 	"github.com/gin-gonic/gin"
 	"github.com/odysseythink/hermind/backend/internal/agent"
+	agentcompression "github.com/odysseythink/hermind/backend/internal/agent/compression"
 	"github.com/odysseythink/hermind/backend/internal/agent/flow"
 	"github.com/odysseythink/hermind/backend/internal/agent/tools/oauth"
 	"github.com/odysseythink/hermind/backend/internal/chunker"
@@ -250,7 +251,8 @@ func main() {
 		mlog.Fatal("failed to start worker manager", mlog.Err(err))
 	}
 	autoTitleSvc := services.NewAutoTitleService(db, llmProv)
-	chatSvc := services.NewChatService(db, cfg, vectorSvc, llmProv, emb, agentRuntime, rerankerSvc, memInj, autoTitleSvc)
+	compStore := agentcompression.NewCompactionStore(db)
+	chatSvc := services.NewChatService(db, cfg, vectorSvc, llmProv, emb, agentRuntime, rerankerSvc, memInj, autoTitleSvc, compStore, sysSvc)
 	agentRuntime.SetChatSearcher(chatSvc)
 	progressMgr := services.NewEmbeddingProgressManager()
 

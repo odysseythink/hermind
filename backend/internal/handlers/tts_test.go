@@ -45,7 +45,7 @@ func newTTSTestEnv(t *testing.T, cfg *config.Config, mockTTS tts.Provider) (*gin
 	}
 	enc, _ := utils.NewEncryptionManager("test-key")
 	authSvc := services.NewAuthService(db, cfg, enc)
-	chatSvc := services.NewChatService(db, cfg, nil, nil, nil, nil, nil, nil, nil)
+	chatSvc := services.NewChatService(db, cfg, nil, nil, nil, nil, nil, nil, nil, nil, nil)
 
 	r := gin.New()
 	api := r.Group("/api")
