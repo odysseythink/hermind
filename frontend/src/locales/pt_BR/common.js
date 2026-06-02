@@ -249,6 +249,23 @@ const TRANSLATIONS = {
         "Valores mais altos geram respostas mais criativas, mas para alguns modelos podem se tornar incoerentes.",
       hint: "Cada modelo LLM tem faixas de valores válidos. Consulte seu provedor.",
     },
+    compression: {
+      title: "Context Compression",
+      description:
+        "Automatically compress long conversation history to stay within the model's context window.",
+      followGlobal: "Follow global",
+      enabled: "Enabled",
+      disabled: "Disabled",
+      globalStatus: "Global default",
+      threshold: "Compression threshold",
+      thresholdDesc:
+        "Trigger compression when history exceeds this fraction of the context window. Leave empty to use path defaults (Agent 0.50, Chat 0.75).",
+      thresholdPlaceholder: "0.75",
+      contextLength: "Context length override",
+      contextLengthDesc:
+        "Override the model's context length (in tokens). Leave empty to use the built-in model map.",
+      contextLengthPlaceholder: "e.g. 128000",
+    },
   },
   "vector-workspace": {
     identifier: "Identificador do banco de dados",

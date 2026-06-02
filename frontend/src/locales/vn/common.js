@@ -242,6 +242,23 @@ const TRANSLATIONS = {
         "Số càng cao thì càng sáng tạo. Đối với một số mô hình, điều này có thể dẫn đến phản hồi không mạch lạc khi đặt quá cao.",
       hint: "Hầu hết các LLM có các phạm vi giá trị hợp lệ khác nhau. Tham khảo nhà cung cấp LLM của bạn để biết thông tin đó.",
     },
+    compression: {
+      title: "Context Compression",
+      description:
+        "Automatically compress long conversation history to stay within the model's context window.",
+      followGlobal: "Follow global",
+      enabled: "Enabled",
+      disabled: "Disabled",
+      globalStatus: "Global default",
+      threshold: "Compression threshold",
+      thresholdDesc:
+        "Trigger compression when history exceeds this fraction of the context window. Leave empty to use path defaults (Agent 0.50, Chat 0.75).",
+      thresholdPlaceholder: "0.75",
+      contextLength: "Context length override",
+      contextLengthDesc:
+        "Override the model's context length (in tokens). Leave empty to use the built-in model map.",
+      contextLengthPlaceholder: "e.g. 128000",
+    },
   },
   "vector-workspace": {
     identifier: "Định danh cơ sở dữ liệu vector",

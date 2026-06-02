@@ -231,6 +231,23 @@ const TRANSLATIONS = {
         "數值越高，創意度越高。對於某些模型，設定過高可能會導致不連貫的回應。",
       hint: "大多數 LLM 都有各自可接受的有效值範圍，請向 LLM 提供者查詢。",
     },
+    compression: {
+      title: "Context Compression",
+      description:
+        "Automatically compress long conversation history to stay within the model's context window.",
+      followGlobal: "Follow global",
+      enabled: "Enabled",
+      disabled: "Disabled",
+      globalStatus: "Global default",
+      threshold: "Compression threshold",
+      thresholdDesc:
+        "Trigger compression when history exceeds this fraction of the context window. Leave empty to use path defaults (Agent 0.50, Chat 0.75).",
+      thresholdPlaceholder: "0.75",
+      contextLength: "Context length override",
+      contextLengthDesc:
+        "Override the model's context length (in tokens). Leave empty to use the built-in model map.",
+      contextLengthPlaceholder: "e.g. 128000",
+    },
   },
   "vector-workspace": {
     identifier: "向量資料庫識別碼",

@@ -261,6 +261,23 @@ const TRANSLATIONS = {
         "Com més alt sigui el número, més creatiu serà. Per a alguns models, això pot provocar respostes incoherents si és massa alt.",
       hint: "La majoria dels LLM tenen diversos rangs acceptables de valors vàlids. Consulta el teu proveïdor de LLM per obtenir aquesta informació.",
     },
+    compression: {
+      title: "Context Compression",
+      description:
+        "Automatically compress long conversation history to stay within the model's context window.",
+      followGlobal: "Follow global",
+      enabled: "Enabled",
+      disabled: "Disabled",
+      globalStatus: "Global default",
+      threshold: "Compression threshold",
+      thresholdDesc:
+        "Trigger compression when history exceeds this fraction of the context window. Leave empty to use path defaults (Agent 0.50, Chat 0.75).",
+      thresholdPlaceholder: "0.75",
+      contextLength: "Context length override",
+      contextLengthDesc:
+        "Override the model's context length (in tokens). Leave empty to use the built-in model map.",
+      contextLengthPlaceholder: "e.g. 128000",
+    },
   },
   "vector-workspace": {
     identifier: "Identificador de la base de dades vectorial",
