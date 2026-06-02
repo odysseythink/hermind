@@ -10,6 +10,7 @@ import (
 	"github.com/gosimple/slug"
 	"github.com/odysseythink/hermind/backend/internal/dto"
 	"github.com/odysseythink/hermind/backend/internal/models"
+	"github.com/odysseythink/mlog"
 	"gorm.io/gorm"
 )
 
@@ -47,17 +48,51 @@ func (s *ThreadService) Create(ctx context.Context, workspaceID int, userID *int
 	}
 
 	thread := models.WorkspaceThread{
-		Name:          name,
-		Slug:          threadSlug,
-		WorkspaceID:   workspaceID,
-		UserID:        userID,
-		CreatedAt:     time.Now(),
-		LastUpdatedAt: time.Now(),
+		Name:           name,
+		Slug:           threadSlug,
+		WorkspaceID:    workspaceID,
+		UserID:         userID,
+		ParentThreadID: req.ParentThreadID,
+		CreatedAt:      time.Now(),
+		LastUpdatedAt:  time.Now(),
 	}
 	if err := s.db.Create(&thread).Error; err != nil {
 		return nil, fmt.Errorf("create thread: %w", err)
 	}
+
+	// Seed child thread with parent's latest compaction summary
+	if req.ParentThreadID != nil {
+		if err := s.seedCompactionFromParent(ctx, workspaceID, req.ParentThreadID, &thread.ID); err != nil {
+			mlog.Warning("thread handoff seeding failed: ", err)
+		}
+	}
+
 	return &thread, nil
+}
+
+func (s *ThreadService) seedCompactionFromParent(ctx context.Context, workspaceID int, parentThreadID, childThreadID *int) error {
+	if parentThreadID == nil || childThreadID == nil {
+		return nil
+	}
+	var parentComp models.ThreadCompaction
+	err := s.db.Where("workspace_id = ? AND thread_id = ?", workspaceID, *parentThreadID).
+		Order("created_at DESC").
+		First(&parentComp).Error
+	if err != nil {
+		if err == gorm.ErrRecordNotFound {
+			return nil // no parent compaction to seed
+		}
+		return err
+	}
+	seed := models.ThreadCompaction{
+		WorkspaceID:   workspaceID,
+		ThreadID:      childThreadID,
+		Summary:       parentComp.Summary,
+		UpToChatID:    0,
+		CreatedAt:     time.Now(),
+		LastUpdatedAt: time.Now(),
+	}
+	return s.db.Create(&seed).Error
 }
 
 func (s *ThreadService) List(ctx context.Context, workspaceID int) ([]models.WorkspaceThread, error) {
