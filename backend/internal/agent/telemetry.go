@@ -61,3 +61,25 @@ func logChatTerminated(eventLog eventLogger, userID *int, sessionUUID string, re
 		}, userID)
 	}()
 }
+
+func logCompactionFinished(eventLog eventLogger, userID *int, workspaceID int, path string, beforeTokens, afterTokens int, fallbackUsed bool) {
+	if isNilLogger(eventLog) {
+		return
+	}
+	go func() {
+		ctx, cancel := context.WithTimeout(context.Background(), 2*time.Second)
+		defer cancel()
+		savedPct := 0.0
+		if beforeTokens > 0 {
+			savedPct = float64(beforeTokens-afterTokens) / float64(beforeTokens) * 100
+		}
+		_ = eventLog.LogEvent(ctx, "compaction_finished", map[string]any{
+			"workspace_id":  workspaceID,
+			"path":          path,
+			"before_tokens": beforeTokens,
+			"after_tokens":  afterTokens,
+			"saved_pct":     savedPct,
+			"fallback_used": fallbackUsed,
+		}, userID)
+	}()
+}

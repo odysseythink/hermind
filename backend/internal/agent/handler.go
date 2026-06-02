@@ -84,7 +84,9 @@ func (r *Runtime) HandleWS(c *gin.Context) {
 	if r.testCompressorOverride != nil {
 		comp = r.testCompressorOverride
 	} else {
-		comp = buildCompressor(r.deps.DB, &ws, lm, r.deps.SysSvc)
+		comp = buildCompressor(r.deps.DB, &ws, lm, r.deps.SysSvc, func(summary string) {
+			_ = wc.Send(ServerFrame{Type: "context.compressed", Content: summary})
+		})
 	}
 	sess := newSession(sessCtx, inv.UUID, &ws, user, lm, systemPrompt, tool.NewRegistry(), wc, ttl, r.deps.EventLog, comp)
 

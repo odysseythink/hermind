@@ -11,7 +11,7 @@ import (
 // buildCompressor constructs a ContextEngine for the agent path when compression
 // is enabled (globally or per-workspace). It wraps the Pantheon Compressor in an
 // Observer that persists extracted summaries to thread_compactions.
-func buildCompressor(db *gorm.DB, ws *models.Workspace, lm core.LanguageModel, sysSvc *services.SystemService) agentcompression.ContextEngine {
+func buildCompressor(db *gorm.DB, ws *models.Workspace, lm core.LanguageModel, sysSvc *services.SystemService, onNotify agentcompression.NotifyFunc) agentcompression.ContextEngine {
 	store := agentcompression.NewCompactionStore(db)
 	comp := agentcompression.NewForAgent(lm, ws, store)
 	if comp == nil {
@@ -25,5 +25,6 @@ func buildCompressor(db *gorm.DB, ws *models.Workspace, lm core.LanguageModel, s
 			Summary:     summary,
 		})
 	})
+	obs.SetNotifyFunc(onNotify)
 	return obs
 }

@@ -14,17 +14,26 @@ const summaryPrefix = "[Compressed summary of earlier conversation]\n"
 // by the closure at the call site (handler.go / runtime.go).
 type SaveFunc func(summary string) error
 
+// NotifyFunc is called after a summary is successfully extracted and saved.
+type NotifyFunc func(summary string)
+
 // Observer wraps a ContextEngine to intercept compression results and extract
 // the summary for persistence. It is a typed shim for the missing
 // PreviousSummary()/SetPreviousSummary() accessors in current Pantheon.
 type Observer struct {
-	inner ContextEngine
-	save  SaveFunc
+	inner  ContextEngine
+	save   SaveFunc
+	notify NotifyFunc
 }
 
 // NewObserver wraps the given engine with summary-extraction persistence.
 func NewObserver(inner ContextEngine, save SaveFunc) *Observer {
 	return &Observer{inner: inner, save: save}
+}
+
+// SetNotifyFunc sets an optional callback that fires when a new summary is extracted.
+func (o *Observer) SetNotifyFunc(fn NotifyFunc) {
+	o.notify = fn
 }
 
 // Compress delegates to the inner engine, then extracts and saves any summary
@@ -34,8 +43,13 @@ func (o *Observer) Compress(ctx context.Context, history []core.Message) ([]core
 	if err != nil {
 		return nil, err
 	}
-	if summary := extractSummary(out); summary != "" && o.save != nil {
-		_ = o.save(summary)
+	if summary := extractSummary(out); summary != "" {
+		if o.save != nil {
+			_ = o.save(summary)
+		}
+		if o.notify != nil {
+			o.notify(summary)
+		}
 	}
 	return out, nil
 }

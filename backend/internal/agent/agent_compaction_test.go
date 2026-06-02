@@ -25,7 +25,7 @@ func TestBuildCompressor_EnabledWorkspace_ReturnsNonNil(t *testing.T) {
 	require.NoError(t, db.Save(ws).Error)
 
 	lm := &mockLanguageModel{provider: "openai", model: "gpt-4o-mini"}
-	comp := buildCompressor(db, ws, lm, nil)
+	comp := buildCompressor(db, ws, lm, nil, nil)
 	require.NotNil(t, comp, "expected compressor to be non-nil when workspace compression is enabled")
 }
 
@@ -38,7 +38,7 @@ func TestBuildCompressor_DisabledWorkspace_ReturnsNil(t *testing.T) {
 	require.NoError(t, db.Create(ws).Error)
 
 	lm := &mockLanguageModel{provider: "openai", model: "gpt-4o-mini"}
-	comp := buildCompressor(db, ws, lm, nil)
+	comp := buildCompressor(db, ws, lm, nil, nil)
 	require.Nil(t, comp, "expected compressor to be nil when workspace compression is disabled")
 }
 

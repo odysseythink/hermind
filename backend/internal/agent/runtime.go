@@ -182,7 +182,7 @@ func (r *Runtime) RunAgentDirectly(ctx context.Context, invUUID string, io Agent
 	if r.testCompressorOverride != nil {
 		comp = r.testCompressorOverride
 	} else {
-		comp = buildCompressor(r.deps.DB, &ws, lm, r.deps.SysSvc)
+		comp = buildCompressor(r.deps.DB, &ws, lm, r.deps.SysSvc, nil)
 	}
 	sess := newSession(sessCtx, inv.UUID, &ws, user, lm, systemPrompt, tool.NewRegistry(), io, ttl, r.deps.EventLog, comp)
 
