@@ -22,4 +22,7 @@ type Workspace struct {
 	AgentModel           *string   `json:"agentModel"`
 	QueryRefusalResponse *string   `json:"queryRefusalResponse"`
 	VectorSearchMode     *string   `gorm:"default:default" json:"vectorSearchMode"`
+	CompressEnabled      *bool     `json:"compressEnabled"`
+	CompressThreshold    *float64  `json:"compressThreshold"`
+	CompressContextLen   *int      `json:"compressContextLen"`
 }
