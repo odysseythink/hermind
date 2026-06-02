@@ -18,6 +18,7 @@ import (
 	"github.com/odysseythink/hermind/backend/internal/vectordb"
 	"github.com/odysseythink/hermind/backend/pkg/utils"
 	"github.com/odysseythink/mlog"
+	"github.com/odysseythink/pantheon/agent/compression"
 	"github.com/odysseythink/pantheon/core"
 	"gorm.io/gorm"
 )
@@ -196,6 +197,12 @@ func (s *ChatService) Stream(ctx context.Context, ws *models.Workspace, user *mo
 		}
 		mlog.Info("ChatService.Stream: built history with ", len(history), " messages")
 
+		// Compression gate
+		history, err = s.tryCompressHistory(ctx, ws, threadID, history)
+		if err != nil {
+			mlog.Warning("ChatService.Stream: compression error: ", err)
+		}
+
 		// Add current user message to history
 		userContent := core.NewTextContent(req.Message)
 		for _, url := range req.Attachments {
@@ -289,6 +296,12 @@ func (s *ChatService) Complete(ctx context.Context, ws *models.Workspace, user *
 		return &dto.ChatResponse{ID: msgID, Type: "abort", Close: true, Error: err.Error()}, nil
 	}
 
+	// Compression gate
+	history, err = s.tryCompressHistory(ctx, ws, threadID, history)
+	if err != nil {
+		mlog.Warning("ChatService.Complete: compression error: ", err)
+	}
+
 	userContent := core.NewTextContent(req.Message)
 	for _, url := range req.Attachments {
 		userContent = append(userContent, core.ImagePart{URL: url})
@@ -373,6 +386,120 @@ func (s *ChatService) saveChatResponse(ctx context.Context, ws *models.Workspace
 	if threadID != nil && s.autoTitleSvc != nil {
 		s.autoTitleSvc.MaybeGenerate(ctx, *threadID, prompt, response)
 	}
+}
+
+// tryCompressHistory attempts to compress the conversation history before
+// sending it to the LLM. If compression is disabled, the aux model is nil,
+// or the threshold is not exceeded, the original history is returned unchanged.
+func (s *ChatService) tryCompressHistory(ctx context.Context, ws *models.Workspace, threadID *int, history []core.Message) ([]core.Message, error) {
+	if s.compStore == nil || s.sysSvc == nil {
+		return history, nil
+	}
+	globalEnabledStr, _ := s.sysSvc.GetSetting(ctx, "context_compress_enabled")
+	globalEnabled := globalEnabledStr == "true"
+	if !agentcompression.IsEnabledForWorkspace(globalEnabled, ws.CompressEnabled) {
+		return history, nil
+	}
+
+	aux := s.llmProv.LanguageModel()
+	if aux == nil {
+		return history, nil
+	}
+
+	cfg := compression.CompressionConfig{
+		Enabled:             true,
+		Threshold:           0.75,
+		TargetRatio:         0.2,
+		ProtectLast:         20,
+		MaxPasses:           3,
+		PerMessageMaxTokens: 8000,
+	}
+	if ws.CompressThreshold != nil {
+		cfg.Threshold = *ws.CompressThreshold
+	}
+	model := ""
+	if ws.ChatModel != nil {
+		model = *ws.ChatModel
+	}
+	ctxLen := agentcompression.ContextLengthFor(model)
+	if ws.CompressContextLen != nil {
+		ctxLen = *ws.CompressContextLen
+	}
+
+	comp := compression.NewCompressor(cfg, aux, ctxLen)
+	compressed, err := comp.Compress(ctx, history)
+	if err != nil {
+		mlog.Warning("ChatService: compression failed: ", err)
+		return history, nil
+	}
+	summary := extractSummaryFromCompressed(compressed)
+	if summary != "" {
+		if err := s.saveCompactionAndSoftDelete(ctx, ws.ID, threadID, summary); err != nil {
+			mlog.Warning("ChatService: compaction persistence failed: ", err)
+		}
+	}
+	return compressed, nil
+}
+
+// saveCompactionAndSoftDelete persists the summary and soft-deletes the
+// compressed chat rows so they are not re-read in future turns.
+func (s *ChatService) saveCompactionAndSoftDelete(ctx context.Context, workspaceID int, threadID *int, summary string) error {
+	maxChatID, err := s.maxChatIDForThread(ctx, workspaceID, threadID)
+	if err != nil || maxChatID == 0 {
+		return err
+	}
+	if err := s.compStore.Save(&models.ThreadCompaction{
+		WorkspaceID: workspaceID,
+		ThreadID:    threadID,
+		Summary:     summary,
+		UpToChatID:  maxChatID,
+	}); err != nil {
+		return fmt.Errorf("save compaction: %w", err)
+	}
+	if err := s.softDeleteChatsUpTo(ctx, workspaceID, threadID, maxChatID); err != nil {
+		return fmt.Errorf("soft-delete chats: %w", err)
+	}
+	return nil
+}
+
+func (s *ChatService) maxChatIDForThread(ctx context.Context, workspaceID int, threadID *int) (int, error) {
+	var maxID int
+	q := s.db.Model(&models.WorkspaceChat{}).Select("COALESCE(MAX(id), 0)").
+		Where("workspace_id = ? AND include = ?", workspaceID, true)
+	if threadID != nil {
+		q = q.Where("thread_id = ?", *threadID)
+	} else {
+		q = q.Where("thread_id IS NULL")
+	}
+	if err := q.Scan(&maxID).Error; err != nil {
+		return 0, err
+	}
+	return maxID, nil
+}
+
+func (s *ChatService) softDeleteChatsUpTo(ctx context.Context, workspaceID int, threadID *int, upToChatID int) error {
+	q := s.db.Model(&models.WorkspaceChat{}).
+		Where("workspace_id = ? AND id <= ?", workspaceID, upToChatID)
+	if threadID != nil {
+		q = q.Where("thread_id = ?", *threadID)
+	} else {
+		q = q.Where("thread_id IS NULL")
+	}
+	return q.Update("include", false).Error
+}
+
+func extractSummaryFromCompressed(msgs []core.Message) string {
+	const prefix = "[Compressed summary of earlier conversation]\n"
+	for _, m := range msgs {
+		if m.Role != core.MESSAGE_ROLE_ASSISTANT {
+			continue
+		}
+		text := m.Text()
+		if idx := strings.Index(text, prefix); idx >= 0 {
+			return text[idx+len(prefix):]
+		}
+	}
+	return ""
 }
 
 func (s *ChatService) GetChatByID(ctx context.Context, id int) (*models.WorkspaceChat, error) {

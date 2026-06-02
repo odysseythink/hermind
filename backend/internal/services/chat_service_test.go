@@ -433,3 +433,71 @@ func TestChatService_SearchWorkspaceChatsFTS5(t *testing.T) {
 	assert.Len(t, results, 1)
 	assert.Contains(t, results[0].Prompt, "Kubernetes")
 }
+
+func TestChatService_tryCompressHistory_Disabled(t *testing.T) {
+	db := setupChatDB(t)
+	cfg := &config.Config{}
+	svc := NewChatService(db, cfg, NewVectorService(cfg), nil, nil, nil, nil, nil, nil, nil, nil)
+
+	ws := &models.Workspace{Name: "ws", Slug: "ws"}
+	require.NoError(t, db.Create(ws).Error)
+
+	history := []core.Message{core.NewTextMessage(core.MESSAGE_ROLE_USER, "hello")}
+	result, err := svc.tryCompressHistory(context.Background(), ws, nil, history)
+	require.NoError(t, err)
+	assert.Len(t, result, 1)
+}
+
+func TestChatService_saveCompactionAndSoftDelete(t *testing.T) {
+	db := setupChatDB(t)
+	cfg := &config.Config{}
+	compStore := agentcompression.NewCompactionStore(db)
+	svc := NewChatService(db, cfg, NewVectorService(cfg), nil, nil, nil, nil, nil, nil, compStore, nil)
+
+	ws := &models.Workspace{Name: "ws", Slug: "ws"}
+	require.NoError(t, db.Create(ws).Error)
+
+	// Insert 3 chats
+	for i := 1; i <= 3; i++ {
+		require.NoError(t, db.Create(&models.WorkspaceChat{
+			WorkspaceID: ws.ID,
+			Prompt:      fmt.Sprintf("q%d", i),
+			Response:    fmt.Sprintf("a%d", i),
+			Include:     true,
+		}).Error)
+	}
+
+	require.NoError(t, svc.saveCompactionAndSoftDelete(context.Background(), ws.ID, nil, "Test summary"))
+
+	// Compaction should exist
+	c, err := compStore.LoadLatest(ws.ID, nil)
+	require.NoError(t, err)
+	require.NotNil(t, c)
+	assert.Equal(t, "Test summary", c.Summary)
+	assert.Equal(t, 3, c.UpToChatID)
+
+	// Chats 1–3 should be soft-deleted
+	var includedCount int64
+	require.NoError(t, db.Model(&models.WorkspaceChat{}).
+		Where("workspace_id = ? AND include = ?", ws.ID, true).
+		Where("thread_id IS NULL").
+		Count(&includedCount).Error)
+	assert.Equal(t, int64(0), includedCount)
+}
+
+func TestExtractSummaryFromCompressed(t *testing.T) {
+	prefix := "[Compressed summary of earlier conversation]\n"
+	msgs := []core.Message{
+		core.NewTextMessage(core.MESSAGE_ROLE_ASSISTANT, prefix+"The user asked about Go."),
+	}
+	assert.Equal(t, "The user asked about Go.", extractSummaryFromCompressed(msgs))
+
+	// No prefix
+	msgs2 := []core.Message{
+		core.NewTextMessage(core.MESSAGE_ROLE_ASSISTANT, "Just a normal response"),
+	}
+	assert.Equal(t, "", extractSummaryFromCompressed(msgs2))
+
+	// Empty
+	assert.Equal(t, "", extractSummaryFromCompressed(nil))
+}
