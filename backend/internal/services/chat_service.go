@@ -6,6 +6,7 @@ import (
 	"errors"
 	"fmt"
 	"strings"
+	"sync"
 	"time"
 
 	"github.com/google/uuid"
@@ -50,6 +51,9 @@ type ChatService struct {
 	autoTitleSvc *AutoTitleService
 	compStore    *agentcompression.CompactionStore
 	sysSvc       *SystemService
+
+	usageMu          sync.RWMutex
+	lastPromptTokens map[string]int // key: "wsID:threadID" or "wsID:nil"
 }
 
 func NewChatService(db *gorm.DB, cfg *config.Config, vectorSvc *VectorService, llmProv providers.LLMProvider, embedder embedder.Embedder, agentInvoker AgentInvoker, reranker reranker.Reranker, memInj *MemoryInjector, autoTitleSvc *AutoTitleService, compStore *agentcompression.CompactionStore, sysSvc *SystemService) *ChatService {
@@ -250,6 +254,9 @@ func (s *ChatService) Stream(ctx context.Context, ws *models.Workspace, user *mo
 			default:
 			}
 			chunkCount++
+			if chunk.Usage != nil {
+				s.recordUsage(ws.ID, threadID, *chunk.Usage)
+			}
 			if chunk.Err != nil {
 				mlog.Error("ChatService.Stream: chunk error: ", chunk.Err)
 				out <- dto.StreamChatResponse{
@@ -442,6 +449,14 @@ func (s *ChatService) tryCompressHistory(ctx context.Context, ws *models.Workspa
 	}
 
 	comp := compression.NewCompressor(cfg, aux, ctxLen)
+
+	// TODO(E3-calibration): Feed real usage from previous turn into the compressor
+	// when Pantheon exposes UpdateFromResponse. Until then, the cache records
+	// usage but does not influence compression behaviour.
+	// if lastPromptTokens, ok := s.getLastPromptTokens(ws.ID, threadID); ok {
+	//     _ = comp.UpdateFromResponse(core.Usage{PromptTokens: lastPromptTokens})
+	// }
+
 	compressed, err := comp.Compress(ctx, history)
 	if err != nil {
 		mlog.Warning("ChatService: compression failed: ", err)
@@ -616,6 +631,32 @@ func estimateTokens(msgs []core.Message) int {
 	}
 	// Rough heuristic: ~4 chars per token for English text.
 	return total / 4
+}
+
+func (s *ChatService) cacheKey(workspaceID int, threadID *int) string {
+	if threadID != nil {
+		return fmt.Sprintf("%d:%d", workspaceID, *threadID)
+	}
+	return fmt.Sprintf("%d:nil", workspaceID)
+}
+
+func (s *ChatService) recordUsage(workspaceID int, threadID *int, usage core.Usage) {
+	if usage.PromptTokens <= 0 {
+		return
+	}
+	s.usageMu.Lock()
+	defer s.usageMu.Unlock()
+	if s.lastPromptTokens == nil {
+		s.lastPromptTokens = make(map[string]int)
+	}
+	s.lastPromptTokens[s.cacheKey(workspaceID, threadID)] = usage.PromptTokens
+}
+
+func (s *ChatService) getLastPromptTokens(workspaceID int, threadID *int) (int, bool) {
+	s.usageMu.RLock()
+	defer s.usageMu.RUnlock()
+	v, ok := s.lastPromptTokens[s.cacheKey(workspaceID, threadID)]
+	return v, ok
 }
 
 func (s *ChatService) GetSuggestedMessages(ctx context.Context, ws *models.Workspace) ([]string, error) {
