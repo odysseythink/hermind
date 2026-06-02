@@ -9,6 +9,7 @@ import ChatTemperatureSettings from "./ChatTemperatureSettings";
 import ChatModeSelection from "./ChatModeSelection";
 import WorkspaceLLMSelection from "./WorkspaceLLMSelection";
 import ChatQueryRefusalResponse from "./ChatQueryRefusalResponse";
+import CompressionSettings from "./CompressionSettings";
 import CTAButton from "@/components/lib/CTAButton";
 
 export default function ChatSettings({ workspace }) {
@@ -87,6 +88,11 @@ export default function ChatSettings({ workspace }) {
         <ChatTemperatureSettings
           settings={settings}
           workspace={workspace}
+          setHasChanges={setHasChanges}
+        />
+        <CompressionSettings
+          workspace={workspace}
+          settings={settings}
           setHasChanges={setHasChanges}
         />
       </form>
