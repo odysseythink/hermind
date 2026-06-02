@@ -1,6 +1,6 @@
 # Hermes Agent 深度源码研究报告
 
-> **研究目标**: 深入分析 `../hermes-agent-2026.5.16` 源码，识别值得引入 Hermind 的亮点功能  
+> **研究目标**: 深入分析 `/Users/ranwei/workspace/go_work/hermes-agent-rewrite/hermes-agent-2026.5.16` 源码，识别值得引入 Hermind 的亮点功能  
 > **研究日期**: 2026-05-31  
 > **研究员**: Kimi Code CLI (Agent)  
 > **方法**: 静态代码分析 + 架构对比 + ROI 评估
