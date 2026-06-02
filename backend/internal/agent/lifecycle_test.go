@@ -16,7 +16,7 @@ func TestRuntime_Shutdown_CancelsPendingApprovals(t *testing.T) {
 
 	mock := &mockLanguageModel{provider: "mock", model: "mock-model", replies: []string{slowReply}}
 	ws := &models.Workspace{ID: 1}
-	sess := newSession(context.Background(), "test-uuid", ws, nil, mock, "You are helpful.", nil, wc, 2*time.Minute, nil)
+	sess := newSession(context.Background(), "test-uuid", ws, nil, mock, "You are helpful.", nil, wc, 2*time.Minute, nil, nil)
 
 	// Start an approval request in the background
 	result := make(chan bool, 1)
@@ -53,7 +53,7 @@ func TestRuntime_Shutdown_MultipleSessions_EachDrained(t *testing.T) {
 
 		mock := &mockLanguageModel{provider: "mock", model: "mock-model", replies: []string{slowReply}}
 		ws := &models.Workspace{ID: i + 1}
-		sess := newSession(context.Background(), "test-uuid-"+string(rune('a'+i)), ws, nil, mock, "You are helpful.", nil, wc, 2*time.Minute, nil)
+		sess := newSession(context.Background(), "test-uuid-"+string(rune('a'+i)), ws, nil, mock, "You are helpful.", nil, wc, 2*time.Minute, nil, nil)
 		sessions[i] = sess
 
 		results[i] = make(chan bool, 1)

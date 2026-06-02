@@ -48,7 +48,7 @@ func TestReader_BailCommands_AbortSession(t *testing.T) {
 				replies: []string{slowReply},
 			}
 			ws := &models.Workspace{ID: 1}
-			sess := newSession(context.Background(), "test-uuid", ws, nil, mock, "You are helpful.", nil, wc, 2*time.Minute, nil)
+			sess := newSession(context.Background(), "test-uuid", ws, nil, mock, "You are helpful.", nil, wc, 2*time.Minute, nil, nil)
 
 			go sess.readerLoopWithInput(&wsInput{conn: wc})
 
@@ -76,7 +76,7 @@ func TestReader_AwaitingFeedback_ForwardsToSession(t *testing.T) {
 		replies: []string{"INTERRUPT", "Continuing now.", "TERMINATE"},
 	}
 	ws := &models.Workspace{ID: 1}
-	sess := newSession(context.Background(), "test-uuid", ws, nil, mock, "You are helpful.", nil, wc, 2*time.Minute, nil)
+	sess := newSession(context.Background(), "test-uuid", ws, nil, mock, "You are helpful.", nil, wc, 2*time.Minute, nil, nil)
 
 	go sess.readerLoopWithInput(&wsInput{conn: wc})
 
@@ -112,7 +112,7 @@ func TestReader_InvalidJSONIsIgnored(t *testing.T) {
 		replies: []string{slowReply},
 	}
 	ws := &models.Workspace{ID: 1}
-	sess := newSession(context.Background(), "test-uuid", ws, nil, mock, "You are helpful.", nil, wc, 2*time.Minute, nil)
+	sess := newSession(context.Background(), "test-uuid", ws, nil, mock, "You are helpful.", nil, wc, 2*time.Minute, nil, nil)
 
 	go sess.readerLoopWithInput(&wsInput{conn: wc})
 	go func() { _ = sess.Run("@agent hi") }()
@@ -138,7 +138,7 @@ func TestReader_BinaryFramesIgnored(t *testing.T) {
 		replies: []string{slowReply},
 	}
 	ws := &models.Workspace{ID: 1}
-	sess := newSession(context.Background(), "test-uuid", ws, nil, mock, "You are helpful.", nil, wc, 2*time.Minute, nil)
+	sess := newSession(context.Background(), "test-uuid", ws, nil, mock, "You are helpful.", nil, wc, 2*time.Minute, nil, nil)
 
 	go sess.readerLoopWithInput(&wsInput{conn: wc})
 	go func() { _ = sess.Run("@agent hi") }()
@@ -160,7 +160,7 @@ func TestReader_ToolApprovalResp_WakesPendingApproval(t *testing.T) {
 
 	mock := &mockLanguageModel{provider: "mock", model: "mock-model", replies: []string{slowReply}}
 	ws := &models.Workspace{ID: 1}
-	sess := newSession(context.Background(), "test-uuid", ws, nil, mock, "You are helpful.", nil, wc, 2*time.Minute, nil)
+	sess := newSession(context.Background(), "test-uuid", ws, nil, mock, "You are helpful.", nil, wc, 2*time.Minute, nil, nil)
 
 	go sess.readerLoopWithInput(&wsInput{conn: wc})
 
@@ -191,7 +191,7 @@ func TestReader_SetAutoApprove_TogglesSession(t *testing.T) {
 
 	mock := &mockLanguageModel{provider: "mock", model: "mock-model", replies: []string{slowReply}}
 	ws := &models.Workspace{ID: 1}
-	sess := newSession(context.Background(), "test-uuid", ws, nil, mock, "You are helpful.", nil, wc, 2*time.Minute, nil)
+	sess := newSession(context.Background(), "test-uuid", ws, nil, mock, "You are helpful.", nil, wc, 2*time.Minute, nil, nil)
 
 	go sess.readerLoopWithInput(&wsInput{conn: wc})
 
@@ -213,7 +213,7 @@ func TestReader_ApprovalResp_UnknownRequestID_Ignored(t *testing.T) {
 
 	mock := &mockLanguageModel{provider: "mock", model: "mock-model", replies: []string{slowReply}}
 	ws := &models.Workspace{ID: 1}
-	sess := newSession(context.Background(), "test-uuid", ws, nil, mock, "You are helpful.", nil, wc, 2*time.Minute, nil)
+	sess := newSession(context.Background(), "test-uuid", ws, nil, mock, "You are helpful.", nil, wc, 2*time.Minute, nil, nil)
 
 	go sess.readerLoopWithInput(&wsInput{conn: wc})
 

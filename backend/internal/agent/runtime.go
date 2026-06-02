@@ -15,8 +15,7 @@ import (
 	"github.com/odysseythink/hermind/backend/internal/mcp"
 	"github.com/odysseythink/hermind/backend/internal/models"
 	"github.com/odysseythink/hermind/backend/internal/services"
-	pantheonAgent "github.com/odysseythink/pantheon/agent"
-	"github.com/odysseythink/pantheon/conversation"
+	agentcompression "github.com/odysseythink/hermind/backend/internal/agent/compression"
 	"github.com/odysseythink/pantheon/core"
 	"github.com/odysseythink/pantheon/tool"
 	"gorm.io/gorm"
@@ -49,6 +48,8 @@ type Runtime struct {
 	sessions   sync.Map           // uuid → *Session
 	lmCache    sync.Map           // string("provider:model") → core.LanguageModel
 	lmOverride core.LanguageModel // test-only
+
+	testCompressorOverride agentcompression.ContextEngine // test-only
 }
 
 func NewRuntime(d Deps) *Runtime {
@@ -100,6 +101,12 @@ func (r *Runtime) Sessions() *sync.Map {
 // the cache and the buildLanguageModel factory. Test-only.
 func (r *Runtime) SetTestLanguageModelOverride(m core.LanguageModel) {
 	r.lmOverride = m
+}
+
+// SetTestCompressorOverride installs a fixed compressor for integration tests.
+// Test-only.
+func (r *Runtime) SetTestCompressorOverride(c agentcompression.ContextEngine) {
+	r.testCompressorOverride = c
 }
 
 // SetChatSearcher injects the chat search service after runtime creation.
@@ -171,22 +178,20 @@ func (r *Runtime) RunAgentDirectly(ctx context.Context, invUUID string, io Agent
 	sessCtx, sessCancel := context.WithTimeout(ctx, sessTTL)
 	defer sessCancel()
 
-	sess := newSession(sessCtx, inv.UUID, &ws, user, lm, systemPrompt, tool.NewRegistry(), io, ttl, r.deps.EventLog)
+	var comp agentcompression.ContextEngine
+	if r.testCompressorOverride != nil {
+		comp = r.testCompressorOverride
+	} else {
+		comp = buildCompressor(r.deps.DB, &ws, lm, r.deps.SysSvc)
+	}
+	sess := newSession(sessCtx, inv.UUID, &ws, user, lm, systemPrompt, tool.NewRegistry(), io, ttl, r.deps.EventLog, comp)
 
 	reg, err := buildSessionRegistry(ctx, r.deps, &ws, user, lm, settings, nil, sess.RequestApproval)
 	if err != nil {
 		_ = io.Send(ServerFrame{Type: FrameWSSFailure, Content: "tools: " + err.Error()})
 		return err
 	}
-	sess.pAgent = pantheonAgent.New(lm,
-		pantheonAgent.WithRegistry(reg),
-		pantheonAgent.WithMaxSteps(10),
-	)
-	sess.conv.RegisterParticipant(&conversation.Participant{
-		Name:  participantAgent,
-		Role:  systemPrompt,
-		Agent: sess.pAgent,
-	})
+	sess.initAgent(lm, reg)
 
 	r.sessions.Store(inv.UUID, sess)
 	var userID *int

@@ -22,7 +22,7 @@ func TestSession_UsesAgentNotRawModel(t *testing.T) {
 		replies: []string{"Hello!", "TERMINATE"},
 	}
 	ws := &models.Workspace{ID: 1}
-	sess := newSession(context.Background(), "test-uuid", ws, nil, mock, "You are helpful.", tool.NewRegistry(), wc, 2*time.Minute, nil)
+	sess := newSession(context.Background(), "test-uuid", ws, nil, mock, "You are helpful.", tool.NewRegistry(), wc, 2*time.Minute, nil, nil)
 
 	require.NotNil(t, sess.pAgent, "Participant.Agent should be set")
 	// The conversation participant was registered with Agent set and Model left zero.
@@ -39,7 +39,7 @@ func TestSession_EmptyRegistry_StillReplies(t *testing.T) {
 		replies: []string{"Hello back!", "TERMINATE"},
 	}
 	ws := &models.Workspace{ID: 1}
-	sess := newSession(context.Background(), "test-uuid", ws, nil, mock, "You are helpful.", tool.NewRegistry(), wc, 2*time.Minute, nil)
+	sess := newSession(context.Background(), "test-uuid", ws, nil, mock, "You are helpful.", tool.NewRegistry(), wc, 2*time.Minute, nil, nil)
 
 	done := make(chan error, 1)
 	go func() {
@@ -76,7 +76,7 @@ func TestSession_AgentMaxStepsIs10(t *testing.T) {
 	}
 	ws := &models.Workspace{ID: 1}
 	reg := tool.NewRegistry()
-	sess := newSession(context.Background(), "test-uuid", ws, nil, mock, "You are helpful.", reg, wc, 2*time.Minute, nil)
+	sess := newSession(context.Background(), "test-uuid", ws, nil, mock, "You are helpful.", reg, wc, 2*time.Minute, nil, nil)
 
 	done := make(chan error, 1)
 	go func() {

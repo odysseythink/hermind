@@ -44,7 +44,7 @@ func TestTelemetry_ChatSent_FiresOnEachNonUserMessage(t *testing.T) {
 	mock := &mockLanguageModel{provider: "mock", model: "mock-model", replies: []string{"Hello!", "TERMINATE"}}
 	ws := &models.Workspace{ID: 1}
 	mel := &mockEventLogger{}
-	sess := newSession(context.Background(), "sess-1", ws, nil, mock, "You are helpful.", nil, wc, 2*time.Minute, mel)
+	sess := newSession(context.Background(), "sess-1", ws, nil, mock, "You are helpful.", nil, wc, 2*time.Minute, mel, nil)
 
 	done := make(chan error, 1)
 	go func() { done <- sess.Run("@agent hi") }()
@@ -76,7 +76,7 @@ func TestTelemetry_ChatSent_NotFiredForUserMessages(t *testing.T) {
 	mock := &mockLanguageModel{provider: "mock", model: "mock-model", replies: []string{"INTERRUPT", "Continuing now.", "TERMINATE"}}
 	ws := &models.Workspace{ID: 1}
 	mel := &mockEventLogger{}
-	sess := newSession(context.Background(), "sess-2", ws, nil, mock, "You are helpful.", nil, wc, 2*time.Minute, mel)
+	sess := newSession(context.Background(), "sess-2", ws, nil, mock, "You are helpful.", nil, wc, 2*time.Minute, mel, nil)
 
 	done := make(chan error, 1)
 	go func() { done <- sess.Run("@agent hi") }()

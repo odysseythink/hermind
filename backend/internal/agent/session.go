@@ -7,9 +7,11 @@ import (
 	"sync/atomic"
 	"time"
 
+	agentcompression "github.com/odysseythink/hermind/backend/internal/agent/compression"
 	"github.com/odysseythink/hermind/backend/internal/models"
 	"github.com/odysseythink/mlog"
 	pantheonAgent "github.com/odysseythink/pantheon/agent"
+	pcompression "github.com/odysseythink/pantheon/agent/compression"
 	"github.com/odysseythink/pantheon/conversation"
 	"github.com/odysseythink/pantheon/core"
 	"github.com/odysseythink/pantheon/tool"
@@ -69,6 +71,9 @@ type Session struct {
 
 	// PR-AR-5: telemetry
 	eventLog eventLogger
+
+	// Context-compression engine (nil when disabled).
+	compressor agentcompression.ContextEngine
 }
 
 // eventLogger is the narrow interface needed for telemetry.
@@ -82,7 +87,7 @@ type feedbackMsg struct {
 }
 
 func newSession(parentCtx context.Context, uuid string, ws *models.Workspace, user *models.User,
-	lm core.LanguageModel, systemPrompt string, reg *tool.Registry, io AgentIO, approvalTTL time.Duration, eventLog eventLogger) *Session {
+	lm core.LanguageModel, systemPrompt string, reg *tool.Registry, io AgentIO, approvalTTL time.Duration, eventLog eventLogger, compressor agentcompression.ContextEngine) *Session {
 
 	ctx, cancel := context.WithCancel(parentCtx)
 	s := &Session{
@@ -100,6 +105,7 @@ func newSession(parentCtx context.Context, uuid string, ws *models.Workspace, us
 		approvals:    make(map[string]chan approvalResp),
 		approvalTTL:  approvalTTL,
 		eventLog:     eventLog,
+		compressor:   compressor,
 	}
 	if user != nil {
 		s.UserID = &user.ID
@@ -112,28 +118,49 @@ func newSession(parentCtx context.Context, uuid string, ws *models.Workspace, us
 		Interrupt: conversation.InterruptNever,
 	})
 
-	s.pAgent = pantheonAgent.New(lm,
-		pantheonAgent.WithRegistry(reg),
-		pantheonAgent.WithMaxSteps(10),
-	)
-	s.conv.RegisterParticipant(&conversation.Participant{
-		Name:  participantAgent,
-		Role:  systemPrompt,
-		Agent: s.pAgent,
-	})
+	s.initAgent(lm, reg)
 	installEventBridges(s)
 	return s
 }
 
+// initAgent builds the pantheon Agent with the current registry and optional
+// compressor, then registers it as the @agent participant.
+func (s *Session) initAgent(lm core.LanguageModel, reg *tool.Registry) {
+	opts := []pantheonAgent.Option{
+		pantheonAgent.WithRegistry(reg),
+		pantheonAgent.WithMaxSteps(10),
+	}
+	if s.compressor != nil {
+		if obs, ok := s.compressor.(*agentcompression.Observer); ok {
+			if inner := obs.Inner(); inner != nil {
+				opts = append(opts, pantheonAgent.WithCompressor(inner))
+			}
+		} else if pc, ok := s.compressor.(*pcompression.Compressor); ok {
+			opts = append(opts, pantheonAgent.WithCompressor(pc))
+		}
+	}
+	s.pAgent = pantheonAgent.New(lm, opts...)
+	s.conv.RegisterParticipant(&conversation.Participant{
+		Name:  participantAgent,
+		Role:  s.systemPrompt,
+		Agent: s.pAgent,
+	})
+}
+
 // NewSessionForTesting creates a Session for unit tests. Test-only.
 func NewSessionForTesting(parentCtx context.Context, uuid string, ws *models.Workspace, user *models.User,
-	lm core.LanguageModel, systemPrompt string, reg *tool.Registry, io AgentIO) *Session {
-	return newSession(parentCtx, uuid, ws, user, lm, systemPrompt, reg, io, 2*time.Minute, nil)
+	lm core.LanguageModel, systemPrompt string, reg *tool.Registry, io AgentIO, compressor agentcompression.ContextEngine) *Session {
+	return newSession(parentCtx, uuid, ws, user, lm, systemPrompt, reg, io, 2*time.Minute, nil, compressor)
 }
 
 // PantheonAgent returns the underlying pantheon agent for test introspection. Test-only.
 func (s *Session) PantheonAgent() *pantheonAgent.Agent {
 	return s.pAgent
+}
+
+// CompressorForTesting returns the compressor for test introspection. Test-only.
+func (s *Session) CompressorForTesting() agentcompression.ContextEngine {
+	return s.compressor
 }
 
 func (s *Session) Run(prompt string) error {

@@ -33,7 +33,7 @@ func TestSession_Run_SingleTurnReply(t *testing.T) {
 	}
 
 	ws := &models.Workspace{ID: 1}
-	sess := agent.NewSessionForTesting(context.Background(), "test-uuid", ws, nil, mock, "You are helpful.", nil, wc)
+	sess := agent.NewSessionForTesting(context.Background(), "test-uuid", ws, nil, mock, "You are helpful.", nil, wc, nil)
 
 	done := make(chan error, 1)
 	go func() {
@@ -62,7 +62,7 @@ func TestSession_Run_ContextCancelStopsRunLoop(t *testing.T) {
 
 	ctx, cancel := context.WithCancel(context.Background())
 	ws := &models.Workspace{ID: 1}
-	sess := agent.NewSessionForTesting(ctx, "test-uuid", ws, nil, mock, "You are helpful.", nil, wc)
+	sess := agent.NewSessionForTesting(ctx, "test-uuid", ws, nil, mock, "You are helpful.", nil, wc, nil)
 
 	done := make(chan error, 1)
 	go func() {
@@ -88,7 +88,7 @@ func TestSession_Run_InterruptAndContinue(t *testing.T) {
 	}
 
 	ws := &models.Workspace{ID: 1}
-	sess := agent.NewSessionForTesting(context.Background(), "test-uuid", ws, nil, mock, "You are helpful.", nil, wc)
+	sess := agent.NewSessionForTesting(context.Background(), "test-uuid", ws, nil, mock, "You are helpful.", nil, wc, nil)
 
 	done := make(chan error, 1)
 	go func() {

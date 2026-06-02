@@ -17,7 +17,7 @@ func TestSession_RequestApproval_UserApproves_ReturnsTrue(t *testing.T) {
 
 	mock := &mockLanguageModel{provider: "mock", model: "mock-model", replies: []string{slowReply}}
 	ws := &models.Workspace{ID: 1}
-	sess := newSession(context.Background(), "test-uuid", ws, nil, mock, "You are helpful.", nil, wc, 2*time.Minute, nil)
+	sess := newSession(context.Background(), "test-uuid", ws, nil, mock, "You are helpful.", nil, wc, 2*time.Minute, nil, nil)
 
 	go sess.readerLoopWithInput(&wsInput{conn: wc})
 
@@ -58,7 +58,7 @@ func TestSession_RequestApproval_UserRejects_ReturnsFalse(t *testing.T) {
 
 	mock := &mockLanguageModel{provider: "mock", model: "mock-model", replies: []string{slowReply}}
 	ws := &models.Workspace{ID: 1}
-	sess := newSession(context.Background(), "test-uuid", ws, nil, mock, "You are helpful.", nil, wc, 2*time.Minute, nil)
+	sess := newSession(context.Background(), "test-uuid", ws, nil, mock, "You are helpful.", nil, wc, 2*time.Minute, nil, nil)
 
 	go sess.readerLoopWithInput(&wsInput{conn: wc})
 
@@ -95,7 +95,7 @@ func TestSession_RequestApproval_Timeout_ReturnsFalseWithReason(t *testing.T) {
 
 	mock := &mockLanguageModel{provider: "mock", model: "mock-model", replies: []string{slowReply}}
 	ws := &models.Workspace{ID: 1}
-	sess := newSession(context.Background(), "test-uuid", ws, nil, mock, "You are helpful.", nil, wc, 100*time.Millisecond, nil)
+	sess := newSession(context.Background(), "test-uuid", ws, nil, mock, "You are helpful.", nil, wc, 100*time.Millisecond, nil, nil)
 
 	approved, reason := sess.RequestApproval(context.Background(), "test-skill", nil, "test desc")
 	require.False(t, approved)
@@ -109,7 +109,7 @@ func TestSession_RequestApproval_CtxCancel_ReturnsFalseWithReason(t *testing.T) 
 
 	mock := &mockLanguageModel{provider: "mock", model: "mock-model", replies: []string{slowReply}}
 	ws := &models.Workspace{ID: 1}
-	sess := newSession(context.Background(), "test-uuid", ws, nil, mock, "You are helpful.", nil, wc, 2*time.Minute, nil)
+	sess := newSession(context.Background(), "test-uuid", ws, nil, mock, "You are helpful.", nil, wc, 2*time.Minute, nil, nil)
 
 	ctx, cancel := context.WithCancel(context.Background())
 	go func() {
@@ -129,7 +129,7 @@ func TestSession_RequestApproval_AutoApproveBypassesGate(t *testing.T) {
 
 	mock := &mockLanguageModel{provider: "mock", model: "mock-model", replies: []string{slowReply}}
 	ws := &models.Workspace{ID: 1}
-	sess := newSession(context.Background(), "test-uuid", ws, nil, mock, "You are helpful.", nil, wc, 2*time.Minute, nil)
+	sess := newSession(context.Background(), "test-uuid", ws, nil, mock, "You are helpful.", nil, wc, 2*time.Minute, nil, nil)
 	sess.SetAutoApprove(true)
 
 	// No frame should be sent because auto-approve bypasses the gate
@@ -150,7 +150,7 @@ func TestSession_RequestApproval_ConcurrentRequests_RoutedByRequestID(t *testing
 
 	mock := &mockLanguageModel{provider: "mock", model: "mock-model", replies: []string{slowReply}}
 	ws := &models.Workspace{ID: 1}
-	sess := newSession(context.Background(), "test-uuid", ws, nil, mock, "You are helpful.", nil, wc, 2*time.Minute, nil)
+	sess := newSession(context.Background(), "test-uuid", ws, nil, mock, "You are helpful.", nil, wc, 2*time.Minute, nil, nil)
 
 	go sess.readerLoopWithInput(&wsInput{conn: wc})
 
@@ -218,7 +218,7 @@ func TestSession_CancelAllApprovals_WakesAllPending(t *testing.T) {
 
 	mock := &mockLanguageModel{provider: "mock", model: "mock-model", replies: []string{slowReply}}
 	ws := &models.Workspace{ID: 1}
-	sess := newSession(context.Background(), "test-uuid", ws, nil, mock, "You are helpful.", nil, wc, 2*time.Minute, nil)
+	sess := newSession(context.Background(), "test-uuid", ws, nil, mock, "You are helpful.", nil, wc, 2*time.Minute, nil, nil)
 
 	const n = 3
 	results := make(chan bool, n)

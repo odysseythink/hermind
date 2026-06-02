@@ -10,8 +10,7 @@ import (
 	"github.com/odysseythink/hermind/backend/internal/agent/tools"
 	"github.com/odysseythink/hermind/backend/internal/models"
 	"github.com/odysseythink/mlog"
-	pantheonAgent "github.com/odysseythink/pantheon/agent"
-	"github.com/odysseythink/pantheon/conversation"
+	agentcompression "github.com/odysseythink/hermind/backend/internal/agent/compression"
 	"github.com/odysseythink/pantheon/core"
 	"github.com/odysseythink/pantheon/tool"
 )
@@ -81,7 +80,13 @@ func (r *Runtime) HandleWS(c *gin.Context) {
 	// Two-step construction breaks the circular dep between Session (which owns
 	// RequestApproval) and the tool Registry (which needs an ApprovalFn).
 	// Step 1: create Session with an empty placeholder registry.
-	sess := newSession(sessCtx, inv.UUID, &ws, user, lm, systemPrompt, tool.NewRegistry(), wc, ttl, r.deps.EventLog)
+	var comp agentcompression.ContextEngine
+	if r.testCompressorOverride != nil {
+		comp = r.testCompressorOverride
+	} else {
+		comp = buildCompressor(r.deps.DB, &ws, lm, r.deps.SysSvc)
+	}
+	sess := newSession(sessCtx, inv.UUID, &ws, user, lm, systemPrompt, tool.NewRegistry(), wc, ttl, r.deps.EventLog, comp)
 
 	// Step 2: build the real registry with the session's approval gate.
 	reg, err := buildSessionRegistry(c.Request.Context(), r.deps, &ws, user, lm, settings, nil, sess.RequestApproval)
@@ -91,15 +96,7 @@ func (r *Runtime) HandleWS(c *gin.Context) {
 	}
 
 	// Step 3: replace the placeholder agent with one backed by the real registry.
-	sess.pAgent = pantheonAgent.New(lm,
-		pantheonAgent.WithRegistry(reg),
-		pantheonAgent.WithMaxSteps(10),
-	)
-	sess.conv.RegisterParticipant(&conversation.Participant{
-		Name:  participantAgent,
-		Role:  systemPrompt,
-		Agent: sess.pAgent,
-	})
+	sess.initAgent(lm, reg)
 
 	r.sessions.Store(inv.UUID, sess)
 	var userID *int
