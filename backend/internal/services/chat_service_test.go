@@ -3,6 +3,7 @@ package services
 import (
 	"context"
 	"encoding/json"
+	"errors"
 	"fmt"
 	"testing"
 
@@ -467,7 +468,7 @@ func TestChatService_saveCompactionAndSoftDelete(t *testing.T) {
 		}).Error)
 	}
 
-	require.NoError(t, svc.saveCompactionAndSoftDelete(context.Background(), ws.ID, nil, "Test summary"))
+	require.NoError(t, svc.saveCompactionAndSoftDelete(context.Background(), ws.ID, nil, "Test summary", 0, 0, false))
 
 	// Compaction should exist
 	c, err := compStore.LoadLatest(ws.ID, nil)
@@ -483,6 +484,36 @@ func TestChatService_saveCompactionAndSoftDelete(t *testing.T) {
 		Where("thread_id IS NULL").
 		Count(&includedCount).Error)
 	assert.Equal(t, int64(0), includedCount)
+}
+
+func TestChatService_CompressNow_Disabled(t *testing.T) {
+	db := setupChatDB(t)
+	cfg := &config.Config{}
+	svc := NewChatService(db, cfg, NewVectorService(cfg), nil, nil, nil, nil, nil, nil, nil, nil)
+
+	ws := &models.Workspace{Name: "ws", Slug: "ws"}
+	require.NoError(t, db.Create(ws).Error)
+
+	_, err := svc.CompressNow(context.Background(), ws, nil, "")
+	require.Error(t, err)
+	assert.True(t, errors.Is(err, ErrCompressionNotAvailable))
+}
+
+func TestChatService_CompressNow_NothingToCompress(t *testing.T) {
+	db := setupChatDB(t)
+	cfg := &config.Config{}
+	compStore := agentcompression.NewCompactionStore(db)
+	sysSvc := NewSystemService(db)
+	require.NoError(t, sysSvc.SetSetting(context.Background(), "context_compress_enabled", "true"))
+
+	svc := NewChatService(db, cfg, NewVectorService(cfg), nil, nil, nil, nil, nil, nil, compStore, sysSvc)
+
+	ws := &models.Workspace{Name: "ws", Slug: "ws", CompressEnabled: boolPtr(true)}
+	require.NoError(t, db.Create(ws).Error)
+
+	_, err := svc.CompressNow(context.Background(), ws, nil, "")
+	require.Error(t, err)
+	assert.True(t, errors.Is(err, ErrNothingToCompress))
 }
 
 func TestExtractSummaryFromCompressed(t *testing.T) {

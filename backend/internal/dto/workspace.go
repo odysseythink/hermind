@@ -24,10 +24,16 @@ type WorkspaceListResponse struct {
 }
 
 type CreateThreadRequest struct {
-	Name string `json:"name"`
-	Slug string `json:"slug"`
+	Name           string `json:"name"`
+	Slug           string `json:"slug"`
+	ParentThreadID *int   `json:"parentThreadId,omitempty"`
 }
 
 type UpdateThreadRequest struct {
 	Name string `json:"name"`
+}
+
+type CompressRequest struct {
+	ThreadID *int   `json:"threadId"`
+	Topic    string `json:"topic"`
 }

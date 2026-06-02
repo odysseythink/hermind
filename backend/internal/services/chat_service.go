@@ -3,6 +3,7 @@ package services
 import (
 	"context"
 	"encoding/json"
+	"errors"
 	"fmt"
 	"strings"
 	"time"
@@ -22,6 +23,20 @@ import (
 	"github.com/odysseythink/pantheon/core"
 	"gorm.io/gorm"
 )
+
+var (
+	ErrNothingToCompress       = errors.New("nothing to compress")
+	ErrCompressionNotAvailable = errors.New("compression not available")
+)
+
+// CompactionResult is the outcome of a manual or automatic compression.
+type CompactionResult struct {
+	Before       int     `json:"before"`
+	After        int     `json:"after"`
+	SavedPct     float64 `json:"savedPct"`
+	Summary      string  `json:"summary"`
+	FallbackUsed bool    `json:"fallbackUsed"`
+}
 
 type ChatService struct {
 	db           *gorm.DB
@@ -434,7 +449,7 @@ func (s *ChatService) tryCompressHistory(ctx context.Context, ws *models.Workspa
 	}
 	summary := extractSummaryFromCompressed(compressed)
 	if summary != "" {
-		if err := s.saveCompactionAndSoftDelete(ctx, ws.ID, threadID, summary); err != nil {
+		if err := s.saveCompactionAndSoftDelete(ctx, ws.ID, threadID, summary, 0, 0, false); err != nil {
 			mlog.Warning("ChatService: compaction persistence failed: ", err)
 		}
 	}
@@ -443,22 +458,26 @@ func (s *ChatService) tryCompressHistory(ctx context.Context, ws *models.Workspa
 
 // saveCompactionAndSoftDelete persists the summary and soft-deletes the
 // compressed chat rows so they are not re-read in future turns.
-func (s *ChatService) saveCompactionAndSoftDelete(ctx context.Context, workspaceID int, threadID *int, summary string) error {
+func (s *ChatService) saveCompactionAndSoftDelete(ctx context.Context, workspaceID int, threadID *int, summary string, beforeTokens, afterTokens int, fallbackUsed bool) error {
 	maxChatID, err := s.maxChatIDForThread(ctx, workspaceID, threadID)
 	if err != nil || maxChatID == 0 {
 		return err
 	}
 	if err := s.compStore.Save(&models.ThreadCompaction{
-		WorkspaceID: workspaceID,
-		ThreadID:    threadID,
-		Summary:     summary,
-		UpToChatID:  maxChatID,
+		WorkspaceID:  workspaceID,
+		ThreadID:     threadID,
+		Summary:      summary,
+		UpToChatID:   maxChatID,
+		BeforeTokens: beforeTokens,
+		AfterTokens:  afterTokens,
+		FallbackUsed: fallbackUsed,
 	}); err != nil {
 		return fmt.Errorf("save compaction: %w", err)
 	}
 	if err := s.softDeleteChatsUpTo(ctx, workspaceID, threadID, maxChatID); err != nil {
 		return fmt.Errorf("soft-delete chats: %w", err)
 	}
+	mlog.Info("chat compaction: ", beforeTokens, "→", afterTokens, " tokens")
 	return nil
 }
 
@@ -508,6 +527,95 @@ func (s *ChatService) GetChatByID(ctx context.Context, id int) (*models.Workspac
 		return nil, err
 	}
 	return &chat, nil
+}
+
+// CompressNow performs an on-demand compression of the full chat history.
+// It bypasses the automatic threshold gate (always attempts compression).
+// Returns ErrNothingToCompress if history is too short, or ErrCompressionNotAvailable
+// if compression is disabled for the workspace.
+func (s *ChatService) CompressNow(ctx context.Context, ws *models.Workspace, threadID *int, topic string) (CompactionResult, error) {
+	if s.compStore == nil || s.sysSvc == nil {
+		return CompactionResult{}, ErrCompressionNotAvailable
+	}
+	globalEnabledStr, _ := s.sysSvc.GetSetting(ctx, "context_compress_enabled")
+	globalEnabled := globalEnabledStr == "true"
+	if !agentcompression.IsEnabledForWorkspace(globalEnabled, ws.CompressEnabled) {
+		return CompactionResult{}, ErrCompressionNotAvailable
+	}
+
+	// Read full history (no limit truncation)
+	history, maxChatID, err := s.buildChatHistory(ctx, ws.ID, threadID, 999999, 0)
+	if err != nil {
+		return CompactionResult{}, err
+	}
+
+	const minMessagesForCompress = 4 // at least 2 user/assistant pairs
+	if len(history) < minMessagesForCompress {
+		return CompactionResult{}, ErrNothingToCompress
+	}
+
+	aux := s.llmProv.LanguageModel()
+	if aux == nil {
+		return CompactionResult{}, ErrCompressionNotAvailable
+	}
+
+	cfg := compression.CompressionConfig{
+		Enabled:             true,
+		Threshold:           0.75,
+		TargetRatio:         0.2,
+		ProtectLast:         20,
+		MaxPasses:           3,
+		PerMessageMaxTokens: 8000,
+	}
+	if ws.CompressThreshold != nil {
+		cfg.Threshold = *ws.CompressThreshold
+	}
+	model := ""
+	if ws.ChatModel != nil {
+		model = *ws.ChatModel
+	}
+	ctxLen := agentcompression.ContextLengthFor(model)
+	if ws.CompressContextLen != nil {
+		ctxLen = *ws.CompressContextLen
+	}
+	comp := compression.NewCompressor(cfg, aux, ctxLen)
+
+	before := estimateTokens(history)
+	compressed, err := comp.Compress(ctx, history)
+	if err != nil {
+		return CompactionResult{}, err
+	}
+	after := estimateTokens(compressed)
+	summary := extractSummaryFromCompressed(compressed)
+
+	// Persist and soft-delete
+	if summary != "" && maxChatID > 0 {
+		if err := s.saveCompactionAndSoftDelete(ctx, ws.ID, threadID, summary, before, after, false); err != nil {
+			mlog.Warning("CompressNow: persistence failed: ", err)
+		}
+	}
+
+	savedPct := 0.0
+	if before > 0 {
+		savedPct = float64(before-after) / float64(before) * 100
+	}
+
+	return CompactionResult{
+		Before:       before,
+		After:        after,
+		SavedPct:     savedPct,
+		Summary:      summary,
+		FallbackUsed: false,
+	}, nil
+}
+
+func estimateTokens(msgs []core.Message) int {
+	total := 0
+	for _, m := range msgs {
+		total += len(m.Text())
+	}
+	// Rough heuristic: ~4 chars per token for English text.
+	return total / 4
 }
 
 func (s *ChatService) GetSuggestedMessages(ctx context.Context, ws *models.Workspace) ([]string, error) {

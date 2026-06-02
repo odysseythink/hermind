@@ -2,6 +2,7 @@ package handlers
 
 import (
 	"encoding/json"
+	"errors"
 	"net/http"
 	"strconv"
 
@@ -227,6 +228,29 @@ func (h *ChatHandler) UpdateChatFeedback(c *gin.Context) {
 	c.JSON(http.StatusOK, gin.H{"success": true})
 }
 
+func (h *ChatHandler) Compress(c *gin.Context) {
+	ws := c.MustGet("workspace").(*models.Workspace)
+	var req dto.CompressRequest
+	if err := c.ShouldBindJSON(&req); err != nil {
+		c.JSON(http.StatusBadRequest, dto.ErrorResponse{Error: err.Error()})
+		return
+	}
+
+	result, err := h.chatSvc.CompressNow(c.Request.Context(), ws, req.ThreadID, req.Topic)
+	if err != nil {
+		switch {
+		case errors.Is(err, services.ErrNothingToCompress):
+			c.JSON(http.StatusConflict, gin.H{"error": "nothing to compress"})
+		case errors.Is(err, services.ErrCompressionNotAvailable):
+			c.JSON(http.StatusServiceUnavailable, gin.H{"error": "compression not available"})
+		default:
+			c.JSON(http.StatusInternalServerError, dto.ErrorResponse{Error: err.Error()})
+		}
+		return
+	}
+	c.JSON(http.StatusOK, result)
+}
+
 func RegisterChatRoutes(r *gin.RouterGroup, chatSvc *services.ChatService, authSvc *services.AuthService, db *gorm.DB) {
 	h := NewChatHandler(chatSvc)
 	r.POST("/workspace/:slug/stream-chat",
@@ -270,4 +294,9 @@ func RegisterChatRoutes(r *gin.RouterGroup, chatSvc *services.ChatService, authS
 		middleware.FlexUserRoleValid([]string{"all"}),
 		middleware.ValidWorkspaceSlug(db),
 		h.UpdateChatFeedback)
+	r.POST("/workspace/:slug/compress",
+		middleware.ValidatedRequest(authSvc),
+		middleware.FlexUserRoleValid([]string{"all"}),
+		middleware.ValidWorkspaceSlug(db),
+		h.Compress)
 }
