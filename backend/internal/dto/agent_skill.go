@@ -9,6 +9,7 @@ type CreateAgentSkillRequest struct {
 	Content     string `json:"content"`
 	Frontmatter string `json:"frontmatter,omitempty"`
 	CreatedBy   string `json:"createdBy,omitempty"`
+	WriteOrigin string `json:"writeOrigin,omitempty"` // foreground | background_review | curator
 }
 
 type UpdateAgentSkillRequest struct {

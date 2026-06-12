@@ -350,3 +350,27 @@ func TestAgentSkillService_PinnedProtection(t *testing.T) {
 }
 
 func boolPtr(b bool) *bool { return &b }
+
+func TestAgentSkillService_WriteOriginDefault(t *testing.T) {
+	db := setupAgentSkillTestDB(t)
+	svc := NewAgentSkillService(db)
+	ctx := context.Background()
+
+	skill, err := svc.Create(ctx, 1, dto.CreateAgentSkillRequest{
+		Name:        "origin-test",
+		Description: "WriteOrigin default",
+		Content:     "test content",
+	})
+	require.NoError(t, err)
+	assert.Equal(t, "foreground", skill.WriteOrigin)
+
+	// Explicit WriteOrigin
+	skill2, err := svc.Create(ctx, 1, dto.CreateAgentSkillRequest{
+		Name:        "origin-test2",
+		Description: "Explicit origin",
+		Content:     "...",
+		WriteOrigin: "background_review",
+	})
+	require.NoError(t, err)
+	assert.Equal(t, "background_review", skill2.WriteOrigin)
+}

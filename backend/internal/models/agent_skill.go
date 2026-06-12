@@ -33,6 +33,7 @@ type AgentSkill struct {
 	LastViewedAt  *time.Time `json:"lastViewedAt"`
 	LastPatchedAt *time.Time `json:"lastPatchedAt"`
 	CreatedBy     string     `gorm:"default:agent" json:"createdBy"` // "agent" | "user"
+	WriteOrigin   string     `gorm:"default:foreground" json:"writeOrigin"` // foreground | background_review | curator
 	CreatedAt     time.Time  `json:"createdAt"`
 	UpdatedAt     time.Time  `json:"updatedAt"`
 }

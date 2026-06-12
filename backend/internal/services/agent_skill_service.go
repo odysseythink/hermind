@@ -214,6 +214,10 @@ func (s *AgentSkillService) Create(ctx context.Context, workspaceID int, req dto
 	if createdBy == "" {
 		createdBy = models.AgentSkillCreatedByAgent
 	}
+	writeOrigin := req.WriteOrigin
+	if writeOrigin == "" {
+		writeOrigin = "foreground"
+	}
 
 	skill := models.AgentSkill{
 		WorkspaceID: workspaceID,
@@ -225,6 +229,7 @@ func (s *AgentSkillService) Create(ctx context.Context, workspaceID int, req dto
 		Frontmatter: frontmatter,
 		Status:      models.AgentSkillStatusActive,
 		CreatedBy:   createdBy,
+		WriteOrigin: writeOrigin,
 		CreatedAt:   time.Now(),
 		UpdatedAt:   time.Now(),
 	}
