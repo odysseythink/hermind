@@ -75,9 +75,10 @@ func (s *BackupService) Snapshot(ctx context.Context, workspaceID int) (string, 
 		})
 	}
 
+	now := time.Now().UTC()
 	snap := snapshotData{
 		WorkspaceID: workspaceID,
-		Timestamp:   time.Now().UTC(),
+		Timestamp:   now,
 		Skills:      entries,
 	}
 
@@ -91,7 +92,7 @@ func (s *BackupService) Snapshot(ctx context.Context, workspaceID int) (string, 
 		return "", fmt.Errorf("mkdir: %w", err)
 	}
 
-	filename := time.Now().UTC().Format("20060102-150405") + ".json"
+	filename := now.Format("20060102-150405") + ".json"
 	if err := os.WriteFile(filepath.Join(dir, filename), data, 0640); err != nil {
 		return "", fmt.Errorf("write file: %w", err)
 	}
@@ -169,10 +170,24 @@ func (s *BackupService) List(ctx context.Context, workspaceID int) ([]SnapshotIn
 		if err != nil {
 			continue
 		}
+
+		skillCount, fileCount := 0, 0
+		if data, err := os.ReadFile(filepath.Join(dir, name)); err == nil {
+			var snap snapshotData
+			if err := json.Unmarshal(data, &snap); err == nil {
+				skillCount = len(snap.Skills)
+				for _, entry := range snap.Skills {
+					fileCount += len(entry.Files)
+				}
+			}
+		}
+
 		infos = append(infos, SnapshotInfo{
 			SnapshotID:  snapshotID,
 			WorkspaceID: workspaceID,
 			CreatedAt:   info.ModTime(),
+			SkillCount:  skillCount,
+			FileCount:   fileCount,
 		})
 	}
 	sort.Slice(infos, func(i, j int) bool {

@@ -99,6 +99,7 @@ func skillManageCreate(ctx context.Context, tc *ToolContext, skillSvc services.A
 	}
 
 	if provenanceSvc != nil {
+		// create records the post-mutation (initial) skill state.
 		_ = provenanceSvc.Record(ctx, skill, "create", "", "agent", "")
 	}
 
@@ -196,7 +197,11 @@ func skillManagePatch(ctx context.Context, tc *ToolContext, skillSvc services.Ag
 			return tool.Error("Failed to patch file: " + err.Error()), nil
 		}
 		if provenanceSvc != nil {
-			_ = provenanceSvc.Record(ctx, skill, "patch", args.FilePath, "agent", "")
+			// Record post-mutation skill state for file patches too.
+			updatedSkill, err := skillSvc.GetBySlug(ctx, wsID, skillSlug)
+			if err == nil {
+				_ = provenanceSvc.Record(ctx, updatedSkill, "patch", args.FilePath, "agent", "")
+			}
 		}
 		return tool.Result(map[string]any{
 			"success":   true,
@@ -249,6 +254,7 @@ func skillManageDelete(ctx context.Context, tc *ToolContext, skillSvc services.A
 	}
 
 	if provenanceSvc != nil {
+		// delete records the pre-mutation skill because post-state no longer exists
 		_ = provenanceSvc.Record(ctx, skill, "delete", "", "agent", "")
 	}
 
@@ -297,7 +303,11 @@ func skillManageWriteFile(ctx context.Context, tc *ToolContext, skillSvc service
 	}
 
 	if provenanceSvc != nil {
-		_ = provenanceSvc.Record(ctx, skill, "write_file", args.FilePath, "agent", "")
+		// Record post-mutation skill state after the file write.
+		updatedSkill, err := skillSvc.GetBySlug(ctx, wsID, slugifyForLookup(args.Name))
+		if err == nil {
+			_ = provenanceSvc.Record(ctx, updatedSkill, "write_file", args.FilePath, "agent", "")
+		}
 	}
 
 	return tool.Result(map[string]any{
@@ -334,7 +344,11 @@ func skillManageRemoveFile(ctx context.Context, tc *ToolContext, skillSvc servic
 	}
 
 	if provenanceSvc != nil {
-		_ = provenanceSvc.Record(ctx, skill, "remove_file", args.FilePath, "agent", "")
+		// Record post-mutation skill state after the file removal.
+		updatedSkill, err := skillSvc.GetBySlug(ctx, wsID, slugifyForLookup(args.Name))
+		if err == nil {
+			_ = provenanceSvc.Record(ctx, updatedSkill, "remove_file", args.FilePath, "agent", "")
+		}
 	}
 
 	return tool.Result(map[string]any{
