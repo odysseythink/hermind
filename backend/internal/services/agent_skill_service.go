@@ -74,6 +74,7 @@ type AgentSkillManager interface {
 	BumpView(ctx context.Context, workspaceID int, skillSlug string) error
 	BumpPatch(ctx context.Context, workspaceID int, skillSlug string) error
 	ApplyCuratorTransitions(ctx context.Context, staleDays, archiveDays int) (map[string]int, error)
+	IsPinned(ctx context.Context, workspaceID int, skillSlug string) (bool, error)
 }
 
 // Ensure AgentSkillService implements AgentSkillManager.
@@ -676,6 +677,14 @@ func (s *AgentSkillService) ApplyCuratorTransitions(ctx context.Context, staleDa
 	}
 
 	return counts, nil
+}
+
+func (s *AgentSkillService) IsPinned(ctx context.Context, workspaceID int, skillSlug string) (bool, error) {
+	skill, err := s.GetBySlug(ctx, workspaceID, skillSlug)
+	if err != nil {
+		return false, err
+	}
+	return skill.Pinned, nil
 }
 
 // ---------------------------------------------------------------------------
