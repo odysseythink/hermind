@@ -40,6 +40,7 @@ type Deps struct {
 	WhitelistSvc    *services.AgentSkillWhitelistService
 	ChatSearcher    tools.ChatSearcher
 	AgentSkillSvc   services.AgentSkillManager
+	ProvenanceSvc   services.ProvenanceRecorder
 }
 
 type Runtime struct {

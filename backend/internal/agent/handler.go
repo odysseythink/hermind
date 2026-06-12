@@ -170,6 +170,7 @@ func buildSessionRegistry(ctx context.Context, deps Deps, ws *models.Workspace, 
 		WhitelistSvc:    deps.WhitelistSvc,
 		ChatSearcher:    deps.ChatSearcher,
 		AgentSkillSvc:   deps.AgentSkillSvc,
+		ProvenanceSvc:   deps.ProvenanceSvc,
 	}
 	// Avoid assigning a nil concrete pointer to an interface (Go nil-interface trap).
 	if deps.MCPHv != nil {

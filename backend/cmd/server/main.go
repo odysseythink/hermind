@@ -187,6 +187,8 @@ func main() {
 	extSvc := services.NewBrowserExtensionService(db)
 	threadSvc := services.NewThreadService(db)
 	agentSkillSvc := services.NewAgentSkillService(db)
+	provenanceSvc := services.NewProvenanceService(db)
+	backupSvc := services.NewBackupService(db, cfg.StorageDir, agentSkillSvc)
 	agentFlowSvc := services.NewAgentFlowService(cfg.StorageDir)
 	apiKeySvc := services.NewAPIKeyService(db)
 	promptPresetSvc := services.NewPromptPresetService(db)
@@ -221,6 +223,7 @@ func main() {
 		OutlookStore:    tokenStore,
 		WhitelistSvc:    whitelistSvc,
 		AgentSkillSvc:   agentSkillSvc,
+		ProvenanceSvc:   provenanceSvc,
 	})
 	sjSvc := services.NewScheduledJobService(db)
 	agentRunner := scheduler.NewRuntimeAgentRunner(agentRuntime, eventLogSvc)
@@ -245,7 +248,7 @@ func main() {
 		workers.NewSyncWatchedJob(db, cfg, coll),
 		workers.NewEmbedWorkerJob(db, cfg, emb, vectorDB),
 		workers.NewExtractMemoriesJob(db, memSvc, memExt, sysSvc),
-		workers.NewSkillCuratorJob(db, agentSkillSvc, sysSvc),
+		workers.NewSkillCuratorJobWithBackup(db, agentSkillSvc, sysSvc, backupSvc),
 	)
 	if err := workerMgr.Start(); err != nil {
 		mlog.Fatal("failed to start worker manager", mlog.Err(err))
