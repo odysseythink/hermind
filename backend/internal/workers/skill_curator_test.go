@@ -73,6 +73,74 @@ func TestSkillCuratorJob_StaleTransition(t *testing.T) {
 	assert.Equal(t, models.AgentSkillStatusStale, updated.Status)
 }
 
+func TestCuratorBackupCalled(t *testing.T) {
+	db, err := gorm.Open(sqlite.Open(":memory:"), &gorm.Config{})
+	require.NoError(t, err)
+	require.NoError(t, db.AutoMigrate(&models.Workspace{}, &models.AgentSkill{}, &models.AgentSkillFile{}, &models.SystemSetting{}))
+
+	skillSvc := services.NewAgentSkillService(db)
+	ctx := context.Background()
+
+	require.NoError(t, db.Create(&models.Workspace{ID: 1, Name: "ws-1", Slug: "ws-1"}).Error)
+	_, _ = skillSvc.Create(ctx, 1, dto.CreateAgentSkillRequest{Name: "backup-test", Content: "..."})
+
+	tmpDir := t.TempDir()
+	backupSvc := services.NewBackupService(db, tmpDir, skillSvc)
+	sysSvc := services.NewSystemService(db)
+
+	job := NewSkillCuratorJobWithBackup(db, skillSvc, sysSvc, backupSvc)
+
+	err = job.Run(ctx)
+	require.NoError(t, err)
+
+	// Verify backup file exists
+	infos, err := backupSvc.List(ctx, 1)
+	require.NoError(t, err)
+	assert.GreaterOrEqual(t, len(infos), 1)
+}
+
+func TestCuratorRespectsPinned(t *testing.T) {
+	db, err := gorm.Open(sqlite.Open(":memory:"), &gorm.Config{})
+	require.NoError(t, err)
+	require.NoError(t, db.AutoMigrate(&models.Workspace{}, &models.AgentSkill{}, &models.AgentSkillFile{}, &models.SystemSetting{}))
+
+	skillSvc := services.NewAgentSkillService(db)
+	ctx := context.Background()
+
+	require.NoError(t, db.Create(&models.Workspace{ID: 1, Name: "ws-1", Slug: "ws-1"}).Error)
+
+	// Create a pinned old skill
+	pinned, _ := skillSvc.Create(ctx, 1, dto.CreateAgentSkillRequest{Name: "pinned-old", Content: "..."})
+	db.Model(pinned).Updates(map[string]any{
+		"pinned":     true,
+		"created_at": db.Raw("datetime('now', '-100 days')"),
+	})
+
+	// Create an unpinned old skill
+	unpinned, _ := skillSvc.Create(ctx, 1, dto.CreateAgentSkillRequest{Name: "unpinned-old", Content: "..."})
+	db.Model(unpinned).Update("created_at", db.Raw("datetime('now', '-100 days')"))
+
+	tmpDir := t.TempDir()
+	backupSvc := services.NewBackupService(db, tmpDir, skillSvc)
+	sysSvc := services.NewSystemService(db)
+	job := NewSkillCuratorJobWithBackup(db, skillSvc, sysSvc, backupSvc)
+
+	// Set stale=30, archive=90
+	_ = sysSvc.SetSetting(ctx, "agent_skill_stale_after_days", "30")
+	_ = sysSvc.SetSetting(ctx, "agent_skill_archive_after_days", "90")
+
+	err = job.Run(ctx)
+	require.NoError(t, err)
+
+	// Pinned should remain active
+	p, _ := skillSvc.GetBySlug(ctx, 1, pinned.Slug)
+	assert.Equal(t, models.AgentSkillStatusActive, p.Status)
+
+	// Unpinned should be archived (100 days > 90 days)
+	u, _ := skillSvc.GetBySlug(ctx, 1, unpinned.Slug)
+	assert.Equal(t, models.AgentSkillStatusArchived, u.Status)
+}
+
 func TestSkillCuratorJob_Reactivation(t *testing.T) {
 	db, err := gorm.Open(sqlite.Open(":memory:"), &gorm.Config{})
 	require.NoError(t, err)
