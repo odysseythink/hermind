@@ -58,7 +58,7 @@ func handleSkillManage(ctx context.Context, tc *ToolContext, skillSvc services.A
 
 	switch args.Action {
 	case "create":
-		return skillManageCreate(ctx, tc, skillSvc, wsID, args)
+		return skillManageCreate(ctx, tc, skillSvc, provenanceSvc, wsID, args)
 	case "edit":
 		return skillManageEdit(ctx, tc, skillSvc, provenanceSvc, wsID, args)
 	case "patch":
@@ -74,7 +74,7 @@ func handleSkillManage(ctx context.Context, tc *ToolContext, skillSvc services.A
 	}
 }
 
-func skillManageCreate(ctx context.Context, tc *ToolContext, skillSvc services.AgentSkillManager, wsID int, args skillManageArgs) (string, error) {
+func skillManageCreate(ctx context.Context, tc *ToolContext, skillSvc services.AgentSkillManager, provenanceSvc services.ProvenanceRecorder, wsID int, args skillManageArgs) (string, error) {
 	if args.Content == "" {
 		return tool.Error("content is required for 'create'. Provide the full SKILL.md text (frontmatter + body)."), nil
 	}
@@ -96,6 +96,10 @@ func skillManageCreate(ctx context.Context, tc *ToolContext, skillSvc services.A
 	})
 	if err != nil {
 		return tool.Error("Failed to create skill: " + err.Error()), nil
+	}
+
+	if provenanceSvc != nil {
+		_ = provenanceSvc.Record(ctx, skill, "create", "", "agent", "")
 	}
 
 	result := map[string]any{
