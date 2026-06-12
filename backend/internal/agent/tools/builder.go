@@ -40,6 +40,7 @@ type BuilderDeps struct {
 	WhitelistSvc    *services.AgentSkillWhitelistService
 	ChatSearcher    ChatSearcher
 	AgentSkillSvc   services.AgentSkillManager
+	ProvenanceSvc   services.ProvenanceRecorder
 }
 
 // Builder composes a tool.Registry from multiple sources per session.
@@ -84,6 +85,7 @@ func (b *Builder) Build(ctx context.Context, ws *models.Workspace, user *models.
 		Approval:        b.deps.Approval,
 		Cfg:             b.deps.Cfg,
 		AgentSkillSvc:   b.deps.AgentSkillSvc,
+		ProvenanceSvc:   b.deps.ProvenanceSvc,
 	}
 
 	// Source 1: default skills
@@ -109,7 +111,7 @@ func (b *Builder) Build(ctx context.Context, ws *models.Workspace, user *models.
 	// Meta-skills: skill management tools — always enabled, not subject to disabled_skills list
 	if b.deps.AgentSkillSvc != nil {
 		for _, e := range []*tool.Entry{
-			NewSkillManageSkill(tc, b.deps.AgentSkillSvc),
+			NewSkillManageSkill(tc, b.deps.AgentSkillSvc, b.deps.ProvenanceSvc),
 			NewSkillsListSkill(tc, b.deps.AgentSkillSvc),
 			NewSkillViewSkill(tc, b.deps.AgentSkillSvc),
 		} {

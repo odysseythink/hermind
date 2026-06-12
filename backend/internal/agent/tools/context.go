@@ -53,4 +53,5 @@ type ToolContext struct {
 	Approval        ApprovalFn // nil = no gate (test default)
 	Cfg             *config.Config
 	AgentSkillSvc   services.AgentSkillManager
+	ProvenanceSvc   services.ProvenanceRecorder
 }

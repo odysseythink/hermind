@@ -14,7 +14,7 @@ import (
 	"github.com/odysseythink/pantheon/tool"
 )
 
-func NewSkillManageSkill(tc *ToolContext, skillSvc services.AgentSkillManager) *tool.Entry {
+func NewSkillManageSkill(tc *ToolContext, skillSvc services.AgentSkillManager, provenanceSvc services.ProvenanceRecorder) *tool.Entry {
 	return &tool.Entry{
 		Name:           "skill_manage",
 		Toolset:        "skills",
@@ -31,7 +31,7 @@ func NewSkillManageSkill(tc *ToolContext, skillSvc services.AgentSkillManager) *
 			if err := json.Unmarshal(raw, &args); err != nil {
 				return tool.Error(err.Error()), nil
 			}
-			return handleSkillManage(ctx, tc, skillSvc, args)
+			return handleSkillManage(ctx, tc, skillSvc, provenanceSvc, args)
 		},
 	}
 }
@@ -49,7 +49,7 @@ type skillManageArgs struct {
 	AbsorbedInto string `json:"absorbed_into,omitempty"`
 }
 
-func handleSkillManage(ctx context.Context, tc *ToolContext, skillSvc services.AgentSkillManager, args skillManageArgs) (string, error) {
+func handleSkillManage(ctx context.Context, tc *ToolContext, skillSvc services.AgentSkillManager, provenanceSvc services.ProvenanceRecorder, args skillManageArgs) (string, error) {
 	if args.Name == "" {
 		return tool.Error("name is required"), nil
 	}
@@ -60,15 +60,15 @@ func handleSkillManage(ctx context.Context, tc *ToolContext, skillSvc services.A
 	case "create":
 		return skillManageCreate(ctx, tc, skillSvc, wsID, args)
 	case "edit":
-		return skillManageEdit(ctx, tc, skillSvc, wsID, args)
+		return skillManageEdit(ctx, tc, skillSvc, provenanceSvc, wsID, args)
 	case "patch":
-		return skillManagePatch(ctx, tc, skillSvc, wsID, args)
+		return skillManagePatch(ctx, tc, skillSvc, provenanceSvc, wsID, args)
 	case "delete":
-		return skillManageDelete(ctx, tc, skillSvc, wsID, args)
+		return skillManageDelete(ctx, tc, skillSvc, provenanceSvc, wsID, args)
 	case "write_file":
-		return skillManageWriteFile(ctx, tc, skillSvc, wsID, args)
+		return skillManageWriteFile(ctx, tc, skillSvc, provenanceSvc, wsID, args)
 	case "remove_file":
-		return skillManageRemoveFile(ctx, tc, skillSvc, wsID, args)
+		return skillManageRemoveFile(ctx, tc, skillSvc, provenanceSvc, wsID, args)
 	default:
 		return tool.Error(fmt.Sprintf("Unknown action '%s'. Use: create, edit, patch, delete, write_file, remove_file", args.Action)), nil
 	}
@@ -111,9 +111,17 @@ func skillManageCreate(ctx context.Context, tc *ToolContext, skillSvc services.A
 	return tool.Result(result), nil
 }
 
-func skillManageEdit(ctx context.Context, tc *ToolContext, skillSvc services.AgentSkillManager, wsID int, args skillManageArgs) (string, error) {
+func skillManageEdit(ctx context.Context, tc *ToolContext, skillSvc services.AgentSkillManager, provenanceSvc services.ProvenanceRecorder, wsID int, args skillManageArgs) (string, error) {
 	if args.Content == "" {
 		return tool.Error("content is required for 'edit'. Provide the full updated SKILL.md text."), nil
+	}
+
+	skill, err := skillSvc.GetBySlug(ctx, wsID, slugifyForLookup(args.Name))
+	if err != nil {
+		return tool.Error("Skill not found: " + err.Error()), nil
+	}
+	if skill.Pinned {
+		return tool.Error(fmt.Sprintf("Skill '%s' is pinned and cannot be edited. Unpin it first.", args.Name)), nil
 	}
 
 	// Require approval for destructive edit
@@ -131,7 +139,7 @@ func skillManageEdit(ctx context.Context, tc *ToolContext, skillSvc services.Age
 
 	tc.Emit(fmt.Sprintf("Editing skill '%s'...", args.Name))
 
-	skill, err := skillSvc.Update(ctx, wsID, slugifyForLookup(args.Name), dto.UpdateAgentSkillRequest{
+	updated, err := skillSvc.Update(ctx, wsID, slugifyForLookup(args.Name), dto.UpdateAgentSkillRequest{
 		Content:     body,
 		Frontmatter: frontmatter,
 	})
@@ -139,12 +147,16 @@ func skillManageEdit(ctx context.Context, tc *ToolContext, skillSvc services.Age
 		return tool.Error("Failed to edit skill: " + err.Error()), nil
 	}
 
-	_ = skillSvc.BumpPatch(ctx, wsID, skill.Slug)
+	_ = skillSvc.BumpPatch(ctx, wsID, updated.Slug)
+
+	if provenanceSvc != nil {
+		_ = provenanceSvc.Record(ctx, updated, "edit", "", "agent", "")
+	}
 
 	result := map[string]any{
 		"success": true,
-		"message": fmt.Sprintf("Skill '%s' updated.", skill.Name),
-		"slug":    skill.Slug,
+		"message": fmt.Sprintf("Skill '%s' updated.", updated.Name),
+		"slug":    updated.Slug,
 	}
 	if frontmatter == "" {
 		result["warning"] = "No YAML frontmatter detected in content. Existing frontmatter was preserved. For best results, include '---\nname: ...\ndescription: ...\n---' at the start of your content."
@@ -152,14 +164,22 @@ func skillManageEdit(ctx context.Context, tc *ToolContext, skillSvc services.Age
 	return tool.Result(result), nil
 }
 
-func skillManagePatch(ctx context.Context, tc *ToolContext, skillSvc services.AgentSkillManager, wsID int, args skillManageArgs) (string, error) {
+func skillManagePatch(ctx context.Context, tc *ToolContext, skillSvc services.AgentSkillManager, provenanceSvc services.ProvenanceRecorder, wsID int, args skillManageArgs) (string, error) {
 	if args.OldString == "" {
 		return tool.Error("old_string is required for 'patch'."), nil
 	}
 
-	tc.Emit(fmt.Sprintf("Patching skill '%s'...", args.Name))
-
 	skillSlug := slugifyForLookup(args.Name)
+
+	skill, err := skillSvc.GetBySlug(ctx, wsID, skillSlug)
+	if err != nil {
+		return tool.Error("Skill not found: " + err.Error()), nil
+	}
+	if skill.Pinned {
+		return tool.Error(fmt.Sprintf("Skill '%s' is pinned and cannot be patched. Unpin it first.", args.Name)), nil
+	}
+
+	tc.Emit(fmt.Sprintf("Patching skill '%s'...", args.Name))
 
 	if args.FilePath != "" {
 		file, err := skillSvc.PatchFile(ctx, wsID, skillSlug, dto.PatchSkillFileRequest{
@@ -171,6 +191,9 @@ func skillManagePatch(ctx context.Context, tc *ToolContext, skillSvc services.Ag
 		if err != nil {
 			return tool.Error("Failed to patch file: " + err.Error()), nil
 		}
+		if provenanceSvc != nil {
+			_ = provenanceSvc.Record(ctx, skill, "patch", args.FilePath, "agent", "")
+		}
 		return tool.Result(map[string]any{
 			"success":   true,
 			"message":   fmt.Sprintf("Patched file '%s' in skill '%s'.", file.FilePath, args.Name),
@@ -178,7 +201,7 @@ func skillManagePatch(ctx context.Context, tc *ToolContext, skillSvc services.Ag
 		}), nil
 	}
 
-	skill, err := skillSvc.Patch(ctx, wsID, skillSlug, dto.PatchAgentSkillRequest{
+	patchedSkill, err := skillSvc.Patch(ctx, wsID, skillSlug, dto.PatchAgentSkillRequest{
 		OldString:  args.OldString,
 		NewString:  args.NewString,
 		ReplaceAll: args.ReplaceAll,
@@ -187,14 +210,26 @@ func skillManagePatch(ctx context.Context, tc *ToolContext, skillSvc services.Ag
 		return tool.Error("Failed to patch skill: " + err.Error()), nil
 	}
 
+	if provenanceSvc != nil {
+		_ = provenanceSvc.Record(ctx, patchedSkill, "patch", args.FilePath, "agent", "")
+	}
+
 	return tool.Result(map[string]any{
 		"success": true,
-		"message": fmt.Sprintf("Patched skill '%s'.", skill.Name),
-		"slug":    skill.Slug,
+		"message": fmt.Sprintf("Patched skill '%s'.", patchedSkill.Name),
+		"slug":    patchedSkill.Slug,
 	}), nil
 }
 
-func skillManageDelete(ctx context.Context, tc *ToolContext, skillSvc services.AgentSkillManager, wsID int, args skillManageArgs) (string, error) {
+func skillManageDelete(ctx context.Context, tc *ToolContext, skillSvc services.AgentSkillManager, provenanceSvc services.ProvenanceRecorder, wsID int, args skillManageArgs) (string, error) {
+	skill, err := skillSvc.GetBySlug(ctx, wsID, slugifyForLookup(args.Name))
+	if err != nil {
+		return tool.Error("Skill not found: " + err.Error()), nil
+	}
+	if skill.Pinned {
+		return tool.Error(fmt.Sprintf("Skill '%s' is pinned and cannot be deleted. Unpin it first.", args.Name)), nil
+	}
+
 	// Require approval for destructive delete
 	if tc.Approval != nil {
 		approved, reason := tc.Approval(ctx, "skill_manage", args, fmt.Sprintf("Delete skill '%s'", args.Name))
@@ -209,6 +244,10 @@ func skillManageDelete(ctx context.Context, tc *ToolContext, skillSvc services.A
 		return tool.Error("Failed to delete skill: " + err.Error()), nil
 	}
 
+	if provenanceSvc != nil {
+		_ = provenanceSvc.Record(ctx, skill, "delete", "", "agent", "")
+	}
+
 	msg := fmt.Sprintf("Skill '%s' deleted.", args.Name)
 	if args.AbsorbedInto != "" {
 		msg += fmt.Sprintf(" Content absorbed into '%s'.", args.AbsorbedInto)
@@ -220,12 +259,20 @@ func skillManageDelete(ctx context.Context, tc *ToolContext, skillSvc services.A
 	}), nil
 }
 
-func skillManageWriteFile(ctx context.Context, tc *ToolContext, skillSvc services.AgentSkillManager, wsID int, args skillManageArgs) (string, error) {
+func skillManageWriteFile(ctx context.Context, tc *ToolContext, skillSvc services.AgentSkillManager, provenanceSvc services.ProvenanceRecorder, wsID int, args skillManageArgs) (string, error) {
 	if args.FilePath == "" {
 		return tool.Error("file_path is required for 'write_file'. Example: 'references/api-guide.md'"), nil
 	}
 	if args.FileContent == "" {
 		return tool.Error("file_content is required for 'write_file'."), nil
+	}
+
+	skill, err := skillSvc.GetBySlug(ctx, wsID, slugifyForLookup(args.Name))
+	if err != nil {
+		return tool.Error("Skill not found: " + err.Error()), nil
+	}
+	if skill.Pinned {
+		return tool.Error(fmt.Sprintf("Skill '%s' is pinned and files cannot be modified. Unpin it first.", args.Name)), nil
 	}
 
 	// Require approval for file writes
@@ -245,15 +292,27 @@ func skillManageWriteFile(ctx context.Context, tc *ToolContext, skillSvc service
 		return tool.Error("Failed to write file: " + err.Error()), nil
 	}
 
+	if provenanceSvc != nil {
+		_ = provenanceSvc.Record(ctx, skill, "write_file", args.FilePath, "agent", "")
+	}
+
 	return tool.Result(map[string]any{
 		"success": true,
 		"message": fmt.Sprintf("File '%s' written to skill '%s'.", args.FilePath, args.Name),
 	}), nil
 }
 
-func skillManageRemoveFile(ctx context.Context, tc *ToolContext, skillSvc services.AgentSkillManager, wsID int, args skillManageArgs) (string, error) {
+func skillManageRemoveFile(ctx context.Context, tc *ToolContext, skillSvc services.AgentSkillManager, provenanceSvc services.ProvenanceRecorder, wsID int, args skillManageArgs) (string, error) {
 	if args.FilePath == "" {
 		return tool.Error("file_path is required for 'remove_file'."), nil
+	}
+
+	skill, err := skillSvc.GetBySlug(ctx, wsID, slugifyForLookup(args.Name))
+	if err != nil {
+		return tool.Error("Skill not found: " + err.Error()), nil
+	}
+	if skill.Pinned {
+		return tool.Error(fmt.Sprintf("Skill '%s' is pinned and files cannot be removed. Unpin it first.", args.Name)), nil
 	}
 
 	// Require approval for destructive file removal
@@ -268,6 +327,10 @@ func skillManageRemoveFile(ctx context.Context, tc *ToolContext, skillSvc servic
 
 	if err := skillSvc.RemoveFile(ctx, wsID, slugifyForLookup(args.Name), args.FilePath); err != nil {
 		return tool.Error("Failed to remove file: " + err.Error()), nil
+	}
+
+	if provenanceSvc != nil {
+		_ = provenanceSvc.Record(ctx, skill, "remove_file", args.FilePath, "agent", "")
 	}
 
 	return tool.Result(map[string]any{
