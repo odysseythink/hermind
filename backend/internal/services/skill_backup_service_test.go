@@ -160,15 +160,17 @@ func TestBackupService_List(t *testing.T) {
 	tmpDir := t.TempDir()
 	backupSvc := NewBackupService(db, tmpDir, skillSvc)
 
-	_, _ = skillSvc.Create(ctx, 1, dto.CreateAgentSkillRequest{Name: "list-1", Content: "..."})
-	_, err := backupSvc.Snapshot(ctx, 1)
+	skill, err := skillSvc.Create(ctx, 1, dto.CreateAgentSkillRequest{Name: "list-1", Content: "..."})
+	require.NoError(t, err)
+	err = skillSvc.WriteFile(ctx, 1, skill.Slug, dto.WriteSkillFileRequest{FilePath: "references/doc.md", Content: "doc"})
 	require.NoError(t, err)
 
-	_, _ = skillSvc.Create(ctx, 1, dto.CreateAgentSkillRequest{Name: "list-2", Content: "..."})
 	_, err = backupSvc.Snapshot(ctx, 1)
 	require.NoError(t, err)
 
 	infos, err := backupSvc.List(ctx, 1)
 	require.NoError(t, err)
-	assert.GreaterOrEqual(t, len(infos), 1)
+	require.Len(t, infos, 1)
+	assert.Equal(t, 1, infos[0].SkillCount)
+	assert.Equal(t, 1, infos[0].FileCount)
 }

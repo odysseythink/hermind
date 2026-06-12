@@ -199,3 +199,37 @@ func TestAgentEditRecordsProvenance(t *testing.T) {
 	assert.Equal(t, "edit", logs[len(logs)-1].Action)
 	assert.Equal(t, "agent", logs[len(logs)-1].ActorType)
 }
+
+func TestAgentWriteFileRecordsProvenance(t *testing.T) {
+	db, skillSvc, provSvc := setupAgentToolTestDB(t)
+	ctx := context.Background()
+
+	skill, err := skillSvc.Create(ctx, 1, dto.CreateAgentSkillRequest{
+		Name:    "prov-write",
+		Content: "skill body",
+	})
+	require.NoError(t, err)
+
+	tc := &ToolContext{
+		Ctx:           ctx,
+		Workspace:     &models.Workspace{ID: 1},
+		Approval:      nil,
+		AgentSkillSvc: skillSvc,
+		ProvenanceSvc: provSvc,
+		Emit:          func(msg string) {},
+	}
+
+	_, _ = skillManageWriteFile(ctx, tc, skillSvc, provSvc, 1, skillManageArgs{
+		Name:        "prov-write",
+		FilePath:    "references/doc.md",
+		FileContent: "file content",
+	})
+
+	var logs []models.SkillProvenanceLog
+	err = db.Where("skill_id = ?", skill.ID).Find(&logs).Error
+	require.NoError(t, err)
+	require.Len(t, logs, 1)
+	assert.Equal(t, "write_file", logs[0].Action)
+	assert.Equal(t, "references/doc.md", logs[0].FilePath)
+	assert.Equal(t, "skill body", logs[0].Content)
+}

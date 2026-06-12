@@ -12,6 +12,7 @@ import (
 	"time"
 
 	"github.com/odysseythink/hermind/backend/internal/models"
+	"github.com/odysseythink/mlog"
 	"gorm.io/gorm"
 )
 
@@ -172,9 +173,14 @@ func (s *BackupService) List(ctx context.Context, workspaceID int) ([]SnapshotIn
 		}
 
 		skillCount, fileCount := 0, 0
-		if data, err := os.ReadFile(filepath.Join(dir, name)); err == nil {
+		data, err := os.ReadFile(filepath.Join(dir, name))
+		if err != nil {
+			mlog.Warning("backup: failed to read snapshot for listing", mlog.String("snapshot", snapshotID), mlog.Err(err))
+		} else {
 			var snap snapshotData
-			if err := json.Unmarshal(data, &snap); err == nil {
+			if err := json.Unmarshal(data, &snap); err != nil {
+				mlog.Warning("backup: failed to unmarshal snapshot for listing", mlog.String("snapshot", snapshotID), mlog.Err(err))
+			} else {
 				skillCount = len(snap.Skills)
 				for _, entry := range snap.Skills {
 					fileCount += len(entry.Files)
