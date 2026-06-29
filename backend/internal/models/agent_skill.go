@@ -1,6 +1,9 @@
 package models
 
-import "time"
+import (
+	"encoding/json"
+	"time"
+)
 
 const (
 	AgentSkillStatusActive   = "active"
@@ -20,6 +23,18 @@ type AgentSkill struct {
 	WorkspaceID   int        `gorm:"index:idx_ws_slug,unique;not null" json:"workspaceId"`
 	Name          string     `gorm:"not null" json:"name"`
 	Slug          string     `gorm:"index:idx_ws_slug,unique;not null" json:"slug"`
+
+	// Extracted from frontmatter into dedicated columns for structured querying
+	Platforms           string `gorm:"type:text;default:''" json:"platforms"`
+	RequiresTools       string `gorm:"type:text;default:''" json:"requiresTools"`
+	RequiresToolsets    string `gorm:"type:text;default:''" json:"requiresToolsets"`
+	FallbackForTools    string `gorm:"type:text;default:''" json:"fallbackForTools"`
+	FallbackForToolsets string `gorm:"type:text;default:''" json:"fallbackForToolsets"`
+	ConfigVars          string `gorm:"type:text;default:''" json:"configVars"`
+
+	// Sidecar JSON column (replaces .usage.json file)
+	UsageSidecar string `gorm:"type:text;default:'{}'" json:"usageSidecar"`
+
 	Description   string     `json:"description"`
 	Category      string     `json:"category"`
 	Content       string     `gorm:"type:text" json:"content"`     // SKILL.md body after frontmatter
@@ -51,3 +66,20 @@ type AgentSkillFile struct {
 }
 
 func (AgentSkillFile) TableName() string { return "agent_skill_files" }
+
+func (s *AgentSkill) parseJSONStringSlice(field string) []string {
+	if field == "" || field == "null" {
+		return nil
+	}
+	var arr []string
+	if err := json.Unmarshal([]byte(field), &arr); err != nil {
+		return nil
+	}
+	return arr
+}
+
+func (s *AgentSkill) ParsePlatforms() []string        { return s.parseJSONStringSlice(s.Platforms) }
+func (s *AgentSkill) ParseRequiresTools() []string    { return s.parseJSONStringSlice(s.RequiresTools) }
+func (s *AgentSkill) ParseRequiresToolsets() []string { return s.parseJSONStringSlice(s.RequiresToolsets) }
+func (s *AgentSkill) ParseFallbackForTools() []string { return s.parseJSONStringSlice(s.FallbackForTools) }
+func (s *AgentSkill) ParseFallbackForToolsets() []string { return s.parseJSONStringSlice(s.FallbackForToolsets) }

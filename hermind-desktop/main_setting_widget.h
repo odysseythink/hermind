@@ -15,6 +15,9 @@ public:
     explicit MainSettingWidget(QWidget *parent = nullptr);
     ~MainSettingWidget() override;
 
+signals:
+    void bottomReturnClicked();
+
 private slots:
     // 左侧设置菜单
     void on_aiProviderButton_clicked();
@@ -28,10 +31,7 @@ private slots:
     void on_toolsButton_clicked();
 
     // 底部图标按钮
-    void on_bottomChatButton_clicked();
-    void on_bottomDocsButton_clicked();
-    void on_bottomGithubButton_clicked();
-    void on_bottomToolsButton_clicked();
+    void on_bottomReturnButton_clicked();
 
     // 右侧下拉框变更
     void on_defaultWindowCombo_currentIndexChanged(int index);

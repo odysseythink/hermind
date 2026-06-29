@@ -68,14 +68,8 @@ void MainSettingWidget::setupConnections()
     connect(ui->toolsButton, &QPushButton::clicked,
             this, &MainSettingWidget::on_toolsButton_clicked);
 
-    connect(ui->bottomChatButton, &QToolButton::clicked,
-            this, &MainSettingWidget::on_bottomChatButton_clicked);
-    connect(ui->bottomDocsButton, &QToolButton::clicked,
-            this, &MainSettingWidget::on_bottomDocsButton_clicked);
-    connect(ui->bottomGithubButton, &QToolButton::clicked,
-            this, &MainSettingWidget::on_bottomGithubButton_clicked);
-    connect(ui->bottomToolsButton, &QToolButton::clicked,
-            this, &MainSettingWidget::on_bottomToolsButton_clicked);
+    connect(ui->bottomReturnButton, &QToolButton::clicked,
+            this, &MainSettingWidget::on_bottomReturnButton_clicked);
 
     connect(ui->defaultWindowCombo, QOverload<int>::of(&QComboBox::currentIndexChanged),
             this, &MainSettingWidget::on_defaultWindowCombo_currentIndexChanged);
@@ -135,7 +129,7 @@ void MainSettingWidget::setupStyleSheet()
             padding: 2px 12px;
         }
 
-        #bottomChatButton, #bottomDocsButton, #bottomGithubButton, #bottomToolsButton {
+        #bottomChatButton, #bottomDocsButton, #bottomGithubButton, #bottomReturnButton {
             border: none;
             border-radius: 14px;
             background-color: #DFE5EA;
@@ -147,7 +141,7 @@ void MainSettingWidget::setupStyleSheet()
             padding: 0px;
         }
 
-        #bottomChatButton:hover, #bottomDocsButton:hover, #bottomGithubButton:hover, #bottomToolsButton:hover {
+        #bottomChatButton:hover, #bottomDocsButton:hover, #bottomGithubButton:hover, #bottomReturnButton:hover {
             background-color: #D2D8DE;
         }
 
@@ -224,10 +218,10 @@ void MainSettingWidget::on_appearanceButton_clicked() { qDebug() << "appearance 
 void MainSettingWidget::on_channelsButton_clicked() { qDebug() << "channels clicked"; }
 void MainSettingWidget::on_toolsButton_clicked() { qDebug() << "tools clicked"; }
 
-void MainSettingWidget::on_bottomChatButton_clicked() { qDebug() << "bottom chat clicked"; }
-void MainSettingWidget::on_bottomDocsButton_clicked() { qDebug() << "bottom docs clicked"; }
-void MainSettingWidget::on_bottomGithubButton_clicked() { qDebug() << "bottom github clicked"; }
-void MainSettingWidget::on_bottomToolsButton_clicked() { qDebug() << "bottom tools clicked"; }
+void MainSettingWidget::on_bottomReturnButton_clicked() {
+    qDebug() << "bottom return clicked";
+    emit bottomReturnClicked();
+}
 
 void MainSettingWidget::on_defaultWindowCombo_currentIndexChanged(int index)
 {
