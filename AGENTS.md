@@ -59,7 +59,7 @@ hermind/
 │   ├── eslint.config.js         # ESLint flat config
 │   └── package.json             # Yarn-based dependencies
 ├── .github/workflows/           # CI: Go tests, lint, goreleaser, desktop builds
-└── .gpowers/                    # Design docs & ADRs (not shipped)
+└── .ody-code/                    # Design docs & ADRs (not shipped)
 ```
 
 ## Technology Stack
@@ -284,5 +284,5 @@ When investigating a bug and you are uncertain which hypothesis is correct, **pr
 
 ## Notes
 
-- The `.gpowers/` directory contains design documents and ADRs generated during planning. They are **not** shipped with the application and may drift from the actual code. Treat the source code as the source of truth.
+- The `.ody-code/` directory contains design documents and ADRs generated during planning. They are **not** shipped with the application and may drift from the actual code. Treat the source code as the source of truth.
 - The old Node.js backend was deleted in commit `b29f337`. Do not search for `api/`, `cmd/`, or `web/` at the repository root — those directories no longer exist. The current backend is entirely under `backend/`.
