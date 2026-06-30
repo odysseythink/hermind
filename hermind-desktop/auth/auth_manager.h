@@ -27,6 +27,9 @@ public:
     /// Initialize the singleton with explicit dependencies. Call once before use.
     void initialize(HermindApiClient *apiClient, SettingsStore *settings);
 
+    void setAuthToken(const QString &token);
+    void setUser(const HermindUser &user);
+
 signals:
     void authStateChanged(AuthState state);
     void userChanged(const HermindUser &user);
@@ -46,8 +49,6 @@ protected:
     Q_DISABLE_COPY(AuthManager)
 
     void setState(AuthState state);
-    void setUser(const HermindUser &user);
-    void setAuthToken(const QString &token);
     void setLastError(const QString &message);
 
     HermindApiClient *m_apiClient = nullptr;

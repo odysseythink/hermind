@@ -98,6 +98,11 @@ void AuthManager::login(const QString &username, const QString &password)
 
 void AuthManager::logout()
 {
+    if (m_settings)
+        m_settings->setAuthToken(QString());
+    if (m_apiClient)
+        m_apiClient->setAuthToken(QString());
+
     setAuthToken(QString());
     setUser(HermindUser());
     setLastError(QString());
@@ -106,20 +111,52 @@ void AuthManager::logout()
 
 void AuthManager::restoreSession()
 {
-    if (!m_settings) {
+    if (!m_settings || !m_apiClient) {
         setState(AuthState::Unauthenticated);
         return;
     }
+
     const QString token = m_settings->authToken();
     if (token.isEmpty()) {
         setState(AuthState::Unauthenticated);
         return;
     }
+
     setAuthToken(token);
+    m_apiClient->setAuthToken(token);
     setState(AuthState::Authenticated);
+    refreshUser();
 }
 
 void AuthManager::refreshUser()
 {
-    // Placeholder: filled in Task 4.
+    if (!m_apiClient) {
+        setState(AuthState::Unauthenticated);
+        return;
+    }
+
+    m_apiClient->refreshUser([this](const HermindUser &user, const QString &message, const ApiError &error) {
+        if (!error.isEmpty()) {
+            if (!message.isEmpty()) {
+                // Backend reported session invalid (multi-user): force logout.
+                logout();
+                setLastError(message);
+                emit authError(message);
+            } else {
+                // Network / server error during refresh: keep existing session but signal error.
+                emit authError(error.message());
+            }
+            return;
+        }
+
+        if (user.id() == 0) {
+            // Single-user mode: backend returns user=null, represented as id==0.
+            // Keep current user empty and do not signal a change unless it was non-empty.
+            if (m_currentUser.id() != 0)
+                setUser(HermindUser());
+            return;
+        }
+
+        setUser(user);
+    });
 }
