@@ -60,10 +60,40 @@ void AuthManager::setLastError(const QString &message)
 
 void AuthManager::login(const QString &username, const QString &password)
 {
-    Q_UNUSED(username)
-    Q_UNUSED(password)
+    if (!m_apiClient) {
+        setLastError(QStringLiteral("AuthManager not initialized"));
+        setState(AuthState::Error);
+        emit authError(m_lastError);
+        return;
+    }
+
     setState(AuthState::Authenticating);
     setLastError(QString());
+
+    m_apiClient->requestToken(username, password,
+        [this](const QString &token, const QString &message, const ApiError &error) {
+            if (!error.isEmpty() || token.isEmpty()) {
+                const QString errMsg = !error.isEmpty() ? error.message() : message;
+                setLastError(errMsg.isEmpty() ? QStringLiteral("Login failed") : errMsg);
+                setState(AuthState::Error);
+                emit authError(m_lastError);
+                return;
+            }
+
+            if (m_settings)
+                m_settings->setAuthToken(token);
+            setAuthToken(token);
+            m_apiClient->setAuthToken(token);
+            setState(AuthState::Authenticated);
+
+            // In multi-user mode the backend also returns a user in the
+            // request-token response. If available, set it immediately and
+            // then refresh to stay in sync with the server.
+            if (!message.isEmpty()) {
+                // message is the server message; user comes from refreshUser.
+                refreshUser();
+            }
+        });
 }
 
 void AuthManager::logout()
