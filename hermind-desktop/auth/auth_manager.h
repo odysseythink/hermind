@@ -29,6 +29,7 @@ public:
 
     void setAuthToken(const QString &token);
     void setUser(const HermindUser &user);
+    void setState(AuthState state);
 
 signals:
     void authStateChanged(AuthState state);
@@ -48,7 +49,6 @@ protected:
     ~AuthManager() override = default;
     Q_DISABLE_COPY(AuthManager)
 
-    void setState(AuthState state);
     void setLastError(const QString &message);
 
     HermindApiClient *m_apiClient = nullptr;
