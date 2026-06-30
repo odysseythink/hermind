@@ -45,4 +45,8 @@ frontend/node_modules/
 backend/bin/
 *.log
 storage/
+<<<<<<< HEAD
 ody-export-session_-*.md
+=======
+.ody-code/
+>>>>>>> origin

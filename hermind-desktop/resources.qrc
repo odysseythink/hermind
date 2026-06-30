@@ -1,0 +1,5 @@
+<RCC>
+    <qresource prefix="/images">
+        <file alias="logo.svg">assets/logo.svg</file>
+    </qresource>
+</RCC>
