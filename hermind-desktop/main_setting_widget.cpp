@@ -1,5 +1,6 @@
 #include "main_setting_widget.h"
 #include "ui_main_setting_widget.h"
+#include "theme_manager.h"
 
 #include <QButtonGroup>
 #include <QDebug>
@@ -230,10 +231,19 @@ void MainSettingWidget::on_defaultWindowCombo_currentIndexChanged(int index)
 
 void MainSettingWidget::on_themeCombo_currentIndexChanged(int index)
 {
-    qDebug() << "theme changed:" << index;
+    switch (index) {
+    case 0: ThemeManager::instance().setTheme(QStringLiteral("system")); break;
+    case 1: ThemeManager::instance().setTheme(QStringLiteral("light"));  break;
+    case 2: ThemeManager::instance().setTheme(QStringLiteral("dark"));   break;
+    }
+    qDebug() << "theme changed:" << index << "→" << ThemeManager::instance().theme();
 }
 
 void MainSettingWidget::on_languageCombo_currentIndexChanged(int index)
 {
-    qDebug() << "language changed:" << index;
+    switch (index) {
+    case 0: ThemeManager::instance().setLanguage(QStringLiteral("en")); break;
+    case 1: ThemeManager::instance().setLanguage(QStringLiteral("zh")); break;
+    }
+    qDebug() << "language changed:" << index << "→" << ThemeManager::instance().language();
 }
