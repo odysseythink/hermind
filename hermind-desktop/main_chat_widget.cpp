@@ -1,5 +1,14 @@
 #include "main_chat_widget.h"
 #include "ui_main_chat_widget.h"
+#include "widgets/icon_button.h"
+#include "widgets/search_input.h"
+#include "widgets/theme_colors.h"
+#include "theme_manager.h"
+
+#include <QDebug>
+#include <QPixmap>
+#include <QLineEdit>
+#include <QBoxLayout>
 
 MainChatWidget::MainChatWidget(QWidget *parent)
     : QWidget(parent)
@@ -7,6 +16,8 @@ MainChatWidget::MainChatWidget(QWidget *parent)
 {
     ui->setupUi(this);
 
+    replaceToolButtons();
+    replaceSearchEdit();
 
     setupLogo();
     setupThreadList();
@@ -33,6 +44,85 @@ MainChatWidget::~MainChatWidget()
     delete ui;
 }
 
+void MainChatWidget::replaceToolButtons()
+{
+    auto replaceOne = [this](const QString &name, const QString &iconText) {
+        QToolButton *oldBtn = findChild<QToolButton *>(name);
+        if (!oldBtn)
+            return;
+
+        IconButton *newBtn = new IconButton(this);
+        newBtn->setObjectName(name);
+        newBtn->setIconText(iconText);
+
+        QLayout *layout = oldBtn->parentWidget()->layout();
+        if (layout) {
+            int idx = -1;
+            for (int i = 0; i < layout->count(); ++i) {
+                if (layout->itemAt(i)->widget() == oldBtn) {
+                    idx = i;
+                    break;
+                }
+            }
+            if (idx >= 0) {
+                layout->removeWidget(oldBtn);
+                if (auto *box = qobject_cast<QBoxLayout *>(layout))
+                    box->insertWidget(idx, newBtn);
+            }
+        }
+
+        oldBtn->deleteLater();
+
+        // Update ui-> pointer (all QToolButton* members)
+        if (name == QLatin1String("popoutButton")) ui->popoutButton = newBtn;
+        else if (name == QLatin1String("newSearchButton")) ui->newSearchButton = newBtn;
+        else if (name == QLatin1String("uploadButton")) ui->uploadButton = newBtn;
+        else if (name == QLatin1String("workspaceSettingsButton")) ui->workspaceSettingsButton = newBtn;
+        else if (name == QLatin1String("headerSettingsButton")) ui->headerSettingsButton = newBtn;
+        else if (name == QLatin1String("micButton")) ui->micButton = newBtn;
+        else if (name == QLatin1String("sendButton")) ui->sendButton = newBtn;
+        else if (name == QLatin1String("bottomSettingButton")) ui->bottomSettingButton = newBtn;
+    };
+
+    replaceOne(QStringLiteral("popoutButton"), QString::fromUtf8("⧉"));
+    replaceOne(QStringLiteral("newSearchButton"), QStringLiteral("+"));
+    replaceOne(QStringLiteral("uploadButton"), QString::fromUtf8("⬆"));
+    replaceOne(QStringLiteral("workspaceSettingsButton"), QString::fromUtf8("⚙"));
+    replaceOne(QStringLiteral("headerSettingsButton"), QString::fromUtf8("⚙"));
+    replaceOne(QStringLiteral("micButton"), QString::fromUtf8("🎤"));
+    replaceOne(QStringLiteral("sendButton"), QString::fromUtf8("➤"));
+    replaceOne(QStringLiteral("bottomSettingButton"), QString::fromUtf8("🔧"));
+}
+
+void MainChatWidget::replaceSearchEdit()
+{
+    QLineEdit *oldEdit = ui->searchEdit;
+    if (!oldEdit)
+        return;
+
+    SearchInput *newEdit = new SearchInput(this);
+    newEdit->setObjectName(QStringLiteral("searchEdit"));
+    newEdit->setPlaceholderText(oldEdit->placeholderText());
+
+    QLayout *layout = oldEdit->parentWidget()->layout();
+    if (layout) {
+        int idx = -1;
+        for (int i = 0; i < layout->count(); ++i) {
+            if (layout->itemAt(i)->widget() == oldEdit) {
+                idx = i;
+                break;
+            }
+        }
+        if (idx >= 0) {
+            layout->removeWidget(oldEdit);
+            if (auto *box = qobject_cast<QBoxLayout *>(layout))
+                box->insertWidget(idx, newEdit);
+        }
+    }
+
+    oldEdit->deleteLater();
+    ui->searchEdit = newEdit;
+}
 
 void MainChatWidget::setupLogo()
 {
@@ -54,87 +144,44 @@ void MainChatWidget::setupThreadList()
 
 void MainChatWidget::setupStyleSheet()
 {
-    setStyleSheet(R"(
-        QWidget {
-            background-color: #FFFFFF;
+    const bool dark = ThemeManager::instance().isDarkMode();
+    const QString windowBg = ThemeColors::windowBackground(dark).name();
+    const QString sidebarBg = ThemeColors::sidebarBackground(dark).name();
+    const QString textPrimary = ThemeColors::textPrimary(dark).name();
+    const QString textSecondary = ThemeColors::textSecondary(dark).name();
+    const QString hoverBg = ThemeColors::hoverBackground(dark).name();
+    const QString selectedBg = ThemeColors::selectedBackground(dark).name();
+
+    setStyleSheet(QStringLiteral(R"(
+        MainChatWidget {
+            background-color: %1;
         }
 
         #sidebarFrame {
-            background-color: #E8EDF2;
+            background-color: %2;
             border: none;
         }
 
         #chatFrame {
-            background-color: #FFFFFF;
+            background-color: %1;
             border: none;
         }
 
         #brandLabel {
-            color: #1F2937;
+            color: %3;
             font-size: 16px;
             font-weight: 600;
         }
 
         #workspaceLabel {
-            color: #1F2937;
+            color: %3;
             font-size: 13px;
             font-weight: 500;
         }
 
         #workspaceIcon {
-            color: #6B7280;
+            color: %4;
             font-size: 12px;
-        }
-
-        QToolButton {
-            border: none;
-            border-radius: 6px;
-            background-color: transparent;
-            color: #4B5563;
-            font-size: 14px;
-            padding: 4px 6px;
-        }
-
-        QToolButton:hover {
-            background-color: #DDE3E9;
-        }
-
-        #popoutButton, #newSearchButton, #uploadButton, #workspaceSettingsButton,
-        #headerSettingsButton, #micButton, #bottomChatButton, #bottomDocsButton,
-        #bottomGithubButton, #bottomSettingButton {
-            min-width: 28px;
-            max-width: 28px;
-            min-height: 28px;
-            max-height: 28px;
-            padding: 0px;
-        }
-
-        #sendButton {
-            background-color: #5B8DEF;
-            color: #FFFFFF;
-            border-radius: 14px;
-            min-width: 28px;
-            max-width: 28px;
-            min-height: 28px;
-            max-height: 28px;
-            padding: 0px;
-        }
-
-        #sendButton:hover {
-            background-color: #4A7DE0;
-        }
-
-        #searchEdit {
-            background-color: #FFFFFF;
-            border: 1px solid #DDE3E9;
-            border-radius: 8px;
-            padding: 6px 10px;
-            color: #1F2937;
-            font-size: 13px;
-        }
-
-        #searchEdit::placeholder {
-            color: #9CA3AF;
         }
 
         #threadList {
@@ -144,37 +191,37 @@ void MainChatWidget::setupStyleSheet()
         }
 
         #threadList::item {
-            color: #374151;
+            color: %3;
             font-size: 13px;
             padding: 8px 12px;
             border-radius: 6px;
         }
 
         #threadList::item:selected {
-            background-color: #D6E8F7;
-            color: #1F2937;
+            background-color: %6;
+            color: %3;
         }
 
         #threadList::item:hover {
-            background-color: #DFE5EA;
+            background-color: %5;
         }
 
         #newThreadButton, #assistantChatsButton {
-            background-color: #FFFFFF;
-            border: 1px solid #DDE3E9;
+            background-color: %1;
+            border: 1px solid %5;
             border-radius: 8px;
             padding: 8px 12px;
-            color: #1F2937;
+            color: %3;
             font-size: 13px;
             text-align: left;
         }
 
         #newThreadButton:hover, #assistantChatsButton:hover {
-            background-color: #F8FAFC;
+            background-color: %5;
         }
 
         #workspaceNameLabel {
-            color: #6B7280;
+            color: %4;
             font-size: 14px;
             font-weight: 500;
         }
@@ -186,63 +233,54 @@ void MainChatWidget::setupStyleSheet()
         }
 
         #welcomeLabel {
-            color: #1F2937;
+            color: %3;
             font-size: 28px;
             font-weight: 500;
         }
 
         #inputFrame {
-            background-color: #FFFFFF;
-            border: 1px solid #E0E4E8;
+            background-color: %1;
+            border: 1px solid %5;
             border-radius: 16px;
         }
 
         #messageEdit {
             background-color: transparent;
             border: none;
-            color: #1F2937;
+            color: %3;
             font-size: 14px;
         }
 
         #messageEdit::placeholder {
-            color: #9CA3AF;
+            color: %4;
         }
 
         #toolsButton {
             background-color: transparent;
             border: none;
-            color: #6B7280;
+            color: %4;
             font-size: 13px;
             padding: 4px 8px;
         }
 
         #toolsButton:hover {
-            background-color: #F1F3F5;
+            background-color: %5;
             border-radius: 6px;
         }
 
         #createAgentButton, #editWorkspaceButton, #uploadFileButton {
-            background-color: #F1F3F5;
+            background-color: %5;
             border: none;
             border-radius: 16px;
             padding: 8px 16px;
-            color: #374151;
+            color: %3;
             font-size: 13px;
         }
 
         #createAgentButton:hover, #editWorkspaceButton:hover, #uploadFileButton:hover {
-            background-color: #E5E7EB;
+            background-color: %5;
         }
-
-        #bottomChatButton, #bottomDocsButton, #bottomGithubButton, #bottomSettingButton {
-            background-color: #DFE5EA;
-            border-radius: 14px;
-        }
-
-        #bottomChatButton:hover, #bottomDocsButton:hover, #bottomGithubButton:hover, #bottomSettingButton:hover {
-            background-color: #D2D8DE;
-        }
-    )");
+    )").arg(windowBg, sidebarBg, textPrimary, textSecondary, hoverBg, selectedBg));
 }
 
 void MainChatWidget::on_popoutButton_clicked() { qDebug() << "popout clicked"; }

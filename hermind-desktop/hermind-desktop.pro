@@ -2,7 +2,7 @@ QT += widgets network websockets
 
 CONFIG += c++17
 
-INCLUDEPATH += $$PWD/api $$PWD/models $$PWD/streaming $$PWD/auth $$PWD/navigation
+INCLUDEPATH += $$PWD/api $$PWD/models $$PWD/streaming $$PWD/auth $$PWD/navigation $$PWD/widgets
 
 # You can make your code fail to compile if it uses deprecated APIs.
 # In order to do so, uncomment the following line.
@@ -24,7 +24,15 @@ SOURCES += \
     streaming/hermind_sse_client.cpp \
     streaming/hermind_websocket_client.cpp \
     auth/auth_manager.cpp \
-    navigation/navigation_manager.cpp
+    navigation/navigation_manager.cpp \
+    widgets/theme_colors.cpp \
+    widgets/theme_style_helper.cpp \
+    widgets/icon_button.cpp \
+    widgets/sidebar_menu_button.cpp \
+    widgets/search_input.cpp \
+    widgets/styled_separator.cpp \
+    widgets/rounded_frame.cpp \
+    widgets/setting_row.cpp
 
 HEADERS += \
     main_chat_widget.h \
@@ -43,7 +51,15 @@ HEADERS += \
     auth/auth_state.h \
     auth/auth_manager.h \
     navigation/navigation_manager.h \
-    navigation/navigation_route.h
+    navigation/navigation_route.h \
+    widgets/theme_colors.h \
+    widgets/theme_style_helper.h \
+    widgets/icon_button.h \
+    widgets/sidebar_menu_button.h \
+    widgets/search_input.h \
+    widgets/styled_separator.h \
+    widgets/rounded_frame.h \
+    widgets/setting_row.h
 
 FORMS += \
     main_chat_widget.ui \

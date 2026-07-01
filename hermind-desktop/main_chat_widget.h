@@ -2,10 +2,14 @@
 #define MAIN_CHAT_WIDGET_H
 
 #include <QWidget>
+#include <QToolButton>
 
 namespace Ui {
 class MainChatWidget;
 }
+
+class IconButton;
+class SearchInput;
 
 class MainChatWidget : public QWidget
 {
@@ -41,6 +45,8 @@ private:
     void setupStyleSheet();
     void setupLogo();
     void setupThreadList();
+    void replaceToolButtons();
+    void replaceSearchEdit();
 
     Ui::MainChatWidget *ui;
 };

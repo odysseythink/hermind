@@ -19,7 +19,6 @@ signals:
     void bottomReturnClicked();
 
 private slots:
-    // 左侧设置菜单
     void on_aiProviderButton_clicked();
     void on_adminButton_clicked();
     void on_agentSkillsButton_clicked();
@@ -30,10 +29,8 @@ private slots:
     void on_channelsButton_clicked();
     void on_toolsButton_clicked();
 
-    // 底部图标按钮
     void on_bottomReturnButton_clicked();
 
-    // 右侧下拉框变更
     void on_defaultWindowCombo_currentIndexChanged(int index);
     void on_themeCombo_currentIndexChanged(int index);
     void on_languageCombo_currentIndexChanged(int index);
@@ -43,6 +40,10 @@ private:
     void setupStyleSheet();
     void setupMenuGroup();
     void setupConnections();
+    void replaceMenuButtons();
+    void replaceSeparator();
+    void replaceContentFrame();
+    void rebuildSettingRows();
 
     Ui::MainSettingWidget *ui;
 };

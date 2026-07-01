@@ -44,4 +44,8 @@ echo "=== streaming websocket tests ==="
 run_test streaming ws_test.pro tst_websocket_client
 
 echo ""
+echo "=== widgets tests ==="
+run_test widgets widgets_test.pro widgets_test
+
+echo ""
 echo "=== all desktop unit tests passed ==="

@@ -1,16 +1,31 @@
 #include "main_setting_widget.h"
 #include "ui_main_setting_widget.h"
 #include "theme_manager.h"
+#include "widgets/sidebar_menu_button.h"
+#include "widgets/styled_separator.h"
+#include "widgets/rounded_frame.h"
+#include "widgets/setting_row.h"
+#include "widgets/theme_colors.h"
 
 #include <QButtonGroup>
 #include <QDebug>
 #include <QPixmap>
+#include <QPushButton>
+#include <QComboBox>
+#include <QFrame>
+#include <QVBoxLayout>
+#include <QBoxLayout>
 
 MainSettingWidget::MainSettingWidget(QWidget *parent)
     : QWidget(parent)
     , ui(new Ui::MainSettingWidget)
 {
     ui->setupUi(this);
+
+    replaceMenuButtons();
+    replaceSeparator();
+    replaceContentFrame();
+    rebuildSettingRows();
 
     setupLogo();
     setupMenuGroup();
@@ -21,6 +36,177 @@ MainSettingWidget::MainSettingWidget(QWidget *parent)
 MainSettingWidget::~MainSettingWidget()
 {
     delete ui;
+}
+
+void MainSettingWidget::replaceMenuButtons()
+{
+    auto replaceOne = [this](const QString &name) {
+        QPushButton *oldBtn = findChild<QPushButton *>(name);
+        if (!oldBtn)
+            return;
+
+        SidebarMenuButton *newBtn = new SidebarMenuButton(oldBtn->text(), this);
+        newBtn->setObjectName(name);
+        newBtn->setChecked(oldBtn->isChecked());
+
+        QLayout *layout = oldBtn->parentWidget()->layout();
+        if (layout) {
+            int idx = -1;
+            for (int i = 0; i < layout->count(); ++i) {
+                if (layout->itemAt(i)->widget() == oldBtn) {
+                    idx = i;
+                    break;
+                }
+            }
+            if (idx >= 0) {
+                layout->removeWidget(oldBtn);
+                if (auto *box = qobject_cast<QBoxLayout *>(layout))
+                    box->insertWidget(idx, newBtn);
+            }
+        }
+
+        oldBtn->deleteLater();
+
+        // Update ui-> pointer
+        if (name == QLatin1String("aiProviderButton")) ui->aiProviderButton = newBtn;
+        else if (name == QLatin1String("adminButton")) ui->adminButton = newBtn;
+        else if (name == QLatin1String("agentSkillsButton")) ui->agentSkillsButton = newBtn;
+        else if (name == QLatin1String("meetingAssistantButton")) ui->meetingAssistantButton = newBtn;
+        else if (name == QLatin1String("desktopAssistantButton")) ui->desktopAssistantButton = newBtn;
+        else if (name == QLatin1String("communityCenterButton")) ui->communityCenterButton = newBtn;
+        else if (name == QLatin1String("appearanceButton")) ui->appearanceButton = newBtn;
+        else if (name == QLatin1String("channelsButton")) ui->channelsButton = newBtn;
+        else if (name == QLatin1String("toolsButton")) ui->toolsButton = newBtn;
+    };
+
+    replaceOne(QStringLiteral("aiProviderButton"));
+    replaceOne(QStringLiteral("adminButton"));
+    replaceOne(QStringLiteral("agentSkillsButton"));
+    replaceOne(QStringLiteral("meetingAssistantButton"));
+    replaceOne(QStringLiteral("desktopAssistantButton"));
+    replaceOne(QStringLiteral("communityCenterButton"));
+    replaceOne(QStringLiteral("appearanceButton"));
+    replaceOne(QStringLiteral("channelsButton"));
+    replaceOne(QStringLiteral("toolsButton"));
+}
+
+void MainSettingWidget::replaceSeparator()
+{
+    QFrame *oldSep = ui->separatorLine;
+    if (!oldSep)
+        return;
+
+    StyledSeparator *newSep = new StyledSeparator(this);
+    newSep->setObjectName(QStringLiteral("separatorLine"));
+
+    QLayout *layout = oldSep->parentWidget()->layout();
+    if (layout) {
+        int idx = -1;
+        for (int i = 0; i < layout->count(); ++i) {
+            if (layout->itemAt(i)->widget() == oldSep) {
+                idx = i;
+                break;
+            }
+        }
+        if (idx >= 0) {
+            layout->removeWidget(oldSep);
+            if (auto *box = qobject_cast<QBoxLayout *>(layout))
+                box->insertWidget(idx, newSep);
+        }
+    }
+
+    oldSep->deleteLater();
+    ui->separatorLine = newSep;
+}
+
+void MainSettingWidget::replaceContentFrame()
+{
+    QFrame *oldFrame = ui->contentFrame;
+    if (!oldFrame)
+        return;
+
+    RoundedFrame *newFrame = new RoundedFrame(this);
+    newFrame->setObjectName(QStringLiteral("contentFrame"));
+    newFrame->setRadius(16);
+
+    // Move children from old frame to new frame
+    QLayout *oldLayout = oldFrame->layout();
+    if (oldLayout) {
+        while (oldLayout->count() > 0) {
+            QLayoutItem *item = oldLayout->takeAt(0);
+            if (item->widget())
+                newFrame->layout()->addWidget(item->widget());
+            else if (item->layout())
+                newFrame->layout()->addItem(item->layout());
+            delete item;
+        }
+    }
+
+    QLayout *parentLayout = oldFrame->parentWidget()->layout();
+    if (parentLayout) {
+        int idx = -1;
+        for (int i = 0; i < parentLayout->count(); ++i) {
+            if (parentLayout->itemAt(i)->widget() == oldFrame) {
+                idx = i;
+                break;
+            }
+        }
+        if (idx >= 0) {
+            parentLayout->removeWidget(oldFrame);
+            if (auto *box = qobject_cast<QBoxLayout *>(parentLayout))
+                box->insertWidget(idx, newFrame);
+        }
+    }
+
+    oldFrame->deleteLater();
+    ui->contentFrame = newFrame;
+}
+
+void MainSettingWidget::rebuildSettingRows()
+{
+    struct RowSpec {
+        QString rowName;
+        QString title;
+        QString desc;
+        QString comboName;
+    };
+
+    const QList<RowSpec> rows = {
+        { QStringLiteral("defaultWindowRow"), tr("默认窗口"), tr("设置应用程序启动时默认显示的窗口。"), QStringLiteral("defaultWindowCombo") },
+        { QStringLiteral("themeRow"), tr("主题"), tr("选择您偏好的应用配色主题。"), QStringLiteral("themeCombo") },
+        { QStringLiteral("languageRow"), tr("显示语言"), tr("选择显示 AnythingLLM 界面所用的语言（若有翻译可用）。"), QStringLiteral("languageCombo") }
+    };
+
+    for (const RowSpec &spec : rows) {
+        QFrame *rowFrame = findChild<QFrame *>(spec.rowName);
+        QComboBox *combo = findChild<QComboBox *>(spec.comboName);
+        if (!rowFrame || !combo)
+            continue;
+
+        SettingRow *settingRow = new SettingRow(this);
+        settingRow->setObjectName(spec.rowName);
+        settingRow->setTitle(spec.title);
+        settingRow->setDescription(spec.desc);
+        settingRow->setControl(combo);
+
+        QLayout *parentLayout = rowFrame->parentWidget()->layout();
+        if (parentLayout) {
+            int idx = -1;
+            for (int i = 0; i < parentLayout->count(); ++i) {
+                if (parentLayout->itemAt(i)->widget() == rowFrame) {
+                    idx = i;
+                    break;
+                }
+            }
+            if (idx >= 0) {
+                parentLayout->removeWidget(rowFrame);
+                if (auto *box = qobject_cast<QBoxLayout *>(parentLayout))
+                    box->insertWidget(idx, settingRow);
+            }
+        }
+
+        rowFrame->deleteLater();
+    }
 }
 
 void MainSettingWidget::setupLogo()
@@ -82,59 +268,47 @@ void MainSettingWidget::setupConnections()
 
 void MainSettingWidget::setupStyleSheet()
 {
-    setStyleSheet(R"(
+    const bool dark = ThemeManager::instance().isDarkMode();
+    const QString windowBg = ThemeColors::windowBackground(dark).name();
+    const QString sidebarBg = ThemeColors::sidebarBackground(dark).name();
+    const QString textPrimary = ThemeColors::textPrimary(dark).name();
+    const QString textSecondary = ThemeColors::textSecondary(dark).name();
+    const QString selectedBg = ThemeColors::selectedBackground(dark).name();
+
+    setStyleSheet(QStringLiteral(R"(
         MainSettingWidget {
-            background-color: #FFFFFF;
+            background-color: %1;
         }
 
         #sidebarFrame {
-            background-color: #E8EDF2;
+            background-color: %2;
             border: none;
         }
 
         #brandLabel {
-            color: #1F2937;
+            color: %3;
             font-size: 16px;
             font-weight: 600;
         }
 
         #settingsSectionLabel {
-            color: #6B7280;
+            color: %4;
             font-size: 12px;
             font-weight: 500;
             margin-top: 8px;
         }
 
-        #sidebarFrame QPushButton {
-            text-align: left;
-            border: none;
-            border-radius: 8px;
-            background-color: transparent;
-            color: #374151;
-            font-size: 14px;
-            padding: 10px 12px;
-        }
-
-        #sidebarFrame QPushButton:hover {
-            background-color: #DDE3E9;
-        }
-
-        #sidebarFrame QPushButton:checked {
-            background-color: #D6E8F7;
-            color: #1F2937;
-        }
-
         #supportLabel, #privacyLabel, #termsLabel {
-            color: #6B7280;
+            color: %4;
             font-size: 12px;
             padding: 2px 12px;
         }
 
-        #bottomChatButton, #bottomDocsButton, #bottomGithubButton, #bottomReturnButton {
+        #bottomReturnButton {
             border: none;
             border-radius: 14px;
-            background-color: #DFE5EA;
-            color: #4B5563;
+            background-color: %2;
+            color: %4;
             min-width: 28px;
             max-width: 28px;
             min-height: 28px;
@@ -142,58 +316,34 @@ void MainSettingWidget::setupStyleSheet()
             padding: 0px;
         }
 
-        #bottomChatButton:hover, #bottomDocsButton:hover, #bottomGithubButton:hover, #bottomReturnButton:hover {
-            background-color: #D2D8DE;
-        }
-
-        #contentFrame {
-            background-color: #FFFFFF;
-            border: 1px solid #E5E7EB;
-            border-radius: 16px;
+        #bottomReturnButton:hover {
+            background-color: %5;
         }
 
         #titleLabel {
-            color: #1F2937;
+            color: %3;
             font-size: 22px;
             font-weight: 600;
         }
 
         #subtitleLabel {
-            color: #6B7280;
+            color: %4;
             font-size: 13px;
         }
 
-        #separatorLine {
-            color: #E5E7EB;
-            background-color: #E5E7EB;
-            border: none;
-            max-height: 1px;
-        }
-
-        #defaultWindowLabel, #themeLabel, #languageLabel {
-            color: #1F2937;
-            font-size: 14px;
-            font-weight: 500;
-        }
-
-        #defaultWindowDesc, #themeDesc, #languageDesc {
-            color: #6B7280;
-            font-size: 12px;
-        }
-
         QComboBox {
-            background-color: #F1F3F5;
-            border: 1px solid #E5E7EB;
+            background-color: %2;
+            border: 1px solid %5;
             border-radius: 8px;
             padding: 8px 12px;
-            color: #1F2937;
+            color: %3;
             font-size: 13px;
             min-width: 140px;
             max-width: 220px;
         }
 
         QComboBox:hover {
-            border-color: #D1D5DB;
+            border-color: %4;
         }
 
         QComboBox::drop-down {
@@ -202,11 +352,12 @@ void MainSettingWidget::setupStyleSheet()
         }
 
         QComboBox QAbstractItemView {
-            background-color: #FFFFFF;
-            border: 1px solid #E5E7EB;
-            selection-background-color: #D6E8F7;
+            background-color: %1;
+            border: 1px solid %5;
+            selection-background-color: %6;
         }
-    )");
+    )").arg(windowBg, sidebarBg, textPrimary, textSecondary,
+            ThemeColors::border(dark).name(), selectedBg));
 }
 
 void MainSettingWidget::on_aiProviderButton_clicked() { qDebug() << "ai provider clicked"; }
