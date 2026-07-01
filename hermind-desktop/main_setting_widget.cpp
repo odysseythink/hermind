@@ -131,16 +131,22 @@ void MainSettingWidget::replaceContentFrame()
 
     // Move children from old frame to new frame
     QLayout *oldLayout = oldFrame->layout();
+    auto *newLayout = new QVBoxLayout(newFrame);
     if (oldLayout) {
+        newLayout->setSpacing(oldLayout->spacing());
+        newLayout->setContentsMargins(oldLayout->contentsMargins());
+
         while (oldLayout->count() > 0) {
             QLayoutItem *item = oldLayout->takeAt(0);
             if (item->widget())
-                newFrame->layout()->addWidget(item->widget());
-            else if (item->layout())
-                newFrame->layout()->addItem(item->layout());
+                newLayout->addWidget(item->widget());
             delete item;
         }
+    } else {
+        newLayout->setSpacing(24);
+        newLayout->setContentsMargins(32, 32, 32, 32);
     }
+    newLayout->addStretch();
 
     QLayout *parentLayout = oldFrame->parentWidget()->layout();
     if (parentLayout) {

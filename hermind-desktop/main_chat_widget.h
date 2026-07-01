@@ -29,9 +29,6 @@ private slots:
     void on_workspaceSettingsButton_clicked();
     void on_newThreadButton_clicked();
     void on_assistantChatsButton_clicked();
-    void on_bottomChatButton_clicked();
-    void on_bottomDocsButton_clicked();
-    void on_bottomGithubButton_clicked();
     void on_bottomSettingButton_clicked();
     void on_headerSettingsButton_clicked();
     void on_toolsButton_clicked();

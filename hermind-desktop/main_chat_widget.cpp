@@ -289,9 +289,6 @@ void MainChatWidget::on_uploadButton_clicked() { qDebug() << "upload clicked"; }
 void MainChatWidget::on_workspaceSettingsButton_clicked() { qDebug() << "workspace settings clicked"; }
 void MainChatWidget::on_newThreadButton_clicked() { qDebug() << "new thread clicked"; }
 void MainChatWidget::on_assistantChatsButton_clicked() { qDebug() << "assistant chats clicked"; }
-void MainChatWidget::on_bottomChatButton_clicked() { qDebug() << "bottom chat clicked"; }
-void MainChatWidget::on_bottomDocsButton_clicked() { qDebug() << "bottom docs clicked"; }
-void MainChatWidget::on_bottomGithubButton_clicked() { qDebug() << "bottom github clicked"; }
 void MainChatWidget::on_bottomSettingButton_clicked() {
     qDebug() << "bottom setting clicked";
     emit bottomSettingClicked();
