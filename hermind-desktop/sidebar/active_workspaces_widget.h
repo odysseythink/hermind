@@ -16,8 +16,9 @@ class ActiveWorkspacesWidget : public QWidget
     Q_OBJECT
 
 public:
-    explicit ActiveWorkspacesWidget(HermindApiClient *apiClient, QWidget *parent = nullptr);
+    explicit ActiveWorkspacesWidget(QWidget *parent = nullptr);
 
+    void setApiClient(HermindApiClient *apiClient);
     void refresh();
     void setSelectedSlug(const QString &slug);
 

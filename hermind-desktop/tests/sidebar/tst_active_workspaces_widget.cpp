@@ -86,7 +86,8 @@ void TestActiveWorkspacesWidget::loadsWorkspacesFromApi()
         return QByteArray(R"({"workspaces":[{"id":1,"name":"Default","slug":"default","openAiHistory":20},{"id":2,"name":"KB","slug":"kb","openAiHistory":20}]})");
     });
 
-    ActiveWorkspacesWidget widget(m_client);
+    ActiveWorkspacesWidget widget;
+    widget.setApiClient(m_client);
     widget.refresh();
 
     QTRY_VERIFY_WITH_TIMEOUT(widget.findChildren<WorkspaceItemWidget *>().size() == 2, 5000);
@@ -102,7 +103,8 @@ void TestActiveWorkspacesWidget::clickNavigatesToWorkspaceChat()
         return QByteArray(R"({"workspaces":[{"id":1,"name":"Default","slug":"default","openAiHistory":20}]})");
     });
 
-    ActiveWorkspacesWidget widget(m_client);
+    ActiveWorkspacesWidget widget;
+    widget.setApiClient(m_client);
     widget.refresh();
     QTRY_VERIFY_WITH_TIMEOUT(widget.findChildren<WorkspaceItemWidget *>().size() == 1, 5000);
 

@@ -10,14 +10,18 @@
 #include <QLabel>
 #include <QDebug>
 
-ActiveWorkspacesWidget::ActiveWorkspacesWidget(HermindApiClient *apiClient, QWidget *parent)
+ActiveWorkspacesWidget::ActiveWorkspacesWidget(QWidget *parent)
     : QWidget(parent)
-    , m_apiClient(apiClient)
 {
     m_layout = new QVBoxLayout(this);
     m_layout->setContentsMargins(0, 0, 0, 0);
     m_layout->setSpacing(4);
     m_layout->addStretch();
+}
+
+void ActiveWorkspacesWidget::setApiClient(HermindApiClient *apiClient)
+{
+    m_apiClient = apiClient;
 }
 
 void ActiveWorkspacesWidget::refresh()

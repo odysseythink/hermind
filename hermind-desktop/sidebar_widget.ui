@@ -1,0 +1,86 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<ui version="4.0">
+ <class>SidebarWidget</class>
+ <widget class="QWidget" name="SidebarWidget">
+  <property name="geometry">
+   <rect>
+    <x>0</x>
+    <y>0</y>
+    <width>260</width>
+    <height>600</height>
+   </rect>
+  </property>
+  <layout class="QVBoxLayout" name="verticalLayout">
+   <property name="spacing"><number>12</number></property>
+   <property name="leftMargin"><number>16</number></property>
+   <property name="topMargin"><number>16</number></property>
+   <property name="rightMargin"><number>16</number></property>
+   <property name="bottomMargin"><number>16</number></property>
+   <item>
+    <layout class="QHBoxLayout" name="logoLayout">
+     <item>
+      <widget class="QLabel" name="logoLabel">
+       <property name="minimumSize"><size><width>24</width><height>24</height></size></property>
+       <property name="maximumSize"><size><width>24</width><height>24</height></size></property>
+      </widget>
+     </item>
+     <item>
+      <widget class="QLabel" name="brandLabel">
+       <property name="text"><string>Hermind</string></property>
+      </widget>
+     </item>
+     <item>
+      <spacer name="logoSpacer">
+       <property name="orientation"><enum>Qt::Orientation::Horizontal</enum></property>
+      </spacer>
+     </item>
+     <item>
+      <widget class="IconButton" name="popoutButton"/>
+     </item>
+    </layout>
+   </item>
+   <item>
+    <layout class="QHBoxLayout" name="searchLayout">
+     <item>
+      <widget class="SearchInput" name="searchEdit"/>
+     </item>
+     <item>
+      <widget class="IconButton" name="newWorkspaceButton"/>
+     </item>
+    </layout>
+   </item>
+   <item>
+    <widget class="ActiveWorkspacesWidget" name="activeWorkspaces"/>
+   </item>
+   <item>
+    <widget class="SidebarFooterWidget" name="footer"/>
+   </item>
+  </layout>
+ </widget>
+ <customwidgets>
+  <customwidget>
+   <class>IconButton</class>
+   <extends>QToolButton</extends>
+   <header>icon_button.h</header>
+  </customwidget>
+  <customwidget>
+   <class>SearchInput</class>
+   <extends>QLineEdit</extends>
+   <header>search_input.h</header>
+  </customwidget>
+  <customwidget>
+   <class>ActiveWorkspacesWidget</class>
+   <extends>QWidget</extends>
+   <header>active_workspaces_widget.h</header>
+   <container>1</container>
+  </customwidget>
+  <customwidget>
+   <class>SidebarFooterWidget</class>
+   <extends>QWidget</extends>
+   <header>sidebar_footer_widget.h</header>
+   <container>1</container>
+  </customwidget>
+ </customwidgets>
+ <resources/>
+ <connections/>
+</ui>
