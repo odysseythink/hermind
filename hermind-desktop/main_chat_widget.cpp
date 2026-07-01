@@ -10,6 +10,26 @@
 #include <QLineEdit>
 #include <QBoxLayout>
 
+namespace {
+
+QBoxLayout *findLayoutContaining(QWidget *widget)
+{
+    QWidget *top = widget->window();
+    if (!top)
+        top = widget;
+
+    const QList<QLayout *> layouts = top->findChildren<QLayout *>();
+    for (QLayout *layout : layouts) {
+        for (int i = 0; i < layout->count(); ++i) {
+            if (layout->itemAt(i)->widget() == widget)
+                return qobject_cast<QBoxLayout *>(layout);
+        }
+    }
+    return nullptr;
+}
+
+} // namespace
+
 MainChatWidget::MainChatWidget(QWidget *parent)
     : QWidget(parent)
     , ui(new Ui::MainChatWidget)
@@ -55,7 +75,7 @@ void MainChatWidget::replaceToolButtons()
         newBtn->setObjectName(name);
         newBtn->setIconText(iconText);
 
-        QLayout *layout = oldBtn->parentWidget()->layout();
+        QBoxLayout *layout = findLayoutContaining(oldBtn);
         if (layout) {
             int idx = -1;
             for (int i = 0; i < layout->count(); ++i) {
@@ -66,8 +86,7 @@ void MainChatWidget::replaceToolButtons()
             }
             if (idx >= 0) {
                 layout->removeWidget(oldBtn);
-                if (auto *box = qobject_cast<QBoxLayout *>(layout))
-                    box->insertWidget(idx, newBtn);
+                layout->insertWidget(idx, newBtn);
             }
         }
 
@@ -104,7 +123,7 @@ void MainChatWidget::replaceSearchEdit()
     newEdit->setObjectName(QStringLiteral("searchEdit"));
     newEdit->setPlaceholderText(oldEdit->placeholderText());
 
-    QLayout *layout = oldEdit->parentWidget()->layout();
+    QBoxLayout *layout = findLayoutContaining(oldEdit);
     if (layout) {
         int idx = -1;
         for (int i = 0; i < layout->count(); ++i) {
@@ -115,8 +134,7 @@ void MainChatWidget::replaceSearchEdit()
         }
         if (idx >= 0) {
             layout->removeWidget(oldEdit);
-            if (auto *box = qobject_cast<QBoxLayout *>(layout))
-                box->insertWidget(idx, newEdit);
+            layout->insertWidget(idx, newEdit);
         }
     }
 

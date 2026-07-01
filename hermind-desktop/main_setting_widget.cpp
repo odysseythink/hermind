@@ -16,6 +16,26 @@
 #include <QVBoxLayout>
 #include <QBoxLayout>
 
+namespace {
+
+QBoxLayout *findLayoutContaining(QWidget *widget)
+{
+    QWidget *top = widget->window();
+    if (!top)
+        top = widget;
+
+    const QList<QLayout *> layouts = top->findChildren<QLayout *>();
+    for (QLayout *layout : layouts) {
+        for (int i = 0; i < layout->count(); ++i) {
+            if (layout->itemAt(i)->widget() == widget)
+                return qobject_cast<QBoxLayout *>(layout);
+        }
+    }
+    return nullptr;
+}
+
+} // namespace
+
 MainSettingWidget::MainSettingWidget(QWidget *parent)
     : QWidget(parent)
     , ui(new Ui::MainSettingWidget)
@@ -49,7 +69,7 @@ void MainSettingWidget::replaceMenuButtons()
         newBtn->setObjectName(name);
         newBtn->setChecked(oldBtn->isChecked());
 
-        QLayout *layout = oldBtn->parentWidget()->layout();
+        QBoxLayout *layout = findLayoutContaining(oldBtn);
         if (layout) {
             int idx = -1;
             for (int i = 0; i < layout->count(); ++i) {
@@ -60,8 +80,7 @@ void MainSettingWidget::replaceMenuButtons()
             }
             if (idx >= 0) {
                 layout->removeWidget(oldBtn);
-                if (auto *box = qobject_cast<QBoxLayout *>(layout))
-                    box->insertWidget(idx, newBtn);
+                layout->insertWidget(idx, newBtn);
             }
         }
 
@@ -99,7 +118,7 @@ void MainSettingWidget::replaceSeparator()
     StyledSeparator *newSep = new StyledSeparator(this);
     newSep->setObjectName(QStringLiteral("separatorLine"));
 
-    QLayout *layout = oldSep->parentWidget()->layout();
+    QBoxLayout *layout = findLayoutContaining(oldSep);
     if (layout) {
         int idx = -1;
         for (int i = 0; i < layout->count(); ++i) {
@@ -110,8 +129,7 @@ void MainSettingWidget::replaceSeparator()
         }
         if (idx >= 0) {
             layout->removeWidget(oldSep);
-            if (auto *box = qobject_cast<QBoxLayout *>(layout))
-                box->insertWidget(idx, newSep);
+            layout->insertWidget(idx, newSep);
         }
     }
 
@@ -148,7 +166,7 @@ void MainSettingWidget::replaceContentFrame()
     }
     newLayout->addStretch();
 
-    QLayout *parentLayout = oldFrame->parentWidget()->layout();
+    QBoxLayout *parentLayout = findLayoutContaining(oldFrame);
     if (parentLayout) {
         int idx = -1;
         for (int i = 0; i < parentLayout->count(); ++i) {
@@ -159,8 +177,7 @@ void MainSettingWidget::replaceContentFrame()
         }
         if (idx >= 0) {
             parentLayout->removeWidget(oldFrame);
-            if (auto *box = qobject_cast<QBoxLayout *>(parentLayout))
-                box->insertWidget(idx, newFrame);
+            parentLayout->insertWidget(idx, newFrame);
         }
     }
 
@@ -195,7 +212,7 @@ void MainSettingWidget::rebuildSettingRows()
         settingRow->setDescription(spec.desc);
         settingRow->setControl(combo);
 
-        QLayout *parentLayout = rowFrame->parentWidget()->layout();
+        QBoxLayout *parentLayout = findLayoutContaining(rowFrame);
         if (parentLayout) {
             int idx = -1;
             for (int i = 0; i < parentLayout->count(); ++i) {
@@ -206,8 +223,7 @@ void MainSettingWidget::rebuildSettingRows()
             }
             if (idx >= 0) {
                 parentLayout->removeWidget(rowFrame);
-                if (auto *box = qobject_cast<QBoxLayout *>(parentLayout))
-                    box->insertWidget(idx, settingRow);
+                parentLayout->insertWidget(idx, settingRow);
             }
         }
 
