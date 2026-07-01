@@ -51,6 +51,18 @@ void SidebarWidget::refreshWorkspaces()
         ui->activeWorkspaces->refresh();
 }
 
+void SidebarWidget::setSelectedWorkspace(const QString &slug)
+{
+    if (ui->activeWorkspaces)
+        ui->activeWorkspaces->setSelectedSlug(slug);
+}
+
+void SidebarWidget::setSelectedThread(const QString &threadSlug)
+{
+    if (ui->activeWorkspaces)
+        ui->activeWorkspaces->setSelectedThreadSlug(threadSlug);
+}
+
 void SidebarWidget::clickSettingsButton()
 {
     emit openSettingsRequested();

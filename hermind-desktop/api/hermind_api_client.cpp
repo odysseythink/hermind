@@ -123,6 +123,73 @@ void HermindApiClient::createWorkspace(const QString &name, WorkspaceCallback ca
          });
 }
 
+void HermindApiClient::listThreads(const QString &workspaceSlug, ThreadsCallback callback)
+{
+    get(QStringLiteral("/workspace/") + workspaceSlug + QStringLiteral("/threads"), QUrlQuery(),
+        [callback](const ApiResponse &resp) {
+            if (!resp.isSuccess()) {
+                callback(QVector<HermindWorkspaceThread>(), resp.error());
+                return;
+            }
+            QVector<HermindWorkspaceThread> list;
+            const QJsonArray arr = resp.body().object().value(QStringLiteral("threads")).toArray();
+            list.reserve(arr.size());
+            for (const QJsonValue &v : arr)
+                list.append(HermindWorkspaceThread::fromJson(v.toObject()));
+            callback(list, ApiError());
+        });
+}
+
+void HermindApiClient::createThread(const QString &workspaceSlug, ThreadCallback callback)
+{
+    post(QStringLiteral("/workspace/") + workspaceSlug + QStringLiteral("/thread/new"), QJsonObject(),
+         [callback](const ApiResponse &resp) {
+             if (!resp.isSuccess()) {
+                 const QString msg = resp.body().object().value(QStringLiteral("error")).toString();
+                 callback(HermindWorkspaceThread(), msg, resp.error());
+                 return;
+             }
+             const QJsonObject obj = resp.body().object();
+             const HermindWorkspaceThread thread = HermindWorkspaceThread::fromJson(
+                 obj.value(QStringLiteral("thread")).toObject());
+             callback(thread, QString(), ApiError());
+         });
+}
+
+void HermindApiClient::updateThread(const QString &workspaceSlug,
+                                    const QString &threadSlug,
+                                    const QString &name,
+                                    ThreadCallback callback)
+{
+    QJsonObject body;
+    body.insert(QStringLiteral("name"), name);
+    post(QStringLiteral("/workspace/") + workspaceSlug + QStringLiteral("/thread/") + threadSlug
+             + QStringLiteral("/update"),
+         body,
+         [callback](const ApiResponse &resp) {
+             if (!resp.isSuccess()) {
+                 const QString msg = resp.body().object().value(QStringLiteral("message")).toString();
+                 callback(HermindWorkspaceThread(), msg, resp.error());
+                 return;
+             }
+             const QJsonObject obj = resp.body().object();
+             const HermindWorkspaceThread thread = HermindWorkspaceThread::fromJson(
+                 obj.value(QStringLiteral("thread")).toObject());
+             callback(thread, QString(), ApiError());
+         });
+}
+
+void HermindApiClient::deleteThread(const QString &workspaceSlug,
+                                    const QString &threadSlug,
+                                    ThreadOperationCallback callback)
+{
+    del(QStringLiteral("/workspace/") + workspaceSlug + QStringLiteral("/thread/") + threadSlug,
+        QJsonObject(),
+        [callback](const ApiResponse &resp) {
+            callback(resp.isSuccess(), resp.error());
+        });
+}
+
 void HermindApiClient::get(const QString &path, const QUrlQuery &query, GenericCallback callback)
 {
     sendRequest(QStringLiteral("GET"), path, query, QJsonObject(), callback);

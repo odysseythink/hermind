@@ -18,6 +18,7 @@ SOURCES += \
     api/api_response.cpp \
     models/hermind_user.cpp \
     models/hermind_workspace.cpp \
+    models/hermind_workspace_thread.cpp \
     api/hermind_api_client.cpp \
     models/hermind_stream_chat_response.cpp \
     models/hermind_agent_event.cpp \
@@ -28,6 +29,8 @@ SOURCES += \
     sidebar_widget.cpp \
     sidebar/workspace_list_model.cpp \
     sidebar/workspace_item_widget.cpp \
+    sidebar/thread_item_widget.cpp \
+    sidebar/thread_container_widget.cpp \
     sidebar/active_workspaces_widget.cpp \
     sidebar/sidebar_footer_widget.cpp \
     widgets/theme_colors.cpp \
@@ -48,6 +51,7 @@ HEADERS += \
     api/api_response.h \
     models/hermind_user.h \
     models/hermind_workspace.h \
+    models/hermind_workspace_thread.h \
     api/hermind_api_client.h \
     models/hermind_stream_chat_response.h \
     models/hermind_agent_event.h \
@@ -60,6 +64,8 @@ HEADERS += \
     sidebar_widget.h \
     sidebar/workspace_list_model.h \
     sidebar/workspace_item_widget.h \
+    sidebar/thread_item_widget.h \
+    sidebar/thread_container_widget.h \
     sidebar/active_workspaces_widget.h \
     sidebar/sidebar_footer_widget.h \
     widgets/theme_colors.h \

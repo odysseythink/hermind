@@ -4,6 +4,7 @@
 #include <QTcpSocket>
 #include "active_workspaces_widget.h"
 #include "workspace_item_widget.h"
+#include "thread_item_widget.h"
 #include "hermind_api_client.h"
 #include "navigation_manager.h"
 
@@ -15,6 +16,8 @@ private slots:
     void cleanupTestCase();
     void loadsWorkspacesFromApi();
     void clickNavigatesToWorkspaceChat();
+    void activeWorkspaceExpandsAndLoadsThreads();
+    void threadClickNavigatesToThreadChat();
 
 private:
     class MockHttpServer;
@@ -82,7 +85,9 @@ void TestActiveWorkspacesWidget::cleanupTestCase()
 
 void TestActiveWorkspacesWidget::loadsWorkspacesFromApi()
 {
-    m_server->setHandler([](const QString &, const QString &) {
+    m_server->setHandler([](const QString &, const QString &path) {
+        if (path.contains(QStringLiteral("/threads")))
+            return QByteArray(R"({"threads":[]})");
         return QByteArray(R"({"workspaces":[{"id":1,"name":"Default","slug":"default","openAiHistory":20},{"id":2,"name":"KB","slug":"kb","openAiHistory":20}]})");
     });
 
@@ -99,7 +104,9 @@ void TestActiveWorkspacesWidget::loadsWorkspacesFromApi()
 
 void TestActiveWorkspacesWidget::clickNavigatesToWorkspaceChat()
 {
-    m_server->setHandler([](const QString &, const QString &) {
+    m_server->setHandler([](const QString &, const QString &path) {
+        if (path.contains(QStringLiteral("/threads")))
+            return QByteArray(R"({"threads":[]})");
         return QByteArray(R"({"workspaces":[{"id":1,"name":"Default","slug":"default","openAiHistory":20}]})");
     });
 
@@ -115,6 +122,60 @@ void TestActiveWorkspacesWidget::clickNavigatesToWorkspaceChat()
     const NavigationRoute route = NavigationManager::instance().currentRoute();
     QCOMPARE(route.page, NavigationPage::WorkspaceChat);
     QCOMPARE(route.workspaceSlug, QStringLiteral("default"));
+}
+
+static ThreadItemWidget *findNonDefaultThreadItem(ActiveWorkspacesWidget *widget)
+{
+    const auto threadItems = widget->findChildren<ThreadItemWidget *>();
+    for (ThreadItemWidget *item : threadItems) {
+        if (!item->isDefaultThread())
+            return item;
+    }
+    return nullptr;
+}
+
+void TestActiveWorkspacesWidget::activeWorkspaceExpandsAndLoadsThreads()
+{
+    m_server->setHandler([](const QString &, const QString &path) {
+        if (path.contains(QStringLiteral("/threads")))
+            return QByteArray(R"({"threads":[{"id":1,"name":"Thread A","slug":"thread-a","workspaceId":1}]})");
+        return QByteArray(R"({"workspaces":[{"id":1,"name":"Default","slug":"default","openAiHistory":20}]})");
+    });
+
+    ActiveWorkspacesWidget widget;
+    widget.setApiClient(m_client);
+    widget.setSelectedSlug(QStringLiteral("default"));
+    widget.refresh();
+
+    QTRY_VERIFY_WITH_TIMEOUT(findNonDefaultThreadItem(&widget) != nullptr, 5000);
+    ThreadItemWidget *threadItem = findNonDefaultThreadItem(&widget);
+    QCOMPARE(threadItem->threadSlug(), QStringLiteral("thread-a"));
+}
+
+void TestActiveWorkspacesWidget::threadClickNavigatesToThreadChat()
+{
+    m_server->setHandler([](const QString &, const QString &path) {
+        if (path.contains(QStringLiteral("/threads")))
+            return QByteArray(R"({"threads":[{"id":1,"name":"Thread A","slug":"thread-a","workspaceId":1}]})");
+        return QByteArray(R"({"workspaces":[{"id":1,"name":"Default","slug":"default","openAiHistory":20}]})");
+    });
+
+    ActiveWorkspacesWidget widget;
+    widget.setApiClient(m_client);
+    widget.setSelectedSlug(QStringLiteral("default"));
+    widget.refresh();
+
+    QTRY_VERIFY_WITH_TIMEOUT(findNonDefaultThreadItem(&widget) != nullptr, 5000);
+    auto *threadItem = findNonDefaultThreadItem(&widget);
+
+    QSignalSpy navSpy(&NavigationManager::instance(), &NavigationManager::currentRouteChanged);
+    threadItem->simulateClick();
+
+    QTRY_VERIFY_WITH_TIMEOUT(!navSpy.isEmpty(), 1000);
+    const NavigationRoute route = NavigationManager::instance().currentRoute();
+    QCOMPARE(route.page, NavigationPage::WorkspaceChat);
+    QCOMPARE(route.workspaceSlug, QStringLiteral("default"));
+    QCOMPARE(route.threadSlug, QStringLiteral("thread-a"));
 }
 
 QTEST_MAIN(TestActiveWorkspacesWidget)

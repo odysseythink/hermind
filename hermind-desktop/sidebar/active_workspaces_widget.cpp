@@ -40,6 +40,12 @@ void ActiveWorkspacesWidget::setSelectedSlug(const QString &slug)
     rebuildItems();
 }
 
+void ActiveWorkspacesWidget::setSelectedThreadSlug(const QString &threadSlug)
+{
+    m_selectedThreadSlug = threadSlug;
+    rebuildItems();
+}
+
 void ActiveWorkspacesWidget::onWorkspacesLoaded(const QVector<HermindWorkspace> &workspaces,
                                                 const ApiError &error)
 {
@@ -59,6 +65,29 @@ void ActiveWorkspacesWidget::onWorkspaceClicked(const QString &slug)
     NavigationManager::instance().navigateTo(route);
 }
 
+void ActiveWorkspacesWidget::onThreadClicked(const QString &workspaceSlug, const QString &threadSlug)
+{
+    NavigationRoute route;
+    route.page = NavigationPage::WorkspaceChat;
+    route.workspaceSlug = workspaceSlug;
+    route.threadSlug = threadSlug;
+    NavigationManager::instance().navigateTo(route);
+}
+
+void ActiveWorkspacesWidget::onWorkspaceSettingsRequested(const QString &slug)
+{
+    NavigationRoute route;
+    route.page = NavigationPage::WorkspaceSettings;
+    route.workspaceSlug = slug;
+    route.settingsPath = QStringLiteral("general-appearance");
+    NavigationManager::instance().navigateTo(route);
+}
+
+void ActiveWorkspacesWidget::onUploadDocumentsRequested(const QString &slug)
+{
+    qDebug() << "upload documents requested for workspace" << slug;
+}
+
 void ActiveWorkspacesWidget::rebuildItems()
 {
     // 移除旧项（保留 stretch）
@@ -72,9 +101,21 @@ void ActiveWorkspacesWidget::rebuildItems()
     for (const HermindWorkspace &ws : std::as_const(m_workspaces)) {
         auto *item = new WorkspaceItemWidget(this);
         item->setWorkspace(ws);
-        item->setActive(ws.slug() == m_selectedSlug);
+        item->setApiClient(m_apiClient);
+
+        const bool active = ws.slug() == m_selectedSlug;
+        item->setActive(active);
+        if (active)
+            item->setSelectedThreadSlug(m_selectedThreadSlug);
+
         connect(item, &WorkspaceItemWidget::workspaceClicked,
                 this, &ActiveWorkspacesWidget::onWorkspaceClicked);
+        connect(item, &WorkspaceItemWidget::threadClicked,
+                this, &ActiveWorkspacesWidget::onThreadClicked);
+        connect(item, &WorkspaceItemWidget::workspaceSettingsRequested,
+                this, &ActiveWorkspacesWidget::onWorkspaceSettingsRequested);
+        connect(item, &WorkspaceItemWidget::uploadDocumentsRequested,
+                this, &ActiveWorkspacesWidget::onUploadDocumentsRequested);
         m_layout->insertWidget(m_layout->count() - 1, item);
     }
 }

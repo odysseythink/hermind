@@ -12,10 +12,13 @@ SOURCES += \
     ../../sidebar/active_workspaces_widget.cpp \
     ../../sidebar/sidebar_footer_widget.cpp \
     ../../sidebar/workspace_item_widget.cpp \
+    ../../sidebar/thread_item_widget.cpp \
+    ../../sidebar/thread_container_widget.cpp \
     ../../sidebar/workspace_list_model.cpp \
     ../../api/hermind_api_client.cpp \
     ../../api/api_response.cpp \
     ../../models/hermind_workspace.cpp \
+    ../../models/hermind_workspace_thread.cpp \
     ../../models/hermind_user.cpp \
     ../../models/hermind_stream_chat_response.cpp \
     ../../models/hermind_agent_event.cpp \
@@ -35,10 +38,13 @@ HEADERS += \
     ../../sidebar/active_workspaces_widget.h \
     ../../sidebar/sidebar_footer_widget.h \
     ../../sidebar/workspace_item_widget.h \
+    ../../sidebar/thread_item_widget.h \
+    ../../sidebar/thread_container_widget.h \
     ../../sidebar/workspace_list_model.h \
     ../../api/hermind_api_client.h \
     ../../api/api_response.h \
     ../../models/hermind_workspace.h \
+    ../../models/hermind_workspace_thread.h \
     ../../models/hermind_user.h \
     ../../models/hermind_stream_chat_response.h \
     ../../models/hermind_agent_event.h \

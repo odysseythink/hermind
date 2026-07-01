@@ -11,6 +11,7 @@
 #include "api_response.h"
 #include "hermind_user.h"
 #include "hermind_workspace.h"
+#include "hermind_workspace_thread.h"
 #include "hermind_stream_chat_response.h"
 #include "hermind_sse_client.h"
 #include "hermind_websocket_client.h"
@@ -34,6 +35,12 @@ public:
     using WorkspaceCallback = std::function<void(const HermindWorkspace &workspace,
                                                  const QString &message,
                                                  const ApiError &error)>;
+    using ThreadsCallback = std::function<void(const QVector<HermindWorkspaceThread> &threads,
+                                               const ApiError &error)>;
+    using ThreadCallback = std::function<void(const HermindWorkspaceThread &thread,
+                                              const QString &message,
+                                              const ApiError &error)>;
+    using ThreadOperationCallback = std::function<void(bool success, const ApiError &error)>;
     using StreamChatCallback = std::function<void(const HermindStreamChatResponse &response)>;
 
     explicit HermindApiClient(QObject *parent = nullptr);
@@ -52,6 +59,16 @@ public:
     void listWorkspaces(WorkspacesCallback callback);
     void getWorkspace(const QString &slug, WorkspaceCallback callback);
     void createWorkspace(const QString &name, WorkspaceCallback callback);
+
+    void listThreads(const QString &workspaceSlug, ThreadsCallback callback);
+    void createThread(const QString &workspaceSlug, ThreadCallback callback);
+    void updateThread(const QString &workspaceSlug,
+                      const QString &threadSlug,
+                      const QString &name,
+                      ThreadCallback callback);
+    void deleteThread(const QString &workspaceSlug,
+                      const QString &threadSlug,
+                      ThreadOperationCallback callback);
 
     void streamChat(const QString &workspaceSlug,
                     const QString &message,

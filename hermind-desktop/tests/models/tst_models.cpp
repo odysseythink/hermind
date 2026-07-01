@@ -2,6 +2,7 @@
 #include "api_response.h"
 #include "hermind_user.h"
 #include "hermind_workspace.h"
+#include "hermind_workspace_thread.h"
 #include "hermind_stream_chat_response.h"
 #include "hermind_agent_event.h"
 
@@ -15,6 +16,7 @@ private slots:
     void apiResponseFailure();
     void userFromJson();
     void workspaceFromJson();
+    void workspaceThreadFromJson();
     void streamChatResponseFromJson();
     void agentEventFromJson();
 };
@@ -86,6 +88,30 @@ void TestModels::workspaceFromJson()
 
     QJsonObject roundTrip = ws.toJson();
     QCOMPARE(roundTrip.value("slug").toString(), QString("default"));
+}
+
+void TestModels::workspaceThreadFromJson()
+{
+    QJsonObject obj;
+    obj.insert("id", 5);
+    obj.insert("name", QString("Brainstorm"));
+    obj.insert("slug", QString("brainstorm-thread"));
+    obj.insert("workspaceId", 1);
+    obj.insert("userId", 7);
+    obj.insert("createdAt", QString("2026-06-30T10:00:00Z"));
+    obj.insert("lastUpdatedAt", QString("2026-06-30T10:05:00Z"));
+
+    HermindWorkspaceThread t = HermindWorkspaceThread::fromJson(obj);
+    QCOMPARE(t.id(), 5);
+    QCOMPARE(t.name(), QString("Brainstorm"));
+    QCOMPARE(t.slug(), QString("brainstorm-thread"));
+    QCOMPARE(t.workspaceId(), 1);
+    QVERIFY(t.userId().has_value());
+    QCOMPARE(t.userId().value(), 7);
+    QVERIFY(!t.parentThreadId().has_value());
+
+    QJsonObject roundTrip = t.toJson();
+    QCOMPARE(roundTrip.value("slug").toString(), QString("brainstorm-thread"));
 }
 
 void TestModels::streamChatResponseFromJson()

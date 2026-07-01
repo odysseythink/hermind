@@ -2,17 +2,14 @@ QT += testlib widgets network websockets
 CONFIG += qt warn_on c++17 console
 CONFIG -= app_bundle
 TEMPLATE = app
-TARGET = tst_active_workspaces_widget
+TARGET = tst_thread_container_widget
 
 INCLUDEPATH += ../../sidebar ../../models ../../api ../../streaming ../../navigation ../../widgets ../../auth ../..
 
 SOURCES += \
-    tst_active_workspaces_widget.cpp \
-    ../../sidebar/active_workspaces_widget.cpp \
-    ../../sidebar/workspace_item_widget.cpp \
-    ../../sidebar/thread_item_widget.cpp \
+    tst_thread_container_widget.cpp \
     ../../sidebar/thread_container_widget.cpp \
-    ../../sidebar/workspace_list_model.cpp \
+    ../../sidebar/thread_item_widget.cpp \
     ../../api/hermind_api_client.cpp \
     ../../api/api_response.cpp \
     ../../models/hermind_workspace.cpp \
@@ -31,11 +28,8 @@ SOURCES += \
     ../../auth/auth_manager.cpp
 
 HEADERS += \
-    ../../sidebar/active_workspaces_widget.h \
-    ../../sidebar/workspace_item_widget.h \
-    ../../sidebar/thread_item_widget.h \
     ../../sidebar/thread_container_widget.h \
-    ../../sidebar/workspace_list_model.h \
+    ../../sidebar/thread_item_widget.h \
     ../../api/hermind_api_client.h \
     ../../api/api_response.h \
     ../../models/hermind_workspace.h \

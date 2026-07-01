@@ -10,6 +10,8 @@ private slots:
     void displaysWorkspaceName();
     void clickEmitsWorkspaceClicked();
     void activeStateStyle();
+    void activeWorkspaceExpands();
+    void selectedThreadSlugPropagatesToContainer();
 };
 
 void TestWorkspaceItemWidget::displaysWorkspaceName()
@@ -46,6 +48,33 @@ void TestWorkspaceItemWidget::activeStateStyle()
     QVERIFY(!item.isActive());
     item.setActive(true);
     QVERIFY(item.isActive());
+}
+
+void TestWorkspaceItemWidget::activeWorkspaceExpands()
+{
+    WorkspaceItemWidget item;
+    const HermindWorkspace ws = HermindWorkspace::fromJson(QJsonObject{
+        {"id", 1}, {"name", "My Workspace"}, {"slug", "my-ws"}, {"openAiHistory", 20}
+    });
+    item.setWorkspace(ws);
+    QVERIFY(!item.isExpanded());
+    item.setActive(true);
+    QVERIFY(item.isExpanded());
+    item.setActive(false);
+    QVERIFY(!item.isExpanded());
+}
+
+void TestWorkspaceItemWidget::selectedThreadSlugPropagatesToContainer()
+{
+    WorkspaceItemWidget item;
+    const HermindWorkspace ws = HermindWorkspace::fromJson(QJsonObject{
+        {"id", 1}, {"name", "My Workspace"}, {"slug", "my-ws"}, {"openAiHistory", 20}
+    });
+    item.setWorkspace(ws);
+    item.setActive(true);
+    item.setSelectedThreadSlug(QStringLiteral("thread-a"));
+    // 仅验证接口调用不崩溃；后续可通过 ThreadItemWidget 进一步断言
+    QVERIFY(item.isExpanded());
 }
 
 QTEST_MAIN(TestWorkspaceItemWidget)

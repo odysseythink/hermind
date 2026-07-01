@@ -20,6 +20,8 @@ public:
 
     void setApiClient(HermindApiClient *apiClient);
     void refreshWorkspaces();
+    void setSelectedWorkspace(const QString &slug);
+    void setSelectedThread(const QString &threadSlug);
 
     // 仅用于测试触发
     void clickSettingsButton();

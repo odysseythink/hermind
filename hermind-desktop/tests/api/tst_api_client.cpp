@@ -26,6 +26,10 @@ private slots:
     void listWorkspaces();
     void createWorkspace();
     void getWorkspace();
+    void listThreads();
+    void createThread();
+    void updateThread();
+    void deleteThread();
 
     void streamChat();
     void streamThreadChat();
@@ -455,6 +459,117 @@ void TestApiClient::getWorkspace()
     QCOMPARE(workspace.id(), 1);
     QCOMPARE(workspace.slug(), QStringLiteral("default"));
     QCOMPARE(m_server->recordedPaths.last(), QStringLiteral("/api/workspace/default"));
+}
+
+void TestApiClient::listThreads()
+{
+    bool done = false;
+    QVector<HermindWorkspaceThread> threads;
+    ApiError err;
+
+    m_server->recordedPaths.clear();
+    m_server->setHandler([](const QString &, const QString &, const QHash<QString, QString> &,
+                            const QByteArray &) {
+        return QByteArray(R"({"threads":[{"id":1,"name":"Thread A","slug":"thread-a","workspaceId":1}]})");
+    });
+
+    m_client->listThreads(QStringLiteral("default"),
+                          [&](const QVector<HermindWorkspaceThread> &list, const ApiError &e) {
+                              done = true;
+                              threads = list;
+                              err = e;
+                          });
+
+    QTRY_VERIFY_WITH_TIMEOUT(done, 5000);
+    QVERIFY(err.isEmpty());
+    QCOMPARE(threads.size(), 1);
+    QCOMPARE(threads.first().name(), QStringLiteral("Thread A"));
+    QCOMPARE(threads.first().slug(), QStringLiteral("thread-a"));
+    QCOMPARE(m_server->recordedPaths.last(), QStringLiteral("/api/workspace/default/threads"));
+}
+
+void TestApiClient::createThread()
+{
+    bool done = false;
+    HermindWorkspaceThread thread;
+    ApiError err;
+
+    m_server->recordedPaths.clear();
+    m_server->setHandler([](const QString &, const QString &, const QHash<QString, QString> &,
+                            const QByteArray &) {
+        return QByteArray(R"({"thread":{"id":2,"name":"New Thread","slug":"new-thread","workspaceId":1}})");
+    });
+
+    m_client->createThread(QStringLiteral("default"),
+                           [&](const HermindWorkspaceThread &t, const QString &, const ApiError &e) {
+                               done = true;
+                               thread = t;
+                               err = e;
+                           });
+
+    QTRY_VERIFY_WITH_TIMEOUT(done, 5000);
+    QVERIFY(err.isEmpty());
+    QCOMPARE(thread.slug(), QStringLiteral("new-thread"));
+    QCOMPARE(m_server->recordedPaths.last(), QStringLiteral("/api/workspace/default/thread/new"));
+}
+
+void TestApiClient::updateThread()
+{
+    bool done = false;
+    HermindWorkspaceThread thread;
+    ApiError err;
+    QByteArray receivedBody;
+
+    m_server->recordedPaths.clear();
+    m_server->setHandler([&](const QString &, const QString &, const QHash<QString, QString> &,
+                             const QByteArray &body) {
+        receivedBody = body;
+        return QByteArray(R"({"thread":{"id":1,"name":"Renamed","slug":"thread-a","workspaceId":1}})");
+    });
+
+    m_client->updateThread(QStringLiteral("default"), QStringLiteral("thread-a"),
+                           QStringLiteral("Renamed"),
+                           [&](const HermindWorkspaceThread &t, const QString &, const ApiError &e) {
+                               done = true;
+                               thread = t;
+                               err = e;
+                           });
+
+    QTRY_VERIFY_WITH_TIMEOUT(done, 5000);
+    QVERIFY(err.isEmpty());
+    QCOMPARE(thread.name(), QStringLiteral("Renamed"));
+    QCOMPARE(m_server->recordedPaths.last(),
+             QStringLiteral("/api/workspace/default/thread/thread-a/update"));
+
+    QJsonObject expectedBody;
+    expectedBody.insert(QStringLiteral("name"), QStringLiteral("Renamed"));
+    QCOMPARE(receivedBody, QJsonDocument(expectedBody).toJson(QJsonDocument::Compact));
+}
+
+void TestApiClient::deleteThread()
+{
+    bool done = false;
+    bool success = false;
+    ApiError err;
+
+    m_server->recordedPaths.clear();
+    m_server->setHandler([](const QString &method, const QString &, const QHash<QString, QString> &,
+                            const QByteArray &) {
+        return method == QStringLiteral("DELETE") ? QByteArray("{}")
+                                                  : QByteArray(R"({"error":"expected DELETE"})");
+    });
+
+    m_client->deleteThread(QStringLiteral("default"), QStringLiteral("thread-a"),
+                           [&](bool ok, const ApiError &e) {
+                               done = true;
+                               success = ok;
+                               err = e;
+                           });
+
+    QTRY_VERIFY_WITH_TIMEOUT(done, 5000);
+    QVERIFY(success);
+    QVERIFY(err.isEmpty());
+    QCOMPARE(m_server->recordedPaths.last(), QStringLiteral("/api/workspace/default/thread/thread-a"));
 }
 
 void TestApiClient::streamChat()

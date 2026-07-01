@@ -47,6 +47,8 @@ echo ""
 echo "=== sidebar tests ==="
 run_test sidebar workspace_list_model_test.pro tst_workspace_list_model
 run_test sidebar workspace_item_widget_test.pro tst_workspace_item_widget
+run_test sidebar thread_item_widget_test.pro tst_thread_item_widget
+run_test sidebar thread_container_widget_test.pro tst_thread_container_widget
 run_test sidebar active_workspaces_widget_test.pro tst_active_workspaces_widget
 run_test sidebar sidebar_footer_widget_test.pro tst_sidebar_footer_widget
 run_test sidebar sidebar_widget_test.pro tst_sidebar_widget

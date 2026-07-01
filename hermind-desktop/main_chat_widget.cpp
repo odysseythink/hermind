@@ -6,6 +6,8 @@
 #include "sidebar_widget.h"
 #include "auth/auth_manager.h"
 #include "api/hermind_api_client.h"
+#include "navigation/navigation_manager.h"
+#include "navigation/navigation_route.h"
 
 #include <QDebug>
 #include <QBoxLayout>
@@ -47,6 +49,10 @@ MainChatWidget::MainChatWidget(QWidget *parent)
     connect(ui->createAgentButton, &QPushButton::clicked, this, &MainChatWidget::on_createAgentButton_clicked);
     connect(ui->editWorkspaceButton, &QPushButton::clicked, this, &MainChatWidget::on_editWorkspaceButton_clicked);
     connect(ui->uploadFileButton, &QPushButton::clicked, this, &MainChatWidget::on_uploadFileButton_clicked);
+
+    connect(&NavigationManager::instance(), &NavigationManager::currentRouteChanged,
+            this, &MainChatWidget::onRouteChanged);
+    updateSidebarSelection(NavigationManager::instance().currentRoute());
 }
 
 MainChatWidget::~MainChatWidget()
@@ -285,3 +291,28 @@ void MainChatWidget::on_sendButton_clicked() { qDebug() << "send clicked"; }
 void MainChatWidget::on_createAgentButton_clicked() { qDebug() << "create agent clicked"; }
 void MainChatWidget::on_editWorkspaceButton_clicked() { qDebug() << "edit workspace clicked"; }
 void MainChatWidget::on_uploadFileButton_clicked() { qDebug() << "upload file clicked"; }
+
+void MainChatWidget::onRouteChanged(const NavigationRoute &route)
+{
+    updateSidebarSelection(route);
+}
+
+void MainChatWidget::updateSidebarSelection(const NavigationRoute &route)
+{
+    if (!m_sidebar)
+        return;
+
+    switch (route.page) {
+    case NavigationPage::WorkspaceChat:
+    case NavigationPage::WorkspaceSettings:
+        m_sidebar->setSelectedWorkspace(route.workspaceSlug);
+        m_sidebar->setSelectedThread(route.threadSlug);
+        break;
+    default:
+        m_sidebar->setSelectedWorkspace(QString());
+        m_sidebar->setSelectedThread(QString());
+        break;
+    }
+
+    m_sidebar->refreshWorkspaces();
+}

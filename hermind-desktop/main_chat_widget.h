@@ -4,6 +4,8 @@
 #include <QWidget>
 #include <QToolButton>
 
+#include "navigation/navigation_route.h"
+
 namespace Ui {
 class MainChatWidget;
 }
@@ -38,11 +40,13 @@ private slots:
     void on_createAgentButton_clicked();
     void on_editWorkspaceButton_clicked();
     void on_uploadFileButton_clicked();
+    void onRouteChanged(const NavigationRoute &route);
 
 private:
     void setupStyleSheet();
     void replaceToolButtons();
     void replaceSidebar();
+    void updateSidebarSelection(const NavigationRoute &route);
 
     Ui::MainChatWidget *ui;
     SidebarWidget *m_sidebar = nullptr;
