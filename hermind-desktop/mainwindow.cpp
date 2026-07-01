@@ -22,8 +22,9 @@ MainWindow::MainWindow(QWidget *parent)
         registerPage(NavigationPage::DefaultChat, chatWidget);
         connect(chatWidget, &MainChatWidget::bottomSettingClicked,
                 this, []() {
-            NavigationManager::instance().navigateTo(
-                NavigationRoute{NavigationPage::GeneralSettings});
+            NavigationRoute route;
+            route.page = NavigationPage::GeneralSettings;
+            NavigationManager::instance().navigateTo(route);
         });
     }
 

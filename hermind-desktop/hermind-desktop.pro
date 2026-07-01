@@ -2,7 +2,7 @@ QT += widgets network websockets
 
 CONFIG += c++17
 
-INCLUDEPATH += $$PWD/api $$PWD/models $$PWD/streaming $$PWD/auth $$PWD/navigation $$PWD/widgets
+INCLUDEPATH += $$PWD $$PWD/api $$PWD/models $$PWD/streaming $$PWD/auth $$PWD/navigation $$PWD/widgets $$PWD/sidebar
 
 # You can make your code fail to compile if it uses deprecated APIs.
 # In order to do so, uncomment the following line.
@@ -25,6 +25,11 @@ SOURCES += \
     streaming/hermind_websocket_client.cpp \
     auth/auth_manager.cpp \
     navigation/navigation_manager.cpp \
+    sidebar_widget.cpp \
+    sidebar/workspace_list_model.cpp \
+    sidebar/workspace_item_widget.cpp \
+    sidebar/active_workspaces_widget.cpp \
+    sidebar/sidebar_footer_widget.cpp \
     widgets/theme_colors.cpp \
     widgets/theme_style_helper.cpp \
     widgets/icon_button.cpp \
@@ -52,6 +57,11 @@ HEADERS += \
     auth/auth_manager.h \
     navigation/navigation_manager.h \
     navigation/navigation_route.h \
+    sidebar_widget.h \
+    sidebar/workspace_list_model.h \
+    sidebar/workspace_item_widget.h \
+    sidebar/active_workspaces_widget.h \
+    sidebar/sidebar_footer_widget.h \
     widgets/theme_colors.h \
     widgets/theme_style_helper.h \
     widgets/icon_button.h \
@@ -64,7 +74,8 @@ HEADERS += \
 FORMS += \
     main_chat_widget.ui \
     main_setting_widget.ui \
-    mainwindow.ui
+    mainwindow.ui \
+    sidebar_widget.ui
 
 RESOURCES += \
     resources.qrc

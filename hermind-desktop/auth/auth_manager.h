@@ -23,6 +23,7 @@ public:
     HermindUser currentUser() const;
     QString authToken() const;
     QString lastError() const;
+    HermindApiClient *apiClient() const;
 
     /// Initialize the singleton with explicit dependencies. Call once before use.
     void initialize(HermindApiClient *apiClient, SettingsStore *settings);

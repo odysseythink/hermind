@@ -1,5 +1,16 @@
 #include "navigation_manager.h"
 
+namespace {
+
+NavigationRoute defaultRoute()
+{
+    NavigationRoute route;
+    route.page = NavigationPage::DefaultChat;
+    return route;
+}
+
+} // namespace
+
 NavigationManager &NavigationManager::instance()
 {
     static NavigationManager mgr;
@@ -9,13 +20,13 @@ NavigationManager &NavigationManager::instance()
 NavigationManager::NavigationManager(QObject *parent)
     : QObject(parent)
 {
-    setCurrentRoute(NavigationRoute{NavigationPage::DefaultChat});
+    setCurrentRoute(defaultRoute());
 }
 
 NavigationRoute NavigationManager::currentRoute() const
 {
     if (m_currentIndex < 0 || m_currentIndex >= m_history.size())
-        return NavigationRoute{NavigationPage::DefaultChat};
+        return defaultRoute();
     return m_history.at(m_currentIndex);
 }
 
@@ -85,7 +96,7 @@ void NavigationManager::clearHistory()
     const bool oldCanGoBack = canGoBack();
     m_history.clear();
     m_currentIndex = 0;
-    m_history.append(NavigationRoute{NavigationPage::DefaultChat});
+    m_history.append(defaultRoute());
     emit historyChanged();
     if (oldCanGoBack != canGoBack())
         emit canGoBackChanged(canGoBack());

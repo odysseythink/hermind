@@ -25,6 +25,7 @@ bool AuthManager::isAuthenticated() const { return m_state == AuthState::Authent
 HermindUser AuthManager::currentUser() const { return m_currentUser; }
 QString AuthManager::authToken() const { return m_authToken; }
 QString AuthManager::lastError() const { return m_lastError; }
+HermindApiClient *AuthManager::apiClient() const { return m_apiClient; }
 
 void AuthManager::setState(AuthState state)
 {

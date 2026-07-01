@@ -10,6 +10,7 @@ class MainChatWidget;
 
 class IconButton;
 class SearchInput;
+class SidebarWidget;
 
 class MainChatWidget : public QWidget
 {
@@ -40,12 +41,11 @@ private slots:
 
 private:
     void setupStyleSheet();
-    void setupLogo();
-    void setupThreadList();
     void replaceToolButtons();
-    void replaceSearchEdit();
+    void replaceSidebar();
 
     Ui::MainChatWidget *ui;
+    SidebarWidget *m_sidebar = nullptr;
 };
 
 #endif // MAIN_CHAT_WIDGET_H

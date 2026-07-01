@@ -1,13 +1,13 @@
 #include "main_chat_widget.h"
 #include "ui_main_chat_widget.h"
 #include "widgets/icon_button.h"
-#include "widgets/search_input.h"
 #include "widgets/theme_colors.h"
 #include "theme_manager.h"
+#include "sidebar_widget.h"
+#include "auth/auth_manager.h"
+#include "api/hermind_api_client.h"
 
 #include <QDebug>
-#include <QPixmap>
-#include <QLineEdit>
 #include <QBoxLayout>
 
 namespace {
@@ -36,20 +36,10 @@ MainChatWidget::MainChatWidget(QWidget *parent)
 {
     ui->setupUi(this);
 
+    replaceSidebar();
     replaceToolButtons();
-    replaceSearchEdit();
-
-    setupLogo();
-    setupThreadList();
     setupStyleSheet();
 
-    connect(ui->popoutButton, &QToolButton::clicked, this, &MainChatWidget::on_popoutButton_clicked);
-    connect(ui->newSearchButton, &QToolButton::clicked, this, &MainChatWidget::on_newSearchButton_clicked);
-    connect(ui->uploadButton, &QToolButton::clicked, this, &MainChatWidget::on_uploadButton_clicked);
-    connect(ui->workspaceSettingsButton, &QToolButton::clicked, this, &MainChatWidget::on_workspaceSettingsButton_clicked);
-    connect(ui->newThreadButton, &QPushButton::clicked, this, &MainChatWidget::on_newThreadButton_clicked);
-    connect(ui->assistantChatsButton, &QPushButton::clicked, this, &MainChatWidget::on_assistantChatsButton_clicked);
-    connect(ui->bottomSettingButton, &QToolButton::clicked, this, &MainChatWidget::on_bottomSettingButton_clicked);
     connect(ui->headerSettingsButton, &QToolButton::clicked, this, &MainChatWidget::on_headerSettingsButton_clicked);
     connect(ui->toolsButton, &QPushButton::clicked, this, &MainChatWidget::on_toolsButton_clicked);
     connect(ui->micButton, &QToolButton::clicked, this, &MainChatWidget::on_micButton_clicked);
@@ -62,6 +52,41 @@ MainChatWidget::MainChatWidget(QWidget *parent)
 MainChatWidget::~MainChatWidget()
 {
     delete ui;
+}
+
+void MainChatWidget::replaceSidebar()
+{
+    m_sidebar = new SidebarWidget(this);
+    m_sidebar->setObjectName(QStringLiteral("sidebarWidget"));
+    m_sidebar->setMinimumWidth(260);
+    m_sidebar->setMaximumWidth(260);
+
+    if (HermindApiClient *client = AuthManager::instance().apiClient())
+        m_sidebar->setApiClient(client);
+
+    connect(m_sidebar, &SidebarWidget::openSettingsRequested,
+            this, &MainChatWidget::bottomSettingClicked);
+    connect(m_sidebar, &SidebarWidget::newWorkspaceRequested,
+            this, []() { qDebug() << "new workspace requested"; });
+
+    QBoxLayout *mainLayout = qobject_cast<QBoxLayout *>(ui->horizontalLayout_2);
+    if (mainLayout && ui->sidebarFrame) {
+        int idx = -1;
+        for (int i = 0; i < mainLayout->count(); ++i) {
+            if (mainLayout->itemAt(i)->widget() == ui->sidebarFrame) {
+                idx = i;
+                break;
+            }
+        }
+        if (idx >= 0) {
+            mainLayout->removeWidget(ui->sidebarFrame);
+            mainLayout->insertWidget(idx, m_sidebar);
+        }
+    }
+
+    // The old sidebar UI is fully replaced by SidebarWidget.
+    delete ui->sidebarFrame;
+    ui->sidebarFrame = nullptr;
 }
 
 void MainChatWidget::replaceToolButtons()
@@ -92,72 +117,14 @@ void MainChatWidget::replaceToolButtons()
 
         oldBtn->deleteLater();
 
-        // Update ui-> pointer (all QToolButton* members)
-        if (name == QLatin1String("popoutButton")) ui->popoutButton = newBtn;
-        else if (name == QLatin1String("newSearchButton")) ui->newSearchButton = newBtn;
-        else if (name == QLatin1String("uploadButton")) ui->uploadButton = newBtn;
-        else if (name == QLatin1String("workspaceSettingsButton")) ui->workspaceSettingsButton = newBtn;
-        else if (name == QLatin1String("headerSettingsButton")) ui->headerSettingsButton = newBtn;
+        if (name == QLatin1String("headerSettingsButton")) ui->headerSettingsButton = newBtn;
         else if (name == QLatin1String("micButton")) ui->micButton = newBtn;
         else if (name == QLatin1String("sendButton")) ui->sendButton = newBtn;
-        else if (name == QLatin1String("bottomSettingButton")) ui->bottomSettingButton = newBtn;
     };
 
-    replaceOne(QStringLiteral("popoutButton"), QString::fromUtf8("⧉"));
-    replaceOne(QStringLiteral("newSearchButton"), QStringLiteral("+"));
-    replaceOne(QStringLiteral("uploadButton"), QString::fromUtf8("⬆"));
-    replaceOne(QStringLiteral("workspaceSettingsButton"), QString::fromUtf8("⚙"));
     replaceOne(QStringLiteral("headerSettingsButton"), QString::fromUtf8("⚙"));
     replaceOne(QStringLiteral("micButton"), QString::fromUtf8("🎤"));
     replaceOne(QStringLiteral("sendButton"), QString::fromUtf8("➤"));
-    replaceOne(QStringLiteral("bottomSettingButton"), QString::fromUtf8("🔧"));
-}
-
-void MainChatWidget::replaceSearchEdit()
-{
-    QLineEdit *oldEdit = ui->searchEdit;
-    if (!oldEdit)
-        return;
-
-    SearchInput *newEdit = new SearchInput(this);
-    newEdit->setObjectName(QStringLiteral("searchEdit"));
-    newEdit->setPlaceholderText(oldEdit->placeholderText());
-
-    QBoxLayout *layout = findLayoutContaining(oldEdit);
-    if (layout) {
-        int idx = -1;
-        for (int i = 0; i < layout->count(); ++i) {
-            if (layout->itemAt(i)->widget() == oldEdit) {
-                idx = i;
-                break;
-            }
-        }
-        if (idx >= 0) {
-            layout->removeWidget(oldEdit);
-            layout->insertWidget(idx, newEdit);
-        }
-    }
-
-    oldEdit->deleteLater();
-    ui->searchEdit = newEdit;
-}
-
-void MainChatWidget::setupLogo()
-{
-    QPixmap logo(":/images/logo.svg");
-    if (!logo.isNull()) {
-        ui->logoLabel->setPixmap(logo.scaled(24, 24, Qt::KeepAspectRatio, Qt::SmoothTransformation));
-    }
-}
-
-void MainChatWidget::setupThreadList()
-{
-    ui->threadList->addItem("hello");
-    ui->threadList->addItem("Thread");
-    ui->threadList->addItem("hello");
-    ui->threadList->addItem(QString::fromUtf8("联网搜索惠阳今天的..."));
-    ui->threadList->addItem("*New Thread");
-    ui->threadList->setCurrentRow(4);
 }
 
 void MainChatWidget::setupStyleSheet()
@@ -175,7 +142,7 @@ void MainChatWidget::setupStyleSheet()
             background-color: %1;
         }
 
-        #sidebarFrame {
+        #sidebarWidget {
             background-color: %2;
             border: none;
         }
