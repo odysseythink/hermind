@@ -2,6 +2,9 @@
 #define MAINWINDOW_H
 
 #include <QMainWindow>
+#include <QHash>
+
+#include "navigation_route.h"
 
 QT_BEGIN_NAMESPACE
 namespace Ui {
@@ -18,13 +21,14 @@ public:
     ~MainWindow() override;
 
 private slots:
-    void onBottomReturnClicked();
-    void onBottomSettingClicked();
+    void onCurrentRouteChanged(const NavigationRoute &route);
 
 private:
-
+    void registerPage(NavigationPage page, QWidget *widget);
+    int pageIndex(NavigationPage page) const;
 
     Ui::MainWindow *ui;
+    QHash<NavigationPage, QWidget *> m_pageRegistry;
 };
 
 #endif // MAINWINDOW_H
