@@ -1,0 +1,42 @@
+package kimi
+
+import (
+	"testing"
+
+	"github.com/odysseythink/pantheon/core"
+)
+
+func TestProviderOptions_ProviderName(t *testing.T) {
+	opts := ProviderOptions{}
+	if opts.ProviderName() != "kimi" {
+		t.Errorf("expected provider name kimi, got %s", opts.ProviderName())
+	}
+}
+
+func TestExtractProviderOptions_Nil(t *testing.T) {
+	result := extractProviderOptions(nil)
+	if result.Thinking != nil || result.PromptCacheKey != "" {
+		t.Error("expected empty options for nil")
+	}
+}
+
+func TestExtractProviderOptions_KimiType(t *testing.T) {
+	input := ProviderOptions{
+		Thinking:       &ThinkingConfig{Type: "enabled"},
+		PromptCacheKey: "key-1",
+	}
+	result := extractProviderOptions(input)
+	if result.PromptCacheKey != "key-1" {
+		t.Errorf("expected key-1, got %s", result.PromptCacheKey)
+	}
+	if result.Thinking == nil || result.Thinking.Type != "enabled" {
+		t.Error("expected thinking enabled")
+	}
+}
+
+func TestExtractProviderOptions_OtherType(t *testing.T) {
+	result := extractProviderOptions(struct{ core.ProviderOptions }{})
+	if result.PromptCacheKey != "" {
+		t.Error("expected empty options for non-kimi type")
+	}
+}
