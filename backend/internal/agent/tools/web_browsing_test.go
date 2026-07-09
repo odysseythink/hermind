@@ -342,3 +342,39 @@ func TestWebBrowsing_FallbackOnProviderError(t *testing.T) {
 		t.Errorf("expected a 'Falling back to DuckDuckGo' status emit, got: %v", emits)
 	}
 }
+
+func TestWebBrowsing_AllProvidersFail(t *testing.T) {
+	// Both primary (non-default) and fallback (DDG) fail -> "unavailable" error.
+	primary := &mockWebSearchProvider{
+		name: "DeadSerper",
+		err:  &SearchError{Provider: "Serper.dev", Message: "timeout after 10s", Cause: context.DeadlineExceeded},
+	}
+	ddg := &mockWebSearchProvider{
+		name: "DeadDDG",
+		err:  &SearchError{Provider: "DuckDuckGo", Message: "network unreachable", Cause: context.DeadlineExceeded},
+	}
+	registerSearchProvider("serper-dot-dev", primary)
+	registerSearchProvider(defaultSearchProvider, ddg)
+	t.Cleanup(func() {
+		delete(searchProviderRegistry, "serper-dot-dev")
+		delete(searchProviderRegistry, defaultSearchProvider)
+	})
+
+	tc := &ToolContext{
+		Settings: map[string]string{"agent_search_provider": "serper-dot-dev"},
+		Cfg:      &config.Config{},
+		Emit:     func(string) {},
+	}
+
+	entry := NewWebBrowsingSkill(tc)
+	result, err := entry.Handler(context.Background(), []byte(`{"query":"dead"}`))
+	if err != nil {
+		t.Fatalf("handler returned error: %v", err)
+	}
+	if !strings.Contains(result, "Web search is currently unavailable") {
+		t.Fatalf("expected 'Web search is currently unavailable', got: %s", result)
+	}
+	if !strings.Contains(result, "All search providers failed") {
+		t.Fatalf("expected 'All search providers failed', got: %s", result)
+	}
+}
