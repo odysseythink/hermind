@@ -135,12 +135,20 @@ func TestWebBrowsing_QueryRequired(t *testing.T) {
 }
 
 func TestWebBrowsing_SearchError(t *testing.T) {
-	mock := &mockWebSearchProvider{name: "BadProvider", err: context.DeadlineExceeded}
-	registerSearchProvider("bad-engine", mock)
-	defer delete(searchProviderRegistry, "bad-engine")
+	// When the DEFAULT provider itself fails, no fallback is possible -> error returned.
+	mock := &mockWebSearchProvider{name: "BadDefault", err: context.DeadlineExceeded}
+	old := searchProviderRegistry[defaultSearchProvider]
+	searchProviderRegistry[defaultSearchProvider] = mock
+	t.Cleanup(func() {
+		if old == nil {
+			delete(searchProviderRegistry, defaultSearchProvider)
+		} else {
+			searchProviderRegistry[defaultSearchProvider] = old
+		}
+	})
 
 	tc := &ToolContext{
-		Settings: map[string]string{"agent_search_provider": "bad-engine"},
+		Settings: map[string]string{}, // empty -> uses default
 		Cfg:      &config.Config{},
 		Emit:     func(string) {},
 	}
@@ -150,8 +158,8 @@ func TestWebBrowsing_SearchError(t *testing.T) {
 	if err != nil {
 		t.Fatalf("handler returned error: %v", err)
 	}
-	if !strings.Contains(result, "search error [BadProvider]") {
-		t.Fatalf("expected provider-scoped error, got: %s", result)
+	if !strings.Contains(result, "Web search is currently unavailable") {
+		t.Fatalf("expected 'Web search is currently unavailable', got: %s", result)
 	}
 }
 
@@ -287,4 +295,50 @@ type mockSkippingProvider struct{}
 func (p *mockSkippingProvider) Name() string { return "MockSkip" }
 func (p *mockSkippingProvider) Search(ctx context.Context, query string, _ map[string]string, _ *config.Config) ([]SearchResult, error) {
 	return []SearchResult{{Title: "No URL", Link: "", Snippet: "No link here"}}, nil
+}
+
+func TestWebBrowsing_FallbackOnProviderError(t *testing.T) {
+	// Primary provider returns an error -> fallback to DuckDuckGo.
+	primary := &mockWebSearchProvider{
+		name: "BadSerper",
+		err:  &SearchError{Provider: "Serper.dev", Message: "timeout", Cause: context.DeadlineExceeded},
+	}
+	fallback := &mockWebSearchProvider{
+		name:    "DDGFallback",
+		results: []SearchResult{{Title: "Fallback OK", Link: "https://ddg.example", Snippet: "ddg worked"}},
+	}
+	// Override both registry entries.
+	registerSearchProvider("serper-dot-dev", primary)
+	registerSearchProvider("duckduckgo-engine", fallback)
+	t.Cleanup(func() {
+		delete(searchProviderRegistry, "serper-dot-dev")
+		delete(searchProviderRegistry, "duckduckgo-engine")
+	})
+
+	var emits []string
+	tc := &ToolContext{
+		Settings: map[string]string{"agent_search_provider": "serper-dot-dev"},
+		Cfg:      &config.Config{},
+		Emit:     func(msg string) { emits = append(emits, msg) },
+	}
+
+	entry := NewWebBrowsingSkill(tc)
+	result, err := entry.Handler(context.Background(), []byte(`{"query":"fallback test"}`))
+	if err != nil {
+		t.Fatalf("handler returned error: %v", err)
+	}
+	if !strings.Contains(result, "Fallback OK") {
+		t.Fatalf("expected fallback to DDG results, got: %s", result)
+	}
+	// Verify the warning status emit mentions the fallback.
+	found := false
+	for _, e := range emits {
+		if strings.Contains(e, "Falling back to DuckDuckGo") {
+			found = true
+			break
+		}
+	}
+	if !found {
+		t.Errorf("expected a 'Falling back to DuckDuckGo' status emit, got: %v", emits)
+	}
 }

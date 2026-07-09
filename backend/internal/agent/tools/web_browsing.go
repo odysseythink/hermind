@@ -45,7 +45,23 @@ func NewWebBrowsingSkill(tc *ToolContext) *tool.Entry {
 			tc.Emit(fmt.Sprintf("Searching web via %s for: %s", p.Name(), args.Query))
 			results, err := p.Search(ctx, args.Query, tc.Settings, tc.Cfg)
 			if err != nil {
-				return tool.Error(fmt.Sprintf("search error [%s]: %s", p.Name(), err.Error())), nil
+				// If the configured provider is not the default and failed,
+				// try falling back to DuckDuckGo.
+				if providerKey != defaultSearchProvider {
+					tc.Emit(fmt.Sprintf("Search via %s failed: %s. Falling back to DuckDuckGo.", p.Name(), err))
+					fb := getSearchProvider(defaultSearchProvider)
+					if fb != nil {
+						results, err = fb.Search(ctx, args.Query, tc.Settings, tc.Cfg)
+						if err != nil {
+							return tool.Error("Web search is currently unavailable. All search providers failed."), nil
+						}
+						// Fallback succeeded — continue with results below.
+					} else {
+						return tool.Error("Web search is currently unavailable. No fallback provider registered."), nil
+					}
+				} else {
+					return tool.Error(fmt.Sprintf("Web search is currently unavailable. %s failed: %s", p.Name(), err)), nil
+				}
 			}
 			if len(results) == 0 {
 				return tool.Result("No information was found online for the search query."), nil
