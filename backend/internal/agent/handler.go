@@ -94,6 +94,10 @@ func (r *Runtime) HandleWS(c *gin.Context) {
 	// the session and sends a reportStreamEvent frame with the citations.
 	citationEmitter := func(citations []tools.Citation) {
 		uuid := sess.CurrentMessageUUID()
+		if uuid == "" {
+			uuid = uuidV4()
+			sess.SetCurrentMessageUUID(uuid)
+		}
 		if uuid == "" || len(citations) == 0 {
 			return
 		}

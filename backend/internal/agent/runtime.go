@@ -190,6 +190,10 @@ func (r *Runtime) RunAgentDirectly(ctx context.Context, invUUID string, io Agent
 
 	citationEmitter := func(citations []tools.Citation) {
 		uuid := sess.CurrentMessageUUID()
+		if uuid == "" {
+			uuid = uuidV4()
+			sess.SetCurrentMessageUUID(uuid)
+		}
 		if uuid == "" || len(citations) == 0 {
 			return
 		}
