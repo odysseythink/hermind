@@ -14,3 +14,9 @@ func registerSearchProvider(key string, p SearchProvider) {
 func getSearchProvider(key string) SearchProvider {
 	return searchProviderRegistry[key]
 }
+
+// RegisterSearchProviderForTesting allows tests to override the registry with
+// mock providers. Test-only; not for production use.
+func RegisterSearchProviderForTesting(key string, p SearchProvider) {
+	registerSearchProvider(key, p)
+}
