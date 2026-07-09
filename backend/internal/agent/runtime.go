@@ -14,6 +14,7 @@ import (
 	"github.com/odysseythink/hermind/backend/internal/config"
 	"github.com/odysseythink/hermind/backend/internal/mcp"
 	"github.com/odysseythink/hermind/backend/internal/models"
+	"github.com/odysseythink/hermind/backend/internal/providers"
 	"github.com/odysseythink/hermind/backend/internal/services"
 	agentcompression "github.com/odysseythink/hermind/backend/internal/agent/compression"
 	"github.com/odysseythink/pantheon/core"
@@ -124,7 +125,7 @@ func (r *Runtime) LanguageModelFor(ws *models.Workspace, settings map[string]str
 		return r.lmOverride, nil
 	}
 	provider := pick("LLMProvider", settings, r.deps.Cfg.LLMProvider)
-	model := resolveModelID(provider, ws, settings, r.deps.Cfg)
+	model := providers.ResolveModelID(provider, r.deps.Cfg, settings)
 	key := provider + ":" + model
 	if cached, ok := r.lmCache.Load(key); ok {
 		return cached.(core.LanguageModel), nil

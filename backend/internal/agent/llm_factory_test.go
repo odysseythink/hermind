@@ -45,6 +45,23 @@ func TestLLMFactory_NoAPIKey_ReturnsError(t *testing.T) {
 	require.Contains(t, err.Error(), "no LLM API key")
 }
 
+func TestLLMFactory_KeyPriority_DBSpecificBeatsEnvGeneric(t *testing.T) {
+	cfg := &config.Config{
+		LLMProvider: "openai",
+		LLMModel:    "gpt-4o",
+		LLMApiKey:   "env-generic-key",
+	}
+	ws := &models.Workspace{}
+	// DB-specific OpenAiKey should beat env-generic LLMApiKey
+	lm, err := agent.BuildLanguageModelForTesting(ws, map[string]string{
+		"LLMProvider": "openai",
+		"OpenAiKey":   "db-specific-key",
+	}, cfg)
+	require.NoError(t, err)
+	require.NotNil(t, lm)
+	require.Equal(t, "openai", lm.Provider())
+}
+
 func TestLLMFactory_WorkspaceOverride_PreferredOverGlobal(t *testing.T) {
 	cfg := &config.Config{LLMProvider: "openai", LLMModel: "gpt-4o", LLMApiKey: "sk-test"}
 	ws := &models.Workspace{}

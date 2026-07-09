@@ -8,6 +8,194 @@ import (
 	"github.com/odysseythink/hermind/backend/internal/config"
 )
 
+// ResolveAPIKey returns the API key for a provider following the unified priority:
+//
+//	settings[providerSpecificKey] > cfg.ProviderSpecificKey > settings["LLMApiKey"] > cfg.LLMApiKey
+func ResolveAPIKey(provider string, settings map[string]string, cfg *config.Config) (string, error) {
+	if specificField := providerAPIKeyField(provider); specificField != "" {
+		if v, ok := settings[specificField]; ok && v != "" {
+			return v, nil
+		}
+		if v := cfgAPIKeyByField(cfg, specificField); v != "" {
+			return v, nil
+		}
+	}
+	if v, ok := settings["LLMApiKey"]; ok && v != "" {
+		return v, nil
+	}
+	if cfg.LLMApiKey != "" {
+		return cfg.LLMApiKey, nil
+	}
+	return "", fmt.Errorf("no API key configured for provider %s", provider)
+}
+
+// ResolveModelID is the exported version of resolveModelID for chat / agent paths.
+func ResolveModelID(provider string, cfg *config.Config, settings map[string]string) string {
+	return resolveModelID(provider, cfg, settings)
+}
+
+// providerAPIKeyField maps a provider name to the corresponding Config field name for its API key.
+func providerAPIKeyField(provider string) string {
+	switch provider {
+	case "openai":
+		return "OpenAiKey"
+	case "azure":
+		return "AzureOpenAiKey"
+	case "anthropic":
+		return "AnthropicApiKey"
+	case "gemini":
+		return "GeminiLLMApiKey"
+	case "localai":
+		return "LocalAiApiKey"
+	case "togetherai":
+		return "TogetherAiApiKey"
+	case "fireworksai":
+		return "FireworksApiKey"
+	case "mistral":
+		return "MistralApiKey"
+	case "huggingface":
+		return "HuggingFaceLLMAccessToken"
+	case "perplexity":
+		return "PerplexityApiKey"
+	case "openrouter":
+		return "OpenRouterApiKey"
+	case "novita":
+		return "NovitaLLMApiKey"
+	case "groq":
+		return "GroqApiKey"
+	case "koboldcpp":
+		return "KoboldCPPApiKey"
+	case "textgenwebui":
+		return "TextGenWebUIAPIKey"
+	case "cohere":
+		return "CohereApiKey"
+	case "litellm":
+		return "LiteLLMApiKey"
+	case "generic-openai":
+		return "GenericOpenAiKey"
+	case "deepseek":
+		return "DeepSeekApiKey"
+	case "apipie":
+		return "ApiPieApiKey"
+	case "xai":
+		return "XAIApiKey"
+	case "ppio":
+		return "PpioApiKey"
+	case "dpaiStudio":
+		return "DellProApiKey"
+	case "moonshotai":
+		return "MoonshotAiApiKey"
+	case "cometapi":
+		return "CometApiLLMApiKey"
+	case "zai":
+		return "ZAiApiKey"
+	case "giteeai":
+		return "GiteeAIApiKey"
+	case "docker-model-runner":
+		return "DockerModelRunnerApiKey"
+	case "privatemode":
+		return "PrivateModeApiKey"
+	case "sambanova":
+		return "SambaNovaLLMApiKey"
+	case "lemonade":
+		return "LemonadeLLMApiKey"
+	case "minimax":
+		return "MinimaxApiKey"
+	case "qwen":
+		return "QwenApiKey"
+	case "wenxin":
+		return "WenxinApiKey"
+	case "zhipu":
+		return "ZhipuApiKey"
+	}
+	return ""
+}
+
+// cfgAPIKeyByField reads a Config API key by field name.
+func cfgAPIKeyByField(cfg *config.Config, field string) string {
+	switch field {
+	case "OpenAiKey":
+		return cfg.OpenAiKey
+	case "AzureOpenAiKey":
+		return cfg.AzureOpenAiKey
+	case "AnthropicApiKey":
+		return cfg.AnthropicApiKey
+	case "GeminiLLMApiKey":
+		return cfg.GeminiApiKey
+	case "LocalAiApiKey":
+		return cfg.LocalAiApiKey
+	case "TogetherAiApiKey":
+		return cfg.TogetherAiApiKey
+	case "FireworksApiKey":
+		return cfg.FireworksApiKey
+	case "MistralApiKey":
+		return cfg.MistralApiKey
+	case "HuggingFaceLLMAccessToken":
+		return cfg.HuggingFaceApiKey
+	case "PerplexityApiKey":
+		return cfg.PerplexityApiKey
+	case "OpenRouterApiKey":
+		return cfg.OpenRouterApiKey
+	case "NovitaLLMApiKey":
+		return cfg.NovitaLLMApiKey
+	case "GroqApiKey":
+		return cfg.GroqApiKey
+	case "KoboldCPPApiKey":
+		return cfg.LLMApiKey
+	case "TextGenWebUIAPIKey":
+		return cfg.TextGenApiKey
+	case "CohereApiKey":
+		return cfg.CohereApiKey
+	case "LiteLLMApiKey":
+		return cfg.LiteLLMApiKey
+	case "GenericOpenAiKey":
+		return cfg.GenericOpenAiKey
+	case "DeepSeekApiKey":
+		return cfg.DeepSeekApiKey
+	case "ApiPieApiKey":
+		return cfg.ApiPieApiKey
+	case "XAIApiKey":
+		return cfg.XAIApiKey
+	case "PpioApiKey":
+		return cfg.PpioApiKey
+	case "DellProApiKey":
+		return cfg.LLMApiKey
+	case "MoonshotAiApiKey":
+		return cfg.MoonshotAiApiKey
+	case "CometApiLLMApiKey":
+		return cfg.CometApiLLMApiKey
+	case "ZAiApiKey":
+		return cfg.ZAiApiKey
+	case "GiteeAIApiKey":
+		return cfg.GiteeAIApiKey
+	case "DockerModelRunnerApiKey":
+		return cfg.LLMApiKey
+	case "PrivateModeApiKey":
+		return cfg.LLMApiKey
+	case "SambaNovaLLMApiKey":
+		return cfg.SambaNovaLLMApiKey
+	case "LemonadeLLMApiKey":
+		return cfg.LemonadeLLMApiKey
+	case "MinimaxApiKey":
+		return cfg.MinimaxAPIKey
+	case "QwenApiKey":
+		return cfg.QwenAPIKey
+	case "WenxinApiKey":
+		return cfg.WenxinAPIKey
+	case "ZhipuApiKey":
+		return cfg.ZhipuAPIKey
+	}
+	return ""
+}
+
+// maskKey masks an API key for logging: first 7 chars + "..." + last 4 chars.
+func maskKey(key string) string {
+	if len(key) <= 11 {
+		return strings.Repeat("*", len(key))
+	}
+	return key[:7] + "..." + key[len(key)-4:]
+}
+
 func firstNonEmpty(values ...string) string {
 	for _, v := range values {
 		if v != "" {

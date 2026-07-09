@@ -174,7 +174,7 @@ func TestBuildAzure_EndpointParsing(t *testing.T) {
 		builder := providerRegistry["azure"]
 		_, err := builder(ctx, cfg, map[string]string{}, "gpt-4o")
 		require.Error(t, err)
-		assert.Contains(t, err.Error(), "azure: apiKey, resourceName, and deployment are required")
+		assert.Contains(t, err.Error(), "no API key configured for provider azure")
 	})
 }
 

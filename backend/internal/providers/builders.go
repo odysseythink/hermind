@@ -94,13 +94,9 @@ func init() {
 }
 
 func buildOpenAI(ctx context.Context, cfg *config.Config, settings map[string]string, modelID string) (core.LanguageModel, error) {
-	apiKey := firstNonEmpty(
-		settings["OpenAiKey"],
-		cfg.OpenAiKey,
-		cfg.LLMApiKey,
-	)
-	if apiKey == "" {
-		return nil, fmt.Errorf("no OpenAI API key configured")
+	apiKey, err := ResolveAPIKey("openai", settings, cfg)
+	if err != nil {
+		return nil, err
 	}
 	p, err := pantheonOpenAI.New(apiKey)
 	if err != nil {
@@ -110,11 +106,10 @@ func buildOpenAI(ctx context.Context, cfg *config.Config, settings map[string]st
 }
 
 func buildAzure(ctx context.Context, cfg *config.Config, settings map[string]string, modelID string) (core.LanguageModel, error) {
-	apiKey := firstNonEmpty(
-		settings["AzureOpenAiKey"],
-		cfg.AzureOpenAiKey,
-		cfg.LLMApiKey,
-	)
+	apiKey, err := ResolveAPIKey("azure", settings, cfg)
+	if err != nil {
+		return nil, err
+	}
 	resourceName := firstNonEmpty(
 		settings["AzureOpenAiResourceName"],
 		cfg.AzureOpenAiResourceName,
@@ -144,8 +139,8 @@ func buildAzure(ctx context.Context, cfg *config.Config, settings map[string]str
 		}
 	}
 
-	if apiKey == "" || resourceName == "" || deployment == "" {
-		return nil, fmt.Errorf("azure: apiKey, resourceName, and deployment are required")
+	if resourceName == "" || deployment == "" {
+		return nil, fmt.Errorf("azure: resourceName and deployment are required")
 	}
 
 	opts := []pantheonAzure.Option{}
@@ -161,13 +156,9 @@ func buildAzure(ctx context.Context, cfg *config.Config, settings map[string]str
 }
 
 func buildAnthropic(ctx context.Context, cfg *config.Config, settings map[string]string, modelID string) (core.LanguageModel, error) {
-	apiKey := firstNonEmpty(
-		settings["AnthropicApiKey"],
-		cfg.AnthropicApiKey,
-		cfg.LLMApiKey,
-	)
-	if apiKey == "" {
-		return nil, fmt.Errorf("no Anthropic API key configured")
+	apiKey, err := ResolveAPIKey("anthropic", settings, cfg)
+	if err != nil {
+		return nil, err
 	}
 	p, err := pantheonAnthropic.New(apiKey)
 	if err != nil {
@@ -177,13 +168,9 @@ func buildAnthropic(ctx context.Context, cfg *config.Config, settings map[string
 }
 
 func buildGoogle(ctx context.Context, cfg *config.Config, settings map[string]string, modelID string) (core.LanguageModel, error) {
-	apiKey := firstNonEmpty(
-		settings["GeminiLLMApiKey"],
-		cfg.GeminiApiKey,
-		cfg.LLMApiKey,
-	)
-	if apiKey == "" {
-		return nil, fmt.Errorf("no Gemini API key configured")
+	apiKey, err := ResolveAPIKey("gemini", settings, cfg)
+	if err != nil {
+		return nil, err
 	}
 	p, err := pantheonGoogle.New(apiKey)
 	if err != nil {
@@ -221,10 +208,10 @@ func buildLocalAI(ctx context.Context, cfg *config.Config, settings map[string]s
 	baseURL = strings.TrimSuffix(baseURL, "/")
 	baseURL = strings.TrimSuffix(baseURL, "/v1")
 
-	apiKey := firstNonEmpty(
-		settings["LocalAiApiKey"],
-		cfg.LocalAiApiKey,
-	)
+	apiKey, err := ResolveAPIKey("localai", settings, cfg)
+	if err != nil {
+		return nil, err
+	}
 
 	opts := []pantheonLocalAI.Option{pantheonLocalAI.WithBaseURL(baseURL)}
 	p, err := pantheonLocalAI.New(apiKey, opts...)
@@ -253,13 +240,9 @@ func buildOllama(ctx context.Context, cfg *config.Config, settings map[string]st
 }
 
 func buildTogether(ctx context.Context, cfg *config.Config, settings map[string]string, modelID string) (core.LanguageModel, error) {
-	apiKey := firstNonEmpty(
-		settings["TogetherAiApiKey"],
-		cfg.TogetherAiApiKey,
-		cfg.LLMApiKey,
-	)
-	if apiKey == "" {
-		return nil, fmt.Errorf("no TogetherAI API key configured")
+	apiKey, err := ResolveAPIKey("togetherai", settings, cfg)
+	if err != nil {
+		return nil, err
 	}
 	p, err := pantheonTogether.New(apiKey)
 	if err != nil {
@@ -269,13 +252,9 @@ func buildTogether(ctx context.Context, cfg *config.Config, settings map[string]
 }
 
 func buildFireworks(ctx context.Context, cfg *config.Config, settings map[string]string, modelID string) (core.LanguageModel, error) {
-	apiKey := firstNonEmpty(
-		settings["FireworksApiKey"],
-		cfg.FireworksApiKey,
-		cfg.LLMApiKey,
-	)
-	if apiKey == "" {
-		return nil, fmt.Errorf("no Fireworks API key configured")
+	apiKey, err := ResolveAPIKey("fireworksai", settings, cfg)
+	if err != nil {
+		return nil, err
 	}
 	p, err := pantheonFireworks.New(apiKey)
 	if err != nil {
@@ -285,13 +264,9 @@ func buildFireworks(ctx context.Context, cfg *config.Config, settings map[string
 }
 
 func buildMistral(ctx context.Context, cfg *config.Config, settings map[string]string, modelID string) (core.LanguageModel, error) {
-	apiKey := firstNonEmpty(
-		settings["MistralApiKey"],
-		cfg.MistralApiKey,
-		cfg.LLMApiKey,
-	)
-	if apiKey == "" {
-		return nil, fmt.Errorf("no Mistral API key configured")
+	apiKey, err := ResolveAPIKey("mistral", settings, cfg)
+	if err != nil {
+		return nil, err
 	}
 	p, err := pantheonMistral.New(apiKey)
 	if err != nil {
@@ -308,11 +283,10 @@ func buildHuggingFace(ctx context.Context, cfg *config.Config, settings map[stri
 	if endpoint == "" {
 		return nil, fmt.Errorf("no HuggingFace endpoint configured")
 	}
-	apiKey := firstNonEmpty(
-		settings["HuggingFaceLLMAccessToken"],
-		cfg.HuggingFaceApiKey,
-		cfg.LLMApiKey,
-	)
+	apiKey, err := ResolveAPIKey("huggingface", settings, cfg)
+	if err != nil {
+		return nil, err
+	}
 
 	opts := []pantheonHuggingFace.Option{pantheonHuggingFace.WithBaseURL(endpoint)}
 	p, err := pantheonHuggingFace.New(apiKey, opts...)
@@ -323,13 +297,9 @@ func buildHuggingFace(ctx context.Context, cfg *config.Config, settings map[stri
 }
 
 func buildPerplexity(ctx context.Context, cfg *config.Config, settings map[string]string, modelID string) (core.LanguageModel, error) {
-	apiKey := firstNonEmpty(
-		settings["PerplexityApiKey"],
-		cfg.PerplexityApiKey,
-		cfg.LLMApiKey,
-	)
-	if apiKey == "" {
-		return nil, fmt.Errorf("no Perplexity API key configured")
+	apiKey, err := ResolveAPIKey("perplexity", settings, cfg)
+	if err != nil {
+		return nil, err
 	}
 	p, err := pantheonPerplexity.New(apiKey)
 	if err != nil {
@@ -339,13 +309,9 @@ func buildPerplexity(ctx context.Context, cfg *config.Config, settings map[strin
 }
 
 func buildOpenRouter(ctx context.Context, cfg *config.Config, settings map[string]string, modelID string) (core.LanguageModel, error) {
-	apiKey := firstNonEmpty(
-		settings["OpenRouterApiKey"],
-		cfg.OpenRouterApiKey,
-		cfg.LLMApiKey,
-	)
-	if apiKey == "" {
-		return nil, fmt.Errorf("no OpenRouter API key configured")
+	apiKey, err := ResolveAPIKey("openrouter", settings, cfg)
+	if err != nil {
+		return nil, err
 	}
 	p, err := pantheonOpenRouter.New(apiKey)
 	if err != nil {
@@ -355,13 +321,9 @@ func buildOpenRouter(ctx context.Context, cfg *config.Config, settings map[strin
 }
 
 func buildNovita(ctx context.Context, cfg *config.Config, settings map[string]string, modelID string) (core.LanguageModel, error) {
-	apiKey := firstNonEmpty(
-		settings["NovitaLLMApiKey"],
-		cfg.NovitaLLMApiKey,
-		cfg.LLMApiKey,
-	)
-	if apiKey == "" {
-		return nil, fmt.Errorf("no Novita API key configured")
+	apiKey, err := ResolveAPIKey("novita", settings, cfg)
+	if err != nil {
+		return nil, err
 	}
 	p, err := pantheonNovita.New(apiKey)
 	if err != nil {
@@ -371,13 +333,9 @@ func buildNovita(ctx context.Context, cfg *config.Config, settings map[string]st
 }
 
 func buildGroq(ctx context.Context, cfg *config.Config, settings map[string]string, modelID string) (core.LanguageModel, error) {
-	apiKey := firstNonEmpty(
-		settings["GroqApiKey"],
-		cfg.GroqApiKey,
-		cfg.LLMApiKey,
-	)
-	if apiKey == "" {
-		return nil, fmt.Errorf("no Groq API key configured")
+	apiKey, err := ResolveAPIKey("groq", settings, cfg)
+	if err != nil {
+		return nil, err
 	}
 	p, err := pantheonGroq.New(apiKey)
 	if err != nil {
@@ -397,10 +355,10 @@ func buildKoboldCPP(ctx context.Context, cfg *config.Config, settings map[string
 	baseURL = strings.TrimSuffix(baseURL, "/")
 	baseURL = strings.TrimSuffix(baseURL, "/v1")
 
-	apiKey := firstNonEmpty(
-		settings["KoboldCPPApiKey"],
-		cfg.LLMApiKey,
-	)
+	apiKey, err := ResolveAPIKey("koboldcpp", settings, cfg)
+	if err != nil {
+		return nil, err
+	}
 
 	opts := []pantheonKoboldCPP.Option{pantheonKoboldCPP.WithBaseURL(baseURL)}
 	p, err := pantheonKoboldCPP.New(apiKey, opts...)
@@ -421,11 +379,10 @@ func buildTextGenWebUI(ctx context.Context, cfg *config.Config, settings map[str
 	baseURL = strings.TrimSuffix(baseURL, "/")
 	baseURL = strings.TrimSuffix(baseURL, "/v1")
 
-	apiKey := firstNonEmpty(
-		settings["TextGenWebUIAPIKey"],
-		cfg.TextGenApiKey,
-		cfg.LLMApiKey,
-	)
+	apiKey, err := ResolveAPIKey("textgenwebui", settings, cfg)
+	if err != nil {
+		return nil, err
+	}
 
 	opts := []pantheonTextGenWebUI.Option{pantheonTextGenWebUI.WithBaseURL(baseURL)}
 	p, err := pantheonTextGenWebUI.New(apiKey, opts...)
@@ -436,13 +393,9 @@ func buildTextGenWebUI(ctx context.Context, cfg *config.Config, settings map[str
 }
 
 func buildCohere(ctx context.Context, cfg *config.Config, settings map[string]string, modelID string) (core.LanguageModel, error) {
-	apiKey := firstNonEmpty(
-		settings["CohereApiKey"],
-		cfg.CohereApiKey,
-		cfg.LLMApiKey,
-	)
-	if apiKey == "" {
-		return nil, fmt.Errorf("no Cohere API key configured")
+	apiKey, err := ResolveAPIKey("cohere", settings, cfg)
+	if err != nil {
+		return nil, err
 	}
 	p, err := pantheonCohere.New(apiKey)
 	if err != nil {
@@ -462,11 +415,10 @@ func buildLiteLLM(ctx context.Context, cfg *config.Config, settings map[string]s
 	baseURL = strings.TrimSuffix(baseURL, "/")
 	baseURL = strings.TrimSuffix(baseURL, "/v1")
 
-	apiKey := firstNonEmpty(
-		settings["LiteLLMApiKey"],
-		cfg.LiteLLMApiKey,
-		cfg.LLMApiKey,
-	)
+	apiKey, err := ResolveAPIKey("litellm", settings, cfg)
+	if err != nil {
+		return nil, err
+	}
 
 	opts := []pantheonLiteLLM.Option{pantheonLiteLLM.WithBaseURL(baseURL)}
 	p, err := pantheonLiteLLM.New(apiKey, opts...)
@@ -487,11 +439,10 @@ func buildGenericOpenAI(ctx context.Context, cfg *config.Config, settings map[st
 	baseURL = strings.TrimSuffix(baseURL, "/")
 	baseURL = strings.TrimSuffix(baseURL, "/v1")
 
-	apiKey := firstNonEmpty(
-		settings["GenericOpenAiKey"],
-		cfg.GenericOpenAiKey,
-		cfg.LLMApiKey,
-	)
+	apiKey, err := ResolveAPIKey("generic-openai", settings, cfg)
+	if err != nil {
+		return nil, err
+	}
 
 	opts := []pantheonGenericOpenAI.Option{pantheonGenericOpenAI.WithBaseURL(baseURL)}
 	p, err := pantheonGenericOpenAI.New(apiKey, opts...)
@@ -536,13 +487,9 @@ func buildBedrock(ctx context.Context, cfg *config.Config, settings map[string]s
 }
 
 func buildDeepSeek(ctx context.Context, cfg *config.Config, settings map[string]string, modelID string) (core.LanguageModel, error) {
-	apiKey := firstNonEmpty(
-		settings["DeepSeekApiKey"],
-		cfg.DeepSeekApiKey,
-		cfg.LLMApiKey,
-	)
-	if apiKey == "" {
-		return nil, fmt.Errorf("no DeepSeek API key configured")
+	apiKey, err := ResolveAPIKey("deepseek", settings, cfg)
+	if err != nil {
+		return nil, err
 	}
 	p, err := pantheonDeepSeek.New(apiKey)
 	if err != nil {
@@ -552,13 +499,9 @@ func buildDeepSeek(ctx context.Context, cfg *config.Config, settings map[string]
 }
 
 func buildApiPie(ctx context.Context, cfg *config.Config, settings map[string]string, modelID string) (core.LanguageModel, error) {
-	apiKey := firstNonEmpty(
-		settings["ApiPieApiKey"],
-		cfg.ApiPieApiKey,
-		cfg.LLMApiKey,
-	)
-	if apiKey == "" {
-		return nil, fmt.Errorf("no ApiPie API key configured")
+	apiKey, err := ResolveAPIKey("apipie", settings, cfg)
+	if err != nil {
+		return nil, err
 	}
 	p, err := pantheonApiPie.New(apiKey)
 	if err != nil {
@@ -568,13 +511,9 @@ func buildApiPie(ctx context.Context, cfg *config.Config, settings map[string]st
 }
 
 func buildXAI(ctx context.Context, cfg *config.Config, settings map[string]string, modelID string) (core.LanguageModel, error) {
-	apiKey := firstNonEmpty(
-		settings["XAIApiKey"],
-		cfg.XAIApiKey,
-		cfg.LLMApiKey,
-	)
-	if apiKey == "" {
-		return nil, fmt.Errorf("no XAI API key configured")
+	apiKey, err := ResolveAPIKey("xai", settings, cfg)
+	if err != nil {
+		return nil, err
 	}
 	p, err := pantheonXAI.New(apiKey)
 	if err != nil {
@@ -602,13 +541,9 @@ func buildNvidiaNIM(ctx context.Context, cfg *config.Config, settings map[string
 }
 
 func buildPPIO(ctx context.Context, cfg *config.Config, settings map[string]string, modelID string) (core.LanguageModel, error) {
-	apiKey := firstNonEmpty(
-		settings["PpioApiKey"],
-		cfg.PpioApiKey,
-		cfg.LLMApiKey,
-	)
-	if apiKey == "" {
-		return nil, fmt.Errorf("no PPIO API key configured")
+	apiKey, err := ResolveAPIKey("ppio", settings, cfg)
+	if err != nil {
+		return nil, err
 	}
 	p, err := pantheonPPIO.New(apiKey)
 	if err != nil {
@@ -628,10 +563,10 @@ func buildDellPro(ctx context.Context, cfg *config.Config, settings map[string]s
 	baseURL = strings.TrimSuffix(baseURL, "/")
 	baseURL = strings.TrimSuffix(baseURL, "/v1")
 
-	apiKey := firstNonEmpty(
-		settings["DellProApiKey"],
-		cfg.LLMApiKey,
-	)
+	apiKey, err := ResolveAPIKey("dpaiStudio", settings, cfg)
+	if err != nil {
+		return nil, err
+	}
 
 	opts := []pantheonDellPro.Option{pantheonDellPro.WithBaseURL(baseURL)}
 	p, err := pantheonDellPro.New(apiKey, opts...)
@@ -642,13 +577,9 @@ func buildDellPro(ctx context.Context, cfg *config.Config, settings map[string]s
 }
 
 func buildMoonshot(ctx context.Context, cfg *config.Config, settings map[string]string, modelID string) (core.LanguageModel, error) {
-	apiKey := firstNonEmpty(
-		settings["MoonshotAiApiKey"],
-		cfg.MoonshotAiApiKey,
-		cfg.LLMApiKey,
-	)
-	if apiKey == "" {
-		return nil, fmt.Errorf("no Moonshot API key configured")
+	apiKey, err := ResolveAPIKey("moonshotai", settings, cfg)
+	if err != nil {
+		return nil, err
 	}
 	p, err := pantheonMoonshot.New(apiKey)
 	if err != nil {
@@ -658,13 +589,9 @@ func buildMoonshot(ctx context.Context, cfg *config.Config, settings map[string]
 }
 
 func buildCometAPI(ctx context.Context, cfg *config.Config, settings map[string]string, modelID string) (core.LanguageModel, error) {
-	apiKey := firstNonEmpty(
-		settings["CometApiLLMApiKey"],
-		cfg.CometApiLLMApiKey,
-		cfg.LLMApiKey,
-	)
-	if apiKey == "" {
-		return nil, fmt.Errorf("no CometAPI API key configured")
+	apiKey, err := ResolveAPIKey("cometapi", settings, cfg)
+	if err != nil {
+		return nil, err
 	}
 	p, err := pantheonCometAPI.New(apiKey)
 	if err != nil {
@@ -692,13 +619,9 @@ func buildFoundry(ctx context.Context, cfg *config.Config, settings map[string]s
 }
 
 func buildZAI(ctx context.Context, cfg *config.Config, settings map[string]string, modelID string) (core.LanguageModel, error) {
-	apiKey := firstNonEmpty(
-		settings["ZAiApiKey"],
-		cfg.ZAiApiKey,
-		cfg.LLMApiKey,
-	)
-	if apiKey == "" {
-		return nil, fmt.Errorf("no ZAI API key configured")
+	apiKey, err := ResolveAPIKey("zai", settings, cfg)
+	if err != nil {
+		return nil, err
 	}
 	p, err := pantheonZAI.New(apiKey)
 	if err != nil {
@@ -708,13 +631,9 @@ func buildZAI(ctx context.Context, cfg *config.Config, settings map[string]strin
 }
 
 func buildGiteeAI(ctx context.Context, cfg *config.Config, settings map[string]string, modelID string) (core.LanguageModel, error) {
-	apiKey := firstNonEmpty(
-		settings["GiteeAIApiKey"],
-		cfg.GiteeAIApiKey,
-		cfg.LLMApiKey,
-	)
-	if apiKey == "" {
-		return nil, fmt.Errorf("no GiteeAI API key configured")
+	apiKey, err := ResolveAPIKey("giteeai", settings, cfg)
+	if err != nil {
+		return nil, err
 	}
 	p, err := pantheonGiteeAI.New(apiKey)
 	if err != nil {
@@ -734,10 +653,10 @@ func buildDockerModelRunner(ctx context.Context, cfg *config.Config, settings ma
 	baseURL = strings.TrimSuffix(baseURL, "/")
 	baseURL = strings.TrimSuffix(baseURL, "/v1")
 
-	apiKey := firstNonEmpty(
-		settings["DockerModelRunnerApiKey"],
-		cfg.LLMApiKey,
-	)
+	apiKey, err := ResolveAPIKey("docker-model-runner", settings, cfg)
+	if err != nil {
+		return nil, err
+	}
 
 	opts := []pantheonDockerModelRunner.Option{pantheonDockerModelRunner.WithBaseURL(baseURL)}
 	p, err := pantheonDockerModelRunner.New(apiKey, opts...)
@@ -758,10 +677,10 @@ func buildPrivateMode(ctx context.Context, cfg *config.Config, settings map[stri
 	baseURL = strings.TrimSuffix(baseURL, "/")
 	baseURL = strings.TrimSuffix(baseURL, "/v1")
 
-	apiKey := firstNonEmpty(
-		settings["PrivateModeApiKey"],
-		cfg.LLMApiKey,
-	)
+	apiKey, err := ResolveAPIKey("privatemode", settings, cfg)
+	if err != nil {
+		return nil, err
+	}
 
 	opts := []pantheonPrivateMode.Option{pantheonPrivateMode.WithBaseURL(baseURL)}
 	p, err := pantheonPrivateMode.New(apiKey, opts...)
@@ -772,13 +691,9 @@ func buildPrivateMode(ctx context.Context, cfg *config.Config, settings map[stri
 }
 
 func buildSambaNova(ctx context.Context, cfg *config.Config, settings map[string]string, modelID string) (core.LanguageModel, error) {
-	apiKey := firstNonEmpty(
-		settings["SambaNovaLLMApiKey"],
-		cfg.SambaNovaLLMApiKey,
-		cfg.LLMApiKey,
-	)
-	if apiKey == "" {
-		return nil, fmt.Errorf("no SambaNova API key configured")
+	apiKey, err := ResolveAPIKey("sambanova", settings, cfg)
+	if err != nil {
+		return nil, err
 	}
 	p, err := pantheonSambaNova.New(apiKey)
 	if err != nil {
@@ -798,11 +713,10 @@ func buildLemonade(ctx context.Context, cfg *config.Config, settings map[string]
 	baseURL = strings.TrimSuffix(baseURL, "/")
 	baseURL = strings.TrimSuffix(baseURL, "/v1")
 
-	apiKey := firstNonEmpty(
-		settings["LemonadeLLMApiKey"],
-		cfg.LemonadeLLMApiKey,
-		cfg.LLMApiKey,
-	)
+	apiKey, err := ResolveAPIKey("lemonade", settings, cfg)
+	if err != nil {
+		return nil, err
+	}
 
 	opts := []pantheonLemonade.Option{pantheonLemonade.WithBaseURL(baseURL)}
 	p, err := pantheonLemonade.New(apiKey, opts...)
@@ -813,13 +727,9 @@ func buildLemonade(ctx context.Context, cfg *config.Config, settings map[string]
 }
 
 func buildMinimax(ctx context.Context, cfg *config.Config, settings map[string]string, modelID string) (core.LanguageModel, error) {
-	apiKey := firstNonEmpty(
-		settings["MinimaxApiKey"],
-		cfg.MinimaxAPIKey,
-		cfg.LLMApiKey,
-	)
-	if apiKey == "" {
-		return nil, fmt.Errorf("minimax: no API key configured")
+	apiKey, err := ResolveAPIKey("minimax", settings, cfg)
+	if err != nil {
+		return nil, err
 	}
 	p, err := pantheonMinimax.New(apiKey)
 	if err != nil {
@@ -829,13 +739,9 @@ func buildMinimax(ctx context.Context, cfg *config.Config, settings map[string]s
 }
 
 func buildQwen(ctx context.Context, cfg *config.Config, settings map[string]string, modelID string) (core.LanguageModel, error) {
-	apiKey := firstNonEmpty(
-		settings["QwenApiKey"],
-		cfg.QwenAPIKey,
-		cfg.LLMApiKey,
-	)
-	if apiKey == "" {
-		return nil, fmt.Errorf("qwen: no API key configured")
+	apiKey, err := ResolveAPIKey("qwen", settings, cfg)
+	if err != nil {
+		return nil, err
 	}
 	p, err := pantheonQwen.New(apiKey)
 	if err != nil {
@@ -845,13 +751,9 @@ func buildQwen(ctx context.Context, cfg *config.Config, settings map[string]stri
 }
 
 func buildWenxin(ctx context.Context, cfg *config.Config, settings map[string]string, modelID string) (core.LanguageModel, error) {
-	apiKey := firstNonEmpty(
-		settings["WenxinApiKey"],
-		cfg.WenxinAPIKey,
-		cfg.LLMApiKey,
-	)
-	if apiKey == "" {
-		return nil, fmt.Errorf("wenxin: no API key configured")
+	apiKey, err := ResolveAPIKey("wenxin", settings, cfg)
+	if err != nil {
+		return nil, err
 	}
 	p, err := pantheonWenxin.New(apiKey)
 	if err != nil {
@@ -861,13 +763,9 @@ func buildWenxin(ctx context.Context, cfg *config.Config, settings map[string]st
 }
 
 func buildZhipu(ctx context.Context, cfg *config.Config, settings map[string]string, modelID string) (core.LanguageModel, error) {
-	apiKey := firstNonEmpty(
-		settings["ZhipuApiKey"],
-		cfg.ZhipuAPIKey,
-		cfg.LLMApiKey,
-	)
-	if apiKey == "" {
-		return nil, fmt.Errorf("zhipu: no API key configured")
+	apiKey, err := ResolveAPIKey("zhipu", settings, cfg)
+	if err != nil {
+		return nil, err
 	}
 	p, err := pantheonZhipu.New(apiKey)
 	if err != nil {

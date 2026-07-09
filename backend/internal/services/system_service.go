@@ -6,16 +6,36 @@ import (
 	"sync"
 
 	"github.com/odysseythink/hermind/backend/internal/models"
+	"github.com/odysseythink/hermind/backend/internal/providers"
 	"gorm.io/gorm"
 )
 
 type SystemService struct {
-	db    *gorm.DB
-	cache *sync.Map
+	db        *gorm.DB
+	cache     *sync.Map
+	observers []providers.SettingObserver
+	obsMu     sync.RWMutex
 }
 
 func NewSystemService(db *gorm.DB) *SystemService {
 	return &SystemService{db: db, cache: &sync.Map{}}
+}
+
+func (s *SystemService) RegisterObserver(o providers.SettingObserver) {
+	s.obsMu.Lock()
+	defer s.obsMu.Unlock()
+	s.observers = append(s.observers, o)
+}
+
+func (s *SystemService) notifyObservers(ctx context.Context, key, value string) error {
+	s.obsMu.RLock()
+	defer s.obsMu.RUnlock()
+	for _, o := range s.observers {
+		if err := o.OnSettingChanged(ctx, key, value); err != nil {
+			return err
+		}
+	}
+	return nil
 }
 
 func (s *SystemService) GetSetting(ctx context.Context, key string) (string, error) {
@@ -52,6 +72,9 @@ func (s *SystemService) SetSetting(ctx context.Context, key, value string) error
 		}
 	}
 	s.cache.Store(key, value)
+	if err := s.notifyObservers(ctx, key, value); err != nil {
+		return err
+	}
 	return nil
 }
 

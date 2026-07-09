@@ -128,7 +128,12 @@ func main() {
 	searchSvc := services.NewSearchService(db)
 	vectorSvc := services.NewVectorService(cfg)
 	dbSettings, _ := sysSvc.GetAllSettings(context.Background())
-	llmProv := providers.NewLLMProvider(cfg, dbSettings)
+	llmMgr, err := providers.NewManagedLLMProvider(cfg, sysSvc, dbSettings)
+	if err != nil {
+		mlog.Fatal("failed to create managed LLM provider", mlog.Err(err))
+	}
+	sysSvc.RegisterObserver(llmMgr)
+	llmProv := providers.LLMProvider(llmMgr)
 	coll, err := collector.NewLocalCollector(cfg.StorageDir)
 	if err != nil {
 		mlog.Warning("collector client init failed, continuing without collector", mlog.Err(err))
@@ -205,7 +210,7 @@ func main() {
 	stateSecret := []byte(cfg.JWTSecret)
 	oauthHandler := handlers.NewOAuthHandler(outlookOAuth, tokenStore, sysSvc, enc, stateSecret, cfg.PublicBaseURL)
 	whitelistSvc := services.NewAgentSkillWhitelistService(sysSvc)
-	flowExec := flow.New(llmProv.LanguageModel(), cfg.AgentFlowAllowPrivateIPs)
+	flowExec := flow.New(llmMgr.LanguageModel(), cfg.AgentFlowAllowPrivateIPs)
 	agentRuntime := agent.NewRuntime(agent.Deps{
 		DB:              db,
 		Cfg:             cfg,
@@ -239,7 +244,7 @@ func main() {
 
 	memSvc := services.NewMemoryService(db)
 	memInj := services.NewMemoryInjector(memSvc, sysSvc, rerankerSvc)
-	memExt := services.NewMemoryExtractor(memSvc, llmProv.LanguageModel(), "", "")
+	memExt := services.NewMemoryExtractor(memSvc, llmMgr.LanguageModel(), "", "")
 
 	workerMgr := workers.NewManager(db, cfg)
 	workerMgr.Register(
