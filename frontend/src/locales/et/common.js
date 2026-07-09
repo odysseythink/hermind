@@ -8,7 +8,7 @@ const TRANSLATIONS = {
     llm: {
       title: "LLM-i eelistus",
       description:
-        "Hermind töötab paljude LLM-teenusepakkujatega. See teenus haldab vestlust.",
+        "AnythingLLM töötab paljude LLM-teenusepakkujatega. See teenus haldab vestlust.",
     },
     userSetup: {
       title: "Kasutaja seadistus",
@@ -34,15 +34,15 @@ const TRANSLATIONS = {
       settingsHint: "Neid sätteid saab igal ajal seadetes muuta.",
     },
     survey: {
-      title: "Tere tulemast Hermind-i",
+      title: "Tere tulemast AnythingLLM-i",
       description:
-        "Aita meil Hermind sinu vajadustele vastavaks kujundada. Valikuline.",
+        "Aita meil AnythingLLM sinu vajadustele vastavaks kujundada. Valikuline.",
       email: "Mis on su e-post?",
-      useCase: "Milleks kasutad Hermind-i?",
+      useCase: "Milleks kasutad AnythingLLM-i?",
       useCaseWork: "Töö jaoks",
       useCasePersonal: "Isiklikuks kasutuseks",
       useCaseOther: "Muu",
-      comment: "Kust kuulsid Hermind-ist?",
+      comment: "Kust kuulsid AnythingLLM-ist?",
       commentPlaceholder:
         "Reddit, Twitter, GitHub, YouTube jne – anna meile teada!",
       skip: "Jäta vahele",
@@ -97,7 +97,7 @@ const TRANSLATIONS = {
     "experimental-features": "Eksperimentaalsed funktsioonid",
     contact: "Tugi",
     "browser-extension": "Brauserilaiend",
-    "mobile-app": "Hermind mobiilversioon",
+    "mobile-app": "AnythingLLM mobiilversioon",
     "community-hub": {
       title: "Kogukonna keskpunkt",
       trending: "Avasta populaarseid",
@@ -162,7 +162,7 @@ const TRANSLATIONS = {
       add: "Lisa uus sõnum",
       save: "Salvesta sõnumid",
       heading: "Selgita mulle",
-      body: "Hermind eeliseid",
+      body: "AnythingLLM eeliseid",
     },
     delete: {
       title: "Kustuta tööruum",
@@ -209,7 +209,6 @@ const TRANSLATIONS = {
       title: "Vestlusajalugu",
       "desc-start": "Eelmiste sõnumite arv, mis kaasatakse vastuse lühimällu.",
       recommend: "Soovitatav 20. ",
-      "desc-end": "Üle 45 võib sõltuvalt sõnumi suurusest põhjustada tõrkeid.",
     },
     prompt: {
       title: "Süsteemprompt",
@@ -240,27 +239,8 @@ const TRANSLATIONS = {
     },
     temperature: {
       title: "LLM-i temperatuur",
-      "desc-start": 'Määrab, kui "loovad" vastused on.',
       "desc-end":
         "Kõrgem väärtus = loovam, ent liiga kõrge võib tekitada ebaühtlasi vastuseid.",
-      hint: "Kontrolli pakkujalt lubatud vahemikke.",
-    },
-    compression: {
-      title: "Context Compression",
-      description:
-        "Automatically compress long conversation history to stay within the model's context window.",
-      followGlobal: "Follow global",
-      enabled: "Enabled",
-      disabled: "Disabled",
-      globalStatus: "Global default",
-      threshold: "Compression threshold",
-      thresholdDesc:
-        "Trigger compression when history exceeds this fraction of the context window. Leave empty to use path defaults (Agent 0.50, Chat 0.75).",
-      thresholdPlaceholder: "0.75",
-      contextLength: "Context length override",
-      contextLengthDesc:
-        "Override the model's context length (in tokens). Leave empty to use the built-in model map.",
-      contextLengthPlaceholder: "e.g. 128000",
     },
   },
   "vector-workspace": {
@@ -755,9 +735,8 @@ const TRANSLATIONS = {
       },
       "intelligent-skill-selection": {
         title: "Nutikad oskuste valiku meetodid",
-        "beta-badge": "Beeta",
         description:
-          "Lubage piiramatu hulga tööriistade kasutamist ning vähendage küsimuse kohta kasutatavate tokenide arv kuni 80% – Hermind valib automaatselt iga küsimuse jaoks sobivad oskused.",
+          "Lubage piiramatu hulga tööriistade kasutamist ning vähendage küsimuse kohta kasutatavate tokenide arv kuni 80% – AnythingLLM valib automaatselt iga küsimuse jaoks sobivad oskused.",
         "max-tools": {
           title: "Max Tools",
           description:
@@ -794,11 +773,11 @@ const TRANSLATIONS = {
   customization: {
     interface: {
       title: "Kasutajaliidese eelistused",
-      description: "Sea Hermind-i UI eelistused.",
+      description: "Sea AnythingLLM-i UI eelistused.",
     },
     branding: {
       title: "Bränding ja valgesildistamine",
-      description: "Valgesildista oma Hermind kohandatud brändinguga.",
+      description: "Valgesildista oma AnythingLLM kohandatud brändinguga.",
     },
     chat: {
       title: "Vestlus",
@@ -838,7 +817,7 @@ const TRANSLATIONS = {
       "display-language": {
         title: "Kuvakeel",
         description:
-          "Vali keel, milles Hermind UI kuvatakse (kui tõlge on olemas).",
+          "Vali keel, milles AnythingLLM UI kuvatakse (kui tõlge on olemas).",
       },
       logo: {
         title: "Brändi logo",
@@ -877,7 +856,7 @@ const TRANSLATIONS = {
   api: {
     title: "API võtmed",
     description:
-      "API võtmed võimaldavad programmipõhiselt hallata seda Hermind instantsi.",
+      "API võtmed võimaldavad programmipõhiselt hallata seda AnythingLLM instantsi.",
     link: "Loe API dokumentatsiooni",
     generate: "Genereeri uus API võti",
     empty: "API võtmeid ei leitud",
@@ -891,7 +870,7 @@ const TRANSLATIONS = {
       close: "Sulge",
       create: "Loo API võti",
       helper:
-        "Pärast loomist saab API võtit kasutada sellele Hermind-i instantsile programmiga ligi pääsemiseks ja selle seadistamiseks.",
+        "Pärast loomist saab API võtit kasutada sellele AnythingLLM-i instantsile programmiga ligi pääsemiseks ja selle seadistamiseks.",
       name: {
         label: "Nimi",
         placeholder: "Tootmiskeskkonna integratsioon",
@@ -916,7 +895,7 @@ const TRANSLATIONS = {
   llm: {
     title: "LLM-i eelistus",
     description:
-      "Siin on sinu valitud LLM-teenusepakkuja võtmed ja seaded. Need peavad olema õiged, vastasel juhul Hermind ei tööta.",
+      "Siin on sinu valitud LLM-teenusepakkuja võtmed ja seaded. Need peavad olema õiged, vastasel juhul AnythingLLM ei tööta.",
     provider: "LLM-pakkuja",
     providers: {
       azure_openai: {
@@ -948,7 +927,7 @@ const TRANSLATIONS = {
     "desc-start":
       "Kui kasutad LLM-i, mis ei sisalda embedding-mootorit, tuleb määrata täiendavad võtmed.",
     "desc-end":
-      "Embedding muudab teksti vektoriteks. Need võtmed on vajalikud, et Hermind saaks sinu failid ja päringud töödelda.",
+      "Embedding muudab teksti vektoriteks. Need võtmed on vajalikud, et AnythingLLM saaks sinu failid ja päringud töödelda.",
     provider: {
       title: "Embedding-i pakkuja",
     },
@@ -971,7 +950,7 @@ const TRANSLATIONS = {
   vector: {
     title: "Vektoriandmebaas",
     description:
-      "Siin on seaded, kuidas Hermind töötab. Vale seadistus võib põhjustada tõrkeid.",
+      "Siin on seaded, kuidas AnythingLLM töötab. Vale seadistus võib põhjustada tõrkeid.",
     provider: {
       title: "Vektoriandmebaasi pakkuja",
       description: "LanceDB puhul seadistust pole vaja.",
@@ -1014,7 +993,7 @@ const TRANSLATIONS = {
   privacy: {
     title: "Privaatsus ja andmetöötlus",
     description:
-      "Konfiguratsioon kolmandate osapoolte ja Hermind-i andmekäitluse kohta.",
+      "Konfiguratsioon kolmandate osapoolte ja AnythingLLM-i andmekäitluse kohta.",
     anonymous: "Anonüümne telemeetria lubatud",
   },
   connectors: {
@@ -1327,12 +1306,18 @@ const TRANSLATIONS = {
         edit_description: "Päivitage selle andmealade sisu.",
         label: "Mälestus",
         placeholder:
-          "Näiteks kasutaja nimi on Joe, kasutaja töötab ettevõttes Hermind jne.",
+          "Näiteks kasutaja nimi on Joe, kasutaja töötab ettevõttes AnythingLLM jne.",
         create: "Loo",
         save: "Salvesta",
         cancel: "Katkuda\nTühista",
       },
     },
+    stt_unsupported: "Mikrofoni kasutamine selles brauseris ei toeta.",
+    stt_mic_denied:
+      "Ei suudet mikrofoni kasutada. Palun andke lubadus ja proovige uuesti.",
+    stt_transcription_failed: "Transkribeerimine ebaõnnestunud: {{error}}",
+    export: "Экспорти руй чат kui...",
+    exporting: "Экспорт",
   },
   profile_settings: {
     edit_account: "Muuda kontot",
@@ -1483,7 +1468,7 @@ const TRANSLATIONS = {
   telegram: {
     title: "Telegrami bot",
     description:
-      "Ühendage oma Hermind instants Telegramiga, et saaksite vestleda oma tööruumidega igast seadmist.",
+      "Ühendage oma AnythingLLM instants Telegramiga, et saaksite vestleda oma tööruumidega igast seadmist.",
     setup: {
       step1: {
         title: "1. samm: Looge oma Telegrami bot",

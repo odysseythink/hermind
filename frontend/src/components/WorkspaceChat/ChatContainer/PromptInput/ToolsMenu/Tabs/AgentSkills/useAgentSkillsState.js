@@ -137,7 +137,7 @@ export default function useAgentSkillsState(defaultSkills) {
         return prev.map((server) => {
           if (server.name !== serverName) return server;
           const currentSuppressed =
-            server.config?.hermind?.suppressedTools || [];
+            server.config?.anythingllm?.suppressedTools || [];
           const newSuppressed = newEnabled
             ? currentSuppressed.filter((t) => t !== toolName)
             : [...currentSuppressed, toolName];
@@ -145,8 +145,8 @@ export default function useAgentSkillsState(defaultSkills) {
             ...server,
             config: {
               ...server.config,
-              hermind: {
-                ...server.config?.hermind,
+              anythingllm: {
+                ...server.config?.anythingllm,
                 suppressedTools: newSuppressed,
               },
             },

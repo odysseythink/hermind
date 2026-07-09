@@ -13,6 +13,7 @@ import {
   Plugs,
 } from "@phosphor-icons/react";
 import AgentIcon from "@/media/animations/agent-static.png";
+import CommunityHubIcon from "@/media/illustrations/community-hub.png";
 import useUser from "@/hooks/useUser";
 import { isMobile } from "react-device-detect";
 import Footer from "../Footer";
@@ -308,18 +309,37 @@ const SidebarOptions = ({ user = null, t }) => (
               className="h-5 w-5 flex-shrink-0 light:invert"
             />
           }
+          href={paths.settings.agentSkills()}
           user={user}
+          flex={true}
           roles={["admin"]}
+        />
+        <Option
+          btnText={t("settings.community-hub.title")}
+          icon={
+            <img
+              src={CommunityHubIcon}
+              alt="Community Hub"
+              className="h-5 w-5 flex-shrink-0 light:invert"
+            />
+          }
+          user={user}
           childOptions={[
             {
-              btnText: "Skill Configuration",
-              href: paths.settings.agentSkills(),
+              btnText: t("settings.community-hub.trending"),
+              href: paths.communityHub.trending(),
               flex: true,
               roles: ["admin"],
             },
             {
-              btnText: "Agent-Created Skills",
-              href: paths.settings.agentCreatedSkills(),
+              btnText: t("settings.community-hub.your-account"),
+              href: paths.communityHub.authentication(),
+              flex: true,
+              roles: ["admin"],
+            },
+            {
+              btnText: t("settings.community-hub.import-item"),
+              href: paths.communityHub.importItem(),
               flex: true,
               roles: ["admin"],
             },
@@ -405,6 +425,12 @@ const SidebarOptions = ({ user = null, t }) => (
               flex: true,
               roles: ["admin", "manager"],
             },
+            {
+              btnText: t("settings.mobile-app"),
+              href: paths.settings.mobile(),
+              flex: true,
+              roles: ["admin"],
+            },
           ]}
         />
         <Option
@@ -435,7 +461,7 @@ function HoldToReveal({ children, holdForMs = 3_000 }) {
   let timeout = null;
   const [showing, setShowing] = useState(
     window.localStorage.getItem(
-      "hermind_experimental_feature_preview_unlocked"
+      "anythingllm_experimental_feature_preview_unlocked"
     )
   );
 
@@ -447,7 +473,7 @@ function HoldToReveal({ children, holdForMs = 3_000 }) {
         // Setting toastId prevents hook spam from holding control too many times or the event not detaching
         showToast("Experimental feature previews unlocked!");
         window.localStorage.setItem(
-          "hermind_experimental_feature_preview_unlocked",
+          "anythingllm_experimental_feature_preview_unlocked",
           "enabled"
         );
         window.removeEventListener("keypress", onPress);
@@ -485,7 +511,7 @@ function AppVersion() {
   if (isLoading) return null;
   return (
     <Link
-      to={`https://github.com/odysseythink/hermind/releases/tag/v${version}`}
+      to={`https://github.com/Mintplex-Labs/anything-llm/releases/tag/v${version}`}
       target="_blank"
       rel="noreferrer"
       className="text-theme-text-secondary light:opacity-80 opacity-50 text-xs mx-3"

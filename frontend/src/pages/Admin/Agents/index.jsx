@@ -311,8 +311,8 @@ export default function AdminAgents() {
           ...server,
           config: {
             ...server.config,
-            hermind: {
-              ...server.config?.hermind,
+            anythingllm: {
+              ...server.config?.anythingllm,
               suppressedTools,
             },
           },
@@ -326,8 +326,8 @@ export default function AdminAgents() {
         ...prev,
         config: {
           ...prev.config,
-          hermind: {
-            ...prev.config?.hermind,
+          anythingllm: {
+            ...prev.config?.anythingllm,
             suppressedTools,
           },
         },

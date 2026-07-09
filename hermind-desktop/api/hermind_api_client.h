@@ -35,6 +35,24 @@ public:
     using WorkspaceCallback = std::function<void(const HermindWorkspace &workspace,
                                                  const QString &message,
                                                  const ApiError &error)>;
+
+    struct SearchResultWorkspace {
+        QString slug;
+        QString name;
+    };
+    struct SearchResultThread {
+        QString slug;
+        QString name;
+        QString workspaceSlug;
+        QString workspaceName;
+    };
+    struct SearchResults {
+        QVector<SearchResultWorkspace> workspaces;
+        QVector<SearchResultThread> threads;
+    };
+    using SearchCallback = std::function<void(const SearchResults &results,
+                                              const ApiError &error)>;
+
     using ThreadsCallback = std::function<void(const QVector<HermindWorkspaceThread> &threads,
                                                const ApiError &error)>;
     using ThreadCallback = std::function<void(const HermindWorkspaceThread &thread,
@@ -59,6 +77,7 @@ public:
     void listWorkspaces(WorkspacesCallback callback);
     void getWorkspace(const QString &slug, WorkspaceCallback callback);
     void createWorkspace(const QString &name, WorkspaceCallback callback);
+    void searchWorkspaceOrThread(const QString &searchTerm, SearchCallback callback);
 
     void listThreads(const QString &workspaceSlug, ThreadsCallback callback);
     void createThread(const QString &workspaceSlug, ThreadCallback callback);

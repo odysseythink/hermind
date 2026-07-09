@@ -123,6 +123,46 @@ void HermindApiClient::createWorkspace(const QString &name, WorkspaceCallback ca
          });
 }
 
+void HermindApiClient::searchWorkspaceOrThread(const QString &searchTerm, SearchCallback callback)
+{
+    QJsonObject body;
+    body.insert(QStringLiteral("searchTerm"), searchTerm);
+    post(QStringLiteral("/workspace/search"), body,
+         [callback](const ApiResponse &resp) {
+             if (!resp.isSuccess()) {
+                 callback(SearchResults(), resp.error());
+                 return;
+             }
+             const QJsonObject obj = resp.body().object();
+             SearchResults results;
+
+             const QJsonArray wsArr = obj.value(QStringLiteral("workspaces")).toArray();
+             results.workspaces.reserve(wsArr.size());
+             for (const QJsonValue &v : wsArr) {
+                 const QJsonObject o = v.toObject();
+                 SearchResultWorkspace ws;
+                 ws.slug = o.value(QStringLiteral("slug")).toString();
+                 ws.name = o.value(QStringLiteral("name")).toString();
+                 results.workspaces.append(ws);
+             }
+
+             const QJsonArray thArr = obj.value(QStringLiteral("threads")).toArray();
+             results.threads.reserve(thArr.size());
+             for (const QJsonValue &v : thArr) {
+                 const QJsonObject o = v.toObject();
+                 const QJsonObject wsObj = o.value(QStringLiteral("workspace")).toObject();
+                 SearchResultThread th;
+                 th.slug = o.value(QStringLiteral("slug")).toString();
+                 th.name = o.value(QStringLiteral("name")).toString();
+                 th.workspaceSlug = wsObj.value(QStringLiteral("slug")).toString();
+                 th.workspaceName = wsObj.value(QStringLiteral("name")).toString();
+                 results.threads.append(th);
+             }
+
+             callback(results, ApiError());
+         });
+}
+
 void HermindApiClient::listThreads(const QString &workspaceSlug, ThreadsCallback callback)
 {
     get(QStringLiteral("/workspace/") + workspaceSlug + QStringLiteral("/threads"), QUrlQuery(),

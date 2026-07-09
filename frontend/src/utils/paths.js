@@ -55,22 +55,22 @@ export default {
     },
   },
   github: () => {
-    return "https://github.com/odysseythink/hermind";
+    return "https://github.com/Mintplex-Labs/anything-llm";
   },
   discord: () => {
     return "https://discord.com/invite/6UyHPeGZAC";
   },
   docs: (path = "") => {
-    return `https://docs.hermind.com${path}`;
+    return `https://docs.anythingllm.com${path}`;
   },
   chatModes: () => {
-    return "https://docs.hermind.com/features/chat-modes";
+    return "https://docs.anythingllm.com/features/chat-modes";
   },
   mailToMintplex: () => {
     return "mailto:team@mintplexlabs.com";
   },
   hosting: () => {
-    return "https://my.mintplexlabs.com/aio-checkout?product=hermind";
+    return "https://my.mintplexlabs.com/aio-checkout?product=anythingllm";
   },
   workspace: {
     chat: (slug, options = {}) => {
@@ -150,9 +150,6 @@ export default {
     agentSkills: () => {
       return "/settings/agents";
     },
-    agentCreatedSkills: () => {
-      return "/settings/agent-created-skills";
-    },
     chat: () => {
       return "/settings/chat";
     },
@@ -179,10 +176,13 @@ export default {
       return `/settings/browser-extension`;
     },
     mobile: () => {
-      return `/settings/mobile-app`;
+      return `/settings/mobile-connections`;
     },
     experimental: () => {
       return `/settings/beta-features`;
+    },
+    mobileConnections: () => {
+      return `/settings/mobile-connections`;
     },
     telegram: () => {
       return `/settings/external-connections/telegram`;
@@ -205,14 +205,48 @@ export default {
       return `/settings/agents/builder/${uuid}`;
     },
   },
+  communityHub: {
+    website: () => {
+      return import.meta.env.DEV
+        ? `http://localhost:5173`
+        : `https://hub.anythingllm.com`;
+    },
+    /**
+     * View more items of a given type on the community hub.
+     * @param {string} type - The type of items to view more of. Should be kebab-case.
+     * @returns {string} The path to view more items of the given type.
+     */
+    viewMoreOfType: function (type) {
+      return `${this.website()}/list/${type}`;
+    },
+    viewItem: function (type, id) {
+      return `${this.website()}/i/${type}/${id}`;
+    },
+    trending: () => {
+      return `/settings/community-hub/trending`;
+    },
+    authentication: () => {
+      return `/settings/community-hub/authentication`;
+    },
+    importItem: (importItemId) => {
+      return `/settings/community-hub/import-item${importItemId ? `?id=${importItemId}` : ""}`;
+    },
+    profile: function (username) {
+      if (username) return `${this.website()}/u/${username}`;
+      return `${this.website()}/me`;
+    },
+    noPrivateItems: () => {
+      return "https://docs.anythingllm.com/community-hub/faq#no-private-items";
+    },
+  },
 
-  // TODO: Migrate all docs.hermind.com links to the new docs.
+  // TODO: Migrate all docs.anythingllm.com links to the new docs.
   documentation: {
     mobileIntroduction: () => {
-      return "https://docs.hermind.com/mobile/overview";
+      return "https://docs.anythingllm.com/mobile/overview";
     },
     contextWindows: () => {
-      return "https://docs.hermind.com/chatting-with-documents/introduction#you-exceed-the-context-window---what-now";
+      return "https://docs.anythingllm.com/chatting-with-documents/introduction#you-exceed-the-context-window---what-now";
     },
   },
 

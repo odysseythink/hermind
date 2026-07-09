@@ -3,6 +3,7 @@ import Sidebar from "@/components/SettingsSidebar";
 import { isMobile } from "react-device-detect";
 import * as Skeleton from "react-loading-skeleton";
 import "react-loading-skeleton/dist/skeleton.css";
+import { BookOpen } from "@phosphor-icons/react";
 import Admin from "@/models/admin";
 import System from "@/models/system";
 import WorkspaceRow from "./WorkspaceRow";
@@ -38,7 +39,7 @@ export default function AdminWorkspaces() {
               onClick={openModal}
               className="mt-3 mr-0 mb-4 md:-mb-14 z-10"
             >
-              New Workspace
+              <BookOpen className="h-4 w-4" weight="bold" /> New Workspace
             </CTAButton>
           </div>
           <div className="overflow-x-auto">

@@ -1,17 +1,17 @@
 export const API_BASE = import.meta.env.VITE_API_BASE || "/api";
-export const ONBOARDING_SURVEY_URL = "https://onboarding.hermind.com";
+export const ONBOARDING_SURVEY_URL = "https://onboarding.anythingllm.com";
 
-export const AUTH_USER = "hermind_user";
-export const AUTH_TOKEN = "hermind_authToken";
-export const AUTH_TIMESTAMP = "hermind_authTimestamp";
-export const COMPLETE_QUESTIONNAIRE = "hermind_completed_questionnaire";
-export const SEEN_DOC_PIN_ALERT = "hermind_pinned_document_alert";
-export const SEEN_WATCH_ALERT = "hermind_watched_document_alert";
-export const LAST_VISITED_WORKSPACE = "hermind_last_visited_workspace";
-export const USER_PROMPT_INPUT_MAP = "hermind_user_prompt_input_map";
-export const PENDING_HOME_MESSAGE = "hermind_pending_home_message";
+export const AUTH_USER = "anythingllm_user";
+export const AUTH_TOKEN = "anythingllm_authToken";
+export const AUTH_TIMESTAMP = "anythingllm_authTimestamp";
+export const COMPLETE_QUESTIONNAIRE = "anythingllm_completed_questionnaire";
+export const SEEN_DOC_PIN_ALERT = "anythingllm_pinned_document_alert";
+export const SEEN_WATCH_ALERT = "anythingllm_watched_document_alert";
+export const LAST_VISITED_WORKSPACE = "anythingllm_last_visited_workspace";
+export const USER_PROMPT_INPUT_MAP = "anythingllm_user_prompt_input_map";
+export const PENDING_HOME_MESSAGE = "anythingllm_pending_home_message";
 
-export const APPEARANCE_SETTINGS = "hermind_appearance_settings";
+export const APPEARANCE_SETTINGS = "anythingllm_appearance_settings";
 
 export const OLLAMA_COMMON_URLS = [
   "http://127.0.0.1:11434",
@@ -38,13 +38,6 @@ export const LOCALAI_COMMON_URLS = [
   "http://localhost:8080/v1",
   "http://host.docker.internal:8080/v1",
   "http://172.17.0.1:8080/v1",
-];
-
-export const DPAIS_COMMON_URLS = [
-  "http://127.0.0.1:8553/v1/openai",
-  "http://0.0.0.0:8553/v1/openai",
-  "http://localhost:8553/v1/openai",
-  "http://host.docker.internal:8553/v1/openai",
 ];
 
 export const NVIDIA_NIM_COMMON_URLS = [

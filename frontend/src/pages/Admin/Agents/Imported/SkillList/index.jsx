@@ -13,12 +13,12 @@ export default function ImportedSkillList({
         <p>
           Learn about agent skills in the{" "}
           <a
-            href="https://docs.hermind.com/agent/custom/developer-guide"
+            href="https://docs.anythingllm.com/agent/custom/developer-guide"
             target="_blank"
             className="text-theme-text-secondary underline hover:text-cta-button"
             rel="noreferrer"
           >
-            Hermind Agent Docs
+            AnythingLLM Agent Docs
           </a>
           .
         </p>

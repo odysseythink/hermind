@@ -15,15 +15,6 @@ export function castToType(key, value) {
     router_id: {
       cast: (value) => (value ? Number(value) : null),
     },
-    compressEnabled: {
-      cast: (value) => value, // "default", "true", or "false" — pass through as string
-    },
-    compressThreshold: {
-      cast: (value) => (value === "" ? "" : value), // pass through string; empty = default
-    },
-    compressContextLen: {
-      cast: (value) => (value === "" ? "" : value), // pass through string; empty = default
-    },
   };
 
   if (!definitions.hasOwnProperty(key)) return value;

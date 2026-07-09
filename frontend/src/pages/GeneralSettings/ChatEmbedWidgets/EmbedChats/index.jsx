@@ -16,7 +16,7 @@ const exportOptions = {
     mimeType: "text/csv",
     fileExtension: "csv",
     filenameFunc: () => {
-      return `hermind-embed-chats-${new Date().toLocaleDateString()}`;
+      return `anythingllm-embed-chats-${new Date().toLocaleDateString()}`;
     },
   },
   json: {
@@ -24,7 +24,7 @@ const exportOptions = {
     mimeType: "application/json",
     fileExtension: "json",
     filenameFunc: () => {
-      return `hermind-embed-chats-${new Date().toLocaleDateString()}`;
+      return `anythingllm-embed-chats-${new Date().toLocaleDateString()}`;
     },
   },
   jsonl: {
@@ -32,7 +32,7 @@ const exportOptions = {
     mimeType: "application/jsonl",
     fileExtension: "jsonl",
     filenameFunc: () => {
-      return `hermind-embed-chats-${new Date().toLocaleDateString()}-lines`;
+      return `anythingllm-embed-chats-${new Date().toLocaleDateString()}-lines`;
     },
   },
   jsonAlpaca: {
@@ -40,7 +40,7 @@ const exportOptions = {
     mimeType: "application/json",
     fileExtension: "json",
     filenameFunc: () => {
-      return `hermind-embed-chats-${new Date().toLocaleDateString()}-alpaca`;
+      return `anythingllm-embed-chats-${new Date().toLocaleDateString()}-alpaca`;
     },
   },
 };

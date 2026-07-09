@@ -8,7 +8,7 @@ const TRANSLATIONS = {
     llm: {
       title: "Preferència de LLM",
       description:
-        "Hermind pot treballar amb molts proveïdors de LLM. Aquest serà el servei que gestionarà les converses.",
+        "AnythingLLM pot treballar amb molts proveïdors de LLM. Aquest serà el servei que gestionarà les converses.",
     },
     userSetup: {
       title: "Configuració d'usuari",
@@ -35,15 +35,15 @@ const TRANSLATIONS = {
         "Aquests paràmetres es poden reconfigurar en qualsevol moment a la configuració.",
     },
     survey: {
-      title: "Benvingut a Hermind",
+      title: "Benvingut a AnythingLLM",
       description:
-        "Ajuda'ns a fer que Hermind s'adapti a les teves necessitats. Opcional.",
+        "Ajuda'ns a fer que AnythingLLM s'adapti a les teves necessitats. Opcional.",
       email: "Quin és el teu correu electrònic?",
-      useCase: "Per a què faràs servir Hermind?",
+      useCase: "Per a què faràs servir AnythingLLM?",
       useCaseWork: "Per a la feina",
       useCasePersonal: "Per a ús personal",
       useCaseOther: "Altres",
-      comment: "Com has sabut d'Hermind?",
+      comment: "Com has sabut d'AnythingLLM?",
       commentPlaceholder:
         "Reddit, Twitter, GitHub, YouTube, etc. - Fes-nos saber com ens has trobat!",
       skip: "Omet l'enquesta",
@@ -111,7 +111,7 @@ const TRANSLATIONS = {
     "experimental-features": "Funcions experimentals",
     contact: "Contacta el suport",
     "browser-extension": "Extensió del navegador",
-    "mobile-app": "Hermind Mòbil",
+    "mobile-app": "AnythingLLM Mòbil",
     channels: "Canals",
     "available-channels": {
       telegram: "Telegram",
@@ -174,7 +174,7 @@ const TRANSLATIONS = {
       add: "Afegeix un missatge nou",
       save: "Desa els missatges",
       heading: "Explica'm",
-      body: "els beneficis d'Hermind",
+      body: "els beneficis d'AnythingLLM",
     },
     delete: {
       title: "Elimina l'espai de treball",
@@ -222,8 +222,6 @@ const TRANSLATIONS = {
       "desc-start":
         "El nombre de xats anteriors que s'inclouran a la memòria a curt termini de la resposta.",
       recommend: "Es recomanen 20. ",
-      "desc-end":
-        "Més de 45 pot provocar errors continus al xat depenent de la mida dels missatges.",
     },
     prompt: {
       title: "Missatge del sistema",
@@ -255,28 +253,8 @@ const TRANSLATIONS = {
     },
     temperature: {
       title: "Temperatura del LLM",
-      "desc-start":
-        'Aquesta configuració controla com de "creatiu" serà el teu LLM en les respostes.',
       "desc-end":
         "Com més alt sigui el número, més creatiu serà. Per a alguns models, això pot provocar respostes incoherents si és massa alt.",
-      hint: "La majoria dels LLM tenen diversos rangs acceptables de valors vàlids. Consulta el teu proveïdor de LLM per obtenir aquesta informació.",
-    },
-    compression: {
-      title: "Context Compression",
-      description:
-        "Automatically compress long conversation history to stay within the model's context window.",
-      followGlobal: "Follow global",
-      enabled: "Enabled",
-      disabled: "Disabled",
-      globalStatus: "Global default",
-      threshold: "Compression threshold",
-      thresholdDesc:
-        "Trigger compression when history exceeds this fraction of the context window. Leave empty to use path defaults (Agent 0.50, Chat 0.75).",
-      thresholdPlaceholder: "0.75",
-      contextLength: "Context length override",
-      contextLengthDesc:
-        "Override the model's context length (in tokens). Leave empty to use the built-in model map.",
-      contextLengthPlaceholder: "e.g. 128000",
     },
   },
   "vector-workspace": {
@@ -792,9 +770,8 @@ const TRANSLATIONS = {
       },
       "intelligent-skill-selection": {
         title: "Selecció intel·ligent d'habilitats",
-        "beta-badge": "Beta",
         description:
-          "Activa eines il·limitades i redueix l'ús de tokens fins a un 80% per consulta: Hermind selecciona automàticament les habilitats adequades per a cada missatge.",
+          "Activa eines il·limitades i redueix l'ús de tokens fins a un 80% per consulta: AnythingLLM selecciona automàticament les habilitats adequades per a cada missatge.",
         "max-tools": {
           title: "Màxim d'eines",
           description:
@@ -832,16 +809,16 @@ const TRANSLATIONS = {
     interface: {
       title: "Preferències d'interfície",
       description:
-        "Estableix les teves preferències d'interfície per a Hermind.",
+        "Estableix les teves preferències d'interfície per a AnythingLLM.",
     },
     branding: {
       title: "Marca i etiqueta blanca",
       description:
-        "Personalitza la teva instància d'Hermind amb una marca pròpia.",
+        "Personalitza la teva instància d'AnythingLLM amb una marca pròpia.",
     },
     chat: {
       title: "Xat",
-      description: "Estableix les teves preferències de xat per a Hermind.",
+      description: "Estableix les teves preferències de xat per a AnythingLLM.",
       auto_submit: {
         title: "Envia automàticament l'entrada de veu",
         description:
@@ -881,7 +858,7 @@ const TRANSLATIONS = {
       "display-language": {
         title: "Idioma de visualització",
         description:
-          "Selecciona l'idioma preferit per mostrar la interfície d'Hermind, quan les traduccions estiguin disponibles.",
+          "Selecciona l'idioma preferit per mostrar la interfície d'AnythingLLM, quan les traduccions estiguin disponibles.",
       },
       logo: {
         title: "Logotip de la marca",
@@ -924,7 +901,7 @@ const TRANSLATIONS = {
   api: {
     title: "Claus API",
     description:
-      "Les claus API permeten al titular accedir i gestionar programàticament aquesta instància d'Hermind.",
+      "Les claus API permeten al titular accedir i gestionar programàticament aquesta instància d'AnythingLLM.",
     link: "Llegeix la documentació de l'API",
     generate: "Genera una nova clau API",
     empty: "No s'han trobat claus API",
@@ -938,7 +915,7 @@ const TRANSLATIONS = {
       close: "Tanca",
       create: "Crea la clau API",
       helper:
-        "Un cop creada, la clau API es pot usar per accedir i configurar programàticament aquesta instància d'Hermind.",
+        "Un cop creada, la clau API es pot usar per accedir i configurar programàticament aquesta instància d'AnythingLLM.",
       name: {
         label: "Nom",
         placeholder: "Integració de producció",
@@ -963,7 +940,7 @@ const TRANSLATIONS = {
   llm: {
     title: "Preferència de LLM",
     description:
-      "Aquestes són les credencials i la configuració del teu proveïdor preferit de xat i embedding de LLM. És important que aquestes claus siguin actuals i correctes, o bé Hermind no funcionarà correctament.",
+      "Aquestes són les credencials i la configuració del teu proveïdor preferit de xat i embedding de LLM. És important que aquestes claus siguin actuals i correctes, o bé AnythingLLM no funcionarà correctament.",
     provider: "Proveïdor de LLM",
     providers: {
       azure_openai: {
@@ -985,7 +962,7 @@ const TRANSLATIONS = {
       "Aquestes són les credencials i la configuració del teu proveïdor de model de transcripció preferit. És important que aquestes claus siguin actuals i correctes, o bé els fitxers multimèdia i d'àudio no es transcriuran.",
     provider: "Proveïdor de transcripció",
     "warn-start":
-      "L'ús del model whisper local en màquines amb poca RAM o CPU pot bloquejar Hermind en processar fitxers multimèdia.",
+      "L'ús del model whisper local en màquines amb poca RAM o CPU pot bloquejar AnythingLLM en processar fitxers multimèdia.",
     "warn-recommend":
       "Recomanem almenys 2 GB de RAM i pujar fitxers de menys de 10 MB.",
     "warn-end":
@@ -996,7 +973,7 @@ const TRANSLATIONS = {
     "desc-start":
       "Quan s'usa un LLM que no admet de manera nativa un motor d'embedding, pot ser que hagis d'especificar adicionalment les credencials per a l'embedding de text.",
     "desc-end":
-      "L'embedding és el procés de convertir text en vectors. Aquestes credencials són necessàries per convertir els teus fitxers i missatges en un format que Hermind pugui processar.",
+      "L'embedding és el procés de convertir text en vectors. Aquestes credencials són necessàries per convertir els teus fitxers i missatges en un format que AnythingLLM pugui processar.",
     provider: {
       title: "Proveïdor d'embedding",
     },
@@ -1022,7 +999,7 @@ const TRANSLATIONS = {
   vector: {
     title: "Base de dades vectorial",
     description:
-      "Aquestes són les credencials i la configuració de com funcionarà la teva instància d'Hermind. És important que aquestes claus siguin actuals i correctes.",
+      "Aquestes són les credencials i la configuració de com funcionarà la teva instància d'AnythingLLM. És important que aquestes claus siguin actuals i correctes.",
     provider: {
       title: "Proveïdor de la base de dades vectorial",
       description: "No cal cap configuració per a LanceDB.",
@@ -1056,7 +1033,7 @@ const TRANSLATIONS = {
   telegram: {
     title: "Bot de Telegram",
     description:
-      "Connecta la teva instància d'Hermind a Telegram per poder xatejar amb els teus espais de treball des de qualsevol dispositiu.",
+      "Connecta la teva instància d'AnythingLLM a Telegram per poder xatejar amb els teus espais de treball des de qualsevol dispositiu.",
     setup: {
       step1: {
         title: "Pas 1: Crea el teu bot de Telegram",
@@ -1134,7 +1111,7 @@ const TRANSLATIONS = {
     password: {
       title: "Protecció per contrasenya",
       description:
-        "Protegeix la teva instància d'Hermind amb una contrasenya. Si l'oblides, no hi ha cap mètode de recuperació, per la qual cosa assegura't de guardar-la.",
+        "Protegeix la teva instància d'AnythingLLM amb una contrasenya. Si l'oblides, no hi ha cap mètode de recuperació, per la qual cosa assegura't de guardar-la.",
       "password-label": "Contrasenya de la instància",
     },
   },
@@ -1152,7 +1129,7 @@ const TRANSLATIONS = {
   privacy: {
     title: "Privadesa i gestió de dades",
     description:
-      "Aquesta és la teva configuració de com els proveïdors de tercers connectats i Hermind gestionen les teves dades.",
+      "Aquesta és la teva configuració de com els proveïdors de tercers connectats i AnythingLLM gestionen les teves dades.",
     anonymous: "Telemetria anònima activada",
   },
   connectors: {
@@ -1324,22 +1301,22 @@ const TRANSLATIONS = {
       fetching: "Obtenint...",
       "fetch-website": "Obtén el lloc web",
       "privacy-notice":
-        "Aquests fitxers es pujaran al processador de documents que s'executa en aquesta instància d'Hermind. Aquests fitxers no s'envien ni es comparteixen amb tercers.",
+        "Aquests fitxers es pujaran al processador de documents que s'executa en aquesta instància d'AnythingLLM. Aquests fitxers no s'envien ni es comparteixen amb tercers.",
     },
     pinning: {
       what_pinning: "Què és l'ancoratge de documents?",
       pin_explained_block1:
-        "Quan <b>ancore</b>s un document a Hermind, injectarem tot el contingut del document a la teva finestra de missatge perquè el teu LLM el comprengui completament.",
+        "Quan <b>ancore</b>s un document a AnythingLLM, injectarem tot el contingut del document a la teva finestra de missatge perquè el teu LLM el comprengui completament.",
       pin_explained_block2:
         "Funciona millor amb <b>models de context gran</b> o fitxers petits que siguin crítics per a la seva base de coneixement.",
       pin_explained_block3:
-        "Si per defecte no obtens les respostes que desitges d'Hermind, l'ancoratge és una manera excel·lent d'obtenir respostes de major qualitat amb un sol clic.",
+        "Si per defecte no obtens les respostes que desitges d'AnythingLLM, l'ancoratge és una manera excel·lent d'obtenir respostes de major qualitat amb un sol clic.",
       accept: "D'acord, entès",
     },
     watching: {
       what_watching: "Què fa observar un document?",
       watch_explained_block1:
-        "Quan <b>observes</b> un document a Hermind, sincronitzarem <i>automàticament</i> el contingut del document des de la seva font original a intervals regulars. Això actualitzarà automàticament el contingut a cada espai de treball on es gestioni aquest fitxer.",
+        "Quan <b>observes</b> un document a AnythingLLM, sincronitzarem <i>automàticament</i> el contingut del document des de la seva font original a intervals regulars. Això actualitzarà automàticament el contingut a cada espai de treball on es gestioni aquest fitxer.",
       watch_explained_block2:
         "Aquesta funció admet actualment contingut en línia i no estarà disponible per a documents pujats manualment.",
       watch_explained_block3_start:
@@ -1486,6 +1463,12 @@ const TRANSLATIONS = {
         cancel: "Cancel·lar",
       },
     },
+    stt_unsupported: "L'accés al mic no està suportat en aquest navegador.",
+    stt_mic_denied:
+      "No s'ha pogut accedir al mic. Si us plau, concedeix l'autorització i prova de nou.",
+    stt_transcription_failed: "No s'ha pogut transmetre: {{error}}",
+    export: "Exporta la conversa com a...",
+    exporting: "Exportant…",
   },
   profile_settings: {
     edit_account: "Edita el compte",
@@ -1609,7 +1592,7 @@ const TRANSLATIONS = {
         unauthenticated: {
           title: "Autenticació requerida",
           description:
-            "Has d'autenticar-te amb el Centre de la comunitat d'Hermind abans de publicar elements.",
+            "Has d'autenticar-te amb el Centre de la comunitat d'AnythingLLM abans de publicar elements.",
           button: "Connecta al Centre de la comunitat",
         },
       },

@@ -195,5 +195,5 @@ function hasVisibleOptions(user = null, childOptions = []) {
 
 function generateStorageKey({ key = "" }) {
   const _key = key.replace(/\s+/g, "_").toLowerCase();
-  return `hermind_menu_${_key}_expanded`;
+  return `anything_llm_menu_${_key}_expanded`;
 }

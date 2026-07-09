@@ -7,7 +7,7 @@ const TRANSLATIONS = {
     llm: {
       title: "LLM Preference",
       description:
-        "Hermind can work with many LLM providers. This will be the service which handles chatting.",
+        "AnythingLLM can work with many LLM providers. This will be the service which handles chatting.",
     },
     userSetup: {
       title: "User Setup",
@@ -34,14 +34,14 @@ const TRANSLATIONS = {
         "These settings can be reconfigured at any time in the settings.",
     },
     survey: {
-      title: "Welcome to Hermind",
-      description: "Help us make Hermind built for your needs. Optional.",
+      title: "Welcome to AnythingLLM",
+      description: "Help us make AnythingLLM built for your needs. Optional.",
       email: "What's your email?",
-      useCase: "What will you use Hermind for?",
+      useCase: "What will you use AnythingLLM for?",
       useCaseWork: "For work",
       useCasePersonal: "For personal use",
       useCaseOther: "Other",
-      comment: "How did you hear about Hermind?",
+      comment: "How did you hear about AnythingLLM?",
       commentPlaceholder:
         "Reddit, Twitter, GitHub, YouTube, etc. - Let us know how you found us!",
       skip: "Skip Survey",
@@ -111,7 +111,7 @@ const TRANSLATIONS = {
     "experimental-features": "Experimental Features",
     contact: "Contact Support",
     "browser-extension": "Browser Extension",
-    "mobile-app": "Hermind Mobile",
+    "mobile-app": "AnythingLLM Mobile",
     channels: "Channels",
     "available-channels": {
       telegram: "Telegram",
@@ -171,7 +171,7 @@ const TRANSLATIONS = {
       add: "Add new message",
       save: "Save Messages",
       heading: "Explain to me",
-      body: "the benefits of Hermind",
+      body: "the benefits of AnythingLLM",
     },
     delete: {
       title: "Delete Workspace",
@@ -219,8 +219,6 @@ const TRANSLATIONS = {
       "desc-start":
         "The number of previous chats that will be included in the response's short-term memory.",
       recommend: "Recommend 20. ",
-      "desc-end":
-        "Anything more than 45 is likely to lead to continuous chat failures depending on message size.",
     },
     prompt: {
       title: "System Prompt",
@@ -251,28 +249,8 @@ const TRANSLATIONS = {
     },
     temperature: {
       title: "LLM Temperature",
-      "desc-start":
-        'This setting controls how "creative" your LLM responses will be.',
       "desc-end":
         "The higher the number the more creative. For some models this can lead to incoherent responses when set too high.",
-      hint: "Most LLMs have various acceptable ranges of valid values. Consult your LLM provider for that information.",
-    },
-    compression: {
-      title: "Context Compression",
-      description:
-        "Automatically compress long conversation history to stay within the model's context window.",
-      followGlobal: "Follow global",
-      enabled: "Enabled",
-      disabled: "Disabled",
-      globalStatus: "Global default",
-      threshold: "Compression threshold",
-      thresholdDesc:
-        "Trigger compression when history exceeds this fraction of the context window. Leave empty to use path defaults (Agent 0.50, Chat 0.75).",
-      thresholdPlaceholder: "0.75",
-      contextLength: "Context length override",
-      contextLengthDesc:
-        "Override the model's context length (in tokens). Leave empty to use the built-in model map.",
-      contextLengthPlaceholder: "e.g. 128000",
     },
   },
   "vector-workspace": {
@@ -764,9 +742,8 @@ const TRANSLATIONS = {
       },
       "intelligent-skill-selection": {
         title: "Intelligent Skill Selection",
-        "beta-badge": "Beta",
         description:
-          "Enable unlimited tools and cut token usage by up to 80% per query — Hermind automatically selects the right skills for every prompt.",
+          "Enable unlimited tools and cut token usage by up to 80% per query — AnythingLLM automatically selects the right skills for every prompt.",
         "max-tools": {
           title: "Max Tools",
           description:
@@ -803,16 +780,16 @@ const TRANSLATIONS = {
   customization: {
     interface: {
       title: "UI Preferences",
-      description: "Set your UI preferences for Hermind.",
+      description: "Set your UI preferences for AnythingLLM.",
     },
     branding: {
       title: "Branding & Whitelabeling",
       description:
-        "White-label your Hermind instance with custom branding.",
+        "White-label your AnythingLLM instance with custom branding.",
     },
     chat: {
       title: "Chat",
-      description: "Set your chat preferences for Hermind.",
+      description: "Set your chat preferences for AnythingLLM.",
       auto_submit: {
         title: "Auto-Submit Speech Input",
         description:
@@ -849,7 +826,7 @@ const TRANSLATIONS = {
       "display-language": {
         title: "Display Language",
         description:
-          "Select the preferred language to render Hermind's UI in - when translations are available.",
+          "Select the preferred language to render AnythingLLM's UI in - when translations are available.",
       },
       logo: {
         title: "Brand Logo",
@@ -890,7 +867,7 @@ const TRANSLATIONS = {
   api: {
     title: "API Keys",
     description:
-      "API keys allow the holder to programmatically access and manage this Hermind instance.",
+      "API keys allow the holder to programmatically access and manage this AnythingLLM instance.",
     link: "Read the API documentation",
     generate: "Generate New API Key",
     empty: "No API keys found",
@@ -904,7 +881,7 @@ const TRANSLATIONS = {
       close: "Close",
       create: "Create API Key",
       helper:
-        "Once created the API key can be used to programmatically access and configure this Hermind instance.",
+        "Once created the API key can be used to programmatically access and configure this AnythingLLM instance.",
       name: {
         label: "Name",
         placeholder: "Production integration",
@@ -929,7 +906,7 @@ const TRANSLATIONS = {
   llm: {
     title: "LLM Preference",
     description:
-      "These are the credentials and settings for your preferred LLM chat & embedding provider. It is important that these keys are current and correct, or else Hermind will not function properly.",
+      "These are the credentials and settings for your preferred LLM chat & embedding provider. It is important that these keys are current and correct, or else AnythingLLM will not function properly.",
     provider: "LLM Provider",
     providers: {
       azure_openai: {
@@ -1126,7 +1103,7 @@ const TRANSLATIONS = {
       "These are the credentials and settings for your preferred transcription model provider. Its important these keys are current and correct or else media files and audio will not transcribe.",
     provider: "Transcription Provider",
     "warn-start":
-      "Using the local whisper model on machines with limited RAM or CPU can stall Hermind when processing media files.",
+      "Using the local whisper model on machines with limited RAM or CPU can stall AnythingLLM when processing media files.",
     "warn-recommend":
       "We recommend at least 2GB of RAM and upload files <10Mb.",
     "warn-end":
@@ -1137,7 +1114,7 @@ const TRANSLATIONS = {
     "desc-start":
       "When using an LLM that does not natively support an embedding engine - you may need to additionally specify credentials for embedding text.",
     "desc-end":
-      "Embedding is the process of turning text into vectors. These credentials are required to turn your files and prompts into a format which Hermind can use to process.",
+      "Embedding is the process of turning text into vectors. These credentials are required to turn your files and prompts into a format which AnythingLLM can use to process.",
     provider: {
       title: "Embedding Provider",
     },
@@ -1163,7 +1140,7 @@ const TRANSLATIONS = {
   vector: {
     title: "Vector Database",
     description:
-      "These are the credentials and settings for how your Hermind instance will function. It's important these keys are current and correct.",
+      "These are the credentials and settings for how your AnythingLLM instance will function. It's important these keys are current and correct.",
     provider: {
       title: "Vector Database Provider",
       description: "There is no configuration needed for LanceDB.",
@@ -1197,7 +1174,7 @@ const TRANSLATIONS = {
   telegram: {
     title: "Telegram Bot",
     description:
-      "Connect your Hermind instance to Telegram so you can chat with your workspaces from any device.",
+      "Connect your AnythingLLM instance to Telegram so you can chat with your workspaces from any device.",
     setup: {
       step1: {
         title: "Step 1: Create your Telegram bot",
@@ -1274,7 +1251,7 @@ const TRANSLATIONS = {
     password: {
       title: "Password Protection",
       description:
-        "Protect your Hermind instance with a password. If you forget this there is no recovery method so ensure you save this password.",
+        "Protect your AnythingLLM instance with a password. If you forget this there is no recovery method so ensure you save this password.",
       "password-label": "Instance Password",
     },
   },
@@ -1292,7 +1269,7 @@ const TRANSLATIONS = {
   privacy: {
     title: "Privacy & Data-Handling",
     description:
-      "This is your configuration for how connected third party providers and Hermind handle your data.",
+      "This is your configuration for how connected third party providers and AnythingLLM handle your data.",
     anonymous: "Anonymous Telemetry Enabled",
   },
   connectors: {
@@ -1463,22 +1440,22 @@ const TRANSLATIONS = {
       fetching: "Fetching...",
       "fetch-website": "Fetch website",
       "privacy-notice":
-        "These files will be uploaded to the document processor running on this Hermind instance. These files are not sent or shared with a third party.",
+        "These files will be uploaded to the document processor running on this AnythingLLM instance. These files are not sent or shared with a third party.",
     },
     pinning: {
       what_pinning: "What is document pinning?",
       pin_explained_block1:
-        "When you <b>pin</b> a document in Hermind we will inject the entire content of the document into your prompt window for your LLM to fully comprehend.",
+        "When you <b>pin</b> a document in AnythingLLM we will inject the entire content of the document into your prompt window for your LLM to fully comprehend.",
       pin_explained_block2:
         "This works best with <b>large-context models</b> or small files that are critical to its knowledge-base.",
       pin_explained_block3:
-        "If you are not getting the answers you desire from Hermind by default then pinning is a great way to get higher quality answers in a click.",
+        "If you are not getting the answers you desire from AnythingLLM by default then pinning is a great way to get higher quality answers in a click.",
       accept: "Okay, got it",
     },
     watching: {
       what_watching: "What does watching a document do?",
       watch_explained_block1:
-        "When you <b>watch</b> a document in Hermind we will <i>automatically</i> sync your document content from it's original source on regular intervals. This will automatically update the content in every workspace where this file is managed.",
+        "When you <b>watch</b> a document in AnythingLLM we will <i>automatically</i> sync your document content from it's original source on regular intervals. This will automatically update the content in every workspace where this file is managed.",
       watch_explained_block2:
         "This feature currently supports online-based content and will not be available for manually uploaded documents.",
       watch_explained_block3_start:
@@ -1493,7 +1470,13 @@ const TRANSLATIONS = {
     send_message: "Send a message",
     attach_file: "Attach a file to this chat",
     text_size: "Change text size.",
+    export: "Export chat as...",
+    exporting: "Exporting...",
     microphone: "Speak your prompt.",
+    stt_unsupported: "Microphone access is not supported in this browser.",
+    stt_mic_denied:
+      "Could not access the microphone. Please grant permission and try again.",
+    stt_transcription_failed: "Transcription failed: {{error}}",
     send: "Send prompt message to workspace",
     tts_speak_message: "TTS Speak message",
     copy: "Copy",
@@ -1614,7 +1597,7 @@ const TRANSLATIONS = {
           'Memories should be a single, concise statement. e.g. "User prefers Python over JavaScript"',
         edit_description: "Update the content of this memory.",
         label: "Memory",
-        placeholder: "e.g. User's name is Joe, User works on Hermind, etc.",
+        placeholder: "e.g. User's name is Joe, User works on AnythingLLM, etc.",
         create: "Create",
         save: "Save",
         cancel: "Cancel",
@@ -1738,7 +1721,7 @@ const TRANSLATIONS = {
         unauthenticated: {
           title: "Authentication Required",
           description:
-            "You need to authenticate with the Hermind Community Hub before publishing items.",
+            "You need to authenticate with the AnythingLLM Community Hub before publishing items.",
           button: "Connect to Community Hub",
         },
       },

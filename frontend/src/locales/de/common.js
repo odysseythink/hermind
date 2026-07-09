@@ -8,7 +8,7 @@ const TRANSLATIONS = {
     llm: {
       title: "LLM-Einstellung",
       description:
-        "Hermind ist mit vielen LLM-Anbietern kompatibel. Der ausgewählte Dienst wird für die Chats verwendet.",
+        "AnythingLLM ist mit vielen LLM-Anbietern kompatibel. Der ausgewählte Dienst wird für die Chats verwendet.",
     },
     userSetup: {
       title: "Benutzer Setup",
@@ -35,15 +35,15 @@ const TRANSLATIONS = {
         "Diese Einstellungen können jederzeit in den Einstellungen angepasst werden.",
     },
     survey: {
-      title: "Willkommen bei Hermind",
+      title: "Willkommen bei AnythingLLM",
       description:
-        "Helfen Sie uns, Hermind an Ihre Bedürfnisse anzupassen. (Optional)",
+        "Helfen Sie uns, AnythingLLM an Ihre Bedürfnisse anzupassen. (Optional)",
       email: "Wie lautet Ihre E-Mail-Adresse?",
-      useCase: "Wofür möchten Sie Hermind verwenden?",
+      useCase: "Wofür möchten Sie AnythingLLM verwenden?",
       useCaseWork: "Beruflich",
       useCasePersonal: "Privat",
       useCaseOther: "Sonstiges",
-      comment: "Wie haben Sie von Hermind erfahren?",
+      comment: "Wie haben Sie von AnythingLLM erfahren?",
       commentPlaceholder:
         "Reddit, Twitter, GitHub, YouTube, etc. – Teilen Sie uns mit, wie Sie uns entdeckt haben!",
       skip: "Umfrage überspringen",
@@ -98,7 +98,7 @@ const TRANSLATIONS = {
     contact: "Support kontaktieren",
     "browser-extension": "Browser-Extension",
     "system-prompt-variables": "Systempromptvariablen",
-    "mobile-app": "Hermind Mobile",
+    "mobile-app": "AnythingLLM Mobile",
     "community-hub": {
       title: "Community Hub",
       trending: "Neuigkeiten",
@@ -165,7 +165,7 @@ const TRANSLATIONS = {
       add: "Neue Nachricht hinzufügen",
       save: "Nachrichten speichern",
       heading: "Erkläre mir",
-      body: "die Vorteile von Hermind",
+      body: "die Vorteile von AnythingLLM",
     },
     delete: {
       title: "Workspace löschen",
@@ -213,8 +213,6 @@ const TRANSLATIONS = {
       "desc-start":
         "Die Anzahl der vorherigen Chats, die in das Kurzzeitgedächtnis der Antwort einbezogen werden.",
       recommend: "Empfohlen 20. ",
-      "desc-end":
-        "Alles über 45 führt wahrscheinlich zu kontinuierlichen Chat-Ausfällen, abhängig von der Nachrichtengröße.",
     },
     prompt: {
       title: "Prompt",
@@ -245,28 +243,8 @@ const TRANSLATIONS = {
     },
     temperature: {
       title: "LLM-Temperatur",
-      "desc-start":
-        'Diese Einstellung steuert, wie "kreativ" Ihre LLM-Antworten sein werden.',
       "desc-end":
         "Je höher die Zahl, desto kreativer. Bei einigen Modellen kann dies zu unverständlichen Antworten führen, wenn sie zu hoch eingestellt ist.",
-      hint: "Die meisten LLMs haben verschiedene akzeptable Bereiche gültiger Werte. Konsultieren Sie Ihren LLM-Anbieter für diese Informationen.",
-    },
-    compression: {
-      title: "Context Compression",
-      description:
-        "Automatically compress long conversation history to stay within the model's context window.",
-      followGlobal: "Follow global",
-      enabled: "Enabled",
-      disabled: "Disabled",
-      globalStatus: "Global default",
-      threshold: "Compression threshold",
-      thresholdDesc:
-        "Trigger compression when history exceeds this fraction of the context window. Leave empty to use path defaults (Agent 0.50, Chat 0.75).",
-      thresholdPlaceholder: "0.75",
-      contextLength: "Context length override",
-      contextLengthDesc:
-        "Override the model's context length (in tokens). Leave empty to use the built-in model map.",
-      contextLengthPlaceholder: "e.g. 128000",
     },
   },
   "vector-workspace": {
@@ -787,9 +765,8 @@ const TRANSLATIONS = {
       },
       "intelligent-skill-selection": {
         title: "Intelligente Auswahl von Fähigkeiten",
-        "beta-badge": "Beta-Version",
         description:
-          "Ermöglichen Sie die uneingeschränkte Nutzung von Werkzeugen und reduzieren Sie die Token-Nutzung pro Anfrage um bis zu 80 % – Hermind wählt automatisch die passenden Fähigkeiten für jede Anfrage aus.",
+          "Ermöglichen Sie die uneingeschränkte Nutzung von Werkzeugen und reduzieren Sie die Token-Nutzung pro Anfrage um bis zu 80 % – AnythingLLM wählt automatisch die passenden Fähigkeiten für jede Anfrage aus.",
         "max-tools": {
           title: "Max Tools",
           description:
@@ -827,16 +804,16 @@ const TRANSLATIONS = {
   customization: {
     interface: {
       title: "UI Einstellungen",
-      description: "Passen Sie die Benutzeroberfläche von Hermind an.",
+      description: "Passen Sie die Benutzeroberfläche von AnythingLLM an.",
     },
     branding: {
       title: "Branding & Whitelabeling",
       description:
-        "Individualisieren Sie Ihre Hermind-Instanz durch eigenes Branding.",
+        "Individualisieren Sie Ihre AnythingLLM-Instanz durch eigenes Branding.",
     },
     chat: {
       title: "Chat",
-      description: "Passen Sie Ihre Chat-Einstellungen für Hermind an.",
+      description: "Passen Sie Ihre Chat-Einstellungen für AnythingLLM an.",
       auto_submit: {
         title: "Spracheingaben automatisch senden",
         description:
@@ -916,7 +893,7 @@ const TRANSLATIONS = {
   api: {
     title: "API-Schlüssel",
     description:
-      "API-Schlüssel ermöglichen es dem Besitzer, programmatisch auf diese Hermind-Instanz zuzugreifen und sie zu verwalten.",
+      "API-Schlüssel ermöglichen es dem Besitzer, programmatisch auf diese AnythingLLM-Instanz zuzugreifen und sie zu verwalten.",
     link: "Lesen Sie die API-Dokumentation",
     generate: "Neuen API-Schlüssel generieren",
     empty: "Keine API-Schlüssel gefunden",
@@ -930,7 +907,7 @@ const TRANSLATIONS = {
       close: "Schließen",
       create: "API-Schlüssel erstellen",
       helper:
-        "Nach der Erstellung kann der API-Schlüssel verwendet werden, um programmgesteuert auf diese Hermind-Instanz zuzugreifen und sie zu konfigurieren.",
+        "Nach der Erstellung kann der API-Schlüssel verwendet werden, um programmgesteuert auf diese AnythingLLM-Instanz zuzugreifen und sie zu konfigurieren.",
       name: {
         label: "Name",
         placeholder: "Produktionsintegration",
@@ -955,7 +932,7 @@ const TRANSLATIONS = {
   llm: {
     title: "LLM-Präferenz",
     description:
-      "Dies sind die Anmeldeinformationen und Einstellungen für Ihren bevorzugten LLM-Chat- und Einbettungsanbieter. Es ist wichtig, dass diese Schlüssel aktuell und korrekt sind, sonst wird Hermind nicht richtig funktionieren.",
+      "Dies sind die Anmeldeinformationen und Einstellungen für Ihren bevorzugten LLM-Chat- und Einbettungsanbieter. Es ist wichtig, dass diese Schlüssel aktuell und korrekt sind, sonst wird AnythingLLM nicht richtig funktionieren.",
     provider: "LLM-Anbieter",
     providers: {
       azure_openai: {
@@ -977,7 +954,7 @@ const TRANSLATIONS = {
       "Dies sind die Anmeldeinformationen und Einstellungen für Ihren bevorzugten Transkriptionsmodellanbieter. Es ist wichtig, dass diese Schlüssel aktuell und korrekt sind, sonst werden Mediendateien und Audio nicht transkribiert.",
     provider: "Transkriptionsanbieter",
     "warn-start":
-      "Die Verwendung des lokalen Whisper-Modells auf Maschinen mit begrenztem RAM oder CPU kann Hermind bei der Verarbeitung von Mediendateien zum Stillstand bringen.",
+      "Die Verwendung des lokalen Whisper-Modells auf Maschinen mit begrenztem RAM oder CPU kann AnythingLLM bei der Verarbeitung von Mediendateien zum Stillstand bringen.",
     "warn-recommend":
       "Wir empfehlen mindestens 2 GB RAM und das Hochladen von Dateien <10 MB.",
     "warn-end":
@@ -988,7 +965,7 @@ const TRANSLATIONS = {
     "desc-start":
       "Bei der Verwendung eines LLM, das keine native Unterstützung für eine Einbettungs-Engine bietet, müssen Sie möglicherweise zusätzlich Anmeldeinformationen für die Texteinbettung angeben.",
     "desc-end":
-      "Einbettung ist der Prozess, Text in Vektoren umzuwandeln. Diese Anmeldeinformationen sind erforderlich, um Ihre Dateien und Prompts in ein Format umzuwandeln, das Hermind zur Verarbeitung verwenden kann.",
+      "Einbettung ist der Prozess, Text in Vektoren umzuwandeln. Diese Anmeldeinformationen sind erforderlich, um Ihre Dateien und Prompts in ein Format umzuwandeln, das AnythingLLM zur Verarbeitung verwenden kann.",
     provider: {
       title: "Einbettungsanbieter",
     },
@@ -1014,7 +991,7 @@ const TRANSLATIONS = {
   vector: {
     title: "Vektordatenbank",
     description:
-      "Dies sind die Anmeldeinformationen und Einstellungen für die Funktionsweise Ihrer Hermind-Instanz. Es ist wichtig, dass diese Schlüssel aktuell und korrekt sind.",
+      "Dies sind die Anmeldeinformationen und Einstellungen für die Funktionsweise Ihrer AnythingLLM-Instanz. Es ist wichtig, dass diese Schlüssel aktuell und korrekt sind.",
     provider: {
       title: "Vektordatenbankanbieter",
       description: "Für LanceDB ist keine Konfiguration erforderlich.",
@@ -1059,7 +1036,7 @@ const TRANSLATIONS = {
   privacy: {
     title: "Datenschutz & Datenverarbeitung",
     description:
-      "Dies ist Ihre Konfiguration dafür, wie verbundene Drittanbieter und Hermind Ihre Daten behandeln.",
+      "Dies ist Ihre Konfiguration dafür, wie verbundene Drittanbieter und AnythingLLM Ihre Daten behandeln.",
     anonymous: "Anonyme Telemetrie aktiviert",
   },
   connectors: {
@@ -1233,7 +1210,7 @@ const TRANSLATIONS = {
       fetching: "Wird abgerufen...",
       "fetch-website": "Website abrufen",
       "privacy-notice":
-        "Diese Dateien werden zum Dokumentenprozessor hochgeladen, der auf dieser Hermind-Instanz läuft. Diese Dateien werden nicht an Dritte gesendet oder geteilt.",
+        "Diese Dateien werden zum Dokumentenprozessor hochgeladen, der auf dieser AnythingLLM-Instanz läuft. Diese Dateien werden nicht an Dritte gesendet oder geteilt.",
     },
     pinning: {
       what_pinning: "Was bedeutet es Dokumente anzuheften?",
@@ -1386,12 +1363,19 @@ const TRANSLATIONS = {
         edit_description: "Aktualisieren Sie den Inhalt dieses Speichers.",
         label: "Gedächtnis",
         placeholder:
-          "z.B. Benutzername: Joe, Benutzer arbeitet an Hermind, usw.",
+          "z.B. Benutzername: Joe, Benutzer arbeitet an AnythingLLM, usw.",
         create: "Erstellen",
         save: "Speichern",
         cancel: "Abbrechen",
       },
     },
+    stt_unsupported:
+      "Die Verwendung eines Mikrofons ist in diesem Browser nicht möglich.",
+    stt_mic_denied:
+      "Es konnte nicht auf das Mikrofon zugegriffen werden. Bitte erteilen Sie die erforderlichen Berechtigungen und versuchen Sie es erneut.",
+    stt_transcription_failed: "Transkription fehlgeschlagen: {{error}}",
+    export: "Chat-Export als...",
+    exporting: "Exportieren...",
   },
   profile_settings: {
     edit_account: "Account bearbeiten",
@@ -1487,7 +1471,7 @@ const TRANSLATIONS = {
         unauthenticated: {
           title: "Benötigte Authentifizierung",
           description:
-            "Sie müssen sich vor der Veröffentlichung von Inhalten über den Hermind Community Hub authentifizieren.",
+            "Sie müssen sich vor der Veröffentlichung von Inhalten über den AnythingLLM Community Hub authentifizieren.",
           button: "Verbinden Sie sich mit dem Community Hub",
         },
       },
@@ -1541,7 +1525,7 @@ const TRANSLATIONS = {
     password: {
       title: "Passwortschutz",
       description:
-        "Schützen Sie Ihre Hermind-Instanz mit einem Passwort. Wenn Sie dieses vergessen, gibt es keine Wiederherstellungsmethode, also stellen Sie sicher, dass Sie dieses Passwort speichern.",
+        "Schützen Sie Ihre AnythingLLM-Instanz mit einem Passwort. Wenn Sie dieses vergessen, gibt es keine Wiederherstellungsmethode, also stellen Sie sicher, dass Sie dieses Passwort speichern.",
       "password-label": "Instanzpasswort",
     },
   },

@@ -8,7 +8,7 @@ const TRANSLATIONS = {
     llm: {
       title: "העדפות מודל שפה (LLM)",
       description:
-        "Hermind יכול לעבוד עם ספקי מודלי שפה (LLM) רבים. זה יהיה השירות שיטפל בצ'אט.",
+        "AnythingLLM יכול לעבוד עם ספקי מודלי שפה (LLM) רבים. זה יהיה השירות שיטפל בצ'אט.",
     },
     userSetup: {
       title: "הגדרת משתמש",
@@ -32,15 +32,15 @@ const TRANSLATIONS = {
       settingsHint: "ניתן להגדיר מחדש הגדרות אלה בכל עת בהגדרות.",
     },
     survey: {
-      title: "ברוכים הבאים ל-Hermind",
+      title: "ברוכים הבאים ל-AnythingLLM",
       description:
-        "עזרו לנו לבנות את Hermind כך שיתאים לצרכים שלכם. אופציונלי.",
+        "עזרו לנו לבנות את AnythingLLM כך שיתאים לצרכים שלכם. אופציונלי.",
       email: "מה האימייל שלך?",
-      useCase: "לאיזו מטרה תשתמש ב-Hermind?",
+      useCase: "לאיזו מטרה תשתמש ב-AnythingLLM?",
       useCaseWork: "לעבודה",
       useCasePersonal: "לשימוש אישי",
       useCaseOther: "אחר",
-      comment: "איך שמעת על Hermind?",
+      comment: "איך שמעת על AnythingLLM?",
       commentPlaceholder:
         "Reddit, Twitter, GitHub, YouTube, וכו' - ספר לנו איך מצאת אותנו!",
       skip: "דלג על הסקר",
@@ -95,7 +95,7 @@ const TRANSLATIONS = {
     "experimental-features": "תכונות ניסיוניות",
     contact: "צור קשר עם התמיכה",
     "browser-extension": "תוסף דפדפן",
-    "mobile-app": "Hermind Mobile",
+    "mobile-app": "AnythingLLM Mobile",
     "community-hub": {
       title: "מרכז קהילתי",
       trending: "גלו את הנושאים החמים",
@@ -160,7 +160,7 @@ const TRANSLATIONS = {
       add: "הוסף הודעה חדשה",
       save: "שמור הודעות",
       heading: "הסבר לי",
-      body: "את היתרונות של Hermind",
+      body: "את היתרונות של AnythingLLM",
     },
     delete: {
       title: "מחק סביבת עבודה",
@@ -207,8 +207,6 @@ const TRANSLATIONS = {
       title: "היסטוריית צ'אט",
       "desc-start": "מספר הצ'אטים הקודמים שייכללו בזיכרון לטווח קצר של התגובה.",
       recommend: "מומלץ 20. ",
-      "desc-end":
-        "יותר מ-45 צפוי להוביל לכשלים רציפים בצ'אט, תלוי בגודל ההודעה.",
     },
     prompt: {
       title: "הנחיית מערכת",
@@ -239,27 +237,8 @@ const TRANSLATIONS = {
     },
     temperature: {
       title: "טמפרטורת LLM",
-      "desc-start": 'הגדרה זו שולטת במידת ה"יצירתיות" של תגובות מודל השפה שלך.',
       "desc-end":
         "ככל שהמספר גבוה יותר, כך התגובה יצירתית יותר. עבור מודלים מסוימים, הדבר עלול להוביל לתגובות לא קוהרנטיות כאשר הערך גבוה מדי.",
-      hint: "לרוב מודלי ה-LLM יש טווחי ערכים קבילים שונים. עיין במידע של ספק ה-LLM שלך.",
-    },
-    compression: {
-      title: "Context Compression",
-      description:
-        "Automatically compress long conversation history to stay within the model's context window.",
-      followGlobal: "Follow global",
-      enabled: "Enabled",
-      disabled: "Disabled",
-      globalStatus: "Global default",
-      threshold: "Compression threshold",
-      thresholdDesc:
-        "Trigger compression when history exceeds this fraction of the context window. Leave empty to use path defaults (Agent 0.50, Chat 0.75).",
-      thresholdPlaceholder: "0.75",
-      contextLength: "Context length override",
-      contextLengthDesc:
-        "Override the model's context length (in tokens). Leave empty to use the built-in model map.",
-      contextLengthPlaceholder: "e.g. 128000",
     },
   },
   "vector-workspace": {
@@ -743,9 +722,8 @@ const TRANSLATIONS = {
       },
       "intelligent-skill-selection": {
         title: "בחירת מיומנויות בהתאם ליכולות",
-        "beta-badge": "בטא",
         description:
-          "אפשרו שימוש בלתי מוגבל בכלים וצמצום השימוש בטוקנים עד 80% לכל שאילתה – ה-Hermind בוחר באופן אוטומטי את הכישורים המתאימים ביותר לכל בקשה.",
+          "אפשרו שימוש בלתי מוגבל בכלים וצמצום השימוש בטוקנים עד 80% לכל שאילתה – ה-AnythingLLM בוחר באופן אוטומטי את הכישורים המתאימים ביותר לכל בקשה.",
         "max-tools": {
           title: "כלים של מקס",
           description:
@@ -781,15 +759,15 @@ const TRANSLATIONS = {
   customization: {
     interface: {
       title: "העדפות ממשק משתמש",
-      description: "הגדר את העדפות ממשק המשתמש שלך עבור Hermind.",
+      description: "הגדר את העדפות ממשק המשתמש שלך עבור AnythingLLM.",
     },
     branding: {
       title: "מיתוג והתאמה אישית (Whitelabeling)",
-      description: "התאם אישית את מופע ה-Hermind שלך עם מיתוג מותאם אישית.",
+      description: "התאם אישית את מופע ה-AnythingLLM שלך עם מיתוג מותאם אישית.",
     },
     chat: {
       title: "צ'אט",
-      description: "הגדר את העדפות הצ'אט שלך עבור Hermind.",
+      description: "הגדר את העדפות הצ'אט שלך עבור AnythingLLM.",
       auto_submit: {
         title: "שליחה אוטומטית של קלט קולי",
         description: "שלח אוטומטית קלט קולי לאחר פרק זמן של שקט",
@@ -824,7 +802,7 @@ const TRANSLATIONS = {
       "display-language": {
         title: "שפת תצוגה",
         description:
-          "בחר את השפה המועדפת להצגת ממשק המשתמש של Hermind - כאשר תרגומים זמינים.",
+          "בחר את השפה המועדפת להצגת ממשק המשתמש של AnythingLLM - כאשר תרגומים זמינים.",
       },
       logo: {
         title: "לוגו מותג",
@@ -865,7 +843,7 @@ const TRANSLATIONS = {
   api: {
     title: "מפתחות API",
     description:
-      "מפתחות API מאפשרים למחזיק בהם לגשת ולנהל באופן תכנותי את מופע Hermind זה.",
+      "מפתחות API מאפשרים למחזיק בהם לגשת ולנהל באופן תכנותי את מופע AnythingLLM זה.",
     link: "קרא את תיעוד ה-API",
     generate: "צור מפתח API חדש",
     empty: "לא נמצאו מפתחות API",
@@ -879,7 +857,7 @@ const TRANSLATIONS = {
       close: "סגירה",
       create: "צור מפתח API",
       helper:
-        "לאחר יצירתו, ניתן להשתמש במפתח ה-API כדי לגשת למופע Hermind זה ולהגדיר אותו באופן תכנותי.",
+        "לאחר יצירתו, ניתן להשתמש במפתח ה-API כדי לגשת למופע AnythingLLM זה ולהגדיר אותו באופן תכנותי.",
       name: {
         label: "שם",
         placeholder: "אינטגרציית ייצור",
@@ -903,7 +881,7 @@ const TRANSLATIONS = {
   llm: {
     title: "העדפות מודל שפה (LLM)",
     description:
-      "אלה האישורים וההגדרות עבור ספק הצ'אט וההטמעה המועדף עליך. חשוב שמפתחות אלה יהיו עדכניים ונכונים, אחרת Hermind לא יפעל כראוי.",
+      "אלה האישורים וההגדרות עבור ספק הצ'אט וההטמעה המועדף עליך. חשוב שמפתחות אלה יהיו עדכניים ונכונים, אחרת AnythingLLM לא יפעל כראוי.",
     provider: "ספק LLM",
     providers: {
       azure_openai: {
@@ -925,7 +903,7 @@ const TRANSLATIONS = {
       "אלה האישורים וההגדרות עבור ספק מודל התמלול המועדף עליך. חשוב שמפתחות אלה יהיו עדכניים ונכונים, אחרת קובצי מדיה ושמע לא יתומללו.",
     provider: "ספק תמלול",
     "warn-start":
-      "שימוש במודל ה-whisper המקומי על מכונות עם זיכרון RAM או מעבד מוגבלים עלול לגרום להאטה של Hermind בעת עיבוד קובצי מדיה.",
+      "שימוש במודל ה-whisper המקומי על מכונות עם זיכרון RAM או מעבד מוגבלים עלול לגרום להאטה של AnythingLLM בעת עיבוד קובצי מדיה.",
     "warn-recommend":
       "אנו ממליצים על לפחות 2GB של זיכרון RAM והעלאת קבצים קטנים מ-10Mb.",
     "warn-end": "המודל המובנה יורד אוטומטית בשימוש הראשון.",
@@ -935,7 +913,7 @@ const TRANSLATIONS = {
     "desc-start":
       "בעת שימוש במודל שפה שאינו תומך באופן מובנה במנוע הטמעה - ייתכן שתצטרך לציין בנוסף אישורים להטמעת טקסט.",
     "desc-end":
-      "הטמעה היא תהליך של הפיכת טקסט לווקטורים. אישורים אלה נדרשים כדי להפוך את הקבצים וההנחיות שלך לפורמט ש-Hermind יכול להשתמש בו לעיבוד.",
+      "הטמעה היא תהליך של הפיכת טקסט לווקטורים. אישורים אלה נדרשים כדי להפוך את הקבצים וההנחיות שלך לפורמט ש-AnythingLLM יכול להשתמש בו לעיבוד.",
     provider: {
       title: "ספק הטמעה",
     },
@@ -960,7 +938,7 @@ const TRANSLATIONS = {
   vector: {
     title: "מסד נתונים וקטורי",
     description:
-      "אלה האישורים וההגדרות לאופן פעולת מופע ה-Hermind שלך. חשוב שמפתחות אלה יהיו עדכניים ונכונים.",
+      "אלה האישורים וההגדרות לאופן פעולת מופע ה-AnythingLLM שלך. חשוב שמפתחות אלה יהיו עדכניים ונכונים.",
     provider: {
       title: "ספק מסד נתונים וקטורי",
       description: "אין צורך בתצורה עבור LanceDB.",
@@ -1003,7 +981,7 @@ const TRANSLATIONS = {
   privacy: {
     title: "פרטיות וטיפול בנתונים",
     description:
-      "זוהי התצורה שלך לאופן שבו ספקים צד שלישי מחוברים ו-Hermind מטפלים בנתונים שלך.",
+      "זוהי התצורה שלך לאופן שבו ספקים צד שלישי מחוברים ו-AnythingLLM מטפלים בנתונים שלך.",
     anonymous: "טלמטריה אנונימית מופעלת",
   },
   connectors: {
@@ -1166,22 +1144,22 @@ const TRANSLATIONS = {
       fetching: "מאחזר...",
       "fetch-website": "אחזר אתר אינטרנט",
       "privacy-notice":
-        "קבצים אלה יועלו למעבד המסמכים הפועל במופע זה של Hermind. קבצים אלה אינם נשלחים או משותפים עם צד שלישי.",
+        "קבצים אלה יועלו למעבד המסמכים הפועל במופע זה של AnythingLLM. קבצים אלה אינם נשלחים או משותפים עם צד שלישי.",
     },
     pinning: {
       what_pinning: "מהי הצמדת מסמכים?",
       pin_explained_block1:
-        "כאשר אתה <b>מצמיד</b> מסמך ב-Hermind, אנו נזריק את כל תוכן המסמך לחלון ההנחיה שלך כדי שמודל השפה שלך יבין אותו במלואו.",
+        "כאשר אתה <b>מצמיד</b> מסמך ב-AnythingLLM, אנו נזריק את כל תוכן המסמך לחלון ההנחיה שלך כדי שמודל השפה שלך יבין אותו במלואו.",
       pin_explained_block2:
         "זה עובד בצורה הטובה ביותר עם <b>מודלים בעלי הקשר רחב</b> או קבצים קטנים שהם קריטיים לבסיס הידע שלו.",
       pin_explained_block3:
-        "אם אינך מקבל את התשובות הרצויות מ-Hermind כברירת מחדל, הצמדה היא דרך מצוינת לקבל תשובות איכותיות יותר בלחיצה אחת.",
+        "אם אינך מקבל את התשובות הרצויות מ-AnythingLLM כברירת מחדל, הצמדה היא דרך מצוינת לקבל תשובות איכותיות יותר בלחיצה אחת.",
       accept: "אוקיי, הבנתי",
     },
     watching: {
       what_watching: "מה עושה מעקב אחר מסמך?",
       watch_explained_block1:
-        "כאשר אתה <b>עוקב</b> אחר מסמך ב-Hermind, אנו נסנכרן <i>אוטומטית</i> את תוכן המסמך שלך ממקורו המקורי במרווחי זמן קבועים. זה יעדכן אוטומטית את התוכן בכל סביבת עבודה שבה קובץ זה מנוהל.",
+        "כאשר אתה <b>עוקב</b> אחר מסמך ב-AnythingLLM, אנו נסנכרן <i>אוטומטית</i> את תוכן המסמך שלך ממקורו המקורי במרווחי זמן קבועים. זה יעדכן אוטומטית את התוכן בכל סביבת עבודה שבה קובץ זה מנוהל.",
       watch_explained_block2:
         "תכונה זו תומכת כיום בתוכן מבוסס-אינטרנט ולא תהיה זמינה עבור מסמכים שהועלו ידנית.",
       watch_explained_block3_start:
@@ -1316,12 +1294,17 @@ const TRANSLATIONS = {
         edit_description: "עדכן את התוכן של הזיכרון הזה.",
         label: "זיכרון",
         placeholder:
-          "לדוגמה, שם המשתמש הוא ג'ואי, המשתמש עובד על פלטפורמת Hermind, וכן הלאה.",
+          "לדוגמה, שם המשתמש הוא ג'ואי, המשתמש עובד על פלטפורמת AnythingLLM, וכן הלאה.",
         create: "צור",
         save: "שמור",
         cancel: "בטל",
       },
     },
+    stt_unsupported: "אין תמיכה בגישה למイクרופון בדפדפן זה.",
+    stt_mic_denied: "לא ניתן לגשת למכשיר המיקרופון. אנא אפשרו גישה ונסו שוב.",
+    stt_transcription_failed: "לא הצליח הטרנסקריפציה: {{error}}",
+    export: "ייצוא צ'אט כ...",
+    exporting: "ייצוא...",
   },
   profile_settings: {
     edit_account: "ערוך חשבון",
@@ -1435,7 +1418,7 @@ const TRANSLATIONS = {
         unauthenticated: {
           title: "נדרש אימות",
           description:
-            "עליך להתאמת עם מרכז הקהילה של Hermind לפני פרסום פריטים.",
+            "עליך להתאמת עם מרכז הקהילה של AnythingLLM לפני פרסום פריטים.",
           button: "התחבר למרכז הקהילה",
         },
       },
@@ -1459,7 +1442,7 @@ const TRANSLATIONS = {
     password: {
       title: "הגנת סיסמה",
       description:
-        "הגן על מופע ה-Hermind שלך באמצעות סיסמה. אם תשכח אותה, אין שיטת שחזור, אז ודא שאתה שומר סיסמה זו.",
+        "הגן על מופע ה-AnythingLLM שלך באמצעות סיסמה. אם תשכח אותה, אין שיטת שחזור, אז ודא שאתה שומר סיסמה זו.",
       "password-label": "סיסמת מופע",
     },
   },
@@ -1473,7 +1456,7 @@ const TRANSLATIONS = {
   telegram: {
     title: "בוט של טלגרם",
     description:
-      "חברו את ההתקנה של Hermind ל-Telegram, כך שתוכלו לתקשר עם סביבות העבודה שלכם ממכשיר כלשהו.",
+      "חברו את ההתקנה של AnythingLLM ל-Telegram, כך שתוכלו לתקשר עם סביבות העבודה שלכם ממכשיר כלשהו.",
     setup: {
       step1: {
         title: "שלב 1: צרו את הבוט שלכם ב-Telegram",

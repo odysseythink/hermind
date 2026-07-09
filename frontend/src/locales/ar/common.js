@@ -96,7 +96,7 @@ const TRANSLATIONS = {
     interface: "تفضيلات واجهة المستخدم",
     branding: "التسويق بالعلامة التجارية ووضع العلامات التجارية",
     chat: "دردشة",
-    "mobile-app": "Hermind Mobile",
+    "mobile-app": "AnythingLLM Mobile",
     "community-hub": {
       title: "مركز المجتمع",
       trending: "استكشف الاتجاهات الرائجة",
@@ -204,8 +204,6 @@ const TRANSLATIONS = {
       "desc-start":
         "عدد المحادثات السابقة التي سيتم تضمينها في رد الذاكرة قصيرة المدى.",
       recommend: "الموصى به 20.",
-      "desc-end":
-        "من المرجح أن يؤدي أي رقم أكبر من 45 إلى فشل مستمر في المحادثة اعتمادًا على حجم الرسالة.",
     },
     prompt: {
       title: "النداء",
@@ -237,28 +235,8 @@ const TRANSLATIONS = {
     },
     temperature: {
       title: "حرارة نموذج التعلم العميق",
-      "desc-start":
-        'يتحكم هذا الإعداد في مدى "الإبداع" الذي ستكون عليه إجابات نموذج التعلم العميق.',
       "desc-end":
         "كلما زاد العدد كلما كان الإبداع أكبر. بالنسبة لبعض النماذج، قد يؤدي هذا إلى استجابات غير منسجمة عند ضبطها على رقم مرتفع للغاية.",
-      hint: "لدى معظم نماذج التعلم العميق مجالات مقبولة مختلفة من القيم الصالحة. استشر موفر نموذج التعلم العميق الخاص بك للحصول على هذه المعلومات.",
-    },
-    compression: {
-      title: "Context Compression",
-      description:
-        "Automatically compress long conversation history to stay within the model's context window.",
-      followGlobal: "Follow global",
-      enabled: "Enabled",
-      disabled: "Disabled",
-      globalStatus: "Global default",
-      threshold: "Compression threshold",
-      thresholdDesc:
-        "Trigger compression when history exceeds this fraction of the context window. Leave empty to use path defaults (Agent 0.50, Chat 0.75).",
-      thresholdPlaceholder: "0.75",
-      contextLength: "Context length override",
-      contextLengthDesc:
-        "Override the model's context length (in tokens). Leave empty to use the built-in model map.",
-      contextLengthPlaceholder: "e.g. 128000",
     },
   },
   "vector-workspace": {
@@ -756,9 +734,8 @@ const TRANSLATIONS = {
       },
       "intelligent-skill-selection": {
         title: "اختيار المهارات الذكية",
-        "beta-badge": "بيتا",
         description:
-          "تمكين استخدام أدوات غير محدودة وتقليل استخدام رموز القطع بنسبة تصل إلى 80٪ لكل استعلام - يقوم Hermind تلقائيًا باختيار المهارات المناسبة لكل طلب.",
+          "تمكين استخدام أدوات غير محدودة وتقليل استخدام رموز القطع بنسبة تصل إلى 80٪ لكل استعلام - يقوم AnythingLLM تلقائيًا باختيار المهارات المناسبة لكل طلب.",
         "max-tools": {
           title: "أدوات ماكس",
           description:
@@ -809,7 +786,7 @@ const TRANSLATIONS = {
       close: "إغلاق",
       create: "إنشاء مفتاح API",
       helper:
-        "بمجرد إنشائه، يمكن استخدام مفتاح API للوصول إلى مثيل Hermind هذا وإدارته برمجيًا.",
+        "بمجرد إنشائه، يمكن استخدام مفتاح API للوصول إلى مثيل AnythingLLM هذا وإدارته برمجيًا.",
       name: {
         label: "الاسم",
         placeholder: "تكامل الإنتاج",
@@ -1094,22 +1071,22 @@ const TRANSLATIONS = {
       fetching: "جاري الاسترجاع...",
       "fetch-website": "احصل على موقع الويب",
       "privacy-notice":
-        "سيتم تحميل هذه الملفات إلى معالج المستندات الذي يعمل على هذه نسخة من Hermind. هذه الملفات لا يتم إرسالها أو مشاركتها مع طرف ثالث.",
+        "سيتم تحميل هذه الملفات إلى معالج المستندات الذي يعمل على هذه نسخة من AnythingLLM. هذه الملفات لا يتم إرسالها أو مشاركتها مع طرف ثالث.",
     },
     pinning: {
       what_pinning: 'ما هو عمل "تثبيت المستندات"؟',
       pin_explained_block1:
-        "عندما تقوم بإرفاق مستند في Hermind، سنقوم بإدخال محتوى المستند بالكامل في نافذة المطالبة الخاصة بـ LLM الخاص بك، وذلك حتى يتمكن LLM من فهم المحتوى بالكامل.",
+        "عندما تقوم بإرفاق مستند في AnythingLLM، سنقوم بإدخال محتوى المستند بالكامل في نافذة المطالبة الخاصة بـ LLM الخاص بك، وذلك حتى يتمكن LLM من فهم المحتوى بالكامل.",
       pin_explained_block2:
         "يعمل هذا بشكل أفضل مع **نماذج ذات سياق كبير** أو ملفات صغيرة ولكنها ضرورية لأساس المعرفة الخاص بها.",
       pin_explained_block3:
-        'إذا لم تحصل على الإجابات التي ترغب بها بشكل افتراضي من Hermind، فإن استخدام ميزة "التثبيت" هو طريقة رائعة للحصول على إجابات ذات جودة أعلى في نقرة واحدة.',
+        'إذا لم تحصل على الإجابات التي ترغب بها بشكل افتراضي من AnythingLLM، فإن استخدام ميزة "التثبيت" هو طريقة رائعة للحصول على إجابات ذات جودة أعلى في نقرة واحدة.',
       accept: "حسناً، فهمت.",
     },
     watching: {
       what_watching: "ما الذي يفعله مشاهدة فيلم وثائقي؟",
       watch_explained_block1:
-        "عندما **تشاهد** مستندًا في Hermind، سيتم **مزامنة** محتوى المستند تلقائيًا من مصدره الأصلي على فترات منتظمة. وهذا سيؤدي إلى تحديث المحتوى تلقائيًا في كل مساحة عمل حيث يتم إدارة هذا الملف.",
+        "عندما **تشاهد** مستندًا في AnythingLLM، سيتم **مزامنة** محتوى المستند تلقائيًا من مصدره الأصلي على فترات منتظمة. وهذا سيؤدي إلى تحديث المحتوى تلقائيًا في كل مساحة عمل حيث يتم إدارة هذا الملف.",
       watch_explained_block2:
         "هذه الميزة تدعم حاليًا المحتوى القائم على الإنترنت، ولن تكون متاحة للمستندات التي يتم تحميلها يدويًا.",
       watch_explained_block3_start:
@@ -1254,12 +1231,18 @@ const TRANSLATIONS = {
         edit_description: "قم بتحديث محتوى هذه الذاكرة.",
         label: "الذاكرة",
         placeholder:
-          'على سبيل المثال: اسم المستخدم هو "جو"، المستخدم يعمل على برنامج "Hermind"، إلخ.',
+          'على سبيل المثال: اسم المستخدم هو "جو"، المستخدم يعمل على برنامج "AnythingLLM"، إلخ.',
         create: "إنشاء",
         save: "احفظ",
         cancel: "إلغاء",
       },
     },
+    stt_unsupported: "لا يتم دعم الوصول إلى الميكروفون في هذا المتصفح.",
+    stt_mic_denied:
+      "لم يتمكن من الوصول إلى الميكروفون. يرجى منح الإذن ومحاولة مرة أخرى.",
+    stt_transcription_failed: "فشلت عملية النسخ: {{error}}",
+    export: "تصدير المحادثة كـ...",
+    exporting: "التصدير...",
   },
   profile_settings: {
     edit_account: "تحرير الحساب",
@@ -1284,16 +1267,16 @@ const TRANSLATIONS = {
   customization: {
     interface: {
       title: "تفضيلات واجهة المستخدم",
-      description: "حدد تفضيلات واجهة المستخدم الخاصة بـ Hermind.",
+      description: "حدد تفضيلات واجهة المستخدم الخاصة بـ AnythingLLM.",
     },
     branding: {
       title: "التسويق بالعلامة التجارية ووضع العلامات التجارية",
       description:
-        "قم بتخصيص نسخة Hermind الخاصة بك باستخدام العلامات التجارية الخاصة بك.",
+        "قم بتخصيص نسخة AnythingLLM الخاصة بك باستخدام العلامات التجارية الخاصة بك.",
     },
     chat: {
       title: "دردشة",
-      description: "حدد تفضيلات الدردشة الخاصة بك لـ Hermind.",
+      description: "حدد تفضيلات الدردشة الخاصة بك لـ AnythingLLM.",
       auto_submit: {
         title: "إرسال تلقائي للمدخلات الصوتية",
         description: "إرسال تلقائي لإدخال الكلام بعد فترة من الصمت",
@@ -1328,7 +1311,7 @@ const TRANSLATIONS = {
       "display-language": {
         title: "اللغة المعروضة",
         description:
-          "حدد اللغة المفضلة لعرض واجهة مستخدم Hermind - عند توفر الترجمات.",
+          "حدد اللغة المفضلة لعرض واجهة مستخدم AnythingLLM - عند توفر الترجمات.",
       },
       logo: {
         title: "شعار العلامة التجارية",
@@ -1441,7 +1424,7 @@ const TRANSLATIONS = {
         unauthenticated: {
           title: "يتطلب التحقق",
           description:
-            "يجب عليك التحقق من هويتك مع مركز مجتمع Hermind قبل نشر أي محتوى.",
+            "يجب عليك التحقق من هويتك مع مركز مجتمع AnythingLLM قبل نشر أي محتوى.",
           button: "تواصل مع مركز المجتمع",
         },
       },

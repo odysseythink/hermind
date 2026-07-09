@@ -8,7 +8,7 @@ const TRANSLATIONS = {
     llm: {
       title: "LLMの設定",
       description:
-        "Hermindは多くのLLMプロバイダーと連携できます。これがチャットを処理するサービスになります。",
+        "AnythingLLMは多くのLLMプロバイダーと連携できます。これがチャットを処理するサービスになります。",
     },
     userSetup: {
       title: "ユーザー設定",
@@ -34,15 +34,15 @@ const TRANSLATIONS = {
       settingsHint: "これらの設定は、設定画面でいつでも再構成できます。",
     },
     survey: {
-      title: "Hermindへようこそ",
+      title: "AnythingLLMへようこそ",
       description:
-        "Hermindをあなたのニーズに合わせて構築するためにご協力ください。任意です。",
+        "AnythingLLMをあなたのニーズに合わせて構築するためにご協力ください。任意です。",
       email: "メールアドレスは何ですか？",
-      useCase: "Hermindを何に使用しますか？",
+      useCase: "AnythingLLMを何に使用しますか？",
       useCaseWork: "仕事用",
       useCasePersonal: "個人用",
       useCaseOther: "その他",
-      comment: "Hermindをどのように知りましたか？",
+      comment: "AnythingLLMをどのように知りましたか？",
       commentPlaceholder:
         "Reddit、Twitter、GitHub、YouTubeなど - どのように見つけたか教えてください！",
       skip: "アンケートをスキップ",
@@ -97,7 +97,7 @@ const TRANSLATIONS = {
     interface: "UI設定",
     branding: "ブランディングとホワイトレーベル化",
     chat: "チャット",
-    "mobile-app": "Hermind モバイル版",
+    "mobile-app": "AnythingLLM モバイル版",
     "community-hub": {
       title: "地域交流拠点",
       trending: "人気のあるものを探す",
@@ -156,7 +156,7 @@ const TRANSLATIONS = {
       add: "新しいメッセージを追加",
       save: "メッセージを保存",
       heading: "説明してください",
-      body: "Hermindの利点",
+      body: "AnythingLLMの利点",
     },
     delete: {
       title: "ワークスペースを削除",
@@ -203,8 +203,6 @@ const TRANSLATIONS = {
       title: "チャット履歴",
       "desc-start": "応答の短期記憶に含まれる過去のチャット数。",
       recommend: "推奨値: 20",
-      "desc-end":
-        "45以上にすると、メッセージサイズによっては継続的なチャット失敗が発生する可能性があります。",
     },
     prompt: {
       title: "プロンプト",
@@ -235,27 +233,8 @@ const TRANSLATIONS = {
     },
     temperature: {
       title: "LLM温度",
-      "desc-start": "この設定はLLMの応答の創造性を制御します。",
       "desc-end":
         "数値が高いほど創造的になりますが、高すぎると一部のモデルでは一貫性のない応答になる場合があります。",
-      hint: "多くのLLMには有効な値の範囲があります。詳細はLLMプロバイダーの情報を参照してください。",
-    },
-    compression: {
-      title: "Context Compression",
-      description:
-        "Automatically compress long conversation history to stay within the model's context window.",
-      followGlobal: "Follow global",
-      enabled: "Enabled",
-      disabled: "Disabled",
-      globalStatus: "Global default",
-      threshold: "Compression threshold",
-      thresholdDesc:
-        "Trigger compression when history exceeds this fraction of the context window. Leave empty to use path defaults (Agent 0.50, Chat 0.75).",
-      thresholdPlaceholder: "0.75",
-      contextLength: "Context length override",
-      contextLengthDesc:
-        "Override the model's context length (in tokens). Leave empty to use the built-in model map.",
-      contextLengthPlaceholder: "e.g. 128000",
     },
   },
   "vector-workspace": {
@@ -747,9 +726,8 @@ const TRANSLATIONS = {
       },
       "intelligent-skill-selection": {
         title: "知的なスキル選択",
-        "beta-badge": "ベータ版",
         description:
-          "クエリごとに、無制限のツールを使用し、トークン使用量を最大80%削減できます。Hermindは、各プロンプトに対して最適なスキルを自動的に選択します。",
+          "クエリごとに、無制限のツールを使用し、トークン使用量を最大80%削減できます。AnythingLLMは、各プロンプトに対して最適なスキルを自動的に選択します。",
         "max-tools": {
           title: "マックスツールズ",
           description:
@@ -787,7 +765,7 @@ const TRANSLATIONS = {
   api: {
     title: "APIキー",
     description:
-      "APIキーにより、プログラム経由でこのHermindインスタンスにアクセスおよび管理できます。",
+      "APIキーにより、プログラム経由でこのAnythingLLMインスタンスにアクセスおよび管理できます。",
     link: "APIドキュメントを読む",
     generate: "新しいAPIキーを生成",
     empty: "APIキーが見つかりません",
@@ -801,7 +779,7 @@ const TRANSLATIONS = {
       close: "閉じる",
       create: "APIキーを作成",
       helper:
-        "作成したAPIキーは、このHermindインスタンスにプログラムからアクセスして設定するために使用できます。",
+        "作成したAPIキーは、このAnythingLLMインスタンスにプログラムからアクセスして設定するために使用できます。",
       name: {
         label: "名前",
         placeholder: "本番環境の統合",
@@ -825,7 +803,7 @@ const TRANSLATIONS = {
   llm: {
     title: "LLMの設定",
     description:
-      "これは、お好みのLLMチャットおよび埋め込みプロバイダー用の認証情報と設定です。これらのキーが最新かつ正確でない場合、Hermindは正しく動作しません。",
+      "これは、お好みのLLMチャットおよび埋め込みプロバイダー用の認証情報と設定です。これらのキーが最新かつ正確でない場合、AnythingLLMは正しく動作しません。",
     provider: "LLMプロバイダー",
     providers: {
       azure_openai: {
@@ -848,7 +826,7 @@ const TRANSLATIONS = {
       "これは、お好みの文字起こしモデルプロバイダー用の認証情報と設定です。これらのキーが最新かつ正確でない場合、メディアファイルや音声が正しく文字起こしされません。",
     provider: "文字起こしプロバイダー",
     "warn-start":
-      "RAMやCPUが限られたマシンでローカルのWhisperモデルを使用すると、メディアファイルの処理中にHermindが停止する可能性があります。",
+      "RAMやCPUが限られたマシンでローカルのWhisperモデルを使用すると、メディアファイルの処理中にAnythingLLMが停止する可能性があります。",
     "warn-recommend":
       "少なくとも2GBのRAMが推奨され、ファイルサイズは10Mb未満であることをお勧めします。",
     "warn-end": "組み込みモデルは初回使用時に自動的にダウンロードされます。",
@@ -858,7 +836,7 @@ const TRANSLATIONS = {
     "desc-start":
       "LLMがネイティブに埋め込みエンジンをサポートしていない場合、テキストの埋め込み用に追加の認証情報を指定する必要がある場合があります。",
     "desc-end":
-      "埋め込みとは、テキストをベクトルに変換するプロセスです。これらの認証情報は、ファイルやプロンプトをHermindが処理できるフォーマットに変換するために必要です。",
+      "埋め込みとは、テキストをベクトルに変換するプロセスです。これらの認証情報は、ファイルやプロンプトをAnythingLLMが処理できるフォーマットに変換するために必要です。",
     provider: {
       title: "埋め込みプロバイダー",
     },
@@ -882,7 +860,7 @@ const TRANSLATIONS = {
   vector: {
     title: "ベクターデータベース設定",
     description:
-      "これは、Hermindインスタンスの動作方法用の認証情報と設定です。これらのキーが最新で正確であることが重要です。",
+      "これは、AnythingLLMインスタンスの動作方法用の認証情報と設定です。これらのキーが最新で正確であることが重要です。",
     provider: {
       title: "ベクターデータベースプロバイダー",
       description: "LanceDBの場合、特に設定は必要ありません。",
@@ -927,7 +905,7 @@ const TRANSLATIONS = {
   privacy: {
     title: "プライバシーとデータ処理",
     description:
-      "これは、接続されているサードパーティプロバイダーとHermindがデータをどのように処理するかの設定です。",
+      "これは、接続されているサードパーティプロバイダーとAnythingLLMがデータをどのように処理するかの設定です。",
     anonymous: "匿名テレメトリが有効",
   },
   connectors: {
@@ -1084,12 +1062,12 @@ const TRANSLATIONS = {
       fetching: "取得中...",
       "fetch-website": "ウェブサイトを取得",
       "privacy-notice":
-        "これらのファイルは、このHermindインスタンス上のドキュメント処理機能にアップロードされます。第三者に送信・共有されることはありません。",
+        "これらのファイルは、このAnythingLLMインスタンス上のドキュメント処理機能にアップロードされます。第三者に送信・共有されることはありません。",
     },
     pinning: {
       what_pinning: "ドキュメントのピン留めとは？",
       pin_explained_block1:
-        "Hermindでドキュメントを<b>ピン留め</b>すると、その内容全体がプロンプトウィンドウに挿入され、LLMがしっかり理解できるようになります。",
+        "AnythingLLMでドキュメントを<b>ピン留め</b>すると、その内容全体がプロンプトウィンドウに挿入され、LLMがしっかり理解できるようになります。",
       pin_explained_block2:
         "<b>大きなコンテキストを持つモデル</b>や、重要な小さなファイルで特に効果的です。",
       pin_explained_block3:
@@ -1099,7 +1077,7 @@ const TRANSLATIONS = {
     watching: {
       what_watching: "ドキュメントのウォッチとは？",
       watch_explained_block1:
-        "Hermindでドキュメントを<b>ウォッチ</b>すると、元のソースから定期的に内容が<i>自動的に</i>同期されます。管理しているすべてのワークスペースで内容が自動更新されます。",
+        "AnythingLLMでドキュメントを<b>ウォッチ</b>すると、元のソースから定期的に内容が<i>自動的に</i>同期されます。管理しているすべてのワークスペースで内容が自動更新されます。",
       watch_explained_block2:
         "この機能は現在オンラインベースのコンテンツのみ対応しており、手動アップロードしたドキュメントには利用できません。",
       watch_explained_block3_start: "ウォッチしているドキュメントの管理は",
@@ -1250,12 +1228,19 @@ const TRANSLATIONS = {
         edit_description: "この記憶の内容を更新してください。",
         label: "記憶",
         placeholder:
-          "例：ユーザー名がジョー、ユーザーが使用しているツールがHermindなど。",
+          "例：ユーザー名がジョー、ユーザーが使用しているツールがAnythingLLMなど。",
         create: "作成する",
         save: "保存",
         cancel: "キャンセル",
       },
     },
+    stt_unsupported:
+      "このブラウザではマイクへのアクセスはサポートされていません。",
+    stt_mic_denied:
+      "マイクへのアクセスができません。「許可を付与して、再度お試しください。」",
+    stt_transcription_failed: "文字起こしに失敗しました: {{error}}",
+    export: "チャットを以下のような形式でエクスポートする：",
+    exporting: "輸出…",
   },
   profile_settings: {
     edit_account: "アカウントを編集",
@@ -1280,16 +1265,16 @@ const TRANSLATIONS = {
   customization: {
     interface: {
       title: "UI設定",
-      description: "Hermind の UI 設定を調整してください。",
+      description: "AnythingLLM の UI 設定を調整してください。",
     },
     branding: {
       title: "ブランディングとホワイトレーベル化",
       description:
-        "Hermindインスタンスを、独自のブランドでカスタマイズしてください。",
+        "AnythingLLMインスタンスを、独自のブランドでカスタマイズしてください。",
     },
     chat: {
       title: "チャット",
-      description: "Hermind のチャット設定をカスタマイズしてください。",
+      description: "AnythingLLM のチャット設定をカスタマイズしてください。",
       auto_submit: {
         title: "自動音声入力送信",
         description: "沈黙の後に自動で音声入力を行う",
@@ -1327,7 +1312,7 @@ const TRANSLATIONS = {
       "display-language": {
         title: "表示言語",
         description:
-          "HermindのUIを特定の言語で表示するためのオプションを選択してください。翻訳が利用可能な場合にのみ有効です。",
+          "AnythingLLMのUIを特定の言語で表示するためのオプションを選択してください。翻訳が利用可能な場合にのみ有効です。",
       },
       logo: {
         title: "ブランドロゴ",
@@ -1449,7 +1434,7 @@ const TRANSLATIONS = {
         unauthenticated: {
           title: "本人確認が必要です。",
           description:
-            "アイテムを公開する前に、Hermindコミュニティハブで認証する必要があります。",
+            "アイテムを公開する前に、AnythingLLMコミュニティハブで認証する必要があります。",
           button: "コミュニティハブへの接続",
         },
       },
@@ -1504,7 +1489,7 @@ const TRANSLATIONS = {
     password: {
       title: "パスワード保護",
       description:
-        "Hermindインスタンスをパスワードで保護します。これを忘れた場合、回復方法はないため、このパスワードを必ず保存してください。",
+        "AnythingLLMインスタンスをパスワードで保護します。これを忘れた場合、回復方法はないため、このパスワードを必ず保存してください。",
       "password-label": "インスタンスパスワード",
     },
   },

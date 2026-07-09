@@ -6,7 +6,7 @@ import { v4 } from "uuid";
 import { ABORT_STREAM_EVENT } from "@/utils/chat";
 
 const Workspace = {
-  workspaceOrderStorageKey: "hermind-workspace-order",
+  workspaceOrderStorageKey: "anythingllm-workspace-order",
   /** The maximum percentage of the context window that can be used for attachments */
   maxContextWindowLimit: 0.8,
 
@@ -73,6 +73,24 @@ const Workspace = {
       .then((res) => res.history || [])
       .catch(() => []);
     return history;
+  },
+  /**
+   * Export a workspace or thread's chat as a server-generated branded PDF.
+   * @param {string} slug - Workspace slug
+   * @param {string|null} threadSlug - Thread slug, or null for the default workspace chat
+   * @returns {Promise<Blob|null>} The PDF blob, or null on failure
+   */
+  exportChatsToType: async function (slug, threadSlug = null, type = "pdf") {
+    return await fetch(`${API_BASE}/export-chat/${type}`, {
+      method: "POST",
+      headers: baseHeaders(),
+      body: JSON.stringify({ workspaceSlug: slug, threadSlug }),
+    })
+      .then((res) => {
+        if (!res.ok) throw new Error("Failed to export chat.");
+        return res.blob();
+      })
+      .catch(() => null);
   },
   updateChatFeedback: async function (chatId, slug, feedback) {
     const result = await fetch(

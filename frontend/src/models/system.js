@@ -7,11 +7,11 @@ import SystemPromptVariable from "./systemPromptVariable";
 
 const System = {
   cacheKeys: {
-    footerIcons: "hermind_footer_links",
-    supportEmail: "hermind_support_email",
-    customAppName: "hermind_custom_app_name",
-    canViewChatHistory: "hermind_can_view_chat_history",
-    deploymentVersion: "hermind_deployment_version",
+    footerIcons: "anythingllm_footer_links",
+    supportEmail: "anythingllm_support_email",
+    customAppName: "anythingllm_custom_app_name",
+    canViewChatHistory: "anythingllm_can_view_chat_history",
+    deploymentVersion: "anythingllm_deployment_version",
   },
   ping: async function () {
     return await fetch(`${API_BASE}/ping`)
@@ -552,7 +552,8 @@ const System = {
     provider,
     apiKey = null,
     basePath = null,
-    timeout = null
+    timeout = null,
+    options = {}
   ) {
     const controller = new AbortController();
     if (!!timeout) {
@@ -569,6 +570,7 @@ const System = {
         provider,
         apiKey,
         basePath,
+        options: options || {},
       }),
     })
       .then((res) => {
@@ -864,6 +866,34 @@ const System = {
       .catch(() => false);
   },
 
+  /**
+   * Send a recorded audio blob to the configured server-side STT provider
+   * for transcription. Returns the transcribed text or an error string.
+   * @param {Blob} audioBlob - Recorded audio (e.g., audio/webm) to transcribe.
+   * @param {string} [filename] - Filename hint for the upload.
+   * @returns {Promise<{text: string|null, error: string|null}>}
+   */
+  transcribeAudio: async function (audioBlob, filename = "audio.webm") {
+    const formData = new FormData();
+    formData.append("audio", audioBlob, filename);
+    return fetch(`${API_BASE}/system/transcribe-audio`, {
+      method: "POST",
+      headers: baseHeaders(),
+      body: formData,
+    })
+      .then(async (res) => {
+        const json = await res.json();
+        if (!res.ok)
+          throw new Error(json?.error || "Failed to transcribe audio.");
+        return { text: json?.text ?? "", error: null };
+      })
+      .catch((e) => ({ text: null, error: e.message }));
+  },
+
+  experimentalFeatures: {
+    liveSync: LiveDocumentSync,
+    agentPlugins: AgentPlugins,
+  },
   promptVariables: SystemPromptVariable,
 };
 

@@ -111,7 +111,7 @@ export default function ServerPanel({
   onToggleTool,
 }) {
   const { t } = useTranslation();
-  const suppressedTools = server.config?.hermind?.suppressedTools || [];
+  const suppressedTools = server.config?.anythingllm?.suppressedTools || [];
   const enabledToolCount = server.tools.filter(
     (tool) => !suppressedTools.includes(tool.name)
   ).length;

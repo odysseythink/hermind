@@ -8,7 +8,7 @@ const TRANSLATIONS = {
     llm: {
       title: "LLM preferences",
       description:
-        "Hermind var strādāt ar daudziem LLM pakalpojumu sniedzējiem. Šis būs pakalpojums, kas apstrādās sarunas.",
+        "AnythingLLM var strādāt ar daudziem LLM pakalpojumu sniedzējiem. Šis būs pakalpojums, kas apstrādās sarunas.",
     },
     userSetup: {
       title: "Lietotāja iestatīšana",
@@ -34,15 +34,15 @@ const TRANSLATIONS = {
         "Šos iestatījumus var pārkonfigurēt jebkurā laikā iestatījumos.",
     },
     survey: {
-      title: "Laipni lūgti Hermind",
+      title: "Laipni lūgti AnythingLLM",
       description:
-        "Palīdziet mums veidot Hermind atbilstoši jūsu vajadzībām. Neobligāti.",
+        "Palīdziet mums veidot AnythingLLM atbilstoši jūsu vajadzībām. Neobligāti.",
       email: "Kāds ir jūsu e-pasts?",
-      useCase: "Kam izmantosiet Hermind?",
+      useCase: "Kam izmantosiet AnythingLLM?",
       useCaseWork: "Darbam",
       useCasePersonal: "Personīgai lietošanai",
       useCaseOther: "Citam nolūkam",
-      comment: "Kā jūs uzzinājāt par Hermind?",
+      comment: "Kā jūs uzzinājāt par AnythingLLM?",
       commentPlaceholder:
         "Reddit, Twitter, GitHub, YouTube utt. - Ļaujiet mums zināt, kā jūs mūs atradāt!",
       skip: "Izlaist aptauju",
@@ -97,7 +97,7 @@ const TRANSLATIONS = {
     "experimental-features": "Eksperimentālās funkcijas",
     contact: "Sazināties ar atbalstu",
     "browser-extension": "Pārlūka paplašinājums",
-    "mobile-app": "Hermind mobilā versija",
+    "mobile-app": "AnythingLLM mobilā versija",
     "community-hub": {
       title: "Sabiedriskais centrs",
       trending: "Izpētiet populārākās",
@@ -164,7 +164,7 @@ const TRANSLATIONS = {
       add: "Pievienot jaunu ziņu",
       save: "Saglabāt ziņas",
       heading: "Izskaidro man",
-      body: "Hermind priekšrocības",
+      body: "AnythingLLM priekšrocības",
     },
     delete: {
       title: "Dzēst darba telpu",
@@ -212,8 +212,6 @@ const TRANSLATIONS = {
       "desc-start":
         "Iepriekšējo sarunu skaits, kas tiks iekļauts atbildes īslaicīgajā atmiņā.",
       recommend: "Ieteicams 20. ",
-      "desc-end":
-        "Vairāk nekā 45 var novest pie nepārtrauktām sarunu kļūmēm atkarībā no ziņojuma izmēra.",
     },
     prompt: {
       title: "Sistēmas uzvedne",
@@ -244,28 +242,8 @@ const TRANSLATIONS = {
     },
     temperature: {
       title: "LLM Temperatūra",
-      "desc-start":
-        'Šis iestatījums kontrolē, cik "radošas" būs jūsu LLM atbildes.',
       "desc-end":
         "Jo lielāks skaitlis, jo radošākas atbildes. Dažiem modeļiem tas var novest pie nesaprotamām atbildēm, ja iestatīts pārāk augsts.",
-      hint: "Lielākajai daļai LLM ir dažādi pieņemami derīgo vērtību diapazoni. Konsultējieties ar savu LLM pakalpojumu sniedzēju par šo informāciju.",
-    },
-    compression: {
-      title: "Context Compression",
-      description:
-        "Automatically compress long conversation history to stay within the model's context window.",
-      followGlobal: "Follow global",
-      enabled: "Enabled",
-      disabled: "Disabled",
-      globalStatus: "Global default",
-      threshold: "Compression threshold",
-      thresholdDesc:
-        "Trigger compression when history exceeds this fraction of the context window. Leave empty to use path defaults (Agent 0.50, Chat 0.75).",
-      thresholdPlaceholder: "0.75",
-      contextLength: "Context length override",
-      contextLengthDesc:
-        "Override the model's context length (in tokens). Leave empty to use the built-in model map.",
-      contextLengthPlaceholder: "e.g. 128000",
     },
   },
   "vector-workspace": {
@@ -775,9 +753,8 @@ const TRANSLATIONS = {
       },
       "intelligent-skill-selection": {
         title: "Izglītības un prasmu izvēle, kas balstota uz spējām",
-        "beta-badge": "Beta",
         description:
-          'Ievērojiet neierobežotu rīku un "cut token" izmantošanas samazinājumu līdz 80% uz katru pieprasījumu – Hermind automātiski izvēlas piemērotākās prasmes katram pieprasījumam.',
+          'Ievērojiet neierobežotu rīku un "cut token" izmantošanas samazinājumu līdz 80% uz katru pieprasījumu – AnythingLLM automātiski izvēlas piemērotākās prasmes katram pieprasījumam.',
         "max-tools": {
           title: "Max Tools",
           description:
@@ -813,16 +790,16 @@ const TRANSLATIONS = {
   customization: {
     interface: {
       title: "UI preferences",
-      description: "Iestatiet savas UI preferences Hermind.",
+      description: "Iestatiet savas UI preferences AnythingLLM.",
     },
     branding: {
       title: "Zīmolrade un identitāte",
       description:
-        "Pielāgojiet savu Hermind instanci ar pielāgotu zīmolradi.",
+        "Pielāgojiet savu AnythingLLM instanci ar pielāgotu zīmolradi.",
     },
     chat: {
       title: "Saruna",
-      description: "Iestatiet savas sarunas preferences Hermind.",
+      description: "Iestatiet savas sarunas preferences AnythingLLM.",
       auto_submit: {
         title: "Automātiski iesniegt runas ievadi",
         description: "Automātiski iesniegt runas ievadi pēc klusuma perioda",
@@ -859,7 +836,7 @@ const TRANSLATIONS = {
       "display-language": {
         title: "Displeja valoda",
         description:
-          "Izvēlieties vēlamo valodu Hermind lietotāja saskarnei - kad pieejami tulkojumi.",
+          "Izvēlieties vēlamo valodu AnythingLLM lietotāja saskarnei - kad pieejami tulkojumi.",
       },
       logo: {
         title: "Zīmola logotips",
@@ -901,7 +878,7 @@ const TRANSLATIONS = {
   api: {
     title: "API atslēgas",
     description:
-      "API atslēgas ļauj to īpašniekam programmatiski piekļūt un pārvaldīt šo Hermind instanci.",
+      "API atslēgas ļauj to īpašniekam programmatiski piekļūt un pārvaldīt šo AnythingLLM instanci.",
     link: "Lasīt API dokumentāciju",
     generate: "Ģenerēt jaunu API atslēgu",
     empty: "API atslēgas nav atrastas",
@@ -915,7 +892,7 @@ const TRANSLATIONS = {
       close: "Aizvērt",
       create: "Izveidot API atslēgu",
       helper:
-        "Pēc izveides API atslēgu var izmantot, lai programmatiski piekļūtu šai Hermind instancei un to konfigurētu.",
+        "Pēc izveides API atslēgu var izmantot, lai programmatiski piekļūtu šai AnythingLLM instancei un to konfigurētu.",
       name: {
         label: "Nosaukums",
         placeholder: "Produkcijas integrācija",
@@ -940,7 +917,7 @@ const TRANSLATIONS = {
   llm: {
     title: "LLM preferences",
     description:
-      "Šie ir akreditācijas dati un iestatījumi jūsu vēlamajam LLM čata un iegulšanas pakalpojuma sniedzējam. Ir svarīgi, lai šīs atslēgas būtu aktuālas un pareizas, pretējā gadījumā Hermind nedarbosies pareizi.",
+      "Šie ir akreditācijas dati un iestatījumi jūsu vēlamajam LLM čata un iegulšanas pakalpojuma sniedzējam. Ir svarīgi, lai šīs atslēgas būtu aktuālas un pareizas, pretējā gadījumā AnythingLLM nedarbosies pareizi.",
     provider: "LLM pakalpojuma sniedzējs",
     providers: {
       azure_openai: {
@@ -963,7 +940,7 @@ const TRANSLATIONS = {
       "Šie ir akreditācijas dati un iestatījumi jūsu vēlamajam transkripcijas modeļa pakalpojuma sniedzējam. Ir svarīgi, lai šīs atslēgas būtu aktuālas un pareizas, pretējā gadījumā multivides faili un audio netiks transkribēti.",
     provider: "Transkripcijas pakalpojuma sniedzējs",
     "warn-start":
-      "Izmantojot lokālo whisper modeli iekārtās ar ierobežotu RAM vai CPU var apstādināt Hermind, apstrādājot multivides failus.",
+      "Izmantojot lokālo whisper modeli iekārtās ar ierobežotu RAM vai CPU var apstādināt AnythingLLM, apstrādājot multivides failus.",
     "warn-recommend":
       "Mēs iesakām vismaz 2GB RAM un augšupielādēt failus <10Mb.",
     "warn-end":
@@ -974,7 +951,7 @@ const TRANSLATIONS = {
     "desc-start":
       "Izmantojot LLM, kas neatbalsta iebūvētu iegulšanas dzinēju - jums var būt nepieciešams papildus norādīt akreditācijas datus teksta iegulšanai.",
     "desc-end":
-      "Iegulšana ir process, ar kuru teksts tiek pārveidots vektoros. Šie akreditācijas dati ir nepieciešami, lai pārveidotu jūsu failus un vaicājumus formātā, kuru Hermind var izmantot apstrādei.",
+      "Iegulšana ir process, ar kuru teksts tiek pārveidots vektoros. Šie akreditācijas dati ir nepieciešami, lai pārveidotu jūsu failus un vaicājumus formātā, kuru AnythingLLM var izmantot apstrādei.",
     provider: {
       title: "Iegulšanas pakalpojuma sniedzējs",
     },
@@ -1000,7 +977,7 @@ const TRANSLATIONS = {
   vector: {
     title: "Vektoru datubāze",
     description:
-      "Šie ir akreditācijas dati un iestatījumi tam, kā darbosies jūsu Hermind instance. Ir svarīgi, lai šīs atslēgas būtu aktuālas un pareizas.",
+      "Šie ir akreditācijas dati un iestatījumi tam, kā darbosies jūsu AnythingLLM instance. Ir svarīgi, lai šīs atslēgas būtu aktuālas un pareizas.",
     provider: {
       title: "Vektoru datubāzes pakalpojuma sniedzējs",
       description: "LanceDB nav nepieciešama konfigurācija.",
@@ -1045,7 +1022,7 @@ const TRANSLATIONS = {
   privacy: {
     title: "Privātums un datu apstrāde",
     description:
-      "Šī ir jūsu konfigurācija tam, kā savienotie trešo pušu pakalpojumu sniedzēji un Hermind apstrādā jūsu datus.",
+      "Šī ir jūsu konfigurācija tam, kā savienotie trešo pušu pakalpojumu sniedzēji un AnythingLLM apstrādā jūsu datus.",
     anonymous: "Anonīmā telemetrija iespējota",
   },
   connectors: {
@@ -1216,22 +1193,22 @@ const TRANSLATIONS = {
       fetching: "Iegūst...",
       "fetch-website": "Iegūt vietni",
       "privacy-notice":
-        "Šie faili tiks augšupielādēti dokumentu apstrādātājā, kas darbojas šajā Hermind instancē. Šie faili netiek nosūtīti vai kopīgoti ar trešo pusi.",
+        "Šie faili tiks augšupielādēti dokumentu apstrādātājā, kas darbojas šajā AnythingLLM instancē. Šie faili netiek nosūtīti vai kopīgoti ar trešo pusi.",
     },
     pinning: {
       what_pinning: "Kas ir dokumentu piespraušana?",
       pin_explained_block1:
-        "Kad jūs <b>piespraudiet</b> dokumentu Hermind, mēs ievietosim visu dokumenta saturu jūsu uzvednes logā, lai jūsu LLM to pilnībā saprastu.",
+        "Kad jūs <b>piespraudiet</b> dokumentu AnythingLLM, mēs ievietosim visu dokumenta saturu jūsu uzvednes logā, lai jūsu LLM to pilnībā saprastu.",
       pin_explained_block2:
         "Tas vislabāk darbojas ar <b>liela konteksta modeļiem</b> vai maziem failiem, kas ir kritiski tā zināšanu bāzei.",
       pin_explained_block3:
-        "Ja jūs nesaņemat vēlamās atbildes no Hermind pēc noklusējuma, tad piespraušana ir lielisks veids, kā iegūt kvalitatīvākas atbildes ar vienu klikšķi.",
+        "Ja jūs nesaņemat vēlamās atbildes no AnythingLLM pēc noklusējuma, tad piespraušana ir lielisks veids, kā iegūt kvalitatīvākas atbildes ar vienu klikšķi.",
       accept: "Labi, sapratu",
     },
     watching: {
       what_watching: "Ko dara dokumenta novērošana?",
       watch_explained_block1:
-        "Kad jūs <b>novērojat</b> dokumentu Hermind, mēs <i>automātiski</i> sinhronizēsim jūsu dokumenta saturu no tā sākotnējā avota regulāros intervālos. Tas automātiski atjauninās saturu katrā darba vietā, kur šis fails tiek pārvaldīts.",
+        "Kad jūs <b>novērojat</b> dokumentu AnythingLLM, mēs <i>automātiski</i> sinhronizēsim jūsu dokumenta saturu no tā sākotnējā avota regulāros intervālos. Tas automātiski atjauninās saturu katrā darba vietā, kur šis fails tiek pārvaldīts.",
       watch_explained_block2:
         "Šī funkcija pašlaik atbalsta tiešsaistes saturu un nebūs pieejama manuāli augšupielādētiem dokumentiem.",
       watch_explained_block3_start:
@@ -1378,6 +1355,12 @@ const TRANSLATIONS = {
         cancel: "Atcelt",
       },
     },
+    stt_unsupported: "Mikrofona lietošana šajā pārlūkprogrammā nav atbalstīta.",
+    stt_mic_denied:
+      "Neizdevās piekļūt mikrofonam. Lūdzu, atļaujiet piekļaušanu un mēģiniet vēlreiz.",
+    stt_transcription_failed: "Transkripcija neizdevās: {{error}}",
+    export: "Eksportēt čatu kā...",
+    exporting: "Eksporteris…",
   },
   profile_settings: {
     edit_account: "Rediģēt kontu",
@@ -1472,7 +1455,7 @@ const TRANSLATIONS = {
         unauthenticated: {
           title: "Nepieciešama autentifikācija",
           description:
-            'Pirms satura publicēšanas ir jāiespējo autentifikācija "Hermind" sabiedrības centrā.',
+            'Pirms satura publicēšanas ir jāiespējo autentifikācija "AnythingLLM" sabiedrības centrā.',
           button: "Pievienojieties sabiedrības centram",
         },
       },
@@ -1524,7 +1507,7 @@ const TRANSLATIONS = {
     password: {
       title: "Aizsardzība ar paroli",
       description:
-        "Aizsargājiet savu Hermind instanci ar paroli. Ja aizmirsīsiet šo paroli, nav atgūšanas metodes, tāpēc pārliecinieties, ka saglabājat šo paroli.",
+        "Aizsargājiet savu AnythingLLM instanci ar paroli. Ja aizmirsīsiet šo paroli, nav atgūšanas metodes, tāpēc pārliecinieties, ka saglabājat šo paroli.",
       "password-label": "Instances paroles",
     },
   },
@@ -1538,7 +1521,7 @@ const TRANSLATIONS = {
   telegram: {
     title: "Telegram bot",
     description:
-      "Iespējiet savu Hermind instanci, lai varētu tikt savienots ar Telegram, un tāpēc varēsat runāt ar saviem darba grupām no jebkura ierīces.",
+      "Iespējiet savu AnythingLLM instanci, lai varētu tikt savienots ar Telegram, un tāpēc varēsat runāt ar saviem darba grupām no jebkura ierīces.",
     setup: {
       step1: {
         title: "1. darbība: Izveidot savu Telegram botu",

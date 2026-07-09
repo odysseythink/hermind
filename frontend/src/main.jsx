@@ -134,15 +134,6 @@ const router = createBrowserRouter([
         },
       },
       {
-        path: "/settings/agent-created-skills",
-        lazy: async () => {
-          const { default: AgentCreatedSkillsPage } = await import(
-            "@/pages/Admin/AgentCreatedSkillsPage"
-          );
-          return { element: <AdminRoute Component={AgentCreatedSkillsPage} /> };
-        },
-      },
-      {
         path: "/settings/agents/builder",
         lazy: async () => {
           const { default: AgentBuilder } = await import(
@@ -240,6 +231,15 @@ const router = createBrowserRouter([
         },
       },
       {
+        path: "/settings/beta-features",
+        lazy: async () => {
+          const { default: ExperimentalFeatures } = await import(
+            "@/pages/Admin/ExperimentalFeatures"
+          );
+          return { element: <AdminRoute Component={ExperimentalFeatures} /> };
+        },
+      },
+      {
         path: "/settings/api-keys",
         lazy: async () => {
           const { default: GeneralApiKeys } = await import(
@@ -330,6 +330,58 @@ const router = createBrowserRouter([
       {
         path: "/onboarding/:step",
         element: <OnboardingFlow />,
+      },
+      // Experimental feature pages
+      {
+        path: "/settings/beta-features/live-document-sync/manage",
+        lazy: async () => {
+          const { default: LiveDocumentSyncManage } = await import(
+            "@/pages/Admin/ExperimentalFeatures/Features/LiveSync/manage"
+          );
+          return {
+            element: <AdminRoute Component={LiveDocumentSyncManage} />,
+          };
+        },
+      },
+      {
+        path: "/settings/community-hub/trending",
+        lazy: async () => {
+          const { default: CommunityHubTrending } = await import(
+            "@/pages/GeneralSettings/CommunityHub/Trending"
+          );
+          return { element: <AdminRoute Component={CommunityHubTrending} /> };
+        },
+      },
+      {
+        path: "/settings/community-hub/authentication",
+        lazy: async () => {
+          const { default: CommunityHubAuthentication } = await import(
+            "@/pages/GeneralSettings/CommunityHub/Authentication"
+          );
+          return {
+            element: <AdminRoute Component={CommunityHubAuthentication} />,
+          };
+        },
+      },
+      {
+        path: "/settings/community-hub/import-item",
+        lazy: async () => {
+          const { default: CommunityHubImportItem } = await import(
+            "@/pages/GeneralSettings/CommunityHub/ImportItem"
+          );
+          return {
+            element: <AdminRoute Component={CommunityHubImportItem} />,
+          };
+        },
+      },
+      {
+        path: "/settings/mobile-connections",
+        lazy: async () => {
+          const { default: MobileConnections } = await import(
+            "@/pages/GeneralSettings/MobileConnections"
+          );
+          return { element: <ManagerRoute Component={MobileConnections} /> };
+        },
       },
       {
         path: "/settings/external-connections/telegram",

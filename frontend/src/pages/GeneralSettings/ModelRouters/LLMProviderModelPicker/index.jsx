@@ -8,7 +8,7 @@ import { X } from "@phosphor-icons/react";
 import showToast from "@/utils/toast";
 
 // Providers that can't be routing targets
-const EXCLUDED_PROVIDERS = ["hermind-router"];
+const EXCLUDED_PROVIDERS = ["anythingllm-router"];
 
 export default function LLMProviderModelPicker({
   providerFieldName = "fallback_provider",

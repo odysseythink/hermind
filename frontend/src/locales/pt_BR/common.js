@@ -8,7 +8,7 @@ const TRANSLATIONS = {
     llm: {
       title: "Preferência de LLM",
       description:
-        "Hermind funciona com vários provedores de LLM. Este será o serviço que lidará com os chats.",
+        "AnythingLLM funciona com vários provedores de LLM. Este será o serviço que lidará com os chats.",
     },
     userSetup: {
       title: "Configuração do Usuário",
@@ -35,14 +35,14 @@ const TRANSLATIONS = {
         "Estas configurações podem ser alteradas a qualquer momento.",
     },
     survey: {
-      title: "Bem-vindo ao Hermind",
-      description: "Ajude-nos a melhorar o Hermind. Opcional.",
+      title: "Bem-vindo ao AnythingLLM",
+      description: "Ajude-nos a melhorar o AnythingLLM. Opcional.",
       email: "Qual seu email?",
-      useCase: "Como você usará o Hermind?",
+      useCase: "Como você usará o AnythingLLM?",
       useCaseWork: "Para trabalho",
       useCasePersonal: "Uso pessoal",
       useCaseOther: "Outro",
-      comment: "Como você conheceu o Hermind?",
+      comment: "Como você conheceu o AnythingLLM?",
       commentPlaceholder:
         "Reddit, Twitter, GitHub, YouTube, etc. - Conte como nos encontrou!",
       skip: "Pular Pesquisa",
@@ -97,7 +97,7 @@ const TRANSLATIONS = {
     "experimental-features": "Recursos Experimentais",
     contact: "Suporte",
     "browser-extension": "Extensão de Navegador",
-    "mobile-app": "Hermind Mobile",
+    "mobile-app": "AnythingLLM Mobile",
     "community-hub": {
       title: "Centro Comunitário",
       trending: "Explore as tendências",
@@ -164,7 +164,7 @@ const TRANSLATIONS = {
       add: "Adicionar mensagem",
       save: "Salvar Mensagens",
       heading: "Explique para mim",
-      body: "os benefícios do Hermind",
+      body: "os benefícios do AnythingLLM",
     },
     delete: {
       title: "Excluir Workspace",
@@ -212,8 +212,6 @@ const TRANSLATIONS = {
       "desc-start":
         "Número de chats anteriores que serão incluídos na memória de curto prazo.",
       recommend: "Recomendado: 20. ",
-      "desc-end":
-        "Valores acima de 45 podem causar falhas dependendo do tamanho das mensagens.",
     },
     prompt: {
       title: "Prompt de Sistema",
@@ -244,27 +242,8 @@ const TRANSLATIONS = {
     },
     temperature: {
       title: "Temperatura do LLM",
-      "desc-start": 'Controla o nível de "criatividade" das respostas.',
       "desc-end":
         "Valores mais altos geram respostas mais criativas, mas para alguns modelos podem se tornar incoerentes.",
-      hint: "Cada modelo LLM tem faixas de valores válidos. Consulte seu provedor.",
-    },
-    compression: {
-      title: "Context Compression",
-      description:
-        "Automatically compress long conversation history to stay within the model's context window.",
-      followGlobal: "Follow global",
-      enabled: "Enabled",
-      disabled: "Disabled",
-      globalStatus: "Global default",
-      threshold: "Compression threshold",
-      thresholdDesc:
-        "Trigger compression when history exceeds this fraction of the context window. Leave empty to use path defaults (Agent 0.50, Chat 0.75).",
-      thresholdPlaceholder: "0.75",
-      contextLength: "Context length override",
-      contextLengthDesc:
-        "Override the model's context length (in tokens). Leave empty to use the built-in model map.",
-      contextLengthPlaceholder: "e.g. 128000",
     },
   },
   "vector-workspace": {
@@ -780,9 +759,8 @@ const TRANSLATIONS = {
       },
       "intelligent-skill-selection": {
         title: "Seleção Inteligente de Habilidades",
-        "beta-badge": "Beta",
         description:
-          "Permita o uso ilimitado de ferramentas e reduza o consumo de tokens em até 80% por consulta — O Hermind seleciona automaticamente as habilidades mais adequadas para cada solicitação.",
+          "Permita o uso ilimitado de ferramentas e reduza o consumo de tokens em até 80% por consulta — O AnythingLLM seleciona automaticamente as habilidades mais adequadas para cada solicitação.",
         "max-tools": {
           title: "Ferramentas Max",
           description:
@@ -823,7 +801,7 @@ const TRANSLATIONS = {
     },
     branding: {
       title: "Marca & Etiqueta Branca",
-      description: "Personalize sua instância do Hermind com sua marca.",
+      description: "Personalize sua instância do AnythingLLM com sua marca.",
     },
     chat: {
       title: "Chat",
@@ -914,7 +892,7 @@ const TRANSLATIONS = {
       close: "Fechar",
       create: "Criar chave de API",
       helper:
-        "Depois de criada, a chave de API pode ser usada para acessar e configurar esta instância do Hermind programaticamente.",
+        "Depois de criada, a chave de API pode ser usada para acessar e configurar esta instância do AnythingLLM programaticamente.",
       name: {
         label: "Nome",
         placeholder: "Integração de produção",
@@ -961,7 +939,7 @@ const TRANSLATIONS = {
       "Credenciais e configurações do seu provedor de transcrição. Essas chaves devem estar corretas para processar arquivos de mídia.",
     provider: "Provedor de Transcrição",
     "warn-start":
-      "Usar o modelo local whisper em máquinas com RAM ou CPU limitada pode travar o Hermind.",
+      "Usar o modelo local whisper em máquinas com RAM ou CPU limitada pode travar o AnythingLLM.",
     "warn-recommend": "Recomendamos pelo menos 2GB de RAM e arquivos <10Mb.",
     "warn-end":
       "O modelo interno será baixado automaticamente no primeiro uso.",
@@ -1039,7 +1017,7 @@ const TRANSLATIONS = {
   privacy: {
     title: "Privacidade & Dados",
     description:
-      "Configurações de como provedores terceiros e o Hermind lidam com seus dados.",
+      "Configurações de como provedores terceiros e o AnythingLLM lidam com seus dados.",
     anonymous: "Telemetria Anônima Ativa",
   },
   connectors: {
@@ -1206,7 +1184,7 @@ const TRANSLATIONS = {
       fetching: "Buscando...",
       "fetch-website": "Buscar site",
       "privacy-notice":
-        "Esses arquivos são enviados ao processador local do Hermind. Não são compartilhados com terceiros.",
+        "Esses arquivos são enviados ao processador local do AnythingLLM. Não são compartilhados com terceiros.",
     },
     pinning: {
       what_pinning: "O que é fixar documento?",
@@ -1361,12 +1339,18 @@ const TRANSLATIONS = {
         edit_description: "Atualize o conteúdo desta memória.",
         label: "Memória",
         placeholder:
-          "por exemplo, o nome do usuário é Joe, o usuário trabalha com Hermind, etc.",
+          "por exemplo, o nome do usuário é Joe, o usuário trabalha com AnythingLLM, etc.",
         create: "Criar",
         save: "Salvar",
         cancel: "Cancelar",
       },
     },
+    stt_unsupported: "O acesso ao microfone não é suportado neste navegador.",
+    stt_mic_denied:
+      "Não foi possível acessar o microfone. Por favor, conceda permissão e tente novamente.",
+    stt_transcription_failed: "Falha na transcrição: {{error}}",
+    export: "Exporte a conversa como...",
+    exporting: "Exportando...",
   },
   profile_settings: {
     edit_account: "Editar conta",
@@ -1519,7 +1503,7 @@ const TRANSLATIONS = {
   telegram: {
     title: "Bot do Telegram",
     description:
-      "Conecte sua instância do Hermind ao Telegram para que possa conversar com seus espaços de trabalho a partir de qualquer dispositivo.",
+      "Conecte sua instância do AnythingLLM ao Telegram para que possa conversar com seus espaços de trabalho a partir de qualquer dispositivo.",
     setup: {
       step1: {
         title: "Passo 1: Crie seu bot do Telegram",

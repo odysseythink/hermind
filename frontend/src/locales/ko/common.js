@@ -8,7 +8,7 @@ const TRANSLATIONS = {
     llm: {
       title: "LLM 기본 설정",
       description:
-        "Hermind은 다양한 LLM 제공자와 연동할 수 있습니다. 여기서 선택한 서비스가 채팅을 담당하게 됩니다.",
+        "AnythingLLM은 다양한 LLM 제공자와 연동할 수 있습니다. 여기서 선택한 서비스가 채팅을 담당하게 됩니다.",
     },
     userSetup: {
       title: "사용자 설정",
@@ -29,19 +29,19 @@ const TRANSLATIONS = {
     data: {
       title: "데이터 처리 및 개인정보 보호",
       description:
-        "Hermind은 여러분의 개인정보에 대한 투명성과 제어권을 최우선으로 생각합니다.",
+        "AnythingLLM은 여러분의 개인정보에 대한 투명성과 제어권을 최우선으로 생각합니다.",
       settingsHint: "이 설정은 언제든지 설정 메뉴에서 다시 변경할 수 있습니다.",
     },
     survey: {
-      title: "Hermind에 오신 것을 환영합니다",
+      title: "AnythingLLM에 오신 것을 환영합니다",
       description:
-        "여러분의 필요에 맞는 Hermind을 만들 수 있도록 도와주세요. (선택 사항)",
+        "여러분의 필요에 맞는 AnythingLLM을 만들 수 있도록 도와주세요. (선택 사항)",
       email: "이메일을 입력해 주세요",
-      useCase: "Hermind을 어떤 용도로 사용하실 예정인가요?",
+      useCase: "AnythingLLM을 어떤 용도로 사용하실 예정인가요?",
       useCaseWork: "업무용",
       useCasePersonal: "개인용",
       useCaseOther: "기타",
-      comment: "Hermind을 어떻게 알게 되셨나요?",
+      comment: "AnythingLLM을 어떻게 알게 되셨나요?",
       commentPlaceholder:
         "Reddit, Twitter, GitHub, YouTube 등 - 어떻게 알게 되셨는지 알려주세요!",
       skip: "설문 건너뛰기",
@@ -96,7 +96,7 @@ const TRANSLATIONS = {
     interface: "UI 환경 설정",
     branding: "브랜딩 및 화이트라벨링",
     chat: "채팅",
-    "mobile-app": "Hermind 모바일",
+    "mobile-app": "AnythingLLM 모바일",
     "community-hub": {
       title: "지역 커뮤니티 허브",
       trending: "인기 트렌드 탐색",
@@ -161,7 +161,7 @@ const TRANSLATIONS = {
       add: "새 메시지 추가",
       save: "메시지 저장",
       heading: "저에게 설명해주세요",
-      body: "Hermind의 장점",
+      body: "AnythingLLM의 장점",
     },
     delete: {
       title: "워크스페이스 삭제",
@@ -208,8 +208,6 @@ const TRANSLATIONS = {
       title: "채팅 기록",
       "desc-start": "응답의 단기 메모리에 포함될 이전 채팅의 수입니다.",
       recommend: "추천 20개 ",
-      "desc-end":
-        " 45개 이상은 메시지 크기에 따라 채팅 실패가 발생할 수 있습니다.",
     },
     prompt: {
       title: "시스템 프롬프트",
@@ -239,27 +237,8 @@ const TRANSLATIONS = {
     },
     temperature: {
       title: "LLM 온도",
-      "desc-start": '이 설정은 LLM 응답이 얼마나 "창의적"일지를 제어합니다.',
       "desc-end":
         "숫자가 높을수록 창의적입니다. 일부 모델에서는 너무 높게 설정하면 일관성 없는 응답이 나올 수 있습니다.",
-      hint: "대부분의 LLM은 유효한 값의 다양한 허용 범위를 가지고 있습니다. 해당 정보는 LLM 제공자에게 문의하세요.",
-    },
-    compression: {
-      title: "Context Compression",
-      description:
-        "Automatically compress long conversation history to stay within the model's context window.",
-      followGlobal: "Follow global",
-      enabled: "Enabled",
-      disabled: "Disabled",
-      globalStatus: "Global default",
-      threshold: "Compression threshold",
-      thresholdDesc:
-        "Trigger compression when history exceeds this fraction of the context window. Leave empty to use path defaults (Agent 0.50, Chat 0.75).",
-      thresholdPlaceholder: "0.75",
-      contextLength: "Context length override",
-      contextLengthDesc:
-        "Override the model's context length (in tokens). Leave empty to use the built-in model map.",
-      contextLengthPlaceholder: "e.g. 128000",
     },
   },
   "vector-workspace": {
@@ -746,9 +725,8 @@ const TRANSLATIONS = {
       },
       "intelligent-skill-selection": {
         title: "지능형 기술 선택",
-        "beta-badge": "베타",
         description:
-          "쿼리당 무제한의 도구 사용 및 컷 토큰 사용량을 최대 80%까지 줄일 수 있습니다 – Hermind은 모든 프롬프트에 적합한 기술을 자동으로 선택합니다.",
+          "쿼리당 무제한의 도구 사용 및 컷 토큰 사용량을 최대 80%까지 줄일 수 있습니다 – AnythingLLM은 모든 프롬프트에 적합한 기술을 자동으로 선택합니다.",
         "max-tools": {
           title: "맥스 툴스",
           description:
@@ -785,16 +763,16 @@ const TRANSLATIONS = {
   customization: {
     interface: {
       title: "UI 환경 설정",
-      description: "Hermind의 UI 환경을 원하는 대로 설정하세요.",
+      description: "AnythingLLM의 UI 환경을 원하는 대로 설정하세요.",
     },
     branding: {
       title: "브랜딩 및 화이트라벨링",
       description:
-        "Hermind 인스턴스에 맞춤 브랜딩을 적용해 화이트라벨링할 수 있습니다.",
+        "AnythingLLM 인스턴스에 맞춤 브랜딩을 적용해 화이트라벨링할 수 있습니다.",
     },
     chat: {
       title: "채팅",
-      description: "Hermind의 채팅 환경을 원하는 대로 설정하세요.",
+      description: "AnythingLLM의 채팅 환경을 원하는 대로 설정하세요.",
       auto_submit: {
         title: "음성 입력 자동 전송",
         description:
@@ -831,7 +809,7 @@ const TRANSLATIONS = {
       "display-language": {
         title: "표시 언어",
         description:
-          "Hermind의 UI에 사용할 언어를 선택하세요. 번역이 제공되는 경우에만 적용됩니다.",
+          "AnythingLLM의 UI에 사용할 언어를 선택하세요. 번역이 제공되는 경우에만 적용됩니다.",
       },
       logo: {
         title: "브랜드 로고",
@@ -871,7 +849,7 @@ const TRANSLATIONS = {
   api: {
     title: "API 키",
     description:
-      "API 키는 소유자가 프로그래밍 방식으로 이 Hermind 인스턴스에 액세스하고 관리할 수 있도록 합니다.",
+      "API 키는 소유자가 프로그래밍 방식으로 이 AnythingLLM 인스턴스에 액세스하고 관리할 수 있도록 합니다.",
     link: "API 문서 읽기",
     generate: "새 API 키 생성",
     empty: "API 키를 찾을 수 없습니다",
@@ -885,7 +863,7 @@ const TRANSLATIONS = {
       close: "닫기",
       create: "API 키 만들기",
       helper:
-        "생성된 API 키는 이 Hermind 인스턴스에 프로그래밍 방식으로 접근하고 구성하는 데 사용할 수 있습니다.",
+        "생성된 API 키는 이 AnythingLLM 인스턴스에 프로그래밍 방식으로 접근하고 구성하는 데 사용할 수 있습니다.",
       name: {
         label: "이름",
         placeholder: "프로덕션 통합",
@@ -910,7 +888,7 @@ const TRANSLATIONS = {
   llm: {
     title: "LLM 기본 설정",
     description:
-      "이것은 채팅과 임베딩을 하기 위한 선호하는 LLM 제공자의 인증입니다. 이 키가 현재 활성 상태이고 정확해야 Hermind이 제대로 작동합니다.",
+      "이것은 채팅과 임베딩을 하기 위한 선호하는 LLM 제공자의 인증입니다. 이 키가 현재 활성 상태이고 정확해야 AnythingLLM이 제대로 작동합니다.",
     provider: "LLM 제공자",
     providers: {
       azure_openai: {
@@ -932,7 +910,7 @@ const TRANSLATIONS = {
       "이것은 선호하는 텍스트 변환 모델 제공자의 인증입니다. 이 키가 현재 활성 상태이고 정확해야 미디어 파일 및 오디오가 텍스트 변환됩니다.",
     provider: "텍스트 변환 제공자",
     "warn-start":
-      "RAM 또는 CPU 성능이 제한된 머신에서 로컬 위스퍼 모델을 사용하면 미디어 파일을 처리할 때 Hermind이 중단될 수 있습니다.",
+      "RAM 또는 CPU 성능이 제한된 머신에서 로컬 위스퍼 모델을 사용하면 미디어 파일을 처리할 때 AnythingLLM이 중단될 수 있습니다.",
     "warn-recommend": "최소 2GB RAM과 10Mb 보다 작은 파일 업로드를 권장합니다.",
     "warn-end": "내장된 모델은 첫 번째 사용 시 자동으로 다운로드됩니다.",
   },
@@ -941,7 +919,7 @@ const TRANSLATIONS = {
     "desc-start":
       "임베딩 엔진을 지원하지 않는 LLM을 사용할 때 텍스트를 임베딩하는 데 다른 임베딩 엔진 제공자의 인증이 필요할 수 있습니다.",
     "desc-end":
-      "임베딩은 텍스트를 벡터로 변환하는 과정입니다. 파일과 프롬프트를 Hermind이 처리할 수 있는 형식으로 변환하려면 이러한 인증이 필요합니다.",
+      "임베딩은 텍스트를 벡터로 변환하는 과정입니다. 파일과 프롬프트를 AnythingLLM이 처리할 수 있는 형식으로 변환하려면 이러한 인증이 필요합니다.",
     provider: {
       title: "임베딩 제공자",
     },
@@ -966,7 +944,7 @@ const TRANSLATIONS = {
   vector: {
     title: "벡터 데이터베이스",
     description:
-      "이것은 Hermind 인스턴스가 벡터 데이터베이스 사용을 위한 인증 설정입니다. 이 키가 활성 상태이고 정확해야 합니다.",
+      "이것은 AnythingLLM 인스턴스가 벡터 데이터베이스 사용을 위한 인증 설정입니다. 이 키가 활성 상태이고 정확해야 합니다.",
     provider: {
       title: "벡터 데이터베이스 제공자",
       description: "LanceDB를 선택하면 설정이 필요 없습니다.",
@@ -1010,7 +988,7 @@ const TRANSLATIONS = {
   privacy: {
     title: "개인정보와 데이터 처리",
     description:
-      "연결된 타사 제공자와 Hermind이 데이터를 처리하는 방식을 구성합니다.",
+      "연결된 타사 제공자와 AnythingLLM이 데이터를 처리하는 방식을 구성합니다.",
     anonymous: "익명 원격 분석 활성화",
   },
   connectors: {
@@ -1179,12 +1157,12 @@ const TRANSLATIONS = {
       fetching: "가져오는 중...",
       "fetch-website": "웹사이트 가져오기",
       "privacy-notice":
-        "이 파일들은 이 Hermind 인스턴스에서 실행 중인 문서 처리기로 업로드됩니다. 파일은 제3자에게 전송되거나 공유되지 않습니다.",
+        "이 파일들은 이 AnythingLLM 인스턴스에서 실행 중인 문서 처리기로 업로드됩니다. 파일은 제3자에게 전송되거나 공유되지 않습니다.",
     },
     pinning: {
       what_pinning: "문서 고정이란 무엇인가요?",
       pin_explained_block1:
-        "Hermind에서 문서를 <b>고정</b>하면 해당 문서의 전체 내용을 프롬프트 창에 삽입하여 LLM이 완전히 이해할 수 있도록 합니다.",
+        "AnythingLLM에서 문서를 <b>고정</b>하면 해당 문서의 전체 내용을 프롬프트 창에 삽입하여 LLM이 완전히 이해할 수 있도록 합니다.",
       pin_explained_block2:
         "이 기능은 <b>대용량 컨텍스트 모델</b>이나 지식 기반에 중요한 소형 파일에 가장 적합합니다.",
       pin_explained_block3:
@@ -1194,7 +1172,7 @@ const TRANSLATIONS = {
     watching: {
       what_watching: "문서 감시는 무엇을 하나요?",
       watch_explained_block1:
-        "Hermind에서 문서를 <b>감시</b>하면 원본 소스에서 정기적으로 문서 내용을 <i>자동으로</i> 동기화합니다. 이 파일이 관리되는 모든 워크스페이스의 내용이 자동으로 업데이트됩니다.",
+        "AnythingLLM에서 문서를 <b>감시</b>하면 원본 소스에서 정기적으로 문서 내용을 <i>자동으로</i> 동기화합니다. 이 파일이 관리되는 모든 워크스페이스의 내용이 자동으로 업데이트됩니다.",
       watch_explained_block2:
         "이 기능은 현재 온라인 기반 콘텐츠만 지원하며, 수동으로 업로드한 문서에는 사용할 수 없습니다.",
       watch_explained_block3_start: "감시 중인 문서는 ",
@@ -1329,12 +1307,18 @@ const TRANSLATIONS = {
         edit_description: "이 메모의 내용을 업데이트하세요.",
         label: "기억",
         placeholder:
-          "예: 사용자의 이름은 조, 사용자는 Hermind에서 근무, 등",
+          "예: 사용자의 이름은 조, 사용자는 AnythingLLM에서 근무, 등",
         create: "만들다",
         save: "저장",
         cancel: "취소",
       },
     },
+    stt_unsupported: "이 브라우저에서는 마이크 접근이 지원되지 않습니다.",
+    stt_mic_denied:
+      "마이크에 접근할 수 없습니다. 권한을 부여하고 다시 시도해 주십시오.",
+    stt_transcription_failed: "전사 오류: {{error}}",
+    export: "채팅 내용을 다음 형식으로 내보내기:",
+    exporting: "수출 중…",
   },
   profile_settings: {
     edit_account: "계정 정보 수정",
@@ -1452,7 +1436,7 @@ const TRANSLATIONS = {
         unauthenticated: {
           title: "인증 필요",
           description:
-            "항목을 게시하려면 Hermind 커뮤니티 허브에 인증해야 합니다.",
+            "항목을 게시하려면 AnythingLLM 커뮤니티 허브에 인증해야 합니다.",
           button: "커뮤니티 허브에 연결",
         },
       },
@@ -1476,7 +1460,7 @@ const TRANSLATIONS = {
     password: {
       title: "비밀번호 보호",
       description:
-        "Hermind 인스턴스를 비밀번호로 보호하십시오. 이 비밀번호를 잊어버리면 복구 방법이 없으므로 반드시 저장하세요.",
+        "AnythingLLM 인스턴스를 비밀번호로 보호하십시오. 이 비밀번호를 잊어버리면 복구 방법이 없으므로 반드시 저장하세요.",
       "password-label": "인스턴스 비밀번호",
     },
   },

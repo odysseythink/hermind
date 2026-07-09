@@ -47,3 +47,4 @@ backend/bin/
 storage/
 ody-export-session_-*.md
 .ody-code/
+backend/server.exe

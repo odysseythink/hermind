@@ -1,4 +1,4 @@
-import HermindIcon from "@/media/logo/hermind-icon.png";
+import AnythingLLMIcon from "@/media/logo/anything-llm-icon.png";
 import OpenAiLogo from "@/media/llmprovider/openai.png";
 import GenericOpenAiLogo from "@/media/llmprovider/generic-openai.png";
 import AzureOpenAiLogo from "@/media/llmprovider/azure.png";
@@ -11,7 +11,6 @@ import NvidiaNimLogo from "@/media/llmprovider/nvidia-nim.png";
 import LMStudioLogo from "@/media/llmprovider/lmstudio.png";
 import LocalAiLogo from "@/media/llmprovider/localai.png";
 import MistralLogo from "@/media/llmprovider/mistral.jpeg";
-import HuggingFaceLogo from "@/media/llmprovider/huggingface.png";
 import PerplexityLogo from "@/media/llmprovider/perplexity.png";
 import OpenRouterLogo from "@/media/llmprovider/openrouter.jpeg";
 import NovitaLogo from "@/media/llmprovider/novita.png";
@@ -36,7 +35,6 @@ import MilvusLogo from "@/media/vectordbs/milvus.png";
 import VoyageAiLogo from "@/media/embeddingprovider/voyageai.png";
 import PPIOLogo from "@/media/llmprovider/ppio.png";
 import PGVectorLogo from "@/media/vectordbs/pgvector.png";
-import DPAISLogo from "@/media/llmprovider/dpais.png";
 import MoonshotAiLogo from "@/media/llmprovider/moonshotai.png";
 import CometApiLogo from "@/media/llmprovider/cometapi.png";
 import FoundryLogo from "@/media/llmprovider/foundry-local.png";
@@ -46,6 +44,7 @@ import PrivateModeLogo from "@/media/llmprovider/privatemode.png";
 import SambaNovaLogo from "@/media/llmprovider/sambanova.png";
 import LemonadeLogo from "@/media/llmprovider/lemonade.png";
 import MinimaxLogo from "@/media/llmprovider/minimax.png";
+import CerebrasLogo from "@/media/llmprovider/cerebras.png";
 
 const LLM_PROVIDER_PRIVACY_MAP = {
   openai: {
@@ -110,11 +109,6 @@ const LLM_PROVIDER_PRIVACY_MAP = {
     name: "Mistral",
     policyUrl: "https://legal.mistral.ai/terms/privacy-policy",
     logo: MistralLogo,
-  },
-  huggingface: {
-    name: "HuggingFace",
-    policyUrl: "https://huggingface.co/privacy",
-    logo: HuggingFaceLogo,
   },
   perplexity: {
     name: "Perplexity AI",
@@ -200,13 +194,6 @@ const LLM_PROVIDER_PRIVACY_MAP = {
     policyUrl: "https://www.pipio.ai/privacy-policy",
     logo: PPIOLogo,
   },
-  dpais: {
-    name: "Dell Pro AI Studio",
-    description: [
-      "Your model and chat contents are only accessible on the computer running Dell Pro AI Studio.",
-    ],
-    logo: DPAISLogo,
-  },
   moonshotai: {
     name: "Moonshot AI",
     policyUrl: "https://platform.moonshot.ai/docs/agreement/userprivacy",
@@ -257,6 +244,11 @@ const LLM_PROVIDER_PRIVACY_MAP = {
     name: "Minimax",
     policyUrl: "https://platform.minimax.io/protocol/privacy-policy",
     logo: MinimaxLogo,
+  },
+  cerebras: {
+    name: "Cerebras",
+    policyUrl: "https://www.cerebras.ai/privacy-policy",
+    logo: CerebrasLogo,
   },
 };
 
@@ -317,7 +309,7 @@ const VECTOR_DB_PROVIDER_PRIVACY_MAP = {
   lancedb: {
     name: "LanceDB",
     description: [
-      "Your vectors and document text are stored privately on this instance of Hermind.",
+      "Your vectors and document text are stored privately on this instance of AnythingLLM.",
     ],
     logo: LanceDbLogo,
   },
@@ -325,11 +317,11 @@ const VECTOR_DB_PROVIDER_PRIVACY_MAP = {
 
 const EMBEDDING_ENGINE_PROVIDER_PRIVACY_MAP = {
   native: {
-    name: "Hermind Embedder",
+    name: "AnythingLLM Embedder",
     description: [
-      "Your document text is embedded privately on this instance of Hermind.",
+      "Your document text is embedded privately on this instance of AnythingLLM.",
     ],
-    logo: HermindIcon,
+    logo: AnythingLLMIcon,
   },
   openai: {
     name: "OpenAI",

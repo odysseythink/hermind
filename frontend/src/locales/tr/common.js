@@ -3,18 +3,18 @@ const TRANSLATIONS = {
   onboarding: {
     survey: {
       email: "E-posta adresiniz nedir?",
-      useCase: "Hermind'yi ne için kullanacaksınız?",
+      useCase: "AnythingLLM'yi ne için kullanacaksınız?",
       useCaseWork: "İş için",
       useCasePersonal: "Kişisel kullanım için",
       useCaseOther: "Diğer",
-      comment: "Hermind'yi nasıl duydunuz?",
+      comment: "AnythingLLM'yi nasıl duydunuz?",
       commentPlaceholder:
         "Reddit, Twitter, GitHub, YouTube vb. - Bizi nasıl buldunuz?",
       skip: "Anketi Atla",
       thankYou: "Geri bildiriminiz için teşekkür ederiz!",
-      title: "Hermind'ye Hoş Geldiniz",
+      title: "AnythingLLM'ye Hoş Geldiniz",
       description:
-        "Hermind'yi ihtiyaçlarınıza göre oluşturmamıza yardımcı olun. İsteğe bağlı.",
+        "AnythingLLM'yi ihtiyaçlarınıza göre oluşturmamıza yardımcı olun. İsteğe bağlı.",
     },
     home: {
       getStarted: "Başla",
@@ -23,7 +23,7 @@ const TRANSLATIONS = {
     llm: {
       title: "LLM Tercihi",
       description:
-        "Hermind birçok LLM sağlayıcısıyla çalışabilir. Bu, sohbeti yöneten hizmet olacaktır.",
+        "AnythingLLM birçok LLM sağlayıcısıyla çalışabilir. Bu, sohbeti yöneten hizmet olacaktır.",
     },
     userSetup: {
       title: "Kullanıcı Kurulumu",
@@ -98,7 +98,7 @@ const TRANSLATIONS = {
     interface: "Arayüz Tercihleri",
     branding: "Marka & Beyaz Etiketleme",
     chat: "Sohbet",
-    "mobile-app": "Hermind Mobil",
+    "mobile-app": "AnythingLLM Mobil",
     "community-hub": {
       title: "Topluluk Merkezi",
       trending: "Popüler olanları keşfedin",
@@ -157,7 +157,7 @@ const TRANSLATIONS = {
       add: "Yeni mesaj ekle",
       save: "Mesajları Kaydet",
       heading: "Bana açıkla",
-      body: "Hermind'nin faydalarını",
+      body: "AnythingLLM'nin faydalarını",
     },
     delete: {
       title: "Çalışma Alanını Sil",
@@ -205,8 +205,6 @@ const TRANSLATIONS = {
       "desc-start":
         "Yanıta dahil edilecek önceki sohbetlerin sayısı (kısa süreli hafıza).",
       recommend: "20 önerilir. ",
-      "desc-end":
-        "45'ten fazlası, mesaj boyutuna göre sürekli sohbet hatalarına yol açabilir.",
     },
     prompt: {
       title: "Komut (Prompt)",
@@ -237,28 +235,8 @@ const TRANSLATIONS = {
     },
     temperature: {
       title: "LLM Sıcaklığı",
-      "desc-start":
-        'Bu ayar, LLM yanıtlarının ne kadar "yaratıcı" olacağını kontrol eder.',
       "desc-end":
         "Sayı yükseldikçe yaratıcı yanıtlar artar. Bazı modeller için bu değer çok yüksek ayarlandığında anlamsız yanıtlar ortaya çıkabilir.",
-      hint: "Çoğu LLM'in farklı kabul edilebilir değer aralıkları vardır. Ayrıntılar için LLM sağlayıcınıza danışın.",
-    },
-    compression: {
-      title: "Context Compression",
-      description:
-        "Automatically compress long conversation history to stay within the model's context window.",
-      followGlobal: "Follow global",
-      enabled: "Enabled",
-      disabled: "Disabled",
-      globalStatus: "Global default",
-      threshold: "Compression threshold",
-      thresholdDesc:
-        "Trigger compression when history exceeds this fraction of the context window. Leave empty to use path defaults (Agent 0.50, Chat 0.75).",
-      thresholdPlaceholder: "0.75",
-      contextLength: "Context length override",
-      contextLengthDesc:
-        "Override the model's context length (in tokens). Leave empty to use the built-in model map.",
-      contextLengthPlaceholder: "e.g. 128000",
     },
   },
   "vector-workspace": {
@@ -775,9 +753,8 @@ const TRANSLATIONS = {
       },
       "intelligent-skill-selection": {
         title: "Akıllı Becerilerin Seçimi",
-        "beta-badge": "Beta",
         description:
-          'Her sorgu için sınırsız araç kullanımı ve "cut token" kullanımını %80\'e kadar azaltma imkanı sunar — Hermind, her talep için doğru becerileri otomatik olarak seçer.',
+          'Her sorgu için sınırsız araç kullanımı ve "cut token" kullanımını %80\'e kadar azaltma imkanı sunar — AnythingLLM, her talep için doğru becerileri otomatik olarak seçer.',
         "max-tools": {
           title: "Max Araçları",
           description:
@@ -815,7 +792,7 @@ const TRANSLATIONS = {
   api: {
     title: "API anahtarları",
     description:
-      "API anahtarları, bu Hermind örneğine programatik olarak erişmeye ve yönetmeye olanak tanır.",
+      "API anahtarları, bu AnythingLLM örneğine programatik olarak erişmeye ve yönetmeye olanak tanır.",
     link: "API dokümantasyonunu okuyun",
     generate: "Yeni API Anahtarı Oluştur",
     empty: "API anahtarları bulunamadı",
@@ -829,7 +806,7 @@ const TRANSLATIONS = {
       close: "Kapat",
       create: "API anahtarı oluştur",
       helper:
-        "Oluşturulduktan sonra API anahtarı, bu Hermind örneğine programatik olarak erişmek ve onu yapılandırmak için kullanılabilir.",
+        "Oluşturulduktan sonra API anahtarı, bu AnythingLLM örneğine programatik olarak erişmek ve onu yapılandırmak için kullanılabilir.",
       name: {
         label: "Ad",
         placeholder: "Üretim entegrasyonu",
@@ -854,7 +831,7 @@ const TRANSLATIONS = {
   llm: {
     title: "LLM Tercihi",
     description:
-      "Bu, tercih ettiğiniz LLM sohbet ve gömme sağlayıcısının kimlik bilgileri ile ayarlarıdır. Bu anahtarların güncel ve doğru olması önemlidir; aksi takdirde Hermind doğru çalışmayacaktır.",
+      "Bu, tercih ettiğiniz LLM sohbet ve gömme sağlayıcısının kimlik bilgileri ile ayarlarıdır. Bu anahtarların güncel ve doğru olması önemlidir; aksi takdirde AnythingLLM doğru çalışmayacaktır.",
     provider: "LLM Sağlayıcısı",
     providers: {
       azure_openai: {
@@ -876,7 +853,7 @@ const TRANSLATIONS = {
       "Bu, tercih ettiğiniz transkripsiyon modeli sağlayıcısının kimlik bilgileri ve ayarlarıdır. Anahtarların güncel ve doğru olması önemlidir; aksi takdirde medya dosyaları ve sesler transkribe edilemez.",
     provider: "Transkripsiyon Sağlayıcısı",
     "warn-start":
-      "Sınırlı RAM veya CPU'ya sahip makinelerde yerel Whisper modelini kullanmak, medya dosyalarını işlerken Hermind'nin duraksamasına neden olabilir.",
+      "Sınırlı RAM veya CPU'ya sahip makinelerde yerel Whisper modelini kullanmak, medya dosyalarını işlerken AnythingLLM'nin duraksamasına neden olabilir.",
     "warn-recommend":
       "En az 2GB RAM öneriyoruz ve 10MB üzerinde dosya yüklememeye dikkat edin.",
     "warn-end":
@@ -887,7 +864,7 @@ const TRANSLATIONS = {
     "desc-start":
       "Yerel olarak gömme mekanizmasını desteklemeyen bir LLM kullanıyorsanız, metinleri gömmek için ek kimlik bilgileri girmeniz gerekebilir.",
     "desc-end":
-      "Gömme, metni vektörlere dönüştürme sürecidir. Dosyalarınızın ve komutlarınızın işlenebilmesi için Hermind, bu kimlik bilgilerine ihtiyaç duyar.",
+      "Gömme, metni vektörlere dönüştürme sürecidir. Dosyalarınızın ve komutlarınızın işlenebilmesi için AnythingLLM, bu kimlik bilgilerine ihtiyaç duyar.",
     provider: {
       title: "Embedding Sağlayıcısı",
     },
@@ -913,7 +890,7 @@ const TRANSLATIONS = {
   vector: {
     title: "Vektör Veritabanı",
     description:
-      "Hermind örneğinizin nasıl çalışacağını belirleyen kimlik bilgileri ve ayarları burada bulunur. Bu anahtarların güncel ve doğru olması önemlidir.",
+      "AnythingLLM örneğinizin nasıl çalışacağını belirleyen kimlik bilgileri ve ayarları burada bulunur. Bu anahtarların güncel ve doğru olması önemlidir.",
     provider: {
       title: "Vektör Veritabanı Sağlayıcısı",
       description: "LanceDB için ek bir yapılandırma gerekmez.",
@@ -958,7 +935,7 @@ const TRANSLATIONS = {
   privacy: {
     title: "Gizlilik & Veri İşleme",
     description:
-      "Bağlantılı üçüncü taraf sağlayıcılarla ve Hermind ile verilerinizin nasıl ele alındığını burada yapılandırabilirsiniz.",
+      "Bağlantılı üçüncü taraf sağlayıcılarla ve AnythingLLM ile verilerinizin nasıl ele alındığını burada yapılandırabilirsiniz.",
     anonymous: "Anonim Telemetri Etkin",
   },
   connectors: {
@@ -1117,22 +1094,22 @@ const TRANSLATIONS = {
       fetching: "Alınıyor...",
       "fetch-website": "Web sitesini al",
       "privacy-notice":
-        "Bu dosyalar, bu Hermind örneğinde çalışan belge işleyiciye yüklenecektir. Bu dosyalar üçüncü taraflarla paylaşılmaz.",
+        "Bu dosyalar, bu AnythingLLM örneğinde çalışan belge işleyiciye yüklenecektir. Bu dosyalar üçüncü taraflarla paylaşılmaz.",
     },
     pinning: {
       what_pinning: "Belge sabitleme nedir?",
       pin_explained_block1:
-        "Hermind'de bir belgeyi <b>sabitlediğinizde</b>, belgenin tüm içeriğini LLM'nin tam olarak anlaması için prompt pencerenize enjekte ederiz.",
+        "AnythingLLM'de bir belgeyi <b>sabitlediğinizde</b>, belgenin tüm içeriğini LLM'nin tam olarak anlaması için prompt pencerenize enjekte ederiz.",
       pin_explained_block2:
         "Bu, <b>büyük bağlam modelleri</b> veya bilgi tabanı için kritik olan küçük dosyalarla en iyi şekilde çalışır.",
       pin_explained_block3:
-        "Hermind'den varsayılan olarak istediğiniz yanıtları alamıyorsanız, sabitleme tek tıklamayla daha yüksek kaliteli yanıtlar almanın harika bir yoludur.",
+        "AnythingLLM'den varsayılan olarak istediğiniz yanıtları alamıyorsanız, sabitleme tek tıklamayla daha yüksek kaliteli yanıtlar almanın harika bir yoludur.",
       accept: "Tamam, anladım",
     },
     watching: {
       what_watching: "Bir belgeyi izlemek ne yapar?",
       watch_explained_block1:
-        "Hermind'de bir belgeyi <b>izlediğinizde</b>, belge içeriğinizi orijinal kaynağından düzenli aralıklarla <i>otomatik olarak</i> senkronize ederiz. Bu, dosyanın yönetildiği her çalışma alanında içeriği otomatik olarak günceller.",
+        "AnythingLLM'de bir belgeyi <b>izlediğinizde</b>, belge içeriğinizi orijinal kaynağından düzenli aralıklarla <i>otomatik olarak</i> senkronize ederiz. Bu, dosyanın yönetildiği her çalışma alanında içeriği otomatik olarak günceller.",
       watch_explained_block2:
         "Bu özellik şu anda yalnızca çevrimiçi tabanlı içeriği desteklemektedir ve manuel olarak yüklenen belgeler için kullanılamayacaktır.",
       watch_explained_block3_start: "Hangi belgelerin izlendiğini ",
@@ -1282,12 +1259,18 @@ const TRANSLATIONS = {
         edit_description: "Bu belleğin içeriğini güncelleyin.",
         label: "Bellek",
         placeholder:
-          "Örneğin, kullanıcının adı Joe, kullanıcı Hermind üzerinde çalışıyor, vb.",
+          "Örneğin, kullanıcının adı Joe, kullanıcı AnythingLLM üzerinde çalışıyor, vb.",
         create: "Yarat",
         save: "Kaydet",
         cancel: "İptal et",
       },
     },
+    stt_unsupported: "Bu tarayıcıda mikrofon erişimi desteklenmemektedir.",
+    stt_mic_denied:
+      "Mikrofonu kullanılamadı. Lütfen izin verin ve tekrar deneyin.",
+    stt_transcription_failed: "Transkripsiyon başarısız: {{error}}",
+    export: "Çat sohbetini şu şekilde dışa aktar:",
+    exporting: "Dışarıya satışı yapma...",
   },
   profile_settings: {
     edit_account: "Hesabı Düzenle",
@@ -1312,16 +1295,16 @@ const TRANSLATIONS = {
   customization: {
     interface: {
       title: "Arayüz Tercihleri",
-      description: "Hermind için arayüz tercihlerinizi ayarlayın.",
+      description: "AnythingLLM için arayüz tercihlerinizi ayarlayın.",
     },
     branding: {
       title: "Marka & Beyaz Etiketleme",
       description:
-        "Hermind örneğinizi özel markalamayla beyaz etiketleyin.",
+        "AnythingLLM örneğinizi özel markalamayla beyaz etiketleyin.",
     },
     chat: {
       title: "Sohbet",
-      description: "Hermind için sohbet tercihlerinizi ayarlayın.",
+      description: "AnythingLLM için sohbet tercihlerinizi ayarlayın.",
       auto_submit: {
         title: "Konuşma Girişini Otomatik Gönder",
         description:
@@ -1360,7 +1343,7 @@ const TRANSLATIONS = {
       "display-language": {
         title: "Görüntüleme Dili",
         description:
-          "Hermind'nin kullanıcı arayüzünü görüntülemek için tercih edilen dili seçin - çeviriler mevcut olduğunda.",
+          "AnythingLLM'nin kullanıcı arayüzünü görüntülemek için tercih edilen dili seçin - çeviriler mevcut olduğunda.",
       },
       logo: {
         title: "Marka Logosu",
@@ -1502,7 +1485,7 @@ const TRANSLATIONS = {
         unauthenticated: {
           title: "Kimlik Doğrulama Gerekli",
           description:
-            "Öğeleri yayınlamadan önce Hermind Topluluk Hub'ına kimlik doğrulaması yapmanız gerekir.",
+            "Öğeleri yayınlamadan önce AnythingLLM Topluluk Hub'ına kimlik doğrulaması yapmanız gerekir.",
           button: "Topluluk Hub'ına Bağlan",
         },
       },
@@ -1526,7 +1509,7 @@ const TRANSLATIONS = {
     password: {
       title: "Şifre Koruması",
       description:
-        "Hermind örneğinizi bir şifre ile koruyun. Bu şifreyi unutmanız hâlinde kurtarma yöntemi yoktur, bu yüzden mutlaka güvende saklayın.",
+        "AnythingLLM örneğinizi bir şifre ile koruyun. Bu şifreyi unutmanız hâlinde kurtarma yöntemi yoktur, bu yüzden mutlaka güvende saklayın.",
       "password-label": "Örnek şifresi",
     },
   },
@@ -1540,7 +1523,7 @@ const TRANSLATIONS = {
   telegram: {
     title: "Telegram Bot'u",
     description:
-      "Hermind örneğinizi Telegram ile bağlantılandırarak, herhangi bir cihazdan çalışma alanlarınızla sohbet edebilmelisiniz.",
+      "AnythingLLM örneğinizi Telegram ile bağlantılandırarak, herhangi bir cihazdan çalışma alanlarınızla sohbet edebilmelisiniz.",
     setup: {
       step1: {
         title: "1. Adım: Telegram botunuzu oluşturun",

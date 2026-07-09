@@ -3,7 +3,7 @@ import Sidebar from "@/components/SettingsSidebar";
 import { isMobile } from "react-device-detect";
 import System from "@/models/system";
 import showToast from "@/utils/toast";
-import HermindIcon from "@/media/logo/hermind-icon.png";
+import AnythingLLMIcon from "@/media/logo/anything-llm-icon.png";
 import OpenAiLogo from "@/media/llmprovider/openai.png";
 import AzureOpenAiLogo from "@/media/llmprovider/azure.png";
 import GeminiAiLogo from "@/media/llmprovider/gemini.png";
@@ -44,12 +44,12 @@ import { useTranslation } from "react-i18next";
 
 const EMBEDDERS = [
   {
-    name: "Hermind Embedder",
+    name: "AnythingLLM Embedder",
     value: "native",
-    logo: HermindIcon,
+    logo: AnythingLLMIcon,
     options: (settings) => <NativeEmbeddingOptions settings={settings} />,
     description:
-      "Use the built-in embedding provider for Hermind. Zero setup!",
+      "Use the built-in embedding provider for AnythingLLM. Zero setup!",
   },
   {
     name: "OpenAI",
