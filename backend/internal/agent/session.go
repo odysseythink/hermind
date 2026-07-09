@@ -74,6 +74,9 @@ type Session struct {
 
 	// Context-compression engine (nil when disabled).
 	compressor agentcompression.ContextEngine
+
+	currentMessageUUID string
+	currentMessageMu   sync.RWMutex
 }
 
 // eventLogger is the narrow interface needed for telemetry.
@@ -183,6 +186,18 @@ func (s *Session) Abort(reason string) {
 	}
 	s.cancelAllApprovals(reason)
 	s.cancel()
+}
+
+func (s *Session) CurrentMessageUUID() string {
+	s.currentMessageMu.RLock()
+	defer s.currentMessageMu.RUnlock()
+	return s.currentMessageUUID
+}
+
+func (s *Session) SetCurrentMessageUUID(uuid string) {
+	s.currentMessageMu.Lock()
+	defer s.currentMessageMu.Unlock()
+	s.currentMessageUUID = uuid
 }
 
 var ErrSessionTerminated = errors.New("session terminated")

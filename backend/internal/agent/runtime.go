@@ -188,7 +188,22 @@ func (r *Runtime) RunAgentDirectly(ctx context.Context, invUUID string, io Agent
 	}
 	sess := newSession(sessCtx, inv.UUID, &ws, user, lm, systemPrompt, tool.NewRegistry(), io, ttl, r.deps.EventLog, comp)
 
-	reg, err := buildSessionRegistry(ctx, r.deps, &ws, user, lm, settings, nil, sess.RequestApproval)
+	citationEmitter := func(citations []tools.Citation) {
+		uuid := sess.CurrentMessageUUID()
+		if uuid == "" || len(citations) == 0 {
+			return
+		}
+		_ = io.Send(ServerFrame{
+			Type: FrameReportStreamEvent,
+			ContentObj: map[string]any{
+				"type":      "citations",
+				"uuid":      uuid,
+				"citations": citations,
+			},
+		})
+	}
+
+	reg, err := buildSessionRegistry(ctx, r.deps, &ws, user, lm, settings, nil, sess.RequestApproval, citationEmitter)
 	if err != nil {
 		_ = io.Send(ServerFrame{Type: FrameWSSFailure, Content: "tools: " + err.Error()})
 		return err

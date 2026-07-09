@@ -175,3 +175,116 @@ func TestWebBrowsing_NoResults(t *testing.T) {
 		t.Fatalf("expected no-results message, got: %s", result)
 	}
 }
+
+func TestWebBrowsing_EmitsCitations(t *testing.T) {
+	registerSearchProvider("mock-emit-test", &mockEmittingProvider{})
+
+	var capturedCitations []Citation
+	emitter := func(citations []Citation) {
+		capturedCitations = citations
+	}
+
+	tc := &ToolContext{
+		Ctx:           context.Background(),
+		Settings:      map[string]string{"agent_search_provider": "mock-emit-test"},
+		Emit:          func(string) {},
+		EmitCitations: emitter,
+		Cfg:           &config.Config{},
+	}
+
+	entry := NewWebBrowsingSkill(tc)
+	handler := entry.Handler
+
+	result, err := handler(context.Background(), []byte(`{"query":"test query"}`))
+	if err != nil {
+		t.Fatalf("handler returned error: %v", err)
+	}
+	if result == "" {
+		t.Fatal("expected non-empty result")
+	}
+
+	if len(capturedCitations) != 2 {
+		t.Fatalf("expected 2 citations, got %d", len(capturedCitations))
+	}
+	if capturedCitations[0].ID != "https://example.com/a" {
+		t.Errorf("expected ID https://example.com/a, got %s", capturedCitations[0].ID)
+	}
+	if capturedCitations[0].Title != "Result A" {
+		t.Errorf("expected title Result A, got %s", capturedCitations[0].Title)
+	}
+	if capturedCitations[0].Text != "Snippet A" {
+		t.Errorf("expected text Snippet A, got %s", capturedCitations[0].Text)
+	}
+	if capturedCitations[0].ChunkSource != "link://https://example.com/a" {
+		t.Errorf("expected chunkSource link://example.com/a, got %s", capturedCitations[0].ChunkSource)
+	}
+	if capturedCitations[0].Score != nil {
+		t.Error("expected nil Score")
+	}
+	if capturedCitations[1].ID != "https://example.com/b" {
+		t.Errorf("expected ID https://example.com/b, got %s", capturedCitations[1].ID)
+	}
+}
+
+func TestWebBrowsing_SkipsResultWithoutURL(t *testing.T) {
+	registerSearchProvider("mock-skip-test", &mockSkippingProvider{})
+
+	var emitted int
+	emitter := func(citations []Citation) {
+		emitted = len(citations)
+	}
+
+	tc := &ToolContext{
+		Ctx:           context.Background(),
+		Settings:      map[string]string{"agent_search_provider": "mock-skip-test"},
+		Emit:          func(string) {},
+		EmitCitations: emitter,
+		Cfg:           &config.Config{},
+	}
+
+	entry := NewWebBrowsingSkill(tc)
+
+	_, err := entry.Handler(context.Background(), []byte(`{"query":"skip"}`))
+	if err != nil {
+		t.Fatalf("handler returned error: %v", err)
+	}
+	if emitted != 0 {
+		t.Fatalf("expected 0 citations when all results have empty URLs, got %d", emitted)
+	}
+}
+
+func TestWebBrowsing_NilEmitterDoesNotPanic(t *testing.T) {
+	registerSearchProvider("mock-nil-emit", &mockEmittingProvider{})
+
+	tc := &ToolContext{
+		Ctx:           context.Background(),
+		Settings:      map[string]string{"agent_search_provider": "mock-nil-emit"},
+		Emit:          func(string) {},
+		EmitCitations: nil, // explicitly nil
+		Cfg:           &config.Config{},
+	}
+
+	entry := NewWebBrowsingSkill(tc)
+
+	_, err := entry.Handler(context.Background(), []byte(`{"query":"any"}`))
+	if err != nil {
+		t.Fatalf("nil EmitCitations should not cause panic: %v", err)
+	}
+}
+
+type mockEmittingProvider struct{}
+
+func (p *mockEmittingProvider) Name() string { return "MockEmit" }
+func (p *mockEmittingProvider) Search(ctx context.Context, query string, _ map[string]string, _ *config.Config) ([]SearchResult, error) {
+	return []SearchResult{
+		{Title: "Result A", Link: "https://example.com/a", Snippet: "Snippet A"},
+		{Title: "Result B", Link: "https://example.com/b", Snippet: "Snippet B"},
+	}, nil
+}
+
+type mockSkippingProvider struct{}
+
+func (p *mockSkippingProvider) Name() string { return "MockSkip" }
+func (p *mockSkippingProvider) Search(ctx context.Context, query string, _ map[string]string, _ *config.Config) ([]SearchResult, error) {
+	return []SearchResult{{Title: "No URL", Link: "", Snippet: "No link here"}}, nil
+}

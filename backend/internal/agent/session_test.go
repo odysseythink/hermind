@@ -108,3 +108,20 @@ func TestSession_Run_InterruptAndContinue(t *testing.T) {
 	err := <-done
 	require.NoError(t, err)
 }
+
+func TestSession_CurrentMessageUUID_Lifecycle(t *testing.T) {
+	serverConn, _ := newPipedWS(t)
+	wc := agent.NewWSConnForTesting(serverConn)
+	defer wc.Close()
+	mock := &mockLanguageModel{
+		provider: "mock", model: "mock-model",
+		replies: []string{"hi", "TERMINATE"},
+	}
+	ws := &models.Workspace{ID: 1}
+	sess := agent.NewSessionForTesting(context.Background(), "test-uuid", ws, nil, mock, "You are helpful.", nil, wc, nil)
+	require.Empty(t, sess.CurrentMessageUUID())
+	sess.SetCurrentMessageUUID("msg-1")
+	require.Equal(t, "msg-1", sess.CurrentMessageUUID())
+	sess.SetCurrentMessageUUID("msg-2")
+	require.Equal(t, "msg-2", sess.CurrentMessageUUID())
+}

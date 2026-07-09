@@ -2,6 +2,7 @@ package agent
 
 import (
 	"context"
+	"crypto/rand"
 	"errors"
 	"fmt"
 
@@ -13,7 +14,14 @@ func installEventBridges(s *Session) {
 		if s.muteUser && chat.From == participantUser {
 			return
 		}
+		// Generate a UUID for assistant messages so citations can attach.
+		uuid := ""
+		if chat.From != participantUser {
+			uuid = uuidV4()
+			s.SetCurrentMessageUUID(uuid)
+		}
 		_ = s.io.Send(ServerFrame{
+			UUID:    uuid,
 			From:    chat.From,
 			To:      chat.To,
 			Content: chat.Content,
@@ -49,4 +57,13 @@ func installEventBridges(s *Session) {
 	s.conv.OnTerminate(func(_ string, _ *conversation.Conversation) {
 		s.once.Do(func() { close(s.terminated) })
 	})
+}
+
+func uuidV4() string {
+	b := make([]byte, 16)
+	_, _ = rand.Read(b)
+	b[6] = (b[6] & 0x0f) | 0x40
+	b[8] = (b[8] & 0x3f) | 0x80
+	return fmt.Sprintf("%08x-%04x-%04x-%04x-%012x",
+		b[0:4], b[4:6], b[6:8], b[8:10], b[10:16])
 }

@@ -41,6 +41,7 @@ type BuilderDeps struct {
 	ChatSearcher    ChatSearcher
 	AgentSkillSvc   services.AgentSkillManager
 	ProvenanceSvc   services.ProvenanceRecorder
+	CitationEmitter CitationEmitter // nil = citations disabled
 }
 
 // Builder composes a tool.Registry from multiple sources per session.
@@ -86,6 +87,7 @@ func (b *Builder) Build(ctx context.Context, ws *models.Workspace, user *models.
 		Cfg:             b.deps.Cfg,
 		AgentSkillSvc:   b.deps.AgentSkillSvc,
 		ProvenanceSvc:   b.deps.ProvenanceSvc,
+		EmitCitations:   b.deps.CitationEmitter,
 	}
 
 	// Source 1: default skills

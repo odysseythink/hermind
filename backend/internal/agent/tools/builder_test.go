@@ -352,6 +352,25 @@ func TestBuilder_NonWhitelisted_StillRequiresApproval(t *testing.T) {
 	require.True(t, called.Load(), "non-whitelisted skill should require approval")
 }
 
+func TestBuilder_WiresCitationEmitterToToolContext(t *testing.T) {
+	captured := func(citations []Citation) {
+		_ = citations
+	}
+	b := NewBuilder(BuilderDeps{CitationEmitter: captured})
+	reg, err := b.Build(context.Background(), &models.Workspace{ID: 1}, nil, func(string) {}, nil)
+	require.NoError(t, err)
+
+	entries := reg.Entries(nil)
+	var found bool
+	for _, e := range entries {
+		if e.Name == "web-browsing" {
+			found = true
+			break
+		}
+	}
+	require.True(t, found, "web-browsing should be registered")
+}
+
 func TestBuilder_WebBrowsing_RegisteredByDefault(t *testing.T) {
 	b := NewBuilder(BuilderDeps{})
 	reg, err := b.Build(context.Background(), &models.Workspace{ID: 1}, nil, func(string) {}, nil)

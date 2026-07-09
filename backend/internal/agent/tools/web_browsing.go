@@ -51,6 +51,25 @@ func NewWebBrowsingSkill(tc *ToolContext) *tool.Entry {
 				return tool.Result("No information was found online for the search query."), nil
 			}
 
+			// Emit citations so the frontend renders clickable source links.
+			if tc.EmitCitations != nil {
+				citations := make([]Citation, 0, len(results))
+				for _, r := range results {
+					if r.Link == "" {
+						continue
+					}
+					citations = append(citations, Citation{
+						ID:          r.Link,
+						Title:       r.Title,
+						Text:        r.Snippet,
+						ChunkSource: "link://" + r.Link,
+					})
+				}
+				if len(citations) > 0 {
+					tc.EmitCitations(citations)
+				}
+			}
+
 			tc.Emit(fmt.Sprintf("Found %d results via %s", len(results), p.Name()))
 			return tool.Result(results), nil
 		},

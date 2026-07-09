@@ -48,7 +48,7 @@ export default function handleSocketResponse(socket, event, setChatHistory) {
       window.dispatchEvent(
         new CustomEvent(THREAD_RENAME_EVENT, {
           detail: { threadSlug: slug, newName: name },
-        })
+        }),
       );
     }
     return;
@@ -61,7 +61,7 @@ export default function handleSocketResponse(socket, event, setChatHistory) {
       return [
         ...prev.filter((msg) => !!msg.content),
         {
-          uuid: v4(),
+          uuid: data.uuid || v4(),
           content: data.content,
           role: "assistant",
           sources: [],
@@ -101,10 +101,10 @@ export default function handleSocketResponse(socket, event, setChatHistory) {
         if (!data.content.routedTo) return prev;
         return [
           ...prev.filter(
-            (msg) => !(msg.role === "assistant" && msg.pending && !msg.content)
+            (msg) => !(msg.role === "assistant" && msg.pending && !msg.content),
           ),
           {
-            uuid: data.content.uuid,
+            uuid: data.content.uuid || v4(),
             type: "modelRouteNotification",
             content: "modelRouteNotification",
             routedTo: data.content.routedTo,
@@ -135,7 +135,7 @@ export default function handleSocketResponse(socket, event, setChatHistory) {
           return [
             ...prev.filter((msg) => !!msg.content),
             {
-              uuid: data.content.uuid,
+              uuid: data.content.uuid || v4(),
               type: "textResponse",
               content: data.content.content,
               role: "assistant",
@@ -160,7 +160,7 @@ export default function handleSocketResponse(socket, event, setChatHistory) {
           return [
             ...prev.filter((msg) => !!msg.content),
             {
-              uuid: data.content.uuid,
+              uuid: data.content.uuid || v4(),
               type: "textResponse",
               content: data.content.content,
               role: "assistant",
@@ -177,7 +177,7 @@ export default function handleSocketResponse(socket, event, setChatHistory) {
         return [
           ...prev.filter((msg) => !!msg.content),
           {
-            uuid: data.content.uuid,
+            uuid: data.content.uuid || v4(),
             type: "statusResponse",
             content: data.content.content,
             role: "assistant",
@@ -206,7 +206,7 @@ export default function handleSocketResponse(socket, event, setChatHistory) {
         if (type === "usageMetrics") {
           if (!data.content.metrics) return prev;
           return prev.map((msg) =>
-            msg.uuid === uuid ? { ...msg, metrics: data.content.metrics } : msg
+            msg.uuid === uuid ? { ...msg, metrics: data.content.metrics } : msg,
           );
         }
 
@@ -215,12 +215,12 @@ export default function handleSocketResponse(socket, event, setChatHistory) {
           const assistantIdx = prev.findIndex((msg) => msg.uuid === uuid);
           if (assistantIdx === -1) return prev;
           const userIdx = prev.findLastIndex(
-            (msg, i) => i < assistantIdx && msg.role === "user"
+            (msg, i) => i < assistantIdx && msg.role === "user",
           );
           return prev.map((msg, i) =>
             i === assistantIdx || i === userIdx
               ? { ...msg, chatId: data.content.chatId }
-              : msg
+              : msg,
           );
         }
 
@@ -235,7 +235,7 @@ export default function handleSocketResponse(socket, event, setChatHistory) {
                   }
                 : msg?.content
                   ? msg
-                  : null
+                  : null,
             )
             .filter((msg) => !!msg);
         }
@@ -244,7 +244,7 @@ export default function handleSocketResponse(socket, event, setChatHistory) {
         return prev.map((msg) =>
           msg.uuid === data.content.uuid
             ? { ...msg, content: msg.content + data.content.content }
-            : msg
+            : msg,
         );
       }
     });
@@ -256,7 +256,7 @@ export default function handleSocketResponse(socket, event, setChatHistory) {
         ...prev.filter((msg) => !!msg.content),
         {
           type: "fileDownloadCard",
-          uuid: v4(),
+          uuid: data.uuid || v4(),
           content: data.content,
           role: "assistant",
           sources: [],
@@ -276,7 +276,7 @@ export default function handleSocketResponse(socket, event, setChatHistory) {
         ...prev.filter((msg) => !!msg.content),
         {
           type: "rechartVisualize",
-          uuid: v4(),
+          uuid: data.uuid || v4(),
           content: data.content,
           role: "assistant",
           sources: [],
@@ -295,7 +295,7 @@ export default function handleSocketResponse(socket, event, setChatHistory) {
       return [
         ...prev.filter((msg) => !!msg.content),
         {
-          uuid: v4(),
+          uuid: data.uuid || v4(),
           content: data.content,
           role: "assistant",
           sources: [],
@@ -314,7 +314,7 @@ export default function handleSocketResponse(socket, event, setChatHistory) {
       return [
         ...prev.filter((msg) => !!msg.content),
         {
-          uuid: v4(),
+          uuid: data.uuid || v4(),
           type: "toolApprovalRequest",
           requestId: data.requestId,
           skillName: data.skillName,
@@ -339,7 +339,7 @@ export default function handleSocketResponse(socket, event, setChatHistory) {
       return [
         ...prev.filter((msg) => !!msg.content),
         {
-          uuid: v4(),
+          uuid: data.uuid || v4(),
           type: "clarifyingQuestion",
           requestId: data.requestId,
           questions: data.questions || [],
@@ -364,7 +364,7 @@ export default function handleSocketResponse(socket, event, setChatHistory) {
     return [
       ...prev.filter((msg) => !!msg.content),
       {
-        uuid: v4(),
+        uuid: data.uuid || v4(),
         type: data.type,
         content: data.content,
         role: "assistant",
@@ -389,13 +389,13 @@ export function getAgentSessionActive() {
 
 export function useIsAgentSessionActive() {
   const [activeSession, setActiveSession] = useState(
-    () => !!getAgentSessionActive()
+    () => !!getAgentSessionActive(),
   );
   useEffect(() => {
     function listenForAgentSession() {
       if (!window) return;
       window.addEventListener(AGENT_SESSION_START, () =>
-        setActiveSession(true)
+        setActiveSession(true),
       );
       window.addEventListener(AGENT_SESSION_END, () => setActiveSession(false));
     }

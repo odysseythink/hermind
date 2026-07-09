@@ -90,8 +90,25 @@ func (r *Runtime) HandleWS(c *gin.Context) {
 	}
 	sess := newSession(sessCtx, inv.UUID, &ws, user, lm, systemPrompt, tool.NewRegistry(), wc, ttl, r.deps.EventLog, comp)
 
+	// Create a citation emitter that reads the current message UUID from
+	// the session and sends a reportStreamEvent frame with the citations.
+	citationEmitter := func(citations []tools.Citation) {
+		uuid := sess.CurrentMessageUUID()
+		if uuid == "" || len(citations) == 0 {
+			return
+		}
+		_ = wc.Send(ServerFrame{
+			Type: FrameReportStreamEvent,
+			ContentObj: map[string]any{
+				"type":      "citations",
+				"uuid":      uuid,
+				"citations": citations,
+			},
+		})
+	}
+
 	// Step 2: build the real registry with the session's approval gate.
-	reg, err := buildSessionRegistry(c.Request.Context(), r.deps, &ws, user, lm, settings, nil, sess.RequestApproval)
+	reg, err := buildSessionRegistry(c.Request.Context(), r.deps, &ws, user, lm, settings, nil, sess.RequestApproval, citationEmitter)
 	if err != nil {
 		_ = wc.Send(ServerFrame{Type: FrameWSSFailure, Content: "tools: " + err.Error()})
 		return
@@ -150,7 +167,7 @@ func (r *Runtime) HandleWS(c *gin.Context) {
 // buildSessionRegistry composes a tool.Registry for the given session.
 // The emit function sends status frames to the client; it may be nil in tests.
 // approval may be nil, in which case all tools bypass the approval gate.
-func buildSessionRegistry(ctx context.Context, deps Deps, ws *models.Workspace, user *models.User, lm core.LanguageModel, settings map[string]string, emit tools.StatusEmitter, approval tools.ApprovalFn) (*tool.Registry, error) {
+func buildSessionRegistry(ctx context.Context, deps Deps, ws *models.Workspace, user *models.User, lm core.LanguageModel, settings map[string]string, emit tools.StatusEmitter, approval tools.ApprovalFn, citationEmitter tools.CitationEmitter) (*tool.Registry, error) {
 	if emit == nil {
 		emit = func(string) {}
 	}
@@ -171,6 +188,7 @@ func buildSessionRegistry(ctx context.Context, deps Deps, ws *models.Workspace, 
 		ChatSearcher:    deps.ChatSearcher,
 		AgentSkillSvc:   deps.AgentSkillSvc,
 		ProvenanceSvc:   deps.ProvenanceSvc,
+		CitationEmitter: citationEmitter,
 	}
 	// Avoid assigning a nil concrete pointer to an interface (Go nil-interface trap).
 	if deps.MCPHv != nil {

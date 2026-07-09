@@ -16,6 +16,11 @@ import (
 // StatusEmitter sends a progress/status message to the WebSocket client.
 type StatusEmitter func(msg string)
 
+// CitationEmitter sends citation frames to the frontend via the agent WebSocket.
+// The message UUID is captured by the closure at wiring time; tool handlers
+// only supply the citations slice.
+type CitationEmitter func(citations []Citation)
+
 // EventLogger is the subset of EventLogService needed by tools.
 type EventLogger interface {
 	LogEvent(ctx context.Context, event string, metadata map[string]any, userID *int) error
@@ -54,4 +59,5 @@ type ToolContext struct {
 	Cfg             *config.Config
 	AgentSkillSvc   services.AgentSkillManager
 	ProvenanceSvc   services.ProvenanceRecorder
+	EmitCitations   CitationEmitter
 }
