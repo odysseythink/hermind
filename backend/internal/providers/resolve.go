@@ -57,6 +57,28 @@ func providerAPIKeyField(provider string) string {
 		return "HuggingFaceLLMAccessToken"
 	case "perplexity":
 		return "PerplexityApiKey"
+	case "serper":
+		return "AgentSerperApiKey"
+	case "tavily":
+		return "AgentTavilyApiKey"
+	case "brave":
+		return "AgentBraveApiKey"
+	case "bing":
+		return "AgentBingSearchApiKey"
+	case "exa":
+		return "AgentExaApiKey"
+	case "perplexity-search":
+		return "AgentPerplexityApiKey"
+	case "serpapi":
+		return "AgentSerpApiKey"
+	case "searchapi":
+		return "AgentSearchApiKey"
+	case "baidu":
+		return "AgentBaiduSearchApiKey"
+	case "serply":
+		return "AgentSerplyApiKey"
+	case "crw":
+		return "AgentCrwApiKey"
 	case "openrouter":
 		return "OpenRouterApiKey"
 	case "novita":
@@ -134,6 +156,28 @@ func cfgAPIKeyByField(cfg *config.Config, field string) string {
 		return cfg.HuggingFaceApiKey
 	case "PerplexityApiKey":
 		return cfg.PerplexityApiKey
+	case "AgentSerperApiKey":
+		return cfg.AgentSerperApiKey
+	case "AgentTavilyApiKey":
+		return cfg.AgentTavilyApiKey
+	case "AgentBraveApiKey":
+		return cfg.AgentBraveApiKey
+	case "AgentBingSearchApiKey":
+		return cfg.AgentBingSearchApiKey
+	case "AgentExaApiKey":
+		return cfg.AgentExaApiKey
+	case "AgentPerplexityApiKey":
+		return cfg.AgentPerplexityApiKey
+	case "AgentSerpApiKey":
+		return cfg.AgentSerpApiKey
+	case "AgentSearchApiKey":
+		return cfg.AgentSearchApiKey
+	case "AgentBaiduSearchApiKey":
+		return cfg.AgentBaiduSearchApiKey
+	case "AgentSerplyApiKey":
+		return cfg.AgentSerplyApiKey
+	case "AgentCrwApiKey":
+		return cfg.AgentCrwApiKey
 	case "OpenRouterApiKey":
 		return cfg.OpenRouterApiKey
 	case "NovitaLLMApiKey":

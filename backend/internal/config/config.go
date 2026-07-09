@@ -324,6 +324,23 @@ type Config struct {
 	// === WebPush ===
 	WebPushMailTo     string `env:"WEBPUSH_MAIL_TO"      envDefault:"mailto:webpush@hermind.local"`
 	WebPushTTLSeconds int    `env:"WEBPUSH_TTL_SECONDS"  envDefault:"60"`
+
+	// === Agent Search Tools ===
+	AgentSerperApiKey       string `env:"AGENT_SERPER_API_KEY"`
+	AgentTavilyApiKey       string `env:"AGENT_TAVILY_API_KEY"`
+	AgentBraveApiKey        string `env:"AGENT_BRAVE_API_KEY"`
+	AgentBingSearchApiKey   string `env:"AGENT_BING_SEARCH_API_KEY"`
+	AgentExaApiKey          string `env:"AGENT_EXA_API_KEY"`
+	AgentPerplexityApiKey   string `env:"AGENT_PERPLEXITY_API_KEY"`
+	AgentSerpApiKey         string `env:"AGENT_SERPAPI_API_KEY"`
+	AgentSerpApiEngine      string `env:"AGENT_SERPAPI_ENGINE"`
+	AgentSearchApiKey       string `env:"AGENT_SEARCHAPI_API_KEY"`
+	AgentSearchApiEngine    string `env:"AGENT_SEARCHAPI_ENGINE"`
+	AgentBaiduSearchApiKey  string `env:"AGENT_BAIDU_SEARCH_API_KEY"`
+	AgentSearXNGApiUrl      string `env:"AGENT_SEARXNG_API_URL"`
+	AgentSerplyApiKey       string `env:"AGENT_SERPLY_API_KEY"`
+	AgentCrwApiKey          string `env:"AGENT_CRW_API_KEY"`
+	AgentCrwApiUrl          string `env:"AGENT_CRW_API_URL"`
 }
 
 func Load() (*Config, error) {
