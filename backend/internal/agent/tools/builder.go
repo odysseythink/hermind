@@ -93,6 +93,7 @@ func (b *Builder) Build(ctx context.Context, ws *models.Workspace, user *models.
 		NewRAGMemorySkill(tc),
 		NewDocSummarizerSkill(tc),
 		NewWebScrapingSkill(tc),
+		NewWebBrowsingSkill(tc),
 		NewRechartSkill(tc),
 		NewSQLAgentSkill(tc),
 		NewFilesystemAgentSkill(tc),
