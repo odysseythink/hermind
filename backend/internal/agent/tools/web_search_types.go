@@ -2,6 +2,7 @@ package tools
 
 import (
 	"context"
+	"fmt"
 
 	"github.com/odysseythink/hermind/backend/internal/config"
 )
@@ -32,3 +33,18 @@ type SearchProvider interface {
 	Name() string
 	Search(ctx context.Context, query string, settings map[string]string, cfg *config.Config) ([]SearchResult, error)
 }
+
+// SearchError is a typed error returned by search providers on failure.
+// It carries the provider name, a human-readable message, and the
+// underlying cause so callers can report which provider failed.
+type SearchError struct {
+	Provider string
+	Message  string
+	Cause    error
+}
+
+func (e *SearchError) Error() string {
+	return fmt.Sprintf("[%s] %s: %v", e.Provider, e.Message, e.Cause)
+}
+
+func (e *SearchError) Unwrap() error { return e.Cause }
