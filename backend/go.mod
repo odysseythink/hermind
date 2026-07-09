@@ -165,4 +165,4 @@ require (
 	google.golang.org/grpc v1.80.0 // indirect
 )
 
-replace github.com/odysseythink/pantheon v0.0.9 => ./_pantheon
+replace github.com/odysseythink/pantheon v0.0.9 => d:/workspace/go_work/pantheon
