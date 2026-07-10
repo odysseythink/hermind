@@ -339,16 +339,24 @@ func (h *SystemHandler) CustomModels(c *gin.Context) {
 		return
 	}
 
+	// If frontend doesn't send basePath, fall back to env/config.
+	basePath := req.BasePath
+	if basePath == nil || *basePath == "" {
+		if fallback := h.basePathForProvider(req.Provider); fallback != "" {
+			basePath = &fallback
+		}
+	}
+
 	switch req.Provider {
 	case "ollama":
-		models, err := h.ollamaModels(req.BasePath, req.APIKey)
+		models, err := h.ollamaModels(basePath, req.APIKey)
 		if err != nil {
 			c.JSON(http.StatusOK, gin.H{"models": []any{}, "error": err.Error()})
 			return
 		}
 		c.JSON(http.StatusOK, gin.H{"models": models, "error": nil})
 	case "localai", "lmstudio", "generic-openai", "openai", "openrouter", "togetherai":
-		models, err := h.openaiCompatibleModels(req.BasePath, req.APIKey)
+		models, err := h.openaiCompatibleModels(basePath, req.APIKey)
 		if err != nil {
 			c.JSON(http.StatusOK, gin.H{"models": []any{}, "error": err.Error()})
 			return
@@ -359,6 +367,27 @@ func (h *SystemHandler) CustomModels(c *gin.Context) {
 		c.JSON(http.StatusOK, gin.H{"models": models, "error": nil})
 	default:
 		c.JSON(http.StatusOK, gin.H{"models": []any{}, "error": nil})
+	}
+}
+
+func (h *SystemHandler) basePathForProvider(provider string) string {
+	switch provider {
+	case "ollama":
+		return h.cfg.OllamaBasePath
+	case "localai":
+		return h.cfg.LocalAiBasePath
+	case "lmstudio":
+		return h.cfg.LMStudioBasePath
+	case "generic-openai":
+		return h.cfg.GenericOpenAiBasePath
+	case "koboldcpp":
+		return h.cfg.KoboldBasePath
+	case "text-gen-webui":
+		return h.cfg.TextGenBasePath
+	case "litellm":
+		return h.cfg.LiteLLMBasePath
+	default:
+		return ""
 	}
 }
 
