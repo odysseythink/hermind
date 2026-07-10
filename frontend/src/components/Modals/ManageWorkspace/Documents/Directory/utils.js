@@ -34,7 +34,7 @@ export function filterFileSearchResults(files = [], searchTerm = "") {
     const fileSearchResults = [];
     for (const file of folder?.items) {
       const fileNameNormalized = stripUuidAndJsonFromString(
-        file.name
+        file.name,
       ).toLowerCase();
 
       // Exact match check

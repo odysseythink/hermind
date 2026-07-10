@@ -36,7 +36,7 @@ export default forwardRef(function (
     regenerateAssistantMessage,
     websocket = null,
   },
-  ref
+  ref,
 ) {
   const lastScrollTopRef = useRef(0);
   const chatHistoryRef = useRef(null);
@@ -71,7 +71,7 @@ export default forwardRef(function (
 
   const debouncedScroll = useMemo(
     () => debounce(handleScroll, 50),
-    [handleScroll]
+    [handleScroll],
   );
 
   useEffect(() => {
@@ -113,7 +113,7 @@ export default forwardRef(function (
       if (role === "user" && saveOnly) {
         const updatedHistory = [...currentHistory];
         const targetIdx = currentHistory.findIndex(
-          (msg) => msg.chatId === chatId
+          (msg) => msg.chatId === chatId,
         );
         if (targetIdx < 0) return;
         updatedHistory[targetIdx].content = editedMessage;
@@ -123,7 +123,7 @@ export default forwardRef(function (
           threadSlug,
           chatId,
           editedMessage,
-          "user"
+          "user",
         );
         return;
       }
@@ -131,7 +131,7 @@ export default forwardRef(function (
       if (role === "user") {
         const updatedHistory = currentHistory.slice(
           0,
-          currentHistory.findIndex((msg) => msg.chatId === chatId) + 1
+          currentHistory.findIndex((msg) => msg.chatId === chatId) + 1,
         );
         updatedHistory[updatedHistory.length - 1].content = editedMessage;
         await Workspace.deleteEditedChats(workspace.slug, threadSlug, chatId);
@@ -147,7 +147,7 @@ export default forwardRef(function (
       if (role === "assistant") {
         const updatedHistory = [...currentHistory];
         const targetIdx = currentHistory.findIndex(
-          (msg) => msg.chatId === chatId && msg.role === role
+          (msg) => msg.chatId === chatId && msg.role === role,
         );
         if (targetIdx < 0) return;
         updatedHistory[targetIdx].content = editedMessage;
@@ -156,12 +156,12 @@ export default forwardRef(function (
           workspace.slug,
           threadSlug,
           chatId,
-          editedMessage
+          editedMessage,
         );
         return;
       }
     },
-    [workspace.slug, threadSlug, updateHistory]
+    [workspace.slug, threadSlug, updateHistory],
   );
 
   const forkThread = useCallback(
@@ -169,14 +169,14 @@ export default forwardRef(function (
       const newThreadSlug = await Workspace.forkThread(
         workspace.slug,
         threadSlug,
-        chatId
+        chatId,
       );
       window.location.href = paths.workspace.thread(
         workspace.slug,
-        newThreadSlug
+        newThreadSlug,
       );
     },
-    [workspace.slug, threadSlug]
+    [workspace.slug, threadSlug],
   );
 
   const compiledHistory = useMemo(
@@ -196,7 +196,7 @@ export default forwardRef(function (
       saveEditedMessage,
       forkThread,
       websocket,
-    ]
+    ],
   );
   const lastMessageInfo = useMemo(() => getLastMessageInfo(history), [history]);
   const renderStatusResponse = useCallback(
@@ -210,7 +210,7 @@ export default forwardRef(function (
         />
       );
     },
-    [compiledHistory.length, lastMessageInfo]
+    [compiledHistory.length, lastMessageInfo],
   );
 
   return (
@@ -224,7 +224,7 @@ export default forwardRef(function (
         >
           <div className="w-full max-w-[750px]">
             {compiledHistory.map((item, index) =>
-              Array.isArray(item) ? renderStatusResponse(item, index) : item
+              Array.isArray(item) ? renderStatusResponse(item, index) : item,
             )}
           </div>
           {showing && (
@@ -312,7 +312,7 @@ function buildMessages({
           key={`route-${props.uuid}`}
           routedTo={props.routedTo}
           isStreaming={isStreaming}
-        />
+        />,
       );
       return acc;
     }
@@ -327,7 +327,7 @@ function buildMessages({
           description={props.description}
           timeoutMs={props.timeoutMs}
           websocket={websocket}
-        />
+        />,
       );
       return acc;
     }
@@ -341,7 +341,7 @@ function buildMessages({
           allowSkip={props.allowSkip}
           timeoutMs={props.timeoutMs}
           websocket={websocket}
-        />
+        />,
       );
       return acc;
     }
@@ -360,7 +360,7 @@ function buildMessages({
           sources={props.sources}
           error={props.error}
           closed={props.closed}
-        />
+        />,
       );
     } else {
       acc.push(
@@ -382,7 +382,7 @@ function buildMessages({
           metrics={props.metrics}
           outputs={props.outputs}
           clarifyingQuestions={props.clarifyingQuestions}
-        />
+        />,
       );
     }
     return acc;

@@ -45,17 +45,17 @@ export default function LLMSelectorAction({ workspaceSlug = null }) {
   useEffect(() => {
     window.addEventListener(
       TOGGLE_LLM_SELECTOR_EVENT,
-      toggleLLMSelectorTooltip
+      toggleLLMSelectorTooltip,
     );
     window.addEventListener(SAVE_LLM_SELECTOR_EVENT, handleSaveLLMSelector);
     return () => {
       window.removeEventListener(
         TOGGLE_LLM_SELECTOR_EVENT,
-        toggleLLMSelectorTooltip
+        toggleLLMSelectorTooltip,
       );
       window.removeEventListener(
         SAVE_LLM_SELECTOR_EVENT,
-        handleSaveLLMSelector
+        handleSaveLLMSelector,
       );
     };
   }, []);
@@ -83,7 +83,7 @@ export default function LLMSelectorAction({ workspaceSlug = null }) {
     return () =>
       window.removeEventListener(
         PROVIDER_SETUP_EVENT,
-        handleProviderSetupEvent
+        handleProviderSetupEvent,
       );
   }, []);
 

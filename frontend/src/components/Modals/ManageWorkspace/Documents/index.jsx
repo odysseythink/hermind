@@ -27,7 +27,7 @@ export default function DocumentSettings({ workspace }) {
     workspace.slug,
     {
       onProgressCleared: () => fetchKeysRef.current?.(true),
-    }
+    },
   );
 
   async function fetchKeys(refetchWorkspace = false, options = {}) {
@@ -59,7 +59,7 @@ export default function DocumentSettings({ workspace }) {
             items: folder.items.filter(
               (file) =>
                 file.type === "file" &&
-                !documentsInWorkspace.includes(`${folder.name}/${file.name}`)
+                !documentsInWorkspace.includes(`${folder.name}/${file.name}`),
             ),
           };
         } else {
@@ -78,7 +78,7 @@ export default function DocumentSettings({ workspace }) {
             items: folder.items.filter(
               (file) =>
                 file.type === "file" &&
-                documentsInWorkspace.includes(`${folder.name}/${file.name}`)
+                documentsInWorkspace.includes(`${folder.name}/${file.name}`),
             ),
           };
         } else {
@@ -121,7 +121,7 @@ export default function DocumentSettings({ workspace }) {
     setLoadingMessage("This may take a while for large documents");
 
     const filenames = movedItems.map(
-      (item) => `${item.folderName}/${item.name}`
+      (item) => `${item.folderName}/${item.name}`,
     );
     const changesToSend = { adds: filenames };
 
@@ -134,7 +134,7 @@ export default function DocumentSettings({ workspace }) {
     // idle (no active job) before embedding has started.
     const embedPromise = Workspace.modifyEmbeddings(
       workspace.slug,
-      changesToSend
+      changesToSend,
     );
     startEmbedding(workspace.slug, filenames);
 
@@ -189,7 +189,7 @@ export default function DocumentSettings({ workspace }) {
             ...folder,
             items: remainingItems,
           };
-        }
+        },
       );
 
       if (foundItem) {
@@ -212,7 +212,7 @@ export default function DocumentSettings({ workspace }) {
           return {
             ...folder,
             items: folder.items.filter(
-              (file) => !embeddingFilenames.has(`${folder.name}/${file.name}`)
+              (file) => !embeddingFilenames.has(`${folder.name}/${file.name}`),
             ),
           };
         }

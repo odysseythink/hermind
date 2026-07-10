@@ -21,7 +21,7 @@ export default function LemonadeEmbeddingOptions({ settings }) {
   });
 
   const [maxChunkLength, setMaxChunkLength] = useState(
-    settings?.EmbeddingModelMaxChunkLength || 8192
+    settings?.EmbeddingModelMaxChunkLength || 8192,
   );
 
   const handleMaxChunkLengthChange = (e) => {
@@ -184,7 +184,7 @@ function LemonadeModelSelection({ settings, basePath = null }) {
         const { models } = await System.customModels(
           "lemonade-embedder",
           null,
-          basePath
+          basePath,
         );
         setCustomModels(models || []);
       } catch (error) {

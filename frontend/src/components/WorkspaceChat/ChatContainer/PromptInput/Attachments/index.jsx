@@ -25,7 +25,7 @@ export default function AttachmentManager({ attachments }) {
       .filter((a) => a.type === "attachment" && a.contentString)
       .map((a) => ({ contentString: a.contentString, name: a.file.name }));
     const idx = imageAttachments.findIndex(
-      (img) => img.name === attachment.file?.name
+      (img) => img.name === attachment.file?.name,
     );
     if (idx !== -1) openImageLightbox(imageAttachments, idx);
   }
@@ -53,7 +53,7 @@ function AttachmentItem({ attachment, onImageClick }) {
 
   function removeFileFromQueue() {
     window.dispatchEvent(
-      new CustomEvent(REMOVE_ATTACHMENT_EVENT, { detail: { uid, document } })
+      new CustomEvent(REMOVE_ATTACHMENT_EVENT, { detail: { uid, document } }),
     );
   }
 

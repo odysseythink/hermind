@@ -321,7 +321,21 @@ func (h *APIAdminHandler) UpdatePreferences(c *gin.Context) {
 		return
 	}
 	for k, v := range updates {
-		if err := h.sysSvc.SetSetting(c.Request.Context(), k, fmt.Sprintf("%v", v)); err != nil {
+		strVal := fmt.Sprintf("%v", v)
+		if k == "agent_search_provider" {
+			validProviders := map[string]bool{
+				"duckduckgo-engine": true, "brave-search": true, "serpapi": true,
+				"searchapi": true, "serper-dot-dev": true, "bing-search": true,
+				"baidu-search": true, "serply-engine": true, "searxng-engine": true,
+				"tavily-search": true, "exa-search": true, "perplexity-search": true,
+				"crw-search": true,
+			}
+			if !validProviders[strVal] {
+				c.JSON(http.StatusBadRequest, gin.H{"success": false, "error": "unknown search provider: " + strVal})
+				return
+			}
+		}
+		if err := h.sysSvc.SetSetting(c.Request.Context(), k, strVal); err != nil {
 			c.JSON(http.StatusOK, gin.H{"success": false, "error": err.Error()})
 			return
 		}

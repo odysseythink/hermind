@@ -49,7 +49,7 @@ export default function ToolApprovalRequest({
           type: "toolApprovalResponse",
           requestId,
           approved: isApproved,
-        })
+        }),
       );
     }
 

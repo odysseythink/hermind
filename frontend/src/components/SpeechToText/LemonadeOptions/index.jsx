@@ -143,7 +143,7 @@ function LemonadeSTTModelSelection({ settings, basePath = null }) {
         const { models } = await System.customModels(
           "lemonade-stt",
           null,
-          basePath
+          basePath,
         );
         setCustomModels(models || []);
       } catch (error) {

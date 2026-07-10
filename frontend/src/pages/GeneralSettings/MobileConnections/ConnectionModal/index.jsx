@@ -104,7 +104,7 @@ function processConnectionUrl(url) {
   const connectionUrl = new URL(`${window.location.origin}${url}`);
   if (["localhost", "127.0.0.1", "0.0.0.0"].includes(connectionUrl.hostname))
     throw new Error(
-      "Please open this page via your machines private IP address or custom domain. Localhost URLs will not work with the mobile app."
+      "Please open this page via your machines private IP address or custom domain. Localhost URLs will not work with the mobile app.",
     );
   return connectionUrl.toString();
 }

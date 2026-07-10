@@ -25,7 +25,7 @@ export default function AutoSpeak() {
     function fetchSettings() {
       const settings = Appearance.getSettings();
       setAutoPlayAssistantTtsResponse(
-        settings.autoPlayAssistantTtsResponse ?? false
+        settings.autoPlayAssistantTtsResponse ?? false,
       );
     }
     fetchSettings();

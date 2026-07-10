@@ -89,13 +89,13 @@ export default function TranscriptionModelPreference() {
 
   useEffect(() => {
     const filtered = PROVIDERS.filter((provider) =>
-      provider.name.toLowerCase().includes(searchQuery.toLowerCase())
+      provider.name.toLowerCase().includes(searchQuery.toLowerCase()),
     );
     setFilteredProviders(filtered);
   }, [searchQuery, selectedProvider]);
 
   const selectedProviderObject = PROVIDERS.find(
-    (provider) => provider.value === selectedProvider
+    (provider) => provider.value === selectedProvider,
   );
 
   return (
@@ -225,7 +225,7 @@ export default function TranscriptionModelPreference() {
               >
                 {selectedProvider &&
                   PROVIDERS.find(
-                    (provider) => provider.value === selectedProvider
+                    (provider) => provider.value === selectedProvider,
                   )?.options(settings)}
               </div>
             </div>

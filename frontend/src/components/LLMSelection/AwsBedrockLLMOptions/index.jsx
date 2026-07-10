@@ -115,7 +115,7 @@ function BedrockModelSelection({ settings, apiKey, region }) {
         apiKey,
         null,
         null,
-        { region }
+        { region },
       );
       if (models?.length > 0) {
         const modelsByOrganization = models.reduce((acc, model) => {

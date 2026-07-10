@@ -34,10 +34,10 @@ export default function WebsiteDepthOptions() {
       showToast(
         `Successfully scraped ${data.length} ${pluralize(
           "page",
-          data.length
+          data.length,
         )}!`,
         "success",
-        { clear: true }
+        { clear: true },
       );
       e.target.reset();
       setLoading(false);

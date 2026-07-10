@@ -110,7 +110,7 @@ export default function SlashCommandRow({
                   {t("chat_window.publish")}
                 </button>
               </div>,
-              document.body
+              document.body,
             )}
         </div>
       )}

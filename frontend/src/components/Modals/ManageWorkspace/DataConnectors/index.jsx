@@ -70,7 +70,9 @@ export default function DataConnectors() {
   const DATA_CONNECTORS = getDataConnectors(t);
 
   const filteredConnectors = Object.keys(DATA_CONNECTORS).filter((slug) =>
-    DATA_CONNECTORS[slug].name.toLowerCase().includes(searchQuery.toLowerCase())
+    DATA_CONNECTORS[slug].name
+      .toLowerCase()
+      .includes(searchQuery.toLowerCase()),
   );
 
   return (

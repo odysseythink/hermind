@@ -90,7 +90,7 @@ export default function ChatContainer({
     window.dispatchEvent(
       new CustomEvent(PROMPT_INPUT_EVENT, {
         detail: { messageContent, writeMode },
-      })
+      }),
     );
   }
 
@@ -114,7 +114,7 @@ export default function ChatContainer({
           JSON.stringify({
             message: currentMessage,
             attachments: parseAttachments(),
-          })
+          }),
         );
         navigate(paths.workspace.thread(workspace.slug, thread.slug));
         return;
@@ -198,7 +198,7 @@ export default function ChatContainer({
       if (thread) {
         sessionStorage.setItem(
           PENDING_HOME_MESSAGE,
-          JSON.stringify({ message: text, attachments })
+          JSON.stringify({ message: text, attachments }),
         );
         navigate(paths.workspace.thread(workspace.slug, thread.slug));
         return;
@@ -258,7 +258,7 @@ export default function ChatContainer({
     (chatId) => {
       const filteredHistory = chatHistoryRef2.current.slice(0, -1);
       const lastUserMessage = filteredHistory.findLast(
-        (msg) => msg.role === "user"
+        (msg) => msg.role === "user",
       );
       Workspace.deleteChats(workspace.slug, [chatId])
         .then(() =>
@@ -267,11 +267,11 @@ export default function ChatContainer({
             autoSubmit: true,
             history: filteredHistory,
             attachments: lastUserMessage?.attachments,
-          })
+          }),
         )
         .catch((e) => console.error(e));
     },
-    [workspace.slug]
+    [workspace.slug],
   );
 
   useEffect(() => {
@@ -308,7 +308,7 @@ export default function ChatContainer({
             type: "awaitingFeedback",
             feedback: promptMessage?.userMessage,
             attachments,
-          })
+          }),
         );
 
         // /reset during an active agent session should end the session AND
@@ -337,7 +337,7 @@ export default function ChatContainer({
             setChatHistory,
             remHistory,
             _chatHistory,
-            setSocketId
+            setSocketId,
           ),
         attachments,
       });
@@ -354,7 +354,7 @@ export default function ChatContainer({
       try {
         if (!socketId || !!websocket) return;
         socket = new WebSocket(
-          `${websocketURI()}/api/agent-invocation/${socketId}`
+          `${websocketURI()}/api/agent-invocation/${socketId}`,
         );
         socket.supportsAgentStreaming = false;
 
@@ -474,8 +474,8 @@ export default function ChatContainer({
                     onEditWorkspace={() =>
                       navigate(
                         paths.workspace.settings.generalAppearance(
-                          workspace.slug
-                        )
+                          workspace.slug,
+                        ),
                       )
                     }
                     onUploadDocument={() =>

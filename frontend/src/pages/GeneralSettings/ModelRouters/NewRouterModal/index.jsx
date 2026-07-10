@@ -61,7 +61,7 @@ export default function NewRouterModal({
     } else {
       setError(
         apiError ||
-          (isEdit ? t("model-router.edit-router.toast-update-failed") : null)
+          (isEdit ? t("model-router.edit-router.toast-update-failed") : null),
       );
     }
   };

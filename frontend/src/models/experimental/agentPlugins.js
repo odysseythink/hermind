@@ -9,7 +9,7 @@ const AgentPlugins = {
         method: "POST",
         headers: baseHeaders(),
         body: JSON.stringify({ active }),
-      }
+      },
     )
       .then((res) => {
         if (!res.ok) throw new Error("Could not update agent plugin status.");
@@ -27,7 +27,7 @@ const AgentPlugins = {
         method: "POST",
         headers: baseHeaders(),
         body: JSON.stringify({ updates }),
-      }
+      },
     )
       .then((res) => {
         if (!res.ok) throw new Error("Could not update agent plugin config.");

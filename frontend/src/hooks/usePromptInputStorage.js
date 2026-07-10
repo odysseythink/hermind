@@ -61,10 +61,10 @@ export default function usePromptInputStorage({ promptInput, setPromptInput }) {
         promptInputMap[slug] = value;
         localStorage.setItem(
           USER_PROMPT_INPUT_MAP,
-          JSON.stringify(promptInputMap)
+          JSON.stringify(promptInputMap),
         );
       }, 500),
-    []
+    [],
   );
 
   useEffect(() => {

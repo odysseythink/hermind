@@ -16,7 +16,7 @@ export const getCreateFileSkills = (t) => [
     name: "create-text-file",
     title: t("agent.skill.createFiles.skills.create-text-file.title"),
     description: t(
-      "agent.skill.createFiles.skills.create-text-file.description"
+      "agent.skill.createFiles.skills.create-text-file.description",
     ),
     icon: FileText,
   },
@@ -67,7 +67,7 @@ export default function CreateFileSkillPanel({
     setLoading(true);
     Admin.systemPreferencesByFields(["disabled_create_files_skills"])
       .then((res) =>
-        setDisabledSkills(res?.settings?.disabled_create_files_skills ?? [])
+        setDisabledSkills(res?.settings?.disabled_create_files_skills ?? []),
       )
       .catch(() => setDisabledSkills([]))
       .finally(() => setLoading(false));
@@ -77,7 +77,7 @@ export default function CreateFileSkillPanel({
     if (prevHasChanges.current === true && hasChanges === false) {
       Admin.systemPreferencesByFields(["disabled_create_files_skills"])
         .then((res) =>
-          setDisabledSkills(res?.settings?.disabled_create_files_skills ?? [])
+          setDisabledSkills(res?.settings?.disabled_create_files_skills ?? []),
         )
         .catch(() => {});
     }
@@ -89,7 +89,7 @@ export default function CreateFileSkillPanel({
     setDisabledSkills((prev) =>
       prev.includes(skillName)
         ? prev.filter((s) => s !== skillName)
-        : [...prev, skillName]
+        : [...prev, skillName],
     );
   }
 

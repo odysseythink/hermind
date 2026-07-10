@@ -26,13 +26,13 @@ export default function DisconnectedView({
     setReconnecting(true);
     const res = await Telegram.connect(
       newToken.trim(),
-      config.default_workspace
+      config.default_workspace,
     );
     setReconnecting(false);
     if (!res.success)
       return showToast(
         res.error || t("telegram.connected.toast-reconnect-failed"),
-        "error"
+        "error",
       );
 
     setNewToken("");

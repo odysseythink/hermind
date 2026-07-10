@@ -41,7 +41,7 @@ export default function useSubSkillPreferences() {
       const disabled = disabledSubSkills[prefKey] ?? [];
       return !disabled.includes(subSkillName);
     },
-    [disabledSubSkills]
+    [disabledSubSkills],
   );
 
   /**
@@ -66,7 +66,7 @@ export default function useSubSkillPreferences() {
         [prefKey]: updated.join(","),
       });
     },
-    [disabledSubSkills]
+    [disabledSubSkills],
   );
 
   return {

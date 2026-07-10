@@ -82,7 +82,7 @@ export const getOutlookSkills = (t) => ({
         name: "outlook-get-mailbox-stats",
         title: t("agent.skill.outlook.skills.getMailboxStats.title"),
         description: t(
-          "agent.skill.outlook.skills.getMailboxStats.description"
+          "agent.skill.outlook.skills.getMailboxStats.description",
         ),
       },
     ],

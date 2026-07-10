@@ -306,7 +306,7 @@ const System = {
         method: "GET",
         cache: "no-cache",
         headers: baseHeaders(),
-      }
+      },
     )
       .then((res) => res.json())
       .catch((e) => {
@@ -319,7 +319,7 @@ const System = {
     const newData = safeJsonParse(footerData, []);
     window.localStorage.setItem(
       this.cacheKeys.footerIcons,
-      JSON.stringify({ data: newData, lastFetched: Date.now() })
+      JSON.stringify({ data: newData, lastFetched: Date.now() }),
     );
     return { footerData: newData, error: null };
   },
@@ -338,7 +338,7 @@ const System = {
         method: "GET",
         cache: "no-cache",
         headers: baseHeaders(),
-      }
+      },
     )
       .then((res) => res.json())
       .catch((e) => {
@@ -349,7 +349,7 @@ const System = {
     if (!supportEmail || !!error) return { email: "", error: null };
     window.localStorage.setItem(
       this.cacheKeys.supportEmail,
-      JSON.stringify({ email: supportEmail, lastFetched: Date.now() })
+      JSON.stringify({ email: supportEmail, lastFetched: Date.now() }),
     );
     return { email: supportEmail, error: null };
   },
@@ -369,7 +369,7 @@ const System = {
         method: "GET",
         cache: "no-cache",
         headers: baseHeaders(),
-      }
+      },
     )
       .then((res) => res.json())
       .catch((e) => {
@@ -384,7 +384,7 @@ const System = {
 
     window.localStorage.setItem(
       this.cacheKeys.customAppName,
-      JSON.stringify({ appName: customAppName, lastFetched: Date.now() })
+      JSON.stringify({ appName: customAppName, lastFetched: Date.now() }),
     );
     return { appName: customAppName, error: null };
   },
@@ -425,7 +425,7 @@ const System = {
     const url = new URL(`${fullApiUrl()}/system/logo`);
     url.searchParams.append(
       "theme",
-      localStorage.getItem("theme") || "default"
+      localStorage.getItem("theme") || "default",
     );
 
     return await fetch(url, {
@@ -553,7 +553,7 @@ const System = {
     apiKey = null,
     basePath = null,
     timeout = null,
-    options = {}
+    options = {},
   ) {
     const controller = new AbortController();
     if (!!timeout) {
@@ -687,7 +687,7 @@ const System = {
         const data = await res.json();
         if (!res.ok)
           throw new Error(
-            data.message || "Error creating slash command preset."
+            data.message || "Error creating slash command preset.",
           );
         return data;
       })
@@ -708,7 +708,7 @@ const System = {
         const data = await res.json();
         if (!res.ok)
           throw new Error(
-            data.message || "Could not update slash command preset."
+            data.message || "Could not update slash command preset.",
           );
         return data;
       })
@@ -742,7 +742,7 @@ const System = {
    */
   fetchCanViewChatHistory: async function () {
     const cache = window.localStorage.getItem(
-      this.cacheKeys.canViewChatHistory
+      this.cacheKeys.canViewChatHistory,
     );
     const { viewable, lastFetched } = cache
       ? safeJsonParse(cache, { viewable: false, lastFetched: 0 })
@@ -759,7 +759,7 @@ const System = {
 
     window.localStorage.setItem(
       this.cacheKeys.canViewChatHistory,
-      JSON.stringify({ viewable: isViewable, lastFetched: Date.now() })
+      JSON.stringify({ viewable: isViewable, lastFetched: Date.now() }),
     );
     return { viewable: isViewable, error: null };
   },
@@ -812,7 +812,7 @@ const System = {
     if (!newVersion) return null;
     window.localStorage.setItem(
       this.cacheKeys.deploymentVersion,
-      JSON.stringify({ version: newVersion, lastFetched: Date.now() })
+      JSON.stringify({ version: newVersion, lastFetched: Date.now() }),
     );
     return newVersion;
   },

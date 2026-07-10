@@ -24,7 +24,7 @@ export default function ConfluenceOptions() {
         {
           clear: true,
           autoClose: false,
-        }
+        },
       );
       const { data, error } = await System.dataConnectors.confluence.collect({
         baseUrl: form.get("baseUrl"),
@@ -45,7 +45,7 @@ export default function ConfluenceOptions() {
       showToast(
         `Pages collected from Confluence space ${data.spaceKey}. Output folder is ${data.destination}.`,
         "success",
-        { clear: true }
+        { clear: true },
       );
       e.target.reset();
       setLoading(false);

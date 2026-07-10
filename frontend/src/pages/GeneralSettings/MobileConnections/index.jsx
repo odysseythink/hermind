@@ -38,7 +38,7 @@ export default function MobileDevices() {
 
   const removeDevice = (id) => {
     setDevices((prevDevices) =>
-      prevDevices.filter((device) => device.id !== id)
+      prevDevices.filter((device) => device.id !== id),
     );
   };
 

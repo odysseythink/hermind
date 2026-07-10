@@ -84,7 +84,7 @@ function OtherInput({ value, onChange }) {
       value={value}
       onChange={(e) => onChange(e.target.value)}
       placeholder={t(
-        "chat_window.agent_invocation.clarifying_other_placeholder"
+        "chat_window.agent_invocation.clarifying_other_placeholder",
       )}
       className="mt-2 w-full border border-solid border-zinc-700 light:border-slate-500 bg-zinc-800 light:bg-white text-white light:text-slate-900 placeholder:text-zinc-500 light:placeholder:text-slate-500 text-sm rounded-lg focus:outline-white light:focus:outline-slate-400 outline-none p-2"
     />

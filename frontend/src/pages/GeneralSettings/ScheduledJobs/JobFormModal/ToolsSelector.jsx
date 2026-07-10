@@ -96,7 +96,7 @@ export default function ToolsSelector({
       setPlacement(
         spaceBelow < POPOVER_MAX_HEIGHT && spaceAbove > spaceBelow
           ? "top"
-          : "bottom"
+          : "bottom",
       );
     };
     updatePlacement();
@@ -110,7 +110,7 @@ export default function ToolsSelector({
 
   const toolLookup = useMemo(
     () => buildToolLookup(availableTools),
-    [availableTools]
+    [availableTools],
   );
 
   const filteredCategories = useMemo(() => {
@@ -122,7 +122,7 @@ export default function ToolsSelector({
         const items = (cat.items || []).filter(
           (item) =>
             item.name.toLowerCase().includes(q) ||
-            item.description?.toLowerCase().includes(q)
+            item.description?.toLowerCase().includes(q),
         );
         return items.length ? { ...cat, items } : null;
       })
@@ -158,7 +158,7 @@ export default function ToolsSelector({
     onChange(
       selectedTools.includes(id)
         ? selectedTools.filter((x) => x !== id)
-        : [...selectedTools, id]
+        : [...selectedTools, id],
     );
   };
 
@@ -173,7 +173,7 @@ export default function ToolsSelector({
       <p className="text-xs text-zinc-400 light:text-slate-600 mt-1 mb-3">
         {t(
           "scheduledJobs.modal.toolsDescription",
-          "Select which agent tools this job can use. If none are selected, the job runs without any tools."
+          "Select which agent tools this job can use. If none are selected, the job runs without any tools.",
         )}
       </p>
 
@@ -209,7 +209,7 @@ export default function ToolsSelector({
                 const expanded = isCategoryExpanded(cat.category);
                 const state = categoryState(cat);
                 const enabledCount = (cat.items || []).filter((i) =>
-                  selectedTools.includes(i.id)
+                  selectedTools.includes(i.id),
                 ).length;
 
                 return (
@@ -233,13 +233,13 @@ export default function ToolsSelector({
                             className="inline-flex items-center gap-0.5 px-1.5 py-0.5 rounded text-[10px] font-medium bg-amber-500/20 text-amber-400 light:bg-amber-100 light:text-amber-700 hover:bg-amber-500/30 light:hover:bg-amber-200 transition-colors"
                             title={t(
                               "scheduledJobs.modal.needsSetup",
-                              "This skill requires configuration before use"
+                              "This skill requires configuration before use",
                             )}
                           >
                             <Warning size={10} weight="fill" />
                             {t(
                               "scheduledJobs.modal.needsSetupLabel",
-                              "Needs Setup"
+                              "Needs Setup",
                             )}
                           </a>
                         )}
@@ -293,13 +293,13 @@ export default function ToolsSelector({
                                       className="inline-flex items-center gap-0.5 px-1.5 py-0.5 rounded text-[10px] font-medium bg-amber-500/20 text-amber-400 light:bg-amber-100 light:text-amber-700 hover:bg-amber-500/30 light:hover:bg-amber-200 transition-colors"
                                       title={t(
                                         "scheduledJobs.modal.needsSetup",
-                                        "This skill requires configuration before use"
+                                        "This skill requires configuration before use",
                                       )}
                                     >
                                       <Warning size={10} weight="fill" />
                                       {t(
                                         "scheduledJobs.modal.needsSetupLabel",
-                                        "Needs Setup"
+                                        "Needs Setup",
                                       )}
                                     </a>
                                   )}

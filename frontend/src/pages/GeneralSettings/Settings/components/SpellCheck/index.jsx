@@ -7,7 +7,7 @@ export default function SpellCheck() {
   const { t } = useTranslation();
   const [saving, setSaving] = useState(false);
   const [enableSpellCheck, setEnableSpellCheck] = useState(
-    Appearance.get("enableSpellCheck")
+    Appearance.get("enableSpellCheck"),
   );
 
   const handleChange = async (checked) => {

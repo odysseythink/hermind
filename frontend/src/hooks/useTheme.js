@@ -34,7 +34,7 @@ export function useTheme() {
   const [systemTheme, setSystemTheme] = useState(() =>
     window.matchMedia?.("(prefers-color-scheme: light)").matches
       ? "light"
-      : "dark"
+      : "dark",
   );
 
   // Listen for OS level theme changes

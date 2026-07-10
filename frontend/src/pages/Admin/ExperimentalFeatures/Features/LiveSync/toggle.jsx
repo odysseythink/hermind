@@ -25,7 +25,7 @@ export default function LiveSyncToggle({ enabled = false, onToggle }) {
         !status ? "enabled" : "disabled"
       }.`,
       "success",
-      { clear: true }
+      { clear: true },
     );
     onToggle();
   }

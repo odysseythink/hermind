@@ -36,7 +36,7 @@ export default function AgentLLMItem({
     // not yet set in settings.
     if (!checked) {
       const requiresAdditionalSetup = (llm.requiredConfig || []).some(
-        (key) => !currentSettings[key]
+        (key) => !currentSettings[key],
       );
       if (requiresAdditionalSetup) {
         openModal();
@@ -183,6 +183,6 @@ function SetupProvider({
         </div>
       </div>
     </ModalWrapper>,
-    document.getElementById("workspace-agent-settings-container")
+    document.getElementById("workspace-agent-settings-container"),
   );
 }

@@ -127,7 +127,7 @@ const JustMe = ({
     if (!PW_REGEX.test(formData.get("password"))) {
       showToast(
         `Your password has restricted characters in it. Allowed symbols are _,-,!,@,$,%,^,&,*,(,),;`,
-        "error"
+        "error",
       );
       return;
     }

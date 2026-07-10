@@ -21,8 +21,8 @@ export default function Members({ workspace }) {
       const adminWorkspaces = await Admin.workspaces();
       setAdminWorkspace(
         adminWorkspaces.find(
-          (adminWorkspace) => adminWorkspace.id === workspace.id
-        )
+          (adminWorkspace) => adminWorkspace.id === workspace.id,
+        ),
       );
       setWorkspaceUsers(workspaceUsers);
       setUsers(_users);

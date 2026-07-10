@@ -17,7 +17,7 @@ import { formatDuration } from "@/utils/numbers";
 function formatRunDuration(run) {
   if (!run.completedAt || !run.startedAt) return "—";
   const duration = moment.duration(
-    moment(run.completedAt).diff(moment(run.startedAt))
+    moment(run.completedAt).diff(moment(run.startedAt)),
   );
   return formatDuration(duration.asSeconds());
 }

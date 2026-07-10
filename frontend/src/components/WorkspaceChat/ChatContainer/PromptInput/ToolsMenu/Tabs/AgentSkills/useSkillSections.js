@@ -79,7 +79,7 @@ export default function useSkillSections({
           t,
           isSubSkillEnabled,
           toggleSubSkill,
-        })
+        }),
       );
     }
     if (skillItems.length > 0) {
@@ -104,7 +104,7 @@ export default function useSkillSections({
           t,
           isSubSkillEnabled,
           toggleSubSkill,
-        })
+        }),
       );
     }
     if (appIntegrationItems.length > 0) {
@@ -160,7 +160,7 @@ export default function useSkillSections({
           toggleMcpTool(
             server.name,
             tool.name,
-            !suppressedTools.includes(tool.name)
+            !suppressedTools.includes(tool.name),
           ),
       }));
       sectionList.push({

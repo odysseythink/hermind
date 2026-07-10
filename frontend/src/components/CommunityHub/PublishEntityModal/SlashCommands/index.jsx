@@ -115,7 +115,7 @@ export default function SlashCommands({ entity }) {
               maxLength={300}
               defaultValue={entity.name}
               placeholder={t(
-                "community_hub.publish.slash_command.name_placeholder"
+                "community_hub.publish.slash_command.name_placeholder",
               )}
               className="border-none w-full bg-theme-bg-secondary rounded-lg p-2 text-theme-text-primary text-sm focus:outline-primary-button active:outline-primary-button outline-none placeholder:text-theme-text-placeholder"
             />
@@ -135,7 +135,7 @@ export default function SlashCommands({ entity }) {
               maxLength={1000}
               defaultValue={entity.description}
               placeholder={t(
-                "community_hub.publish.slash_command.description_description"
+                "community_hub.publish.slash_command.description_description",
               )}
               className="border-none w-full bg-theme-bg-secondary rounded-lg p-2 text-white text-sm focus:outline-primary-button active:outline-primary-button outline-none min-h-[80px] placeholder:text-theme-text-placeholder"
             />
@@ -169,7 +169,7 @@ export default function SlashCommands({ entity }) {
                 onChange={(e) => setTagInput(e.target.value)}
                 onKeyDown={handleKeyDown}
                 placeholder={t(
-                  "community_hub.publish.slash_command.tags_placeholder"
+                  "community_hub.publish.slash_command.tags_placeholder",
                 )}
                 className="flex-1 min-w-[200px] border-none text-sm bg-transparent text-theme-text-primary placeholder:text-theme-text-placeholder p-0 h-[24px] focus:outline-none"
               />
@@ -235,7 +235,7 @@ export default function SlashCommands({ entity }) {
               minLength={10}
               defaultValue={entity.prompt}
               placeholder={t(
-                "community_hub.publish.slash_command.prompt_placeholder"
+                "community_hub.publish.slash_command.prompt_placeholder",
               )}
               className="border-none w-full bg-theme-bg-secondary rounded-lg p-2 text-white text-sm focus:outline-primary-button active:outline-primary-button outline-none min-h-[300px] placeholder:text-theme-text-placeholder"
             />

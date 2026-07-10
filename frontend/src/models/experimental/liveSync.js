@@ -44,7 +44,7 @@ const LiveDocumentSync = {
       .then((res) => {
         if (!res.ok) {
           throw new Error(
-            res.statusText || "Error setting watch status for document."
+            res.statusText || "Error setting watch status for document.",
           );
         }
         return true;

@@ -74,7 +74,7 @@ export default function WorkspaceChats() {
   const handleClearAllChats = async () => {
     if (
       !window.confirm(
-        `Are you sure you want to clear all chats?\n\nThis action is irreversible.`
+        `Are you sure you want to clear all chats?\n\nThis action is irreversible.`,
       )
     )
       return false;

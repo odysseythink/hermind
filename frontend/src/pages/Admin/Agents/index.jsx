@@ -90,10 +90,10 @@ export default function AdminAgents() {
     return true;
   };
   const configurableSkills = Object.fromEntries(
-    Object.entries(allConfigurableSkills).filter(filterSkillsByMode)
+    Object.entries(allConfigurableSkills).filter(filterSkillsByMode),
   );
   const appIntegrationSkills = Object.fromEntries(
-    Object.entries(allAppIntegrationSkills).filter(filterSkillsByMode)
+    Object.entries(allAppIntegrationSkills).filter(filterSkillsByMode),
   );
 
   // Alert user if they try to leave the page with unsaved changes
@@ -135,7 +135,7 @@ export default function AdminAgents() {
       setSettings({ ..._settings, preferences: _preferences.settings } ?? {});
       setAgentSkills(_preferences.settings?.default_agent_skills ?? []);
       setDisabledAgentSkills(
-        _preferences.settings?.disabled_agent_skills ?? []
+        _preferences.settings?.disabled_agent_skills ?? [],
       );
       setImportedSkills(_preferences.settings?.imported_agent_skills ?? []);
       setActiveFlowIds(flows.filter((f) => f.active).map((f) => f.uuid));
@@ -222,7 +222,7 @@ export default function AdminAgents() {
       setSettings({ ..._settings, preferences: _preferences.settings } ?? {});
       setAgentSkills(_preferences.settings?.default_agent_skills ?? []);
       setDisabledAgentSkills(
-        _preferences.settings?.disabled_agent_skills ?? []
+        _preferences.settings?.disabled_agent_skills ?? [],
       );
       setImportedSkills(_preferences.settings?.imported_agent_skills ?? []);
       showToast(`Agent preferences saved successfully.`, "success", {
@@ -288,7 +288,7 @@ export default function AdminAgents() {
   const handleMCPServerDelete = (serverName) => {
     setSelectedMcpServer(null);
     setMcpServers((prev) =>
-      prev.filter((server) => server.name !== serverName)
+      prev.filter((server) => server.name !== serverName),
     );
   };
 
@@ -296,7 +296,7 @@ export default function AdminAgents() {
     const { success, error, suppressedTools } = await MCPServers.toggleTool(
       serverName,
       toolName,
-      enabled
+      enabled,
     );
 
     if (!success) {
@@ -317,7 +317,7 @@ export default function AdminAgents() {
             },
           },
         };
-      })
+      }),
     );
 
     setSelectedMcpServer((prev) => {
@@ -385,7 +385,7 @@ export default function AdminAgents() {
               selectedSkill={selectedSkill}
               handleClick={handleDefaultSkillClick}
               activeSkills={Object.keys(defaultSkills).filter(
-                (skill) => !disabledAgentSkills.includes(skill)
+                (skill) => !disabledAgentSkills.includes(skill),
               )}
             />
             {/* Configurable skills */}
@@ -503,7 +503,7 @@ export default function AdminAgents() {
                                 toggleSkill={toggleDefaultSkill}
                                 enabled={
                                   !disabledAgentSkills.includes(
-                                    defaultSkills[selectedSkill]?.skill
+                                    defaultSkills[selectedSkill]?.skill,
                                   )
                                 }
                                 setHasChanges={setHasChanges}
@@ -516,7 +516,7 @@ export default function AdminAgents() {
                                 settings={settings}
                                 toggleSkill={toggleAgentSkill}
                                 enabled={agentSkills.includes(
-                                  configurableSkills[selectedSkill]?.skill
+                                  configurableSkills[selectedSkill]?.skill,
                                 )}
                                 setHasChanges={setHasChanges}
                                 hasChanges={hasChanges}
@@ -531,7 +531,7 @@ export default function AdminAgents() {
                                 settings={settings}
                                 toggleSkill={toggleAgentSkill}
                                 enabled={agentSkills.includes(
-                                  appIntegrationSkills[selectedSkill]?.skill
+                                  appIntegrationSkills[selectedSkill]?.skill,
                                 )}
                                 setHasChanges={setHasChanges}
                                 hasChanges={hasChanges}
@@ -609,7 +609,7 @@ export default function AdminAgents() {
                 selectedSkill={selectedSkill}
                 handleClick={handleSkillClick}
                 activeSkills={Object.keys(defaultSkills).filter(
-                  (skill) => !disabledAgentSkills.includes(skill)
+                  (skill) => !disabledAgentSkills.includes(skill),
                 )}
               />
               {/* Configurable skills */}
@@ -725,7 +725,7 @@ export default function AdminAgents() {
                         toggleSkill={toggleDefaultSkill}
                         enabled={
                           !disabledAgentSkills.includes(
-                            defaultSkills[selectedSkill]?.skill
+                            defaultSkills[selectedSkill]?.skill,
                           )
                         }
                         setHasChanges={setHasChanges}
@@ -738,7 +738,7 @@ export default function AdminAgents() {
                         settings={settings}
                         toggleSkill={toggleAgentSkill}
                         enabled={agentSkills.includes(
-                          configurableSkills[selectedSkill]?.skill
+                          configurableSkills[selectedSkill]?.skill,
                         )}
                         setHasChanges={setHasChanges}
                         hasChanges={hasChanges}
@@ -751,7 +751,7 @@ export default function AdminAgents() {
                         settings={settings}
                         toggleSkill={toggleAgentSkill}
                         enabled={agentSkills.includes(
-                          appIntegrationSkills[selectedSkill]?.skill
+                          appIntegrationSkills[selectedSkill]?.skill,
                         )}
                         setHasChanges={setHasChanges}
                         hasChanges={hasChanges}

@@ -29,7 +29,7 @@ export default function UploadFile({
     const form = new FormData(formEl);
     const { response, data } = await Workspace.uploadLink(
       workspace.slug,
-      form.get("link")
+      form.get("link"),
     );
     if (!response.ok) {
       showToast(`Error uploading link: ${data.error}`, "error");
@@ -43,7 +43,7 @@ export default function UploadFile({
   };
 
   const debouncedFetchKeysRef = useRef(
-    debounce((fn, opts) => fn(true, opts), 1000)
+    debounce((fn, opts) => fn(true, opts), 1000),
   );
   const handleUploadSuccess = () =>
     debouncedFetchKeysRef.current(fetchKeys, { autoSelectNew: true });

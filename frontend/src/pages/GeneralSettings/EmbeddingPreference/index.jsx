@@ -238,13 +238,13 @@ export default function GeneralEmbeddingPreference() {
 
   useEffect(() => {
     const filtered = EMBEDDERS.filter((embedder) =>
-      embedder.name.toLowerCase().includes(searchQuery.toLowerCase())
+      embedder.name.toLowerCase().includes(searchQuery.toLowerCase()),
     );
     setFilteredEmbedders(filtered);
   }, [searchQuery, selectedEmbedder]);
 
   const selectedEmbedderObject = EMBEDDERS.find(
-    (embedder) => embedder.value === selectedEmbedder
+    (embedder) => embedder.value === selectedEmbedder,
   );
 
   return (
@@ -380,7 +380,7 @@ export default function GeneralEmbeddingPreference() {
               >
                 {selectedEmbedder &&
                   EMBEDDERS.find(
-                    (embedder) => embedder.value === selectedEmbedder
+                    (embedder) => embedder.value === selectedEmbedder,
                   )?.options(settings)}
               </div>
             </div>

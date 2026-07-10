@@ -3,11 +3,11 @@ import { DISABLED_PROVIDERS } from "@/hooks/useGetProvidersModels";
 
 export function autoScrollToSelectedLLMProvider(
   selectedLLMProvider,
-  timeout = 500
+  timeout = 500,
 ) {
   setTimeout(() => {
     const selectedButton = document.querySelector(
-      `[data-llm-value="${selectedLLMProvider}"]`
+      `[data-llm-value="${selectedLLMProvider}"]`,
     );
     if (!selectedButton) return;
     selectedButton.scrollIntoView({ behavior: "smooth", block: "nearest" });
@@ -32,7 +32,7 @@ export function validatedModelSelection(model) {
     // If the model is not in the dropdown, return the first model in the dropdown
     // to prevent invalid provider<>model selection issues
     const selectedOption = selectOption.querySelector(
-      `option[value="${model}"]`
+      `option[value="${model}"]`,
     );
     if (!selectedOption) return selectOption.querySelector(`option`).value;
 
@@ -56,5 +56,5 @@ export function hasMissingCredentials(settings, provider) {
 }
 
 export const WORKSPACE_LLM_PROVIDERS = ALL_LLM_PROVIDERS.filter(
-  (provider) => !DISABLED_PROVIDERS.includes(provider.value)
+  (provider) => !DISABLED_PROVIDERS.includes(provider.value),
 );

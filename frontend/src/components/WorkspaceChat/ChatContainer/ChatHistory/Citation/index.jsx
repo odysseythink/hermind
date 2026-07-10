@@ -319,14 +319,14 @@ export function parseChunkSource({ title = "", chunks = [] }) {
   if (
     !chunks.length ||
     !supportedSources.some((source) =>
-      chunks[0].chunkSource?.startsWith(source)
+      chunks[0].chunkSource?.startsWith(source),
     )
   )
     return nullResponse;
 
   try {
     const sourceID = supportedSources.find((source) =>
-      chunks[0].chunkSource?.startsWith(source)
+      chunks[0].chunkSource?.startsWith(source),
     );
     let url, text, icon;
 

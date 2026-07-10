@@ -11,7 +11,7 @@ export default function AddMemberModal({ closeModal, workspace, users }) {
     e.preventDefault();
     const { success, error } = await Admin.updateUsersInWorkspace(
       workspace.id,
-      selectedUsers
+      selectedUsers,
     );
     if (success) {
       showToast("Users updated successfully.", "success");
@@ -54,7 +54,7 @@ export default function AddMemberModal({ closeModal, workspace, users }) {
 
   const filteredUsers = users
     .filter((user) =>
-      user.username.toLowerCase().includes(searchTerm.toLowerCase())
+      user.username.toLowerCase().includes(searchTerm.toLowerCase()),
     )
     .filter((user) => user.role !== "admin")
     .filter((user) => user.role !== "manager");

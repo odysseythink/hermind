@@ -40,7 +40,7 @@ export default function OpenAiTextToSpeechOptions({ settings }) {
                   {toProperCase(voice)}
                 </option>
               );
-            }
+            },
           )}
         </select>
       </div>

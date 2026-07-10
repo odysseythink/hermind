@@ -179,8 +179,8 @@ function FileReview({ item }) {
                   fileMarkup(file) === "markdown"
                     ? file.content.replace(/```/g, "~~~") // Escape triple backticks in markdown
                     : file.content
-                }\n\`\`\``
-              )
+                }\n\`\`\``,
+              ),
             ),
           }}
         />

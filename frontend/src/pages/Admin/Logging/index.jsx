@@ -30,7 +30,7 @@ export default function AdminLogs() {
   const handleResetLogs = async () => {
     if (
       !window.confirm(
-        "Are you sure you want to clear all event logs? This action is irreversible."
+        "Are you sure you want to clear all event logs? This action is irreversible.",
       )
     )
       return;

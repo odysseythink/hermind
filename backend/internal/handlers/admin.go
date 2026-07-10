@@ -360,6 +360,24 @@ func (h *AdminHandler) UpdateSystemPreferences(c *gin.Context) {
 			default:
 				strVal = fmt.Sprintf("%v", val)
 			}
+		case "agent_search_provider":
+			switch v := val.(type) {
+			case string:
+				strVal = v
+			default:
+				strVal = fmt.Sprintf("%v", val)
+			}
+			validProviders := map[string]bool{
+				"duckduckgo-engine": true, "brave-search": true, "serpapi": true,
+				"searchapi": true, "serper-dot-dev": true, "bing-search": true,
+				"baidu-search": true, "serply-engine": true, "searxng-engine": true,
+				"tavily-search": true, "exa-search": true, "perplexity-search": true,
+				"crw-search": true,
+			}
+			if !validProviders[strVal] {
+				c.JSON(http.StatusBadRequest, gin.H{"success": false, "error": "unknown search provider: " + strVal})
+				return
+			}
 		default:
 			switch v := val.(type) {
 			case string:

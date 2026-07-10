@@ -26,7 +26,7 @@ export default function DrupalWikiOptions() {
         {
           clear: true,
           autoClose: false,
-        }
+        },
       );
       const { data, error } = await System.dataConnectors.drupalwiki.collect({
         baseUrl: form.get("baseUrl"),
@@ -43,7 +43,7 @@ export default function DrupalWikiOptions() {
       showToast(
         `Pages collected from Drupal Wiki spaces ${data.spaceIds}. Output folder is ${data.destination}.`,
         "success",
-        { clear: true }
+        { clear: true },
       );
       e.target.reset();
       setLoading(false);

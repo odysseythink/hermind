@@ -18,7 +18,7 @@ export default function AgentSkillReranker() {
           AgentSkillRerankerTopN: newMaxToolsCount.toString(),
         });
       }, 800),
-    []
+    [],
   );
 
   useEffect(() => {
@@ -76,7 +76,7 @@ export default function AgentSkillReranker() {
             </label>
             <p className="text-xs text-white/60">
               {t(
-                "agent.settings.intelligent-skill-selection.max-tools.description"
+                "agent.settings.intelligent-skill-selection.max-tools.description",
               )}
             </p>
           </div>

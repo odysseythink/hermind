@@ -11,7 +11,7 @@ export default function DocumentSyncQueueRow({ queue }) {
     await System.experimentalFeatures.liveSync.setWatchStatusForDocument(
       queue.workspaceDoc.workspace.slug,
       queue.workspaceDoc.docpath,
-      false
+      false,
     );
   };
 

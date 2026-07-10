@@ -13,7 +13,7 @@ export default function ExperimentalFeatures() {
   const [featureFlags, setFeatureFlags] = useState({});
   const [loading, setLoading] = useState(true);
   const [selectedFeature, setSelectedFeature] = useState(
-    "experimental_live_file_sync"
+    "experimental_live_file_sync",
   );
 
   useEffect(() => {
@@ -185,11 +185,11 @@ function FeatureVerification({ children }) {
 
       window.localStorage.setItem(
         "anythingllm_tos_experimental_feature_set",
-        "accepted"
+        "accepted",
       );
       showToast(
         "Experimental Feature set enabled. Reloading the page.",
-        "success"
+        "success",
       );
       setTimeout(() => {
         window.location.reload();

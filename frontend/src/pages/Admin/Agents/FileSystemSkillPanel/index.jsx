@@ -25,7 +25,7 @@ export const getFileSystemSubSkills = (t) => {
       name: "filesystem-read-text-file",
       title: t("agent.skill.filesystem.skills.read-text-file.title"),
       description: t(
-        "agent.skill.filesystem.skills.read-text-file.description"
+        "agent.skill.filesystem.skills.read-text-file.description",
       ),
       icon: File,
       category: "read",
@@ -34,7 +34,7 @@ export const getFileSystemSubSkills = (t) => {
       name: "filesystem-read-multiple-files",
       title: t("agent.skill.filesystem.skills.read-multiple-files.title"),
       description: t(
-        "agent.skill.filesystem.skills.read-multiple-files.description"
+        "agent.skill.filesystem.skills.read-multiple-files.description",
       ),
       icon: Files,
       category: "read",
@@ -43,7 +43,7 @@ export const getFileSystemSubSkills = (t) => {
       name: "filesystem-list-directory",
       title: t("agent.skill.filesystem.skills.list-directory.title"),
       description: t(
-        "agent.skill.filesystem.skills.list-directory.description"
+        "agent.skill.filesystem.skills.list-directory.description",
       ),
       icon: FolderOpen,
       category: "read",
@@ -66,7 +66,7 @@ export const getFileSystemSubSkills = (t) => {
       name: "filesystem-write-text-file",
       title: t("agent.skill.filesystem.skills.write-text-file.title"),
       description: t(
-        "agent.skill.filesystem.skills.write-text-file.description"
+        "agent.skill.filesystem.skills.write-text-file.description",
       ),
       icon: FloppyDisk,
       category: "write",
@@ -82,7 +82,7 @@ export const getFileSystemSubSkills = (t) => {
       name: "filesystem-create-directory",
       title: t("agent.skill.filesystem.skills.create-directory.title"),
       description: t(
-        "agent.skill.filesystem.skills.create-directory.description"
+        "agent.skill.filesystem.skills.create-directory.description",
       ),
       icon: FolderPlus,
       category: "write",
@@ -125,7 +125,7 @@ export default function FileSystemSkillPanel({
     setLoading(true);
     Admin.systemPreferencesByFields(["disabled_filesystem_skills"])
       .then((res) =>
-        setDisabledSubSkills(res?.settings?.disabled_filesystem_skills ?? [])
+        setDisabledSubSkills(res?.settings?.disabled_filesystem_skills ?? []),
       )
       .catch(() => setDisabledSubSkills([]))
       .finally(() => setLoading(false));
@@ -135,7 +135,7 @@ export default function FileSystemSkillPanel({
     if (prevHasChanges.current === true && hasChanges === false) {
       Admin.systemPreferencesByFields(["disabled_filesystem_skills"])
         .then((res) =>
-          setDisabledSubSkills(res?.settings?.disabled_filesystem_skills ?? [])
+          setDisabledSubSkills(res?.settings?.disabled_filesystem_skills ?? []),
         )
         .catch(() => {});
     }
@@ -153,7 +153,7 @@ export default function FileSystemSkillPanel({
   }
   const readSkills = FILESYSTEM_SUB_SKILLS.filter((s) => s.category === "read");
   const writeSkills = FILESYSTEM_SUB_SKILLS.filter(
-    (s) => s.category === "write"
+    (s) => s.category === "write",
   );
 
   return (

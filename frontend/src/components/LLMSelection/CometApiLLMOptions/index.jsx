@@ -96,7 +96,7 @@ function CometApiModelSelection({ settings }) {
           }
         }
         unique.sort((a, b) =>
-          String(a.name || a.id).localeCompare(String(b.name || b.id))
+          String(a.name || a.id).localeCompare(String(b.name || b.id)),
         );
         setModels(unique);
       } else {

@@ -19,7 +19,7 @@ export default function AgentClarifyingQuestions() {
           agent_clarifying_questions_max_per_turn: String(value),
         });
       }, 800),
-    []
+    [],
   );
 
   useEffect(() => {
@@ -81,7 +81,7 @@ export default function AgentClarifyingQuestions() {
               </label>
               <p className="text-xs text-white/60">
                 {t(
-                  "agent.settings.clarifying-questions.max-per-turn.description"
+                  "agent.settings.clarifying-questions.max-per-turn.description",
                 )}
               </p>
             </div>

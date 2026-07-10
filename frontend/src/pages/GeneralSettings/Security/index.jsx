@@ -216,7 +216,7 @@ function PasswordProtection() {
     if (!PW_REGEX.test(form.get("password"))) {
       showToast(
         `Your password has restricted characters in it. Allowed symbols are _,-,!,@,$,%,^,&,*,(,),;`,
-        "error"
+        "error",
       );
       setSaving(false);
       return;

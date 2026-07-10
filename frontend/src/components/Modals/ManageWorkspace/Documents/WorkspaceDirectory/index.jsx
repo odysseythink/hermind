@@ -40,7 +40,7 @@ function WorkspaceDirectory({
   const [selectedItems, setSelectedItems] = useState({});
   const embeddedDocCount = (files?.items ?? []).reduce(
     (sum, folder) => sum + (folder.items?.length ?? 0),
-    0
+    0,
   );
 
   const toggleSelection = (item) => {
@@ -75,7 +75,7 @@ function WorkspaceDirectory({
 
     const itemsToRemove = Object.keys(selectedItems).map((itemId) => {
       const folder = files.items.find((f) =>
-        f.items.some((i) => i.id === itemId)
+        f.items.some((i) => i.id === itemId),
       );
       const item = folder.items.find((i) => i.id === itemId);
       return `${folder.name}/${item.name}`;
@@ -197,7 +197,7 @@ function WorkspaceDirectory({
                       Object.keys(selectedItems).length ===
                       files.items.reduce(
                         (sum, folder) => sum + folder.items.length,
-                        0
+                        0,
                       )
                     }
                     tabIndex={0}
@@ -206,7 +206,7 @@ function WorkspaceDirectory({
                     {Object.keys(selectedItems).length ===
                       files.items.reduce(
                         (sum, folder) => sum + folder.items.length,
-                        0
+                        0,
                       ) && <div className="w-2 h-2 bg-white rounded-[2px]" />}
                   </div>
                 ) : (
@@ -268,7 +268,7 @@ function WorkspaceDirectory({
                       {Object.keys(selectedItems).length ===
                       files.items.reduce(
                         (sum, folder) => sum + folder.items.length,
-                        0
+                        0,
                       )
                         ? t("connectors.directory.deselect_all")
                         : t("connectors.directory.select_all")}
@@ -522,7 +522,7 @@ const getDisplayName = (filename) => {
   const base = filename.split("/").pop() || filename;
   return base.replace(
     /-[a-f0-9]{8}-[a-f0-9]{4}-[a-f0-9]{4}-[a-f0-9]{4}-[a-f0-9]{12}\.json$/,
-    ""
+    "",
   );
 };
 

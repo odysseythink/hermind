@@ -81,8 +81,8 @@ delete TRANSLATIONS["en"];
 
 console.log(
   `The following translation files will be verified: [${Object.keys(
-    TRANSLATIONS
-  ).join(",")}]`
+    TRANSLATIONS,
+  ).join(",")}]`,
 );
 for (const [lang, translations] of Object.entries(TRANSLATIONS)) {
   const passed = compareStructures(lang, translations, PRIMARY);
@@ -93,9 +93,9 @@ for (const [lang, translations] of Object.entries(TRANSLATIONS)) {
 if (failed.length !== 0)
   throw new Error(
     `The following translations files are INVALID and need fixing. Please see logs`,
-    failed
+    failed,
   );
 console.log(
-  `👍 All translation files located match the schema defined by the English file!`
+  `👍 All translation files located match the schema defined by the English file!`,
 );
 process.exit(0);

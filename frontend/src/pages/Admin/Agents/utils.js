@@ -23,7 +23,7 @@ export function filterSkillCategories(skillCategories, searchTerm) {
   const filtered = {};
   for (const [key, category] of Object.entries(skillCategories)) {
     const matchingSkills = category.skills.filter((skill) =>
-      skillMatchesSearch(skill, searchTerm)
+      skillMatchesSearch(skill, searchTerm),
     );
     if (matchingSkills.length > 0) {
       filtered[key] = { ...category, skills: matchingSkills };

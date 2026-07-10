@@ -78,7 +78,7 @@ function NvidiaNimModelSelection({ settings, basePath }) {
       const { models } = await System.customModels(
         "nvidia-nim",
         null,
-        basePath
+        basePath,
       );
       setModels(models);
       setLoading(false);

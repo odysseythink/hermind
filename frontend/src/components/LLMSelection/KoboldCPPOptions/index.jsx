@@ -20,10 +20,10 @@ export default function KoboldCPPOptions({ settings }) {
   });
 
   const [tokenLimit, setTokenLimit] = useState(
-    settings?.KoboldCPPTokenLimit || 4096
+    settings?.KoboldCPPTokenLimit || 4096,
   );
   const [maxTokens, setMaxTokens] = useState(
-    settings?.KoboldCPPMaxTokens || 2048
+    settings?.KoboldCPPMaxTokens || 2048,
   );
 
   const handleTokenLimitChange = (e) => {
@@ -159,7 +159,7 @@ function KoboldCPPModelSelection({ settings, basePath = null }) {
         const { models } = await System.customModels(
           "koboldcpp",
           null,
-          basePath
+          basePath,
         );
         setCustomModels(models || []);
       } catch (error) {

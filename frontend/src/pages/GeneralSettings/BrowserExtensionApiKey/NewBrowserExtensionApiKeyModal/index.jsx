@@ -25,7 +25,7 @@ export default function NewBrowserExtensionApiKeyModal({
 
       window.postMessage(
         { type: POPUP_BROWSER_EXTENSION_EVENT, apiKey: fullApiKey },
-        "*"
+        "*",
       );
     }
     setError(error);

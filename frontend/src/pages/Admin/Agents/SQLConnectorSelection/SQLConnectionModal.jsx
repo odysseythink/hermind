@@ -153,7 +153,7 @@ export default function SQLConnectionModal({
   function isDuplicateConnectionName(slugifiedName) {
     // Get active connections (not marked for removal)
     const activeConnections = connections.filter(
-      (conn) => conn.action !== "remove"
+      (conn) => conn.action !== "remove",
     );
 
     // Check for duplicates, excluding the original connection in edit mode
@@ -191,7 +191,7 @@ export default function SQLConnectionModal({
       showToast(
         `A connection with the name "${slugifiedDatabaseId}" already exists. Please choose a different name.`,
         "error",
-        { clear: true }
+        { clear: true },
       );
       return;
     }
@@ -201,14 +201,14 @@ export default function SQLConnectionModal({
       // Validate that we can actually connect to this database
       const { success, error } = await System.validateSQLConnection(
         engine,
-        connectionString
+        connectionString,
       );
       if (!success) {
         showToast(
           error ||
             "Failed to establish database connection. Please check your connection details.",
           "error",
-          { clear: true }
+          { clear: true },
         );
         setIsValidating(false);
         return;
@@ -247,7 +247,7 @@ export default function SQLConnectionModal({
         error?.message ||
           "Failed to validate connection. Please check your connection details.",
         "error",
-        { clear: true }
+        { clear: true },
       );
     } finally {
       setIsValidating(false);
@@ -473,7 +473,7 @@ export default function SQLConnectionModal({
         </div>
       </div>
     </ModalWrapper>,
-    document.getElementById("workspace-agent-settings-container")
+    document.getElementById("workspace-agent-settings-container"),
   );
 }
 

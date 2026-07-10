@@ -76,7 +76,7 @@ export default function AddBlockMenu({
                     </div>
                   </div>
                 </button>
-              )
+              ),
           )}
         </div>
       )}

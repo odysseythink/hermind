@@ -65,7 +65,7 @@ export function DnDFileUploaderProvider({
     window.addEventListener(PASTE_ATTACHMENT_EVENT, handlePastedAttachment);
     window.addEventListener(
       PARSED_FILE_ATTACHMENT_REMOVED_EVENT,
-      handleRemoveParsedFile
+      handleRemoveParsedFile,
     );
 
     return () => {
@@ -73,11 +73,11 @@ export function DnDFileUploaderProvider({
       window.removeEventListener(CLEAR_ATTACHMENTS_EVENT, resetAttachments);
       window.removeEventListener(
         PARSED_FILE_ATTACHMENT_REMOVED_EVENT,
-        handleRemoveParsedFile
+        handleRemoveParsedFile,
       );
       window.removeEventListener(
         PASTE_ATTACHMENT_EVENT,
-        handlePastedAttachment
+        handlePastedAttachment,
       );
     };
   }, []);
@@ -90,7 +90,7 @@ export function DnDFileUploaderProvider({
   async function handleRemoveParsedFile(event) {
     const { document } = event.detail;
     setFiles((prev) =>
-      prev.filter((prevFile) => prevFile.document.id !== document.id)
+      prev.filter((prevFile) => prevFile.document.id !== document.id),
     );
   }
 
@@ -125,14 +125,14 @@ export function DnDFileUploaderProvider({
         ?.map(
           (
             /** @type {Attachment} */
-            attachment
+            attachment,
           ) => {
             return {
               name: attachment.file.name,
               mime: attachment.file.type,
               contentString: attachment.contentString,
             };
-          }
+          },
         ) || []
     );
   }
@@ -243,12 +243,12 @@ export function DnDFileUploaderProvider({
                 prev.map(
                   (
                     /** @type {Attachment} */
-                    prevFile
+                    prevFile,
                   ) =>
                     prevFile.uid !== attachment.uid
                       ? prevFile
-                      : { ...prevFile, ...updates }
-                )
+                      : { ...prevFile, ...updates },
+                ),
               );
               return;
             }
@@ -284,21 +284,21 @@ export function DnDFileUploaderProvider({
               prev.map(
                 (
                   /** @type {Attachment} */
-                  prevFile
+                  prevFile,
                 ) =>
                   prevFile.uid !== attachment.uid
                     ? prevFile
-                    : { ...prevFile, ...updates }
-              )
+                    : { ...prevFile, ...updates },
+              ),
             );
-          }
-        )
+          },
+        ),
       );
     }
 
     // Wait for all promises to resolve in some way before dispatching the event to unlock the send button
     Promise.all(promises).finally(() =>
-      window.dispatchEvent(new CustomEvent(ATTACHMENTS_PROCESSED_EVENT))
+      window.dispatchEvent(new CustomEvent(ATTACHMENTS_PROCESSED_EVENT)),
     );
   }
 
@@ -309,15 +309,15 @@ export function DnDFileUploaderProvider({
     // Delete all files from this batch
     await Workspace.deleteParsedFiles(
       workspace.slug,
-      pendingFiles.map((file) => file.parsedFileId)
+      pendingFiles.map((file) => file.parsedFileId),
     );
 
     // Remove all files from this batch from the UI
     setFiles((prev) =>
       prev.filter(
         (prevFile) =>
-          !pendingFiles.some((file) => file.attachment.uid === prevFile.uid)
-      )
+          !pendingFiles.some((file) => file.attachment.uid === prevFile.uid),
+      ),
     );
     setShowWarningModal(false);
     setPendingFiles([]);
@@ -345,7 +345,7 @@ export function DnDFileUploaderProvider({
       prev.map((prevFile) => {
         const update = fileUpdates.find((f) => f.uid === prevFile.uid);
         return update ? { ...prevFile, ...update.updates } : prevFile;
-      })
+      }),
     );
     setShowWarningModal(false);
     setPendingFiles([]);
@@ -366,9 +366,9 @@ export function DnDFileUploaderProvider({
             completed++;
             setEmbedProgress(completed);
             return result;
-          }
-        )
-      )
+          },
+        ),
+      ),
     );
 
     // Update status for all files
@@ -385,7 +385,7 @@ export function DnDFileUploaderProvider({
       prev.map((prevFile) => {
         const update = fileUpdates.find((f) => f.uid === prevFile.uid);
         return update ? { ...prevFile, ...update.updates } : prevFile;
-      })
+      }),
     );
     setShowWarningModal(false);
     setPendingFiles([]);
@@ -394,7 +394,7 @@ export function DnDFileUploaderProvider({
     window.dispatchEvent(new CustomEvent(ATTACHMENTS_PROCESSED_EVENT));
     showToast(
       `${pendingFiles.length} ${pluralize("file", pendingFiles.length)} embedded successfully`,
-      "success"
+      "success",
     );
   };
 

@@ -34,7 +34,7 @@ export default function WorkspaceChat({ loading, workspace }) {
       const files = pendingFilesRef.current;
       pendingFilesRef.current = [];
       window.dispatchEvent(
-        new CustomEvent(PASTE_ATTACHMENT_EVENT, { detail: { files } })
+        new CustomEvent(PASTE_ATTACHMENT_EVENT, { detail: { files } }),
       );
     }
   }, [loaded?.threadSlug]);
@@ -168,7 +168,7 @@ function copyCodeSnippet(uuid) {
   if (!target) return false;
   const markdown =
     target.parentElement?.parentElement?.querySelector(
-      "pre:first-of-type"
+      "pre:first-of-type",
     )?.innerText;
   if (!markdown) return false;
 

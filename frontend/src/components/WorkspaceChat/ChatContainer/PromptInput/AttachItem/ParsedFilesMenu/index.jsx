@@ -27,7 +27,7 @@ export default function ParsedFilesMenu({
   const [isEmbedding, setIsEmbedding] = useState(false);
   const [embedProgress, setEmbedProgress] = useState(1);
   const [contextWindowLimitExceeded, setContextWindowLimitExceeded] = useState(
-    initialContextWindowLimitExceeded
+    initialContextWindowLimitExceeded,
   );
 
   async function handleRemove(e, file) {
@@ -45,11 +45,11 @@ export default function ParsedFilesMenu({
     window.dispatchEvent(
       new CustomEvent(PARSED_FILE_ATTACHMENT_REMOVED_EVENT, {
         detail: { document: file },
-      })
+      }),
     );
     const { currentContextTokenCount } = await Workspace.getParsedFiles(
       workspaceSlug,
-      threadSlug
+      threadSlug,
     );
     const newContextWindowLimitExceeded =
       contextWindow &&
@@ -76,22 +76,22 @@ export default function ParsedFilesMenu({
           Workspace.embedParsedFile(workspaceSlug, file.id).then(() => {
             completed++;
             setEmbedProgress(completed + 1);
-          })
-        )
+          }),
+        ),
       );
       setFiles([]);
       const { currentContextTokenCount } = await Workspace.getParsedFiles(
         workspaceSlug,
-        threadSlug
+        threadSlug,
       );
       setCurrentTokens(currentContextTokenCount);
       setContextWindowLimitExceeded(
         currentContextTokenCount >=
-          contextWindow * Workspace.maxContextWindowLimit
+          contextWindow * Workspace.maxContextWindowLimit,
       );
       showToast(
         `${files.length} ${pluralize("file", files.length)} embedded successfully`,
-        "success"
+        "success",
       );
       tooltipRef?.current?.close();
     } catch (error) {

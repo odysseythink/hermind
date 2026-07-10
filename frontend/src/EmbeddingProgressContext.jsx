@@ -26,7 +26,7 @@ export function useEmbeddingProgress() {
  */
 export function useWorkspaceEmbeddingProgress(
   slug,
-  { onProgressCleared } = {}
+  { onProgressCleared } = {},
 ) {
   const { embeddingProgressMap, startEmbedding, connectSSE, removeQueuedFile } =
     useEmbeddingProgress();
@@ -54,7 +54,7 @@ export function useWorkspaceEmbeddingProgress(
 
   const removeQueued = useCallback(
     (filename) => removeQueuedFile(slug, filename),
-    [slug, removeQueuedFile]
+    [slug, removeQueuedFile],
   );
 
   return { embeddingProgress, startEmbedding, removeQueuedFile: removeQueued };
@@ -69,7 +69,7 @@ export function EmbeddingProgressProvider({ children }) {
   useEffect(() => {
     return () => {
       Object.values(abortControllersRef.current).forEach((ctrl) =>
-        ctrl?.abort()
+        ctrl?.abort(),
       );
     };
   }, []);
@@ -80,7 +80,7 @@ export function EmbeddingProgressProvider({ children }) {
         ...prev,
         [slug]: { ...prev[slug], [filename]: status },
       })),
-    []
+    [],
   );
 
   const handleMessage = useCallback(
@@ -90,7 +90,7 @@ export function EmbeddingProgressProvider({ children }) {
       switch (data.type) {
         case "batch_starting": {
           const initial = Object.fromEntries(
-            (data.filenames || []).map((name) => [name, { status: "pending" }])
+            (data.filenames || []).map((name) => [name, { status: "pending" }]),
           );
           setEmbeddingProgressMap((prev) => ({
             ...prev,
@@ -167,7 +167,7 @@ export function EmbeddingProgressProvider({ children }) {
           break;
       }
     },
-    [updateFileStatus]
+    [updateFileStatus],
   );
 
   /**
@@ -194,7 +194,7 @@ export function EmbeddingProgressProvider({ children }) {
         },
       }).catch(() => {});
     },
-    [handleMessage]
+    [handleMessage],
   );
 
   const startEmbedding = useCallback(
@@ -208,7 +208,7 @@ export function EmbeddingProgressProvider({ children }) {
       }
 
       const newEntries = Object.fromEntries(
-        filenames.map((name) => [name, { status: "pending" }])
+        filenames.map((name) => [name, { status: "pending" }]),
       );
       setEmbeddingProgressMap((prev) => ({
         ...prev,
@@ -217,7 +217,7 @@ export function EmbeddingProgressProvider({ children }) {
 
       connectSSE(slug);
     },
-    [connectSSE]
+    [connectSSE],
   );
 
   const removeQueuedFile = useCallback(async (slug, filename) => {

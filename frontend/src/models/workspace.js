@@ -30,7 +30,7 @@ const Workspace = {
         method: "POST",
         body: JSON.stringify(data),
         headers: baseHeaders(),
-      }
+      },
     )
       .then((res) => res.json())
       .catch((e) => {
@@ -46,7 +46,7 @@ const Workspace = {
         method: "POST",
         body: JSON.stringify(changes), // contains 'adds' and 'removes' keys that are arrays of filepaths
         headers: baseHeaders(),
-      }
+      },
     )
       .then((res) => res.json())
       .catch((e) => {
@@ -99,7 +99,7 @@ const Workspace = {
         method: "POST",
         headers: baseHeaders(),
         body: JSON.stringify({ feedback }),
-      }
+      },
     )
       .then((res) => res.ok)
       .catch(() => false);
@@ -131,7 +131,7 @@ const Workspace = {
     threadSlug = "",
     chatId,
     newText,
-    role = "assistant"
+    role = "assistant",
   ) {
     if (!!threadSlug)
       return this.threads._updateChat(slug, threadSlug, chatId, newText, role);
@@ -149,13 +149,13 @@ const Workspace = {
         { workspaceSlug, threadSlug },
         prompt,
         chatHandler,
-        attachments
+        attachments,
       );
     return this.streamChat(
       { slug: workspaceSlug },
       prompt,
       chatHandler,
-      attachments
+      attachments,
     );
   },
   streamChat: async function ({ slug }, message, handleChat, attachments = []) {
@@ -331,7 +331,7 @@ const Workspace = {
       .then((res) => {
         if (!res.ok) {
           throw new Error(
-            res.statusText || "Error setting suggested messages."
+            res.statusText || "Error setting suggested messages.",
           );
         }
         return { success: true, ...res.json() };
@@ -350,7 +350,7 @@ const Workspace = {
       .then((res) => {
         if (!res.ok) {
           throw new Error(
-            res.statusText || "Error setting pin status for document."
+            res.statusText || "Error setting pin status for document.",
           );
         }
         return true;
@@ -491,7 +491,7 @@ const Workspace = {
         method: "POST",
         body: formData,
         headers: baseHeaders(),
-      }
+      },
     );
 
     const data = await response.json();
@@ -505,7 +505,7 @@ const Workspace = {
         method: "DELETE",
         headers: baseHeaders(),
         body: JSON.stringify({ fileIds }),
-      }
+      },
     );
     return response.ok;
   },
@@ -516,7 +516,7 @@ const Workspace = {
       {
         method: "POST",
         headers: baseHeaders(),
-      }
+      },
     );
 
     const data = await response.json();
@@ -536,7 +536,7 @@ const Workspace = {
         method: "DELETE",
         body: JSON.stringify({ documentLocation }),
         headers: baseHeaders(),
-      }
+      },
     );
     return response.ok;
   },
@@ -550,7 +550,7 @@ const Workspace = {
     try {
       localStorage.setItem(
         this.workspaceOrderStorageKey,
-        JSON.stringify(workspaceIds)
+        JSON.stringify(workspaceIds),
       );
       return true;
     } catch (error) {
@@ -572,7 +572,7 @@ const Workspace = {
     orderedWorkspaces.sort(
       (a, b) =>
         workspaceOrderPreference.indexOf(a.id) -
-        workspaceOrderPreference.indexOf(b.id)
+        workspaceOrderPreference.indexOf(b.id),
     );
     return orderedWorkspaces;
   },
@@ -608,7 +608,7 @@ const Workspace = {
     if (!slug) return { showAgentCommand: true };
     return await fetch(
       `${API_BASE}/workspace/${slug}/is-agent-command-available`,
-      { headers: baseHeaders() }
+      { headers: baseHeaders() },
     )
       .then((res) => res.json())
       .catch((e) => {

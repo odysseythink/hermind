@@ -31,7 +31,7 @@ export default function GeneralInfo({ slug, deletionProtected = false }) {
     for (var [key, value] of form.entries()) data[key] = castToType(key, value);
     const { workspace: updatedWorkspace, message } = await Workspace.update(
       workspace.slug,
-      data
+      data,
     );
     if (!!updatedWorkspace) {
       showToast("Workspace updated!", "success", { clear: true });

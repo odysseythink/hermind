@@ -3,7 +3,7 @@ import System from "@/models/system";
 
 export default function KokoroTTSOptions({ settings }) {
   const [endpoint, setEndpoint] = useState(
-    settings?.TTSKokoroEndpoint || "http://localhost:8880/v1"
+    settings?.TTSKokoroEndpoint || "http://localhost:8880/v1",
   );
   const [inputEndpoint, setInputEndpoint] = useState(endpoint);
   const [apiKey, setApiKey] = useState(settings?.TTSKokoroKey);
@@ -91,7 +91,7 @@ function KokoroVoiceSelection({ settings, endpoint, apiKey = null }) {
         const { models } = await System.customModels(
           "kokoro-tts",
           apiKey,
-          endpoint
+          endpoint,
         );
         setVoices(models || []);
       } catch {

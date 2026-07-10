@@ -48,7 +48,7 @@ export default function CodeNode({
         {renderVariableSelect(
           config.resultVariable,
           (value) => onConfigChange({ resultVariable: value }),
-          "Select or create variable"
+          "Select or create variable",
         )}
       </div>
     </div>

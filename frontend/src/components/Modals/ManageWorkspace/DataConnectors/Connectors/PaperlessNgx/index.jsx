@@ -15,7 +15,7 @@ export default function PaperlessNgxOptions() {
       showToast(
         "Fetching documents from Paperless-ngx - this may take a while.",
         "info",
-        { clear: true, autoClose: false }
+        { clear: true, autoClose: false },
       );
 
       const { data, error } = await System.dataConnectors.paperlessNgx.collect({
@@ -32,7 +32,7 @@ export default function PaperlessNgxOptions() {
       showToast(
         `Successfully imported ${data.files} documents from Paperless-ngx. Output folder is ${data.destination}.`,
         "success",
-        { clear: true }
+        { clear: true },
       );
       e.target.reset();
       setLoading(false);

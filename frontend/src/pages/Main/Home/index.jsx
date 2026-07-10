@@ -31,7 +31,7 @@ import MemoriesSidebar from "@/components/WorkspaceChat/ChatContainer/MemoriesSi
 
 async function getTargetWorkspace() {
   const lastVisited = safeJsonParse(
-    localStorage.getItem(LAST_VISITED_WORKSPACE)
+    localStorage.getItem(LAST_VISITED_WORKSPACE),
   );
   if (lastVisited?.slug) {
     const workspace = await Workspace.bySlug(lastVisited.slug);
@@ -87,7 +87,7 @@ export default function Home() {
       const files = pendingFilesRef.current;
       pendingFilesRef.current = [];
       window.dispatchEvent(
-        new CustomEvent(PASTE_ATTACHMENT_EVENT, { detail: { files } })
+        new CustomEvent(PASTE_ATTACHMENT_EVENT, { detail: { files } }),
       );
     }
   }, [workspace, threadSlug]);
@@ -193,7 +193,7 @@ function HomeContent({ workspace, setWorkspace, threadSlug, setThreadSlug }) {
       window.dispatchEvent(
         new CustomEvent(PROMPT_INPUT_EVENT, {
           detail: { messageContent: "", writeMode: "replace" },
-        })
+        }),
       );
     }
   }, []);
@@ -207,7 +207,7 @@ function HomeContent({ workspace, setWorkspace, threadSlug, setThreadSlug }) {
 
       if (!targetWorkspace) {
         targetWorkspace = await createDefaultWorkspace(
-          t("new-workspace.placeholder")
+          t("new-workspace.placeholder"),
         );
         if (!targetWorkspace) {
           setLoading(false);
@@ -224,7 +224,7 @@ function HomeContent({ workspace, setWorkspace, threadSlug, setThreadSlug }) {
 
       sessionStorage.setItem(
         PENDING_HOME_MESSAGE,
-        JSON.stringify({ message, attachments })
+        JSON.stringify({ message, attachments }),
       );
 
       if (targetThread) {
@@ -264,7 +264,7 @@ function HomeContent({ workspace, setWorkspace, threadSlug, setThreadSlug }) {
     window.dispatchEvent(
       new CustomEvent(PROMPT_INPUT_EVENT, {
         detail: { messageContent: text, writeMode },
-      })
+      }),
     );
   }
 
@@ -273,7 +273,7 @@ function HomeContent({ workspace, setWorkspace, threadSlug, setThreadSlug }) {
 
     if (!targetWorkspace) {
       targetWorkspace = await createDefaultWorkspace(
-        t("new-workspace.placeholder")
+        t("new-workspace.placeholder"),
       );
       if (!targetWorkspace) return;
       setWorkspace(targetWorkspace);

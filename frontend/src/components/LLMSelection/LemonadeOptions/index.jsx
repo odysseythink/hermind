@@ -34,10 +34,10 @@ export default function LemonadeOptions({ settings }) {
     ENDPOINTS: LEMONADE_COMMON_URLS,
   });
   const [selectedModelId, setSelectedModelId] = useState(
-    settings?.LemonadeLLMModelPref
+    settings?.LemonadeLLMModelPref,
   );
   const [maxTokens, setMaxTokens] = useState(
-    settings?.LemonadeLLMModelTokenLimit || 4096
+    settings?.LemonadeLLMModelTokenLimit || 4096,
   );
 
   return (
@@ -266,22 +266,22 @@ function LemonadeModelSelection({
     try {
       if (
         !window.confirm(
-          `Are you sure you want to uninstall this model? You will need to download it again to use it.`
+          `Are you sure you want to uninstall this model? You will need to download it again to use it.`,
         )
       )
         return;
       const { success, error } = await LemonadeUtils.deleteModel(
         modelId,
-        basePath
+        basePath,
       );
 
       if (!success)
         throw new Error(
-          error || "An error occurred while uninstalling the model"
+          error || "An error occurred while uninstalling the model",
         );
 
       const updatedModels = customModels.map((model) =>
-        model.id === modelId ? { ...model, downloaded: false } : model
+        model.id === modelId ? { ...model, downloaded: false } : model,
       );
       setCustomModels(updatedModels);
       setFilteredModels(updatedModels);
@@ -291,7 +291,7 @@ function LemonadeModelSelection({
       showToast(
         e.message || "An error occurred while uninstalling the model",
         "error",
-        { clear: true }
+        { clear: true },
       );
     } finally {
       setLoading(false);
@@ -302,18 +302,18 @@ function LemonadeModelSelection({
     try {
       if (
         !window.confirm(
-          `Are you sure you want to download this model? It is ${fileSize} in size and may take a while to download.`
+          `Are you sure you want to download this model? It is ${fileSize} in size and may take a while to download.`,
         )
       )
         return;
       const { success, error } = await LemonadeUtils.downloadModel(
         modelId,
         basePath,
-        progressCallback
+        progressCallback,
       );
       if (!success)
         throw new Error(
-          error || "An error occurred while downloading the model"
+          error || "An error occurred while downloading the model",
         );
       progressCallback(100);
       handleSetActiveModel(modelId);
@@ -331,7 +331,7 @@ function LemonadeModelSelection({
       showToast(
         e.message || "An error occurred while downloading the model",
         "error",
-        { clear: true }
+        { clear: true },
       );
     } finally {
       setLoading(false);
@@ -373,13 +373,13 @@ function LemonadeModelSelection({
       .get("installed")
       .entries()
       .forEach(([organization, models]) =>
-        installedMap.set(organization, models)
+        installedMap.set(organization, models),
       );
     mapping
       .get("not installed")
       .entries()
       .forEach(([organization, models]) =>
-        orderedMap.set(organization, models)
+        orderedMap.set(organization, models),
       );
 
     // Sort the models by organization/creator name alphabetically but keep the installed models at the top
@@ -388,9 +388,9 @@ function LemonadeModelSelection({
         .sort((a, b) => a[0].localeCompare(b[0]))
         .concat(
           Array.from(orderedMap.entries()).sort((a, b) =>
-            a[0].localeCompare(b[0])
-          )
-        )
+            a[0].localeCompare(b[0]),
+          ),
+        ),
     );
   }
 

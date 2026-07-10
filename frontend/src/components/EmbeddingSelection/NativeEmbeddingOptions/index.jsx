@@ -6,7 +6,7 @@ export default function NativeEmbeddingOptions({ settings }) {
   const [loading, setLoading] = useState(true);
   const [availableModels, setAvailableModels] = useState([]);
   const [selectedModel, setSelectedModel] = useState(
-    settings?.EmbeddingModelPref
+    settings?.EmbeddingModelPref,
   );
   const [selectedModelInfo, setSelectedModelInfo] = useState();
 
@@ -30,7 +30,7 @@ export default function NativeEmbeddingOptions({ settings }) {
   useEffect(() => {
     if (!availableModels?.length || !selectedModel) return;
     setSelectedModelInfo(
-      availableModels.find((model) => model.id === selectedModel)
+      availableModels.find((model) => model.id === selectedModel),
     );
   }, [selectedModel, availableModels]);
 

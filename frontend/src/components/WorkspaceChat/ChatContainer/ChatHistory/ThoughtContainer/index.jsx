@@ -28,7 +28,7 @@ export function ThoughtExpansionProvider({ children }) {
       if (!messageId) return false;
       return expansionStates[messageId] ?? false;
     },
-    [expansionStates]
+    [expansionStates],
   );
 
   const setExpanded = useCallback((messageId, expanded) => {
@@ -61,16 +61,18 @@ export function useThoughtExpansion(messageId) {
 const THOUGHT_KEYWORDS = ["thought", "thinking", "think", "thought_chain"];
 const CLOSING_TAGS = [...THOUGHT_KEYWORDS, "response", "answer"];
 export const THOUGHT_REGEX_OPEN = new RegExp(
-  THOUGHT_KEYWORDS.map((keyword) => `<${keyword}\\s*(?:[^>]*?)?\\s*>`).join("|")
+  THOUGHT_KEYWORDS.map((keyword) => `<${keyword}\\s*(?:[^>]*?)?\\s*>`).join(
+    "|",
+  ),
 );
 export const THOUGHT_REGEX_CLOSE = new RegExp(
-  CLOSING_TAGS.map((keyword) => `</${keyword}\\s*(?:[^>]*?)?>`).join("|")
+  CLOSING_TAGS.map((keyword) => `</${keyword}\\s*(?:[^>]*?)?>`).join("|"),
 );
 export const THOUGHT_REGEX_COMPLETE = new RegExp(
   THOUGHT_KEYWORDS.map(
     (keyword) =>
-      `<${keyword}\\s*(?:[^>]*?)?\\s*>[\\s\\S]*?<\\/${keyword}\\s*(?:[^>]*?)?>`
-  ).join("|")
+      `<${keyword}\\s*(?:[^>]*?)?\\s*>[\\s\\S]*?<\\/${keyword}\\s*(?:[^>]*?)?>`,
+  ).join("|"),
 );
 const THOUGHT_PREVIEW_LENGTH = isMobile ? 25 : 50;
 
@@ -99,7 +101,7 @@ export const ThoughtChainComponent = forwardRef(
   ({ content: initialContent, messageId }, ref) => {
     const [content, setContent] = useState(initialContent);
     const [hasReadableContent, setHasReadableContent] = useState(
-      contentIsNotEmpty(initialContent)
+      contentIsNotEmpty(initialContent),
     );
     const { expanded: persistedExpanded, setExpanded: setPersistedExpanded } =
       useThoughtExpansion(messageId);
@@ -203,7 +205,7 @@ export const ThoughtChainComponent = forwardRef(
                       __html: DOMPurify.sanitize(
                         isExpanded
                           ? renderMarkdown(tagStrippedContent)
-                          : tagStrippedContent
+                          : tagStrippedContent,
                       ),
                     }}
                   />
@@ -214,6 +216,6 @@ export const ThoughtChainComponent = forwardRef(
         </div>
       </div>
     );
-  }
+  },
 );
 ThoughtChainComponent.displayName = "ThoughtChainComponent";

@@ -15,7 +15,7 @@ function ManageFlowMenu({ flow, onDelete }) {
     setOpen(false);
     if (
       !window.confirm(
-        "Are you sure you want to delete this flow? This action cannot be undone."
+        "Are you sure you want to delete this flow? This action cannot be undone.",
       )
     )
       return;
@@ -79,7 +79,7 @@ export default function FlowPanel({ flow, toggleFlow, enabled, onDelete }) {
     try {
       const { success, error } = await AgentFlows.toggleFlow(
         flow.uuid,
-        !enabled
+        !enabled,
       );
       if (!success) throw new Error(error);
       toggleFlow(flow.uuid);

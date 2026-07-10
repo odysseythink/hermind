@@ -17,7 +17,7 @@ import { useEffect, useRef, useState } from "react";
  */
 export default function useTimeoutProgress(
   timeoutMs,
-  { active = true, onTimeout, intervalMs = 100 } = {}
+  { active = true, onTimeout, intervalMs = 100 } = {},
 ) {
   const [progressPercent, setProgressPercent] = useState(100);
   const startTimeRef = useRef(null);

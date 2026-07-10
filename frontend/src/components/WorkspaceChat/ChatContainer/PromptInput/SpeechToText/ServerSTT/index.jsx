@@ -50,7 +50,7 @@ export default function ServerSTT({ sendCommand }) {
         audio: true,
       });
       const mimeType = MIME_CANDIDATES.find((m) =>
-        MediaRecorder.isTypeSupported(m)
+        MediaRecorder.isTypeSupported(m),
       );
       const recorder = mimeType
         ? new MediaRecorder(audioStream, { mimeType })
@@ -77,7 +77,7 @@ export default function ServerSTT({ sendCommand }) {
           recorder.mimeType,
           sendCommand,
           setProcessing,
-          t
+          t,
         );
       };
 
@@ -106,13 +106,13 @@ async function uploadAndDispatch(
   mimeType,
   sendCommand,
   setProcessing,
-  t
+  t,
 ) {
   setProcessing(true);
   const extension = mimeType.includes("ogg") ? "ogg" : "webm";
   const { text, error } = await System.transcribeAudio(
     blob,
-    `audio.${extension}`
+    `audio.${extension}`,
   );
   setProcessing(false);
 

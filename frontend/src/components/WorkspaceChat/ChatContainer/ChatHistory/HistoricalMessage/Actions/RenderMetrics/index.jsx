@@ -59,7 +59,7 @@ function toggleAutoShowMetrics() {
   window.dispatchEvent(
     new CustomEvent(SHOW_METRICS_EVENT, {
       detail: { showMetricsAutomatically: !currentValue },
-    })
+    }),
   );
   return !currentValue;
 }

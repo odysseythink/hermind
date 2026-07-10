@@ -91,7 +91,7 @@ function normalizeTranslations(lang, source, target, _subdir = null) {
       lang,
       source[key],
       normalized[key],
-      key
+      key,
     );
   }
 
@@ -123,8 +123,8 @@ delete TRANSLATIONS["en"];
 
 console.log(
   `The following translation files will be normalized against the English file: [${Object.keys(
-    TRANSLATIONS
-  ).join(",")}]`
+    TRANSLATIONS,
+  ).join(",")}]`,
 );
 
 // Normalize each non-English translation
@@ -145,19 +145,19 @@ for (const [lang, translations] of Object.entries(TRANSLATIONS)) {
     `// Anything with "null" requires a translation. Contribute to translation via a PR!
 const TRANSLATIONS = ${JSON.stringify(normalized, null, 2)}
 
-export default TRANSLATIONS;`
+export default TRANSLATIONS;`,
   );
 }
 
 if (failed.length !== 0) {
   throw new Error(
     `Error verifying normalized translations. Please check the logs.`,
-    failed
+    failed,
   );
 }
 
 console.log(
-  `👍 All translation files have been normalized to match the English schema!`
+  `👍 All translation files have been normalized to match the English schema!`,
 );
 
 process.exit(0);

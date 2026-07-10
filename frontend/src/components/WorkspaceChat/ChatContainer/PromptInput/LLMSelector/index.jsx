@@ -30,7 +30,7 @@ export default function LLMSelectorModal({
   const [selectedLLMModel, setSelectedLLMModel] = useState("");
   const [selectedRouterId, setSelectedRouterId] = useState(null);
   const [availableProviders, setAvailableProviders] = useState(
-    WORKSPACE_LLM_PROVIDERS
+    WORKSPACE_LLM_PROVIDERS,
   );
   const [hasChanges, setHasChanges] = useState(false);
   const [saving, setSaving] = useState(false);
@@ -51,13 +51,13 @@ export default function LLMSelectorModal({
         autoScrollToSelectedLLMProvider(providerToSelect);
         setSelectedLLMModel(savedModel);
         setSelectedRouterId(
-          workspace.router_id || systemSettings?.ModelRouterId || null
+          workspace.router_id || systemSettings?.ModelRouterId || null,
         );
 
         if (initialProvider && initialProvider !== savedProvider) {
           setHasChanges(true);
           setMissingCredentials(
-            hasMissingCredentials(systemSettings, initialProvider)
+            hasMissingCredentials(systemSettings, initialProvider),
           );
         }
       })
@@ -67,7 +67,7 @@ export default function LLMSelectorModal({
   function handleSearch(e) {
     const searchTerm = e.target.value.toLowerCase();
     const filteredProviders = WORKSPACE_LLM_PROVIDERS.filter((provider) =>
-      provider.name.toLowerCase().includes(searchTerm)
+      provider.name.toLowerCase().includes(searchTerm),
     );
     setAvailableProviders(filteredProviders);
   }
@@ -148,7 +148,7 @@ export default function LLMSelectorModal({
             </p>
             <p className="text-xs font-medium text-zinc-400 light:text-slate-500">
               {t(
-                "chat_window.workspace_llm_manager.available_models_description"
+                "chat_window.workspace_llm_manager.available_models_description",
               )}
             </p>
           </div>
@@ -175,11 +175,11 @@ export default function LLMSelectorModal({
               new CustomEvent(PROVIDER_SETUP_EVENT, {
                 detail: {
                   provider: WORKSPACE_LLM_PROVIDERS.find(
-                    (p) => p.value === selectedLLMProvider
+                    (p) => p.value === selectedLLMProvider,
                   ),
                   settings,
                 },
-              })
+              }),
             );
           }}
         />

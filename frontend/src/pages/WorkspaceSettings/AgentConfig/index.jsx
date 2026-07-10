@@ -55,7 +55,7 @@ export default function WorkspaceAgentConfiguration({ workspace }) {
 
     const { workspace: updatedWorkspace, message } = await Workspace.update(
       workspace.slug,
-      data.workspace
+      data.workspace,
     );
     await Admin.updateSystemPreferences(data.system);
     await System.updateSystem(data.env);

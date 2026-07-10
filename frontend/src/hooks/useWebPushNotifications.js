@@ -54,7 +54,7 @@ export async function subscribeToPushNotifications(askToEnable = true) {
     if (!publicKey) return log("No public key found or generated");
 
     const swReg = await navigator.serviceWorker.register(
-      `/service-workers/push-notifications.js?v=${SW_VERSION}`
+      `/service-workers/push-notifications.js?v=${SW_VERSION}`,
     );
 
     // Check for updates

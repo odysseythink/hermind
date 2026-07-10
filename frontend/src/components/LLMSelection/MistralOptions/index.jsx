@@ -45,7 +45,7 @@ function MistralModelSelection({ apiKey, settings }) {
       setLoading(true);
       const { models } = await System.customModels(
         "mistral",
-        typeof apiKey === "boolean" ? null : apiKey
+        typeof apiKey === "boolean" ? null : apiKey,
       );
       setCustomModels(models || []);
       setLoading(false);

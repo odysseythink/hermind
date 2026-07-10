@@ -12,7 +12,7 @@ const LemonadeUtils = {
   downloadModel: async function (
     modelId,
     basePath = "",
-    progressCallback = () => {}
+    progressCallback = () => {},
   ) {
     // eslint-disable-next-line no-async-promise-executor
     return new Promise(async (resolve) => {
@@ -23,7 +23,7 @@ const LemonadeUtils = {
             method: "POST",
             headers: baseHeaders(),
             body: JSON.stringify({ modelId, basePath }),
-          }
+          },
         );
 
         if (!response.ok)

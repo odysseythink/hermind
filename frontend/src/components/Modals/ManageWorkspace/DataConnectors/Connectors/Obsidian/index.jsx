@@ -45,7 +45,7 @@ export default function ObsidianOptions() {
             path: file.webkitRelativePath,
             content: content,
           };
-        })
+        }),
       );
 
       const { data, error } = await System.dataConnectors.obsidian.collect({
@@ -69,13 +69,13 @@ export default function ObsidianOptions() {
         showToast(
           `Successfully imported ${successCount} files from your vault!`,
           "success",
-          { clear: true }
+          { clear: true },
         );
       } else {
         showToast(
           `Imported ${successCount} files, ${failCount} failed`,
           "warning",
-          { clear: true }
+          { clear: true },
         );
       }
 

@@ -30,7 +30,7 @@ export default function ExportRow({
     const blob = await Workspace.exportChatsToType(
       workspace.slug,
       threadSlug,
-      format.key
+      format.key,
     );
     if (blob) {
       const stamp = moment().format("YYYY-MM-DD HH:mm:ss");

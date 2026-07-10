@@ -13,11 +13,11 @@ export default function KeyboardShortcutsHelp() {
 
   useEffect(() => {
     window.addEventListener(KEYBOARD_SHORTCUTS_HELP_EVENT, () =>
-      setIsOpen((prev) => !prev)
+      setIsOpen((prev) => !prev),
     );
     return () => {
       window.removeEventListener(KEYBOARD_SHORTCUTS_HELP_EVENT, () =>
-        setIsOpen(false)
+        setIsOpen(false),
       );
     };
   }, []);

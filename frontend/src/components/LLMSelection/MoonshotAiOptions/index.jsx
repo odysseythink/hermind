@@ -4,7 +4,7 @@ import System from "@/models/system";
 export default function MoonshotAiOptions({ settings }) {
   const [inputValue, setInputValue] = useState(settings?.MoonshotAiApiKey);
   const [moonshotAiKey, setMoonshotAiKey] = useState(
-    settings?.MoonshotAiApiKey
+    settings?.MoonshotAiApiKey,
   );
 
   return (
@@ -42,7 +42,7 @@ function MoonshotAiModelSelection({ apiKey, settings }) {
       setLoading(true);
       const { models: availableModels } = await System.customModels(
         "moonshotai",
-        typeof apiKey === "boolean" ? null : apiKey
+        typeof apiKey === "boolean" ? null : apiKey,
       );
 
       if (availableModels?.length > 0) {

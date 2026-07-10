@@ -16,7 +16,7 @@ function ManageServerMenu({ server, toggleServer, onDelete }) {
   async function deleteServer() {
     if (
       !window.confirm(
-        "Are you sure you want to delete this MCP server? It will be removed from your config file and you will need to add it back manually."
+        "Are you sure you want to delete this MCP server? It will be removed from your config file and you will need to add it back manually.",
       )
     )
       return;
@@ -34,7 +34,7 @@ function ManageServerMenu({ server, toggleServer, onDelete }) {
       !window.confirm(
         running
           ? "Are you sure you want to stop this MCP server? It will be started automatically when you next start the server."
-          : "Are you sure you want to start this MCP server? It will be started automatically when you next start the server."
+          : "Are you sure you want to start this MCP server? It will be started automatically when you next start the server.",
       )
     )
       return;
@@ -47,7 +47,7 @@ function ManageServerMenu({ server, toggleServer, onDelete }) {
       showToast(
         `MCP server ${server.name} ${newState ? "started" : "stopped"} successfully.`,
         "success",
-        { clear: true }
+        { clear: true },
       );
     } else {
       showToast(error || "Failed to toggle MCP server.", "error", {
@@ -113,7 +113,7 @@ export default function ServerPanel({
   const { t } = useTranslation();
   const suppressedTools = server.config?.anythingllm?.suppressedTools || [];
   const enabledToolCount = server.tools.filter(
-    (tool) => !suppressedTools.includes(tool.name)
+    (tool) => !suppressedTools.includes(tool.name),
   ).length;
 
   return (
@@ -304,7 +304,7 @@ function ServerTool({ serverName, tool, enabled, onToggle }) {
                       {value.type}
                     </p>
                   </div>
-                )
+                ),
               )}
             </div>
           </div>

@@ -28,7 +28,7 @@ export default function EmbedRow({ embed }) {
   const handleSuspend = async () => {
     if (
       !window.confirm(
-        `Are you sure you want to disabled this embed?\nOnce disabled the embed will no longer respond to any chat requests.`
+        `Are you sure you want to disabled this embed?\nOnce disabled the embed will no longer respond to any chat requests.`,
       )
     )
       return false;
@@ -41,7 +41,7 @@ export default function EmbedRow({ embed }) {
       showToast(
         `Embed ${enabled ? "has been disabled" : "is active"}.`,
         "success",
-        { clear: true }
+        { clear: true },
       );
       setEnabled(!enabled);
     }
@@ -49,7 +49,7 @@ export default function EmbedRow({ embed }) {
   const handleDelete = async () => {
     if (
       !window.confirm(
-        `Are you sure you want to delete this embed?\nOnce deleted this embed will no longer respond to chats or be active.\n\nThis action is irreversible.`
+        `Are you sure you want to delete this embed?\nOnce deleted this embed will no longer respond to chats or be active.\n\nThis action is irreversible.`,
       )
     )
       return false;

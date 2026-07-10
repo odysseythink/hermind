@@ -64,7 +64,7 @@ export default function SlashCommandsTab({
         preset,
       })),
     ],
-    [presets, t]
+    [presets, t],
   );
 
   const handleUseCommand = useCallback(
@@ -91,13 +91,13 @@ export default function SlashCommandsTab({
       window.dispatchEvent(
         new CustomEvent(PROMPT_INPUT_EVENT, {
           detail: { messageContent: newValue },
-        })
+        }),
       );
       textarea.focus();
       const newCursor = insertStart + command.length;
       setTimeout(() => textarea.setSelectionRange(newCursor, newCursor), 0);
     },
-    [sendCommand, setShowing, promptRef]
+    [sendCommand, setShowing, promptRef],
   );
 
   useToolsMenuItems({
@@ -129,7 +129,7 @@ export default function SlashCommandsTab({
   const handleUpdatePreset = async (updatedPreset) => {
     const { error } = await System.updateSlashCommandPreset(
       updatedPreset.id,
-      updatedPreset
+      updatedPreset,
     );
     if (error) {
       showToast(error, "error");
@@ -167,7 +167,7 @@ export default function SlashCommandsTab({
           onClick={() =>
             handleUseCommand(
               item.preset ? `${item.command} ` : item.command,
-              item.autoSubmit
+              item.autoSubmit,
             )
           }
           onEdit={item.preset ? () => handleEditPreset(item.preset) : undefined}

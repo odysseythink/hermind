@@ -11,7 +11,7 @@ const OPEN_EVENT = "open-image-lightbox";
  */
 export function openImageLightbox(images, initialIndex = 0) {
   window.dispatchEvent(
-    new CustomEvent(OPEN_EVENT, { detail: { images, initialIndex } })
+    new CustomEvent(OPEN_EVENT, { detail: { images, initialIndex } }),
   );
 }
 
@@ -110,6 +110,6 @@ export default function ImageLightbox() {
         </div>
       )}
     </div>,
-    document.getElementById("root")
+    document.getElementById("root"),
   );
 }

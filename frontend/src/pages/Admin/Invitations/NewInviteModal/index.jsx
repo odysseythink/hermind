@@ -29,7 +29,7 @@ export default function NewInviteModal({ closeModal, onSuccess }) {
   const copyInviteLink = () => {
     if (!invite) return false;
     window.navigator.clipboard.writeText(
-      `${window.location.origin}/accept-invite/${invite.code}`
+      `${window.location.origin}/accept-invite/${invite.code}`,
     );
     setCopied(true);
     showToast("Invite link copied to clipboard", "success", {

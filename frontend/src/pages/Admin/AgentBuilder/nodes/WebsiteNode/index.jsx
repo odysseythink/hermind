@@ -60,7 +60,7 @@ export default function WebsiteNode({
         {renderVariableSelect(
           config.resultVariable,
           (value) => onConfigChange({ resultVariable: value }),
-          "Select or create variable"
+          "Select or create variable",
         )}
       </div>
     </div>

@@ -84,7 +84,7 @@ function Directory({
         t("connectors.directory.removing-message", {
           count: toRemove.length,
           folderCount: foldersToRemove.length,
-        })
+        }),
       );
       await System.deleteDocuments(toRemove);
       for (const folderName of foldersToRemove) {
@@ -143,7 +143,7 @@ function Directory({
     for (const itemId of Object.keys(selectedItems)) {
       for (const currentFolder of files.items) {
         const foundItem = currentFolder.items.find(
-          (file) => file.id === itemId
+          (file) => file.id === itemId,
         );
         if (foundItem) {
           toMove.push({ ...foundItem, folderName: currentFolder.name });
@@ -155,7 +155,7 @@ function Directory({
     setLoadingMessage(`Moving ${toMove.length} documents. Please wait.`);
     const { success, message } = await Document.moveToFolder(
       toMove,
-      folder.name
+      folder.name,
     );
     if (!success) {
       showToast(`Error moving files: ${message}`, "error");
@@ -169,7 +169,7 @@ function Directory({
     } else {
       showToast(
         t("connectors.directory.move-success", { count: toMove.length }),
-        "success"
+        "success",
       );
     }
     await fetchKeys(true);
@@ -264,14 +264,14 @@ function Directory({
                         totalItems={item.items?.length ?? 0}
                         selected={isSelected(
                           item.id,
-                          item.type === "folder" ? item : null
+                          item.type === "folder" ? item : null,
                         )}
                         onRowClick={() => toggleSelection(item)}
                         toggleSelection={toggleSelection}
                         isSelected={isSelected}
                         autoExpanded={index === 0}
                       />
-                    )
+                    ),
                 )
               ) : (
                 <div className="w-full h-full flex items-center justify-center">
@@ -305,7 +305,7 @@ function Directory({
                       {showFolderSelection && (
                         <FolderSelectionPopup
                           folders={files.items.filter(
-                            (item) => item.type === "folder"
+                            (item) => item.type === "folder",
                           )}
                           onSelect={moveToFolder}
                           onClose={() => setShowFolderSelection(false)}

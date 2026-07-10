@@ -29,7 +29,7 @@ export default function LMStudioOptions({ settings, showAlert = false }) {
   });
 
   const [maxTokens, setMaxTokens] = useState(
-    settings?.LMStudioTokenLimit || ""
+    settings?.LMStudioTokenLimit || "",
   );
 
   const handleMaxTokensChange = (e) => {
@@ -240,7 +240,7 @@ function LMStudioModelSelection({ settings, basePath = null, apiKey = null }) {
         const { models } = await System.customModels(
           "lmstudio",
           apiKey,
-          basePath
+          basePath,
         );
         setCustomModels(models || []);
       } catch (error) {

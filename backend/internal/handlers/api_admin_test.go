@@ -264,6 +264,54 @@ func TestAPIAdmin_WorkspaceChats(t *testing.T) {
 	assert.False(t, body.HasPages)
 }
 
+func TestAPIAdmin_Preferences_SearchProvider_Valid(t *testing.T) {
+	env, _ := setupAPIAdmin(t, nil)
+	payload, _ := json.Marshal(map[string]string{"agent_search_provider": "serper-dot-dev"})
+	req := httptest.NewRequest("POST", "/api/v1/admin/preferences", bytes.NewReader(payload))
+	req.Header.Set("Authorization", "Bearer "+env.APIKey)
+	req.Header.Set("Content-Type", "application/json")
+	rec := httptest.NewRecorder()
+	env.Router.ServeHTTP(rec, req)
+	assert.Equal(t, http.StatusOK, rec.Code)
+	var body map[string]any
+	require.NoError(t, json.Unmarshal(rec.Body.Bytes(), &body))
+	assert.Equal(t, true, body["success"])
+}
+
+func TestAPIAdmin_Preferences_SearchProvider_Invalid(t *testing.T) {
+	env, _ := setupAPIAdmin(t, nil)
+	payload, _ := json.Marshal(map[string]string{"agent_search_provider": "not-a-real-provider"})
+	req := httptest.NewRequest("POST", "/api/v1/admin/preferences", bytes.NewReader(payload))
+	req.Header.Set("Authorization", "Bearer "+env.APIKey)
+	req.Header.Set("Content-Type", "application/json")
+	rec := httptest.NewRecorder()
+	env.Router.ServeHTTP(rec, req)
+	assert.Equal(t, http.StatusBadRequest, rec.Code)
+	var body map[string]any
+	require.NoError(t, json.Unmarshal(rec.Body.Bytes(), &body))
+	assert.Equal(t, false, body["success"])
+	assert.Contains(t, body["error"], "unknown search provider")
+}
+
+func TestAPIAdmin_Preferences_SearchProvider_AllKnownKeys(t *testing.T) {
+	known := []string{
+		"duckduckgo-engine", "brave-search", "serpapi", "searchapi",
+		"serper-dot-dev", "bing-search", "baidu-search", "serply-engine",
+		"searxng-engine", "tavily-search", "exa-search", "perplexity-search",
+		"crw-search",
+	}
+	for _, provider := range known {
+		env, _ := setupAPIAdmin(t, nil)
+		payload, _ := json.Marshal(map[string]string{"agent_search_provider": provider})
+		req := httptest.NewRequest("POST", "/api/v1/admin/preferences", bytes.NewReader(payload))
+		req.Header.Set("Authorization", "Bearer "+env.APIKey)
+		req.Header.Set("Content-Type", "application/json")
+		rec := httptest.NewRecorder()
+		env.Router.ServeHTTP(rec, req)
+		assert.Equal(t, http.StatusOK, rec.Code, "provider %q should be accepted", provider)
+	}
+}
+
 func TestAPIAdmin_Preferences(t *testing.T) {
 	env, _ := setupAPIAdmin(t, nil)
 	payload, _ := json.Marshal(map[string]string{"support_email": "x@y.com"})

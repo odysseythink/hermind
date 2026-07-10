@@ -54,7 +54,7 @@ export default function CardMenu({
         onClick={onDelete}
       />
     </div>,
-    document.body
+    document.body,
   );
 }
 

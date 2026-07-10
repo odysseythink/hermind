@@ -201,7 +201,7 @@ export function parseCronToBuilderState(cron) {
         dow
           .split(",")
           .map((d) => parseInt(d, 10) % 7)
-          .filter((d) => d >= 0 && d <= 6)
+          .filter((d) => d >= 0 && d <= 6),
       ),
     ];
     const local = utcTimeToLocal(parseInt(h, 10), parseInt(m, 10));

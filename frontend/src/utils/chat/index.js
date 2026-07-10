@@ -9,7 +9,7 @@ export default function handleChat(
   setChatHistory,
   remHistory,
   _chatHistory,
-  setWebsocket
+  setWebsocket,
 ) {
   const {
     uuid,
@@ -182,7 +182,7 @@ export default function handleChat(
             threadSlug: chatResult.thread.slug,
             newName: chatResult.thread.name,
           },
-        })
+        }),
       );
     }
   }

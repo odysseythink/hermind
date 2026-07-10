@@ -212,7 +212,7 @@ export default memo(
       JSON.stringify(prevProps.clarifyingQuestions) ===
         JSON.stringify(nextProps.clarifyingQuestions)
     );
-  }
+  },
 );
 
 /**
@@ -352,5 +352,5 @@ const RenderChatContent = memo(
       prevProps.message === nextProps.message &&
       prevProps.messageId === nextProps.messageId
     );
-  }
+  },
 );

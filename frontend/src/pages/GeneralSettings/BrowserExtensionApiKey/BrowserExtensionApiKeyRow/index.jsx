@@ -16,7 +16,7 @@ export default function BrowserExtensionApiKeyRow({
   const handleRevoke = async () => {
     if (
       !window.confirm(
-        `Are you sure you want to revoke this browser extension API key?\nAfter you do this it will no longer be useable.\n\nThis action is irreversible.`
+        `Are you sure you want to revoke this browser extension API key?\nAfter you do this it will no longer be useable.\n\nThis action is irreversible.`,
       )
     )
       return false;
@@ -48,7 +48,7 @@ export default function BrowserExtensionApiKeyRow({
     // This will open the extension window and attempt to connect with the API key
     window.postMessage(
       { type: POPUP_BROWSER_EXTENSION_EVENT, apiKey: connectionString },
-      "*"
+      "*",
     );
     showToast("Attempting to connect to browser extension...", "info", {
       clear: true,

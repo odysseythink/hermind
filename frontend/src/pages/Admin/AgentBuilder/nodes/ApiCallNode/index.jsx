@@ -25,7 +25,7 @@ export default function ApiCallNode({
 
   const removeHeader = (index) => {
     const newHeaders = [...(config.headers || [])].filter(
-      (_, i) => i !== index
+      (_, i) => i !== index,
     );
     onConfigChange({ headers: newHeaders });
   };
@@ -86,7 +86,7 @@ export default function ApiCallNode({
                   "",
                   insertVariableAtCursor,
                   "Select variable to insert",
-                  true
+                  true,
                 )}
               </div>
             )}
@@ -231,7 +231,7 @@ export default function ApiCallNode({
                     <button
                       onClick={() => {
                         const newFormData = [...(config.formData || [])].filter(
-                          (_, i) => i !== index
+                          (_, i) => i !== index,
                         );
                         onConfigChange({ formData: newFormData });
                       }}
@@ -275,7 +275,7 @@ export default function ApiCallNode({
         {renderVariableSelect(
           config.responseVariable,
           (value) => onConfigChange({ responseVariable: value }),
-          "Select or create variable"
+          "Select or create variable",
         )}
       </div>
     </div>

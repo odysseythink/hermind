@@ -34,7 +34,7 @@ export default function ChatSettings({ workspace }) {
 
     const { workspace: updatedWorkspace, message } = await Workspace.update(
       workspace.slug,
-      data
+      data,
     );
     if (updatedWorkspace) {
       showToast("Workspace updated!", "success", { clear: true });

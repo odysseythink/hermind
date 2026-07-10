@@ -48,7 +48,7 @@ export const SHORTCUTS = {
       window.dispatchEvent(
         new CustomEvent(KEYBOARD_SHORTCUTS_HELP_EVENT, {
           detail: { show: true },
-        })
+        }),
       );
     },
   },
@@ -58,7 +58,7 @@ export const SHORTCUTS = {
       window.dispatchEvent(
         new CustomEvent(KEYBOARD_SHORTCUTS_HELP_EVENT, {
           detail: { show: true },
-        })
+        }),
       );
     },
   },

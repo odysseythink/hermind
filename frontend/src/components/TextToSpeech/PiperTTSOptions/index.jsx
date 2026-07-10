@@ -40,7 +40,7 @@ function PiperTTSModelSelection({ settings }) {
   const [loading, setLoading] = useState(true);
   const [voices, setVoices] = useState([]);
   const [selectedVoice, setSelectedVoice] = useState(
-    settings?.TTSPiperTTSVoiceModel
+    settings?.TTSPiperTTSVoiceModel,
   );
 
   function flushVoices() {
@@ -48,7 +48,7 @@ function PiperTTSModelSelection({ settings }) {
       .then(() =>
         showToast("All voices flushed from browser storage", "info", {
           clear: true,
-        })
+        }),
       )
       .catch((e) => console.error(e));
   }
@@ -149,7 +149,7 @@ function DemoVoiceSample({ voiceId }) {
         setLoading(true);
         const client = new PiperTTSClient({ voiceId });
         const blobUrl = await client.getAudioBlobForText(
-          "Hello, welcome to AnythingLLM!"
+          "Hello, welcome to AnythingLLM!",
         );
         setAudioSrc(blobUrl);
         setLoading(false);

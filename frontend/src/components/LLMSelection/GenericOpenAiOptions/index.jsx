@@ -3,13 +3,13 @@ import System from "@/models/system";
 
 export default function GenericOpenAiOptions({ settings }) {
   const [genericOpenAiBasePath, setGenericOpenAiBasePath] = useState(
-    settings?.GenericOpenAiBasePath
+    settings?.GenericOpenAiBasePath,
   );
   const [genericOpenAiApiKey, setGenericOpenAiApiKey] = useState(
-    settings?.GenericOpenAiApiKey
+    settings?.GenericOpenAiApiKey,
   );
   const [genericOpenAiModelPref, setGenericOpenAiModelPref] = useState(
-    settings?.GenericOpenAiModelPref
+    settings?.GenericOpenAiModelPref,
   );
 
   return (
@@ -114,7 +114,7 @@ function GenericOpenAiModelSelection({
         const { models } = await System.customModels(
           "generic-openai",
           apiKey,
-          basePath
+          basePath,
         );
         setCustomModels(models || []);
       } catch (error) {

@@ -24,7 +24,7 @@ function inputsFromArgs(setupArgs) {
         ? props.value
         : props?.input?.default || "",
     }),
-    {}
+    {},
   );
 }
 
@@ -39,7 +39,7 @@ export default function ImportedSkillConfig({
   const [config, setConfig] = useState(selectedSkill);
   const [hasChanges, setHasChanges] = useState(false);
   const [inputs, setInputs] = useState(
-    inputsFromArgs(selectedSkill?.setup_args)
+    inputsFromArgs(selectedSkill?.setup_args),
   );
 
   const hasSetupArgs =
@@ -50,16 +50,16 @@ export default function ImportedSkillConfig({
     const updatedConfig = { ...selectedSkill, active: !config.active };
     await System.experimentalFeatures.agentPlugins.updatePluginConfig(
       config.hubId,
-      { active: !config.active }
+      { active: !config.active },
     );
     setImportedSkills((prev) =>
-      prev.map((s) => (s.hubId === config.hubId ? updatedConfig : s))
+      prev.map((s) => (s.hubId === config.hubId ? updatedConfig : s)),
     );
     setConfig(updatedConfig);
     showToast(
       `Skill ${updatedConfig.active ? "activated" : "deactivated"}.`,
       "success",
-      { clear: true }
+      { clear: true },
     );
   }
 
@@ -88,13 +88,13 @@ export default function ImportedSkillConfig({
 
     await System.experimentalFeatures.agentPlugins.updatePluginConfig(
       config.hubId,
-      updatedConfig
+      updatedConfig,
     );
     setConfig(updatedConfig);
     setImportedSkills((prev) =>
       prev.map((skill) =>
-        skill.hubId === config.hubId ? updatedConfig : skill
-      )
+        skill.hubId === config.hubId ? updatedConfig : skill,
+      ),
     );
     showToast("Skill config updated successfully.", "success");
     setHasChanges(false);
@@ -103,7 +103,7 @@ export default function ImportedSkillConfig({
   useEffect(() => {
     setHasChanges(
       JSON.stringify(inputs) !==
-        JSON.stringify(inputsFromArgs(selectedSkill.setup_args))
+        JSON.stringify(inputsFromArgs(selectedSkill.setup_args)),
     );
   }, [inputs]);
 
@@ -196,12 +196,12 @@ function ManageSkillMenu({ config, setImportedSkills }) {
   async function deleteSkill() {
     if (
       !window.confirm(
-        "Are you sure you want to delete this skill? This action cannot be undone."
+        "Are you sure you want to delete this skill? This action cannot be undone.",
       )
     )
       return;
     const success = await System.experimentalFeatures.agentPlugins.deletePlugin(
-      config.hubId
+      config.hubId,
     );
     if (success) {
       setImportedSkills((prev) => prev.filter((s) => s.hubId !== config.hubId));

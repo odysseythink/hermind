@@ -12,7 +12,7 @@ const DMRUtils = {
   downloadModel: async function (
     modelId,
     basePath = "",
-    progressCallback = () => {}
+    progressCallback = () => {},
   ) {
     // eslint-disable-next-line no-async-promise-executor
     return new Promise(async (resolve) => {

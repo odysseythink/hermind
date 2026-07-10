@@ -54,7 +54,7 @@ export const getDefaultSkills = (t) => ({
 
 export const getConfigurableSkills = (
   t,
-  { fileSystemAgentAvailable = true, createFilesAgentAvailable = true } = {}
+  { fileSystemAgentAvailable = true, createFilesAgentAvailable = true } = {},
 ) => ({
   ...(fileSystemAgentAvailable && {
     "filesystem-agent": {

@@ -17,7 +17,7 @@ export function EditMessageAction({ chatId = null, role, isEditing }) {
   const { t } = useTranslation();
   function handleEditClick() {
     window.dispatchEvent(
-      new CustomEvent(EDIT_EVENT, { detail: { chatId, role } })
+      new CustomEvent(EDIT_EVENT, { detail: { chatId, role } }),
     );
   }
 
@@ -60,7 +60,7 @@ export function EditMessageForm({
     const editedMessage = formRef.current.value;
     saveChanges({ editedMessage, chatId, role, attachments });
     window.dispatchEvent(
-      new CustomEvent(EDIT_EVENT, { detail: { chatId, role, attachments } })
+      new CustomEvent(EDIT_EVENT, { detail: { chatId, role, attachments } }),
     );
   }
 
@@ -74,13 +74,13 @@ export function EditMessageForm({
       saveOnly: true,
     });
     window.dispatchEvent(
-      new CustomEvent(EDIT_EVENT, { detail: { chatId, role, attachments } })
+      new CustomEvent(EDIT_EVENT, { detail: { chatId, role, attachments } }),
     );
   }
 
   function cancelEdits() {
     window.dispatchEvent(
-      new CustomEvent(EDIT_EVENT, { detail: { chatId, role, attachments } })
+      new CustomEvent(EDIT_EVENT, { detail: { chatId, role, attachments } }),
     );
     return false;
   }

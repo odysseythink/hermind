@@ -6,7 +6,7 @@ import CommunityHubImportItemSteps, {
 
 function SideBarSelection({ setStep, currentStep }) {
   const currentIndex = Object.keys(CommunityHubImportItemSteps).indexOf(
-    currentStep
+    currentStep,
   );
   return (
     <div
@@ -61,7 +61,7 @@ function SideBarSelection({ setStep, currentStep }) {
               </div>
             </div>
           );
-        }
+        },
       )}
     </div>
   );

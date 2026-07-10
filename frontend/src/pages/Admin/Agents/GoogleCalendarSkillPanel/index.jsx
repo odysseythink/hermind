@@ -53,7 +53,7 @@ export default function GoogleCalendarSkillPanel({
     ])
       .then(([prefsRes, settingsRes, statusRes]) => {
         setDisabledSkills(
-          prefsRes?.settings?.disabled_google_calendar_skills ?? []
+          prefsRes?.settings?.disabled_google_calendar_skills ?? [],
         );
         setIsMultiUserMode(settingsRes?.MultiUserMode ?? false);
 
@@ -81,7 +81,7 @@ export default function GoogleCalendarSkillPanel({
       ])
         .then(([prefsRes, statusRes]) => {
           setDisabledSkills(
-            prefsRes?.settings?.disabled_google_calendar_skills ?? []
+            prefsRes?.settings?.disabled_google_calendar_skills ?? [],
           );
           if (statusRes?.success && statusRes.config) {
             setDeploymentId(statusRes.config.deploymentId || "");
@@ -98,7 +98,7 @@ export default function GoogleCalendarSkillPanel({
     setDisabledSkills((prev) =>
       prev.includes(skillName)
         ? prev.filter((s) => s !== skillName)
-        : [...prev, skillName]
+        : [...prev, skillName],
     );
   }
 
@@ -318,7 +318,7 @@ function SkillSearchInput({ onSearch }) {
       debounce((value) => {
         onSearch(value);
       }, 300),
-    [onSearch]
+    [onSearch],
   );
 
   useEffect(() => {
@@ -359,7 +359,7 @@ function SkillsSection({ skillCategories, disabledSkills, onToggle }) {
 
   const filteredCategories = useMemo(
     () => filterSkillCategories(skillCategories, searchTerm),
-    [skillCategories, searchTerm]
+    [skillCategories, searchTerm],
   );
 
   const hasResults = Object.keys(filteredCategories).length > 0;

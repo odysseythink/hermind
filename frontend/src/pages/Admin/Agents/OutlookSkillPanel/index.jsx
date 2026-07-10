@@ -62,7 +62,7 @@ export default function OutlookSkillPanel({
           setClientSecret(data.config.clientSecret || "");
           setAuthType(data.config.authType || "common");
           setConfigDefaultExpanded(
-            !(data.config.clientId && data.config.clientSecret)
+            !(data.config.clientId && data.config.clientSecret),
           );
         }
       }
@@ -91,7 +91,7 @@ export default function OutlookSkillPanel({
             setClientSecret(statusRes.config.clientSecret || "");
             setAuthType(statusRes.config.authType || "common");
             setConfigDefaultExpanded(
-              !(statusRes.config.clientId && statusRes.config.clientSecret)
+              !(statusRes.config.clientId && statusRes.config.clientSecret),
             );
           }
         }
@@ -145,7 +145,7 @@ export default function OutlookSkillPanel({
     setDisabledSkills((prev) =>
       prev.includes(skillName)
         ? prev.filter((s) => s !== skillName)
-        : [...prev, skillName]
+        : [...prev, skillName],
     );
   }
 
@@ -540,7 +540,7 @@ function SkillSearchInput({ onSearch }) {
       debounce((value) => {
         onSearch(value);
       }, 300),
-    [onSearch]
+    [onSearch],
   );
 
   useEffect(() => {
@@ -581,7 +581,7 @@ function SkillsSection({ skillCategories, disabledSkills, onToggle }) {
 
   const filteredCategories = useMemo(
     () => filterSkillCategories(skillCategories, searchTerm),
-    [skillCategories, searchTerm]
+    [skillCategories, searchTerm],
   );
 
   const hasResults = Object.keys(filteredCategories).length > 0;

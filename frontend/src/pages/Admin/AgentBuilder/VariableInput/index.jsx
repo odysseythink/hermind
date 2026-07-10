@@ -54,7 +54,7 @@ const VariableInput = forwardRef(function VariableInput(
     className = "",
     ...props
   },
-  ref
+  ref,
 ) {
   const backdropRef = useRef(null);
   const availableVariables = useAvailableVariables();

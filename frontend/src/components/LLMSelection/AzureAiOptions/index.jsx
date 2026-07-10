@@ -102,7 +102,7 @@ export default function AzureAiOptions({ settings }) {
               data-tooltip-id="azure-openai-model-type"
               data-tooltip-place="top"
               data-tooltip-content={t(
-                "llm.providers.azure_openai.model_type_tooltip"
+                "llm.providers.azure_openai.model_type_tooltip",
               )}
             >
               <Info size={18} className="text-theme-text-secondary" />

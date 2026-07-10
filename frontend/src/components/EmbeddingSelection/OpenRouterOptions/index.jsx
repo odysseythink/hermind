@@ -30,7 +30,7 @@ function OpenRouterEmbeddingModelSelection({ settings }) {
   const [models, setModels] = useState([]);
   const [loading, setLoading] = useState(true);
   const [selectedModel, setSelectedModel] = useState(
-    settings?.EmbeddingModelPref || ""
+    settings?.EmbeddingModelPref || "",
   );
 
   useEffect(() => {

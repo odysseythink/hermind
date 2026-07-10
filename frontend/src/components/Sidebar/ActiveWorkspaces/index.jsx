@@ -60,7 +60,7 @@ export default function ActiveWorkspaces() {
     reorderedWorkspaces.splice(endIndex, 0, removed);
     setWorkspaces(reorderedWorkspaces);
     const success = Workspace.storeWorkspaceOrder(
-      reorderedWorkspaces.map((w) => w.id)
+      reorderedWorkspaces.map((w) => w.id),
     );
     if (!success) {
       showToast("Failed to reorder workspaces", "error");
@@ -77,7 +77,7 @@ export default function ActiveWorkspaces() {
   const virtualActiveSlug = (() => {
     if (!isHomePage || workspaces.length === 0) return null;
     const lastVisited = safeJsonParse(
-      localStorage.getItem(LAST_VISITED_WORKSPACE)
+      localStorage.getItem(LAST_VISITED_WORKSPACE),
     );
     if (
       lastVisited?.slug &&
@@ -182,8 +182,8 @@ export default function ActiveWorkspaces() {
                                       isInWorkspaceSettings
                                         ? paths.workspace.chat(workspace.slug)
                                         : paths.workspace.settings.generalAppearance(
-                                            workspace.slug
-                                          )
+                                            workspace.slug,
+                                          ),
                                     );
                                   }}
                                   className={`group/gear rounded-md flex items-center justify-center ml-auto p-[2px] ${isActive ? "hover:bg-zinc-500 light:hover:bg-sky-800/30" : "hover:bg-zinc-500 light:hover:bg-slate-400"}`}

@@ -46,7 +46,7 @@ export function useSidebarToggle() {
           const newState = !prev;
           window.localStorage.setItem(
             SIDEBAR_TOGGLE_STORAGE_KEY,
-            newState ? "open" : "closed"
+            newState ? "open" : "closed",
           );
           return newState;
         });
@@ -61,12 +61,12 @@ export function useSidebarToggle() {
   useEffect(() => {
     window.localStorage.setItem(
       SIDEBAR_TOGGLE_STORAGE_KEY,
-      showSidebar ? "open" : "closed"
+      showSidebar ? "open" : "closed",
     );
     window.dispatchEvent(
       new CustomEvent(SIDEBAR_TOGGLE_EVENT, {
         detail: { open: showSidebar },
-      })
+      }),
     );
   }, [showSidebar]);
 

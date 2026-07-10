@@ -25,7 +25,7 @@ function isStandalonePWA() {
       : false;
 
   return Boolean(
-    matchesStandaloneDisplayMode || isIOSStandalone || androidReferrer
+    matchesStandaloneDisplayMode || isIOSStandalone || androidReferrer,
   );
 }
 
@@ -72,7 +72,7 @@ export function PWAModeProvider({ children }) {
     document.body.classList.toggle("pwa", isPWA);
     document.documentElement?.setAttribute(
       "data-pwa",
-      isPWA ? "true" : "false"
+      isPWA ? "true" : "false",
     );
 
     return () => {

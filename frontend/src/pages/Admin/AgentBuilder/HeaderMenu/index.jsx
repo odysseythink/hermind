@@ -69,7 +69,7 @@ export default function HeaderMenu({
                 onClick={() => {
                   if (!agentName && !hasOtherFlows) {
                     const agentNameInput = document.getElementById(
-                      "agent-flow-name-input"
+                      "agent-flow-name-input",
                     );
                     if (agentNameInput) agentNameInput.focus();
                     return;

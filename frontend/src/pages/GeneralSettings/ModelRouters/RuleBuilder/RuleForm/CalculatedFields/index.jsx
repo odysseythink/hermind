@@ -101,7 +101,7 @@ export default function CalculatedFields({
 
   const updateCondition = (index, changes) => {
     setConditions((prev) =>
-      prev.map((c, i) => (i === index ? { ...c, ...changes } : c))
+      prev.map((c, i) => (i === index ? { ...c, ...changes } : c)),
     );
   };
 
@@ -320,7 +320,7 @@ function ComparatorAndValueFields({ condition, onChange, showLabels }) {
           placeholder={valuePlaceholder(
             t,
             condition.property,
-            condition.comparator
+            condition.comparator,
           )}
           className={`bg-zinc-800 light:bg-white light:border light:border-slate-300 text-white light:text-slate-700 placeholder:text-zinc-400 light:placeholder:text-slate-400 text-sm rounded-[8px] outline-none block w-full h-8 px-3.5 ${
             condition.comparator === "matches" ? "font-mono" : ""

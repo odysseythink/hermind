@@ -29,7 +29,7 @@ export default function GithubOptions() {
       showToast(
         "Fetching all files for repo - this may take a while.",
         "info",
-        { clear: true, autoClose: false }
+        { clear: true, autoClose: false },
       );
       const { data, error } = await System.dataConnectors.github.collect({
         repo: form.get("repo"),
@@ -49,7 +49,7 @@ export default function GithubOptions() {
           data.author
         }/${data.repo}:${data.branch}. Output folder is ${data.destination}.`,
         "success",
-        { clear: true }
+        { clear: true },
       );
       e.target.reset();
       setLoading(false);

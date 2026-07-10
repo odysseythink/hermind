@@ -14,7 +14,7 @@ export default function TextSizeRow() {
   const { t } = useTranslation();
   const [showSubmenu, setShowSubmenu] = useState(false);
   const [selectedSize, setSelectedSize] = useState(
-    window.localStorage.getItem("anythingllm_text_size") || "normal"
+    window.localStorage.getItem("anythingllm_text_size") || "normal",
   );
 
   function handleTextSizeChange(size) {

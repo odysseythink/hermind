@@ -83,7 +83,7 @@ export default function useAgentSkillsState(defaultSkills) {
         ? !disabledDefaults.includes(key)
         : enabledConfigurable.includes(key);
     },
-    [defaultSkills, disabledDefaults, enabledConfigurable]
+    [defaultSkills, disabledDefaults, enabledConfigurable],
   );
 
   // Toggle functions
@@ -109,15 +109,15 @@ export default function useAgentSkillsState(defaultSkills) {
         default_agent_skills: updated.join(","),
       });
     },
-    [defaultSkills, disabledDefaults, enabledConfigurable]
+    [defaultSkills, disabledDefaults, enabledConfigurable],
   );
 
   const toggleImportedSkill = useCallback(async (skill) => {
     const newActive = !skill.active;
     setImportedSkills((prev) =>
       prev.map((s) =>
-        s.hubId === skill.hubId ? { ...s, active: newActive } : s
-      )
+        s.hubId === skill.hubId ? { ...s, active: newActive } : s,
+      ),
     );
     await AgentPlugins.toggleFeature(skill.hubId, newActive);
   }, []);
@@ -125,7 +125,7 @@ export default function useAgentSkillsState(defaultSkills) {
   const toggleFlow = useCallback(async (flow) => {
     const newActive = !flow.active;
     setFlows((prev) =>
-      prev.map((f) => (f.uuid === flow.uuid ? { ...f, active: newActive } : f))
+      prev.map((f) => (f.uuid === flow.uuid ? { ...f, active: newActive } : f)),
     );
     await AgentFlows.toggleFlow(flow.uuid, newActive);
   }, []);
@@ -155,7 +155,7 @@ export default function useAgentSkillsState(defaultSkills) {
       });
       await MCPServers.toggleTool(serverName, toolName, newEnabled);
     },
-    []
+    [],
   );
 
   return {

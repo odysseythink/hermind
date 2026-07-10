@@ -24,7 +24,7 @@ const PromptHistory = {
         {
           method: "GET",
           headers: baseHeaders(),
-        }
+        },
       )
         .then((res) => res.json())
         .then((res) => res.history || [])
@@ -50,7 +50,7 @@ const PromptHistory = {
         {
           method: "DELETE",
           headers: baseHeaders(),
-        }
+        },
       )
         .then((res) => res.json())
         .catch((error) => {

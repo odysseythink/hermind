@@ -11,7 +11,7 @@ export default function SlashCommand({ item, setStep }) {
       if (error) throw new Error(error);
       showToast(
         `Slash command ${item.command} imported successfully!`,
-        "success"
+        "success",
       );
       setStep(CommunityHubImportItemSteps.completed.key);
     } catch (e) {

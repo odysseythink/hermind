@@ -122,7 +122,7 @@ export default function WorkspaceFileRow({
 
 const PinItemToWorkspace = memo(({ workspace, docPath, item }) => {
   const [pinned, setPinned] = useState(
-    item?.pinnedWorkspaces?.includes(workspace.id) || false
+    item?.pinnedWorkspaces?.includes(workspace.id) || false,
   );
   const pinEvent = new CustomEvent("pinned_document");
 
@@ -133,7 +133,7 @@ const PinItemToWorkspace = memo(({ workspace, docPath, item }) => {
       const success = await Workspace.setPinForDocument(
         workspace.slug,
         docPath,
-        !pinned
+        !pinned,
       );
 
       if (!success) {
@@ -146,7 +146,7 @@ const PinItemToWorkspace = memo(({ workspace, docPath, item }) => {
       showToast(
         `Document ${!pinned ? "pinned to" : "unpinned from"} workspace`,
         "success",
-        { clear: true }
+        { clear: true },
       );
       setPinned(!pinned);
     } catch (error) {
@@ -198,7 +198,7 @@ const WatchForChanges = memo(({ workspace, docPath, item }) => {
         await System.experimentalFeatures.liveSync.setWatchStatusForDocument(
           workspace.slug,
           docPath,
-          !watched
+          !watched,
         );
 
       if (!success) {
@@ -207,7 +207,7 @@ const WatchForChanges = memo(({ workspace, docPath, item }) => {
           "error",
           {
             clear: true,
-          }
+          },
         );
         return;
       }
@@ -219,7 +219,7 @@ const WatchForChanges = memo(({ workspace, docPath, item }) => {
             : "will no longer be watched for changes"
         }.`,
         "success",
-        { clear: true }
+        { clear: true },
       );
       setWatched(!watched);
     } catch (error) {

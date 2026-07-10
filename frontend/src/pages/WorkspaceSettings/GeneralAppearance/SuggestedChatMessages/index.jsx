@@ -24,11 +24,11 @@ export default function SuggestedChatMessages({ slug }) {
 
   const handleSaveSuggestedMessages = async () => {
     const validMessages = suggestedMessages.filter(
-      (msg) => msg?.message?.trim()?.length > 0
+      (msg) => msg?.message?.trim()?.length > 0,
     );
     const { success, error } = await Workspace.setSuggestedMessages(
       slug,
-      validMessages
+      validMessages,
     );
     if (!success) {
       showToast(`Failed to update suggested chat messages: ${error}`, "error");
@@ -74,7 +74,7 @@ export default function SuggestedChatMessages({ slug }) {
       };
       setNewMessage(merged);
       setSuggestedMessages(
-        suggestedMessages.map((msg, i) => (i === index ? merged : msg))
+        suggestedMessages.map((msg, i) => (i === index ? merged : msg)),
       );
     } else {
       setNewMessage({ ...suggestion });

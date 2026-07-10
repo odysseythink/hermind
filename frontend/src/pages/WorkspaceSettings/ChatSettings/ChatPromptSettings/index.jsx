@@ -72,7 +72,7 @@ export default function ChatPromptSettings({
 
   useEffect(() => {
     System.fetchDefaultSystemPrompt().then(({ defaultSystemPrompt }) =>
-      setDefaultSystemPrompt(defaultSystemPrompt)
+      setDefaultSystemPrompt(defaultSystemPrompt),
     );
   }, []);
 

@@ -4,7 +4,7 @@ import System from "@/models/system";
 export default function ElevenLabsOptions({ settings }) {
   const [inputValue, setInputValue] = useState(settings?.TTSElevenLabsKey);
   const [elevenLabsKey, setElevenLabsKey] = useState(
-    settings?.TTSElevenLabsKey
+    settings?.TTSElevenLabsKey,
   );
 
   return (
@@ -42,7 +42,7 @@ function ElevenLabsModelSelection({ apiKey, settings }) {
       setLoading(true);
       const { models } = await System.customModels(
         "elevenlabs-tts",
-        typeof apiKey === "boolean" ? null : apiKey
+        typeof apiKey === "boolean" ? null : apiKey,
       );
 
       if (models?.length > 0) {

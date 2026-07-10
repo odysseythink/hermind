@@ -32,7 +32,7 @@ export default function useProviderEndpointAutoDiscovery({
             .catch(() => {
               reject(`${provider} @ ${endpoint} did not resolve.`);
             });
-        })
+        }),
       );
     });
 

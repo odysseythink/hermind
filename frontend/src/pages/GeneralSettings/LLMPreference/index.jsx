@@ -494,20 +494,20 @@ export default function GeneralLLMPreference() {
     return () => {
       window.removeEventListener(
         LLM_PREFERENCE_CHANGED_EVENT,
-        updateHasChanges
+        updateHasChanges,
       );
     };
   }, []);
 
   useEffect(() => {
     const filtered = AVAILABLE_LLM_PROVIDERS.filter((llm) =>
-      llm.name.toLowerCase().includes(searchQuery.toLowerCase())
+      llm.name.toLowerCase().includes(searchQuery.toLowerCase()),
     );
     setFilteredLLMs(filtered);
   }, [searchQuery, selectedLLM]);
 
   const selectedLLMObject = AVAILABLE_LLM_PROVIDERS.find(
-    (llm) => llm.value === selectedLLM
+    (llm) => llm.value === selectedLLM,
   );
   return (
     <div className="w-screen h-screen overflow-hidden bg-theme-bg-container flex">
@@ -639,7 +639,7 @@ export default function GeneralLLMPreference() {
               >
                 {selectedLLM &&
                   AVAILABLE_LLM_PROVIDERS.find(
-                    (llm) => llm.value === selectedLLM
+                    (llm) => llm.value === selectedLLM,
                   )?.options?.(settings)}
               </div>
             </div>

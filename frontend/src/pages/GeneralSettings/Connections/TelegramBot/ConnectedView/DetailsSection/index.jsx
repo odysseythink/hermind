@@ -63,7 +63,7 @@ function DisconnectButton({ onDisconnected }) {
     if (!res.success) {
       showToast(
         res.error || t("telegram.connected.toast-disconnect-failed"),
-        "error"
+        "error",
       );
       return;
     }

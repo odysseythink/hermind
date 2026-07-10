@@ -36,7 +36,7 @@ export default function WorkspaceLLM({
     // not yet set in settings.
     if (!checked) {
       const requiresAdditionalSetup = (llm.requiredConfig || []).some(
-        (key) => !currentSettings[key]
+        (key) => !currentSettings[key],
       );
       if (requiresAdditionalSetup) {
         openModal();
@@ -181,6 +181,6 @@ function SetupProvider({
         </div>
       </div>
     </ModalWrapper>,
-    document.getElementById("workspace-chat-settings-container")
+    document.getElementById("workspace-chat-settings-container"),
   );
 }

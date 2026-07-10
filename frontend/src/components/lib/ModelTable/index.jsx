@@ -45,7 +45,7 @@ export default function ModelTable({
   },
 }) {
   const [showAll, setShowAll] = useState(
-    models.some((model) => model.downloaded)
+    models.some((model) => model.downloaded),
   );
   const totalModels = models.length;
 
@@ -189,7 +189,7 @@ function ModelRow({
       ? humanFileSize(model.size * 1e6, true, 2)
       : (model.size ?? "Unknown size");
   const [isActiveModel, setIsActiveModel] = useState(
-    selectedModelId === model.id
+    selectedModelId === model.id,
   );
 
   async function handleSetActiveModel() {
@@ -226,7 +226,7 @@ function ModelRow({
       modelRowRef.current.classList.add("!bg-gray-200/10");
       setTimeout(
         () => modelRowRef.current.classList.remove("!bg-gray-200/10"),
-        800
+        800,
       );
     } else {
       setIsActiveModel(false);

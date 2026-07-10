@@ -57,14 +57,14 @@ export function MessageActionsProvider({ children }) {
     (chatId, role) => {
       return editingMessage?.chatId === chatId && editingMessage?.role === role;
     },
-    [editingMessage]
+    [editingMessage],
   );
 
   const isDeleted = useCallback(
     (chatId) => {
       return deletedMessages.has(chatId);
     },
-    [deletedMessages]
+    [deletedMessages],
   );
 
   const clearEditing = useCallback(() => {

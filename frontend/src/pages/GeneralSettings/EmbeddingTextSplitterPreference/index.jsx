@@ -34,7 +34,7 @@ export default function EmbeddingTextSplitterPreference() {
     ) {
       showToast(
         "Chunk overlap cannot be larger or equal to chunk size.",
-        "error"
+        "error",
       );
       return;
     }
@@ -46,16 +46,16 @@ export default function EmbeddingTextSplitterPreference() {
     setSaving(true);
     try {
       const form = new FormData(
-        document.getElementById("text-splitter-chunking-form")
+        document.getElementById("text-splitter-chunking-form"),
       );
       await Admin.updateSystemPreferences({
         text_splitter_chunk_size: isNullOrNaN(
-          form.get("text_splitter_chunk_size")
+          form.get("text_splitter_chunk_size"),
         )
           ? 1000
           : Number(form.get("text_splitter_chunk_size")),
         text_splitter_chunk_overlap: isNullOrNaN(
-          form.get("text_splitter_chunk_overlap")
+          form.get("text_splitter_chunk_overlap"),
         )
           ? 1000
           : Number(form.get("text_splitter_chunk_overlap")),

@@ -79,7 +79,7 @@ export default function AttachItem({
       window.removeEventListener(ATTACHMENTS_PROCESSED_EVENT, fetchFiles);
       window.removeEventListener(
         REMOVE_ATTACHMENT_EVENT,
-        handleRemoveAttachment
+        handleRemoveAttachment,
       );
     };
   }, [slug, threadSlug]);

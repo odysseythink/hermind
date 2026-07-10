@@ -19,7 +19,7 @@ export default function FoundryOptions({ settings }) {
         const { models, error } = await System.customModels(
           "foundry",
           null,
-          basePath
+          basePath,
         );
         if (error) throw new Error(error);
         setModels(models);

@@ -49,12 +49,12 @@ export default function RuleForm({
   const [loading, setLoading] = useState(false);
   const [ruleType, setRuleType] = useState(existingRule?.type || "calculated");
   const [conditionLogic, setConditionLogic] = useState(
-    existingRule?.condition_logic || "AND"
+    existingRule?.condition_logic || "AND",
   );
   const [conditions, setConditions] = useState(
     Array.isArray(existingRule?.conditions) && existingRule.conditions.length
       ? existingRule.conditions
-      : [emptyCondition()]
+      : [emptyCondition()],
   );
 
   const handleSubmit = async (e) => {
@@ -80,14 +80,14 @@ export default function RuleForm({
 
     if (ruleType === "calculated") {
       const incomplete = conditions.findIndex(
-        (c) => !c.property || !c.comparator || !String(c.value ?? "").trim()
+        (c) => !c.property || !c.comparator || !String(c.value ?? "").trim(),
       );
       if (incomplete !== -1) {
         showToast(
           t("model-router.rule-form.conditions-incomplete", {
             index: incomplete + 1,
           }),
-          "error"
+          "error",
         );
         setLoading(false);
         return;
@@ -115,7 +115,7 @@ export default function RuleForm({
     } else {
       showToast(
         result.error || t("model-router.rule-form.toast-save-failed"),
-        "error"
+        "error",
       );
     }
   };

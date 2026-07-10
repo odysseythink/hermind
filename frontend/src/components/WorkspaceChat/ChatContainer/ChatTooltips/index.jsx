@@ -135,6 +135,6 @@ function DocumentLevelTooltip() {
         className="tooltip !text-xs z-[100]"
       />
     </>,
-    document.body
+    document.body,
   );
 }

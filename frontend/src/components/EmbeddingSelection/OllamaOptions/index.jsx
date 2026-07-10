@@ -23,10 +23,10 @@ export default function OllamaEmbeddingOptions({ settings }) {
   });
 
   const [maxChunkLength, setMaxChunkLength] = useState(
-    settings?.EmbeddingModelMaxChunkLength || 8192
+    settings?.EmbeddingModelMaxChunkLength || 8192,
   );
   const [batchSize, setBatchSize] = useState(
-    settings?.OllamaEmbeddingBatchSize || 1
+    settings?.OllamaEmbeddingBatchSize || 1,
   );
 
   const handleMaxChunkLengthChange = (e) => {

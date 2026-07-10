@@ -436,5 +436,5 @@ const router = createBrowserRouter([
 ReactDOM.createRoot(document.getElementById("root")).render(
   <REACTWRAP>
     <RouterProvider router={router} />
-  </REACTWRAP>
+  </REACTWRAP>,
 );

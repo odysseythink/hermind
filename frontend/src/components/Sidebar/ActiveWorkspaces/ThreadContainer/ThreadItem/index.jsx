@@ -217,7 +217,7 @@ function OptionsMenu({
     const { message } = await Workspace.threads.update(
       workspace.slug,
       thread.slug,
-      { name }
+      { name },
     );
     if (!!message) {
       showToast(`Thread could not be updated! ${message}`, "error", {
@@ -234,7 +234,7 @@ function OptionsMenu({
   const handleDelete = async () => {
     if (
       !window.confirm(
-        "Are you sure you want to delete this thread? All of its chats will be deleted. You cannot undo this."
+        "Are you sure you want to delete this thread? All of its chats will be deleted. You cannot undo this.",
       )
     )
       return;

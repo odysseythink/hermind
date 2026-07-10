@@ -85,7 +85,7 @@ const ModelRouter = {
         method: "PUT",
         headers: baseHeaders(),
         body: JSON.stringify(data),
-      }
+      },
     )
       .then((res) => res.json())
       .catch((e) => {
@@ -100,7 +100,7 @@ const ModelRouter = {
       {
         method: "DELETE",
         headers: baseHeaders(),
-      }
+      },
     )
       .then((res) => res.json())
       .catch((e) => {

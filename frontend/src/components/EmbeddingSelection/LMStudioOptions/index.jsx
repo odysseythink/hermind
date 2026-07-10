@@ -28,7 +28,7 @@ export default function LMStudioEmbeddingOptions({ settings }) {
   });
 
   const [maxChunkLength, setMaxChunkLength] = useState(
-    settings?.EmbeddingModelMaxChunkLength || 8192
+    settings?.EmbeddingModelMaxChunkLength || 8192,
   );
 
   const handleMaxChunkLengthChange = (e) => {
@@ -215,7 +215,7 @@ function LMStudioModelSelection({ settings, basePath = null, apiKey = null }) {
         const { models } = await System.customModels(
           "lmstudio",
           apiKey,
-          basePath
+          basePath,
         );
         setCustomModels(models || []);
       } catch (error) {

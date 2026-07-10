@@ -30,7 +30,7 @@ export default function MenuOption({
   const isActive = hasChildren
     ? (!isExpanded &&
         childOptions.some((child) =>
-          isPathMatch(child.href, location.pathname)
+          isPathMatch(child.href, location.pathname),
         )) ||
       location.pathname === href
     : isPathMatch(href, location.pathname);
@@ -152,7 +152,7 @@ function useIsExpanded({
   useEffect(() => {
     if (hasVisibleChildren) {
       const shouldExpand = childOptions.some((child) =>
-        isPathMatch(child.href, location)
+        isPathMatch(child.href, location),
       );
       if (shouldExpand && !isExpanded) {
         setIsExpanded(true);
@@ -189,7 +189,7 @@ function hasVisibleOptions(user = null, childOptions = []) {
   }
 
   return childOptions.some((opt) =>
-    isVisible({ roles: opt.roles, user, flex: opt.flex, hidden: opt.hidden })
+    isVisible({ roles: opt.roles, user, flex: opt.flex, hidden: opt.hidden }),
   );
 }
 

@@ -16,7 +16,7 @@ export default function AgentFlow({ item, setStep }) {
       setLoading(true);
       const { success, error, flow } = await AgentFlows.saveFlow(
         item.name,
-        flowInfo
+        flowInfo,
       );
       if (!success) throw new Error(error);
       if (!!flow?.uuid) await AgentFlows.toggleFlow(flow.uuid, true); // Enable the flow automatically after import

@@ -103,7 +103,7 @@ function LiteLLMModelSelection({ settings, basePath = null, apiKey = null }) {
       const { models } = await System.customModels(
         "litellm",
         typeof apiKey === "boolean" ? null : apiKey,
-        basePath
+        basePath,
       );
       setCustomModels(models || []);
       setLoading(false);

@@ -14,8 +14,8 @@ export default function DeleteWorkspace({ workspace, visible = true }) {
     if (
       !window.confirm(
         `${t("general.delete.confirm-start")} ${workspace.name} ${t(
-          "general.delete.confirm-end"
-        )}`
+          "general.delete.confirm-end",
+        )}`,
       )
     )
       return false;

@@ -99,7 +99,7 @@ export default function DefaultSystemPrompt() {
       .catch((error) => {
         showToast(
           `Failed to update default system prompt: ${error.message}`,
-          "error"
+          "error",
         );
         setSystemPromptForm((prev) => ({
           ...prev,
@@ -242,7 +242,7 @@ export default function DefaultSystemPrompt() {
                         className="whitespace-pre-wrap"
                         highlightClassName="bg-cta-button p-0.5 rounded-md"
                         searchWords={availableVariables.map(
-                          (v) => `{${v.key}}`
+                          (v) => `{${v.key}}`,
                         )}
                         autoEscape={true}
                         caseSensitive={true}

@@ -28,7 +28,7 @@ export function MCPServerHeader({
   const refreshMCPServers = () => {
     if (
       window.confirm(
-        "Are you sure you want to refresh the list of MCP servers? This will restart all MCP servers and reload their tools."
+        "Are you sure you want to refresh the list of MCP servers? This will restart all MCP servers and reload their tools.",
       )
     ) {
       setLoadingMcpServers(true);

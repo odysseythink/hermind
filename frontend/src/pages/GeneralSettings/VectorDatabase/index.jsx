@@ -183,7 +183,7 @@ export default function GeneralVectorDatabase() {
 
   useEffect(() => {
     const filtered = VECTOR_DBS.filter((vdb) =>
-      vdb.name.toLowerCase().includes(searchQuery.toLowerCase())
+      vdb.name.toLowerCase().includes(searchQuery.toLowerCase()),
     );
     setFilteredVDBs(filtered);
   }, [searchQuery, selectedVDB]);
@@ -322,7 +322,7 @@ export default function GeneralVectorDatabase() {
               >
                 {selectedVDB &&
                   VECTOR_DBS.find((vdb) => vdb.value === selectedVDB)?.options(
-                    settings
+                    settings,
                   )}
               </div>
             </div>

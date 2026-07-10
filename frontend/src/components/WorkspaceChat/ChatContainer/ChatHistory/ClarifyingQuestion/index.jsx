@@ -130,7 +130,7 @@ export default function ClarifyingQuestionCard({
   const [responded, setResponded] = useState(false);
   const [submittedResult, setSubmittedResult] = useState(null);
   const [drafts, setDrafts] = useState(() =>
-    questions.map((q) => emptyDraftFor(q))
+    questions.map((q) => emptyDraftFor(q)),
   );
 
   const progressPercent = useTimeoutProgress(timeoutMs, {
@@ -154,14 +154,14 @@ export default function ClarifyingQuestionCard({
         const r = answerForDraft(q, drafts[i]);
         return acc + (r.skipped ? 0 : 1);
       }, 0),
-    [questions, drafts]
+    [questions, drafts],
   );
 
   if (!total) return null;
 
   function updateDraft(patch) {
     setDrafts((prev) =>
-      prev.map((d, i) => (i === index ? { ...d, ...patch } : d))
+      prev.map((d, i) => (i === index ? { ...d, ...patch } : d)),
     );
   }
 
@@ -175,7 +175,7 @@ export default function ClarifyingQuestionCard({
           type: "clarificationResponse",
           requestId,
           ...payload,
-        })
+        }),
       );
     }
   }

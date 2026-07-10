@@ -75,7 +75,7 @@ export default function AgentLLMSelection({
 }) {
   const [filteredLLMs, setFilteredLLMs] = useState([]);
   const [selectedLLM, setSelectedLLM] = useState(
-    workspace?.agentProvider ?? "none"
+    workspace?.agentProvider ?? "none",
   );
   const [searchQuery, setSearchQuery] = useState("");
   const [searchMenuOpen, setSearchMenuOpen] = useState(false);
@@ -99,7 +99,7 @@ export default function AgentLLMSelection({
 
   useEffect(() => {
     const filtered = LLMS.filter((llm) =>
-      llm.name.toLowerCase().includes(searchQuery.toLowerCase())
+      llm.name.toLowerCase().includes(searchQuery.toLowerCase()),
     );
     setFilteredLLMs(filtered);
   }, [searchQuery, selectedLLM]);

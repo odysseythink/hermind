@@ -123,13 +123,13 @@ for (const file of sourceFiles) {
 
 if (dynamicUsages.length > 0) {
   console.log(
-    `\nWarning: Found ${dynamicUsages.length} dynamic t() call(s) that cannot be statically analyzed:\n`
+    `\nWarning: Found ${dynamicUsages.length} dynamic t() call(s) that cannot be statically analyzed:\n`,
   );
   for (const { file, arg } of dynamicUsages) {
     console.log(`  ${file}: t(${arg})`);
   }
   console.log(
-    `\nIf these reference valid keys, add them to locales/dynamicKeyAllowlist.js to prevent accidental deletion.\n`
+    `\nIf these reference valid keys, add them to locales/dynamicKeyAllowlist.js to prevent accidental deletion.\n`,
   );
 }
 
@@ -154,7 +154,7 @@ const unusedKeys = [...definedKeys]
     (key) =>
       !referencedKeys.has(key) &&
       !allowlist.has(key) &&
-      !isPluralFormOfReferencedKey(key)
+      !isPluralFormOfReferencedKey(key),
   )
   .sort();
 
@@ -170,7 +170,7 @@ for (const key of unusedKeys) {
 
 if (!shouldDelete) {
   console.log(
-    `\nThese keys are defined in en/common.js but not referenced in any source file.`
+    `\nThese keys are defined in en/common.js but not referenced in any source file.`,
   );
   console.log(`Run with --delete to remove them from en/common.js.`);
   process.exit(1);
@@ -211,6 +211,6 @@ export default TRANSLATIONS;\n`;
 fs.writeFileSync(filePath, output, "utf-8");
 
 console.log(
-  `\n✅ Deleted ${unusedKeys.length} unused key(s) from en/common.js.`
+  `\n✅ Deleted ${unusedKeys.length} unused key(s) from en/common.js.`,
 );
 process.exit(0);

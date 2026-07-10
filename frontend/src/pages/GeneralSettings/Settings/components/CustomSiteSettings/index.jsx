@@ -32,7 +32,7 @@ export default function CustomSiteSettings() {
     showToast(
       "Site preferences updated! They will reflect on page reload.",
       "success",
-      { clear: true }
+      { clear: true },
     );
     setHasChanges(false);
     return;

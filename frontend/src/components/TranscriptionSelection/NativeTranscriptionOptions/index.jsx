@@ -27,7 +27,7 @@ export default function NativeTranscriptionOptions({ settings }) {
                     {value}
                   </option>
                 );
-              }
+              },
             )}
           </select>
         </div>

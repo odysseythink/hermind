@@ -60,7 +60,7 @@ export default function PrivacyAndDataHandling() {
 
 function TelemetryLogs({ settings }) {
   const [telemetry, setTelemetry] = useState(
-    settings?.DisableTelemetry !== "true"
+    settings?.DisableTelemetry !== "true",
   );
   const { t } = useTranslation();
   async function toggleTelemetry() {
@@ -71,7 +71,7 @@ function TelemetryLogs({ settings }) {
     showToast(
       `Anonymous Telemetry has been ${!telemetry ? "enabled" : "disabled"}.`,
       "info",
-      { clear: true }
+      { clear: true },
     );
   }
 

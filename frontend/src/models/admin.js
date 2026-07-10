@@ -135,7 +135,7 @@ const Admin = {
         method: "POST",
         headers: baseHeaders(),
         body: JSON.stringify({ userIds }),
-      }
+      },
     )
       .then((res) => res.json())
       .catch((e) => {
@@ -167,7 +167,7 @@ const Admin = {
       {
         method: "GET",
         headers: baseHeaders(),
-      }
+      },
     )
       .then((res) => res.json())
       .catch((e) => {

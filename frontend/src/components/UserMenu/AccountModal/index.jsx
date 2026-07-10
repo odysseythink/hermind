@@ -336,7 +336,7 @@ function AutoSpeakPreference() {
   useEffect(() => {
     const settings = Appearance.getSettings();
     setAutoPlayAssistantTtsResponse(
-      settings.autoPlayAssistantTtsResponse ?? false
+      settings.autoPlayAssistantTtsResponse ?? false,
     );
   }, []);
 

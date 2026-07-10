@@ -31,7 +31,7 @@ const LLM_DEFAULT = {
 };
 
 const LLMS = [LLM_DEFAULT, ...ALL_LLM_PROVIDERS].filter(
-  (llm) => !DISABLED_PROVIDERS.includes(llm.value)
+  (llm) => !DISABLED_PROVIDERS.includes(llm.value),
 );
 
 export default function WorkspaceLLMSelection({
@@ -41,7 +41,7 @@ export default function WorkspaceLLMSelection({
 }) {
   const [filteredLLMs, setFilteredLLMs] = useState([]);
   const [selectedLLM, setSelectedLLM] = useState(
-    workspace?.chatProvider ?? "default"
+    workspace?.chatProvider ?? "default",
   );
   const [searchQuery, setSearchQuery] = useState("");
   const [searchMenuOpen, setSearchMenuOpen] = useState(false);
@@ -65,7 +65,7 @@ export default function WorkspaceLLMSelection({
 
   useEffect(() => {
     const filtered = LLMS.filter((llm) =>
-      llm.name.toLowerCase().includes(searchQuery.toLowerCase())
+      llm.name.toLowerCase().includes(searchQuery.toLowerCase()),
     );
     setFilteredLLMs(filtered);
   }, [LLMS, searchQuery, selectedLLM]);

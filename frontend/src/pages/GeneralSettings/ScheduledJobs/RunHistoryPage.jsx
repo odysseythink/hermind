@@ -19,7 +19,7 @@ export default function RunHistoryPage() {
   const [loading, setLoading] = useState(true);
   const [triggering, setTriggering] = useState(false);
   const hasInFlightRun = runs.some(
-    (r) => r.status === "queued" || r.status === "running"
+    (r) => r.status === "queued" || r.status === "running",
   );
 
   const fetchRuns = async () => {
@@ -49,9 +49,9 @@ export default function RunHistoryPage() {
       showToast(
         t(
           "scheduledJobs.toast.triggerSkipped",
-          "A run is already in progress for this job"
+          "A run is already in progress for this job",
         ),
-        "info"
+        "info",
       );
     } else {
       showToast(t("scheduledJobs.toast.triggered"), "success");

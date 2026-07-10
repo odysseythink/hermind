@@ -15,7 +15,7 @@ export default function MaxToolCallStack() {
           AgentSkillMaxToolCalls: newMaxCallStack.toString(),
         });
       }, 800),
-    []
+    [],
   );
 
   useEffect(() => {

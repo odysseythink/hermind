@@ -17,7 +17,7 @@ export default function ResetDatabase({ workspace }) {
         t("vector-workspace.common.error"),
         {
           clear: true,
-        }
+        },
       );
       setDeleting(false);
       return;
@@ -28,7 +28,7 @@ export default function ResetDatabase({ workspace }) {
       t("vector-workspace.common.success"),
       {
         clear: true,
-      }
+      },
     );
     setDeleting(false);
   };

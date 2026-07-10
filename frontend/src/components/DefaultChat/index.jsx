@@ -24,7 +24,7 @@ export default function DefaultChatContainer() {
     async function fetchWorkspaces() {
       const availableWorkspaces = await Workspace.all();
       const serializedLastVisitedWorkspace = localStorage.getItem(
-        LAST_VISITED_WORKSPACE
+        LAST_VISITED_WORKSPACE,
       );
       if (!serializedLastVisitedWorkspace)
         return setWorkspaces({
@@ -35,11 +35,11 @@ export default function DefaultChatContainer() {
       try {
         const lastVisitedWorkspace = safeJsonParse(
           serializedLastVisitedWorkspace,
-          null
+          null,
         );
         if (lastVisitedWorkspace == null) throw new Error("Non-parseable!");
         const isValid = availableWorkspaces.some(
-          (ws) => ws.slug === lastVisitedWorkspace?.slug
+          (ws) => ws.slug === lastVisitedWorkspace?.slug,
         );
         if (!isValid) throw new Error("Invalid value!");
         setLastVisitedWorkspace(lastVisitedWorkspace);
@@ -88,7 +88,7 @@ export default function DefaultChatContainer() {
         {hasWorkspaces && (
           <NavLink
             to={paths.workspace.chat(
-              lastVisitedWorkspace?.slug || workspaces[0].slug
+              lastVisitedWorkspace?.slug || workspaces[0].slug,
             )}
             className="text-sm font-medium mt-[10px] w-fit px-4 h-[34px] flex items-center justify-center rounded-lg cursor-pointer bg-theme-home-button-secondary hover:bg-theme-home-button-secondary-hover text-theme-home-button-secondary-text hover:text-theme-home-button-secondary-hover-text transition-all duration-200"
           >

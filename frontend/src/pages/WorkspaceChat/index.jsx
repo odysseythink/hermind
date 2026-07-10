@@ -57,7 +57,7 @@ function ShowWorkspaceChat() {
         JSON.stringify({
           slug: _workspace.slug,
           name: _workspace.name,
-        })
+        }),
       );
     }
     getWorkspace();

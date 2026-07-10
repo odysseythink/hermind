@@ -4,7 +4,7 @@ import System from "@/models/system";
 export default function DeepSeekOptions({ settings }) {
   const [inputValue, setInputValue] = useState(settings?.DeepSeekApiKey);
   const [deepSeekApiKey, setDeepSeekApiKey] = useState(
-    settings?.DeepSeekApiKey
+    settings?.DeepSeekApiKey,
   );
 
   return (
@@ -48,7 +48,7 @@ function DeepSeekModelSelection({ apiKey, settings }) {
       setLoading(true);
       const { models } = await System.customModels(
         "deepseek",
-        typeof apiKey === "boolean" ? null : apiKey
+        typeof apiKey === "boolean" ? null : apiKey,
       );
       setModels(models || []);
       setLoading(false);

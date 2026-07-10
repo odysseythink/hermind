@@ -159,7 +159,7 @@ function LocalAIModelSelection({ settings, basePath = null, apiKey = null }) {
       const { models } = await System.customModels(
         "localai",
         typeof apiKey === "boolean" ? null : apiKey,
-        basePath
+        basePath,
       );
       setCustomModels(models || []);
       setLoading(false);

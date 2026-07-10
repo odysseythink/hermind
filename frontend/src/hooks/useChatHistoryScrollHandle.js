@@ -14,7 +14,7 @@ import { useImperativeHandle } from "react";
 export default function useChatHistoryScrollHandle(
   ref,
   chatHistoryRef,
-  { setIsUserScrolling, isStreaming, scrollToBottom }
+  { setIsUserScrolling, isStreaming, scrollToBottom },
 ) {
   useImperativeHandle(
     ref,
@@ -33,6 +33,6 @@ export default function useChatHistoryScrollHandle(
         scrollToBottom(isStreaming ? false : true);
       },
     }),
-    [isStreaming]
+    [isStreaming],
   );
 }

@@ -173,7 +173,8 @@ function CalculatedRuleBody({ rule }) {
   const quantifier = rule.condition_logic === "OR" ? "any" : "all";
   const conditionsSummary = conditions
     .map(
-      (c) => `${c.property} ${getComparatorLabel(t, c.comparator)} "${c.value}"`
+      (c) =>
+        `${c.property} ${getComparatorLabel(t, c.comparator)} "${c.value}"`,
     )
     .join(" AND ");
 

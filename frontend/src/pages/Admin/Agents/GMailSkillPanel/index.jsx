@@ -94,7 +94,7 @@ export default function GMailSkillPanel({
     setDisabledSkills((prev) =>
       prev.includes(skillName)
         ? prev.filter((s) => s !== skillName)
-        : [...prev, skillName]
+        : [...prev, skillName],
     );
   }
 
@@ -309,7 +309,7 @@ function SkillSearchInput({ onSearch }) {
       debounce((value) => {
         onSearch(value);
       }, 300),
-    [onSearch]
+    [onSearch],
   );
 
   useEffect(() => {
@@ -350,7 +350,7 @@ function SkillsSection({ skillCategories, disabledSkills, onToggle }) {
 
   const filteredCategories = useMemo(
     () => filterSkillCategories(skillCategories, searchTerm),
-    [skillCategories, searchTerm]
+    [skillCategories, searchTerm],
   );
 
   const hasResults = Object.keys(filteredCategories).length > 0;

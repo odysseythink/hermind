@@ -12,7 +12,7 @@ import { t } from "i18next";
 const RecoveryForm = ({ onSubmit, setShowRecoveryForm }) => {
   const [username, setUsername] = useState("");
   const [recoveryCodeInputs, setRecoveryCodeInputs] = useState(
-    Array(2).fill("")
+    Array(2).fill(""),
   );
 
   const handleRecoveryCodeChange = (index, value) => {
@@ -24,7 +24,7 @@ const RecoveryForm = ({ onSubmit, setShowRecoveryForm }) => {
   const handleSubmit = (e) => {
     e.preventDefault();
     const recoveryCodes = recoveryCodeInputs.filter(
-      (code) => code.trim() !== ""
+      (code) => code.trim() !== "",
     );
     onSubmit(username, recoveryCodes);
   };
@@ -221,7 +221,7 @@ export default function MultiUserAuth() {
   const handleRecoverySubmit = async (username, recoveryCodes) => {
     const { success, resetToken, error } = await System.recoverAccount(
       username,
-      recoveryCodes
+      recoveryCodes,
     );
 
     if (success && resetToken) {
@@ -240,7 +240,7 @@ export default function MultiUserAuth() {
       const { success, error } = await System.resetPassword(
         resetToken,
         newPassword,
-        confirmPassword
+        confirmPassword,
       );
 
       if (success) {

@@ -55,7 +55,7 @@ export default function TextSizeButton() {
 function TextSizeMenu({ tooltipRef }) {
   const { t } = useTranslation();
   const [selectedSize, setSelectedSize] = useState(
-    window.localStorage.getItem("anythingllm_text_size") || "normal"
+    window.localStorage.getItem("anythingllm_text_size") || "normal",
   );
 
   const handleTextSizeChange = (size) => {

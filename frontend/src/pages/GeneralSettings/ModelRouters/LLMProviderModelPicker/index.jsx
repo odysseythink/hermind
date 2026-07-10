@@ -36,7 +36,7 @@ export default function LLMProviderModelPicker({
   }, [defaultModel]);
 
   const availableProviders = AVAILABLE_LLM_PROVIDERS.filter(
-    (llm) => !EXCLUDED_PROVIDERS.includes(llm.value)
+    (llm) => !EXCLUDED_PROVIDERS.includes(llm.value),
   );
 
   useEffect(() => {
@@ -98,7 +98,7 @@ export default function LLMProviderModelPicker({
     if (error) {
       showToast(
         t("model-router.provider-picker.toast-save-failed", { error }),
-        "error"
+        "error",
       );
       return;
     }
@@ -108,7 +108,7 @@ export default function LLMProviderModelPicker({
   }
 
   const selectedLlm = availableProviders.find(
-    (l) => l.value === selectedProvider
+    (l) => l.value === selectedProvider,
   );
   const needsSetup =
     selectedProvider && selectedLlm && !isConfigured(selectedProvider);

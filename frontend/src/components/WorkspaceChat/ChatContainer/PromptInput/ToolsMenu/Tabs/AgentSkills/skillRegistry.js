@@ -9,7 +9,7 @@ import { getOutlookSkills } from "@/pages/Admin/Agents/OutlookSkillPanel/utils";
  */
 function flattenCategorySkills(categorizedSkills) {
   return Object.values(categorizedSkills).flatMap(
-    (category) => category.skills
+    (category) => category.skills,
   );
 }
 
@@ -54,7 +54,7 @@ export const SUB_SKILL_REGISTRY = {
  */
 export function getSubSkillPreferenceKeys() {
   return Object.values(SUB_SKILL_REGISTRY).map(
-    (config) => config.preferenceKey
+    (config) => config.preferenceKey,
   );
 }
 

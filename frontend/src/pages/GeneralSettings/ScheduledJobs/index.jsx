@@ -58,10 +58,10 @@ export default function ScheduledJobsPage() {
       showToast(
         t(
           "scheduledJobs.toast.triggerSkipped",
-          "A run is already in progress for this job"
+          "A run is already in progress for this job",
         ),
         "info",
-        { clear: true }
+        { clear: true },
       );
     } else {
       showToast(t("scheduledJobs.toast.triggered"), "success", { clear: true });
@@ -202,7 +202,7 @@ function BaseLayout({
 function NotificationBellButton() {
   const { t } = useTranslation();
   const [permissionState, setPermissionState] = useState(
-    typeof Notification !== "undefined" ? Notification.permission : "denied"
+    typeof Notification !== "undefined" ? Notification.permission : "denied",
   );
 
   if (
@@ -226,7 +226,7 @@ function NotificationBellButton() {
         data-tooltip-id="notification-bell-tooltip"
         data-tooltip-content={t(
           "scheduledJobs.enableNotifications",
-          "Enable browser notifications for job results"
+          "Enable browser notifications for job results",
         )}
         className="flex items-center justify-center w-9 h-9 rounded-lg hover:bg-white/10 light:hover:bg-slate-200 transition-colors"
       >

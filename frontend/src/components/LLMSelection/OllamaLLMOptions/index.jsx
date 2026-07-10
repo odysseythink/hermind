@@ -22,7 +22,7 @@ export default function OllamaLLMOptions({ settings }) {
     ENDPOINTS: OLLAMA_COMMON_URLS,
   });
   const [maxTokens, setMaxTokens] = useState(
-    settings?.OllamaLLMTokenLimit || ""
+    settings?.OllamaLLMTokenLimit || "",
   );
 
   return (
@@ -296,7 +296,7 @@ function OllamaLLMModelSelection({
         const { models } = await System.customModels(
           "ollama",
           authToken,
-          basePath
+          basePath,
         );
         setCustomModels(models || []);
       } catch (error) {

@@ -24,7 +24,7 @@ export default function DBConnection({
   function removeConfirmation() {
     if (
       !window.confirm(
-        `Delete ${database_id} from the list of available SQL connections? This cannot be undone.`
+        `Delete ${database_id} from the list of available SQL connections? This cannot be undone.`,
       )
     )
       return false;

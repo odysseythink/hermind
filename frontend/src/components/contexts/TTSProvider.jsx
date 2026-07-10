@@ -67,7 +67,7 @@ export function useTTSProvider() {
  */
 export function emitAssistantMessageCompleteEvent(chatId) {
   window.dispatchEvent(
-    new CustomEvent(ASSISTANT_MESSAGE_COMPLETE_EVENT, { detail: { chatId } })
+    new CustomEvent(ASSISTANT_MESSAGE_COMPLETE_EVENT, { detail: { chatId } }),
   );
 }
 
@@ -81,7 +81,7 @@ export function emitAssistantMessageCompleteEvent(chatId) {
  */
 export function useWatchForAutoPlayAssistantTTSResponse() {
   const autoPlayAssistantTtsResponse = Appearance.get(
-    "autoPlayAssistantTtsResponse"
+    "autoPlayAssistantTtsResponse",
   );
 
   function handleAutoPlayTTSEvent(event) {
@@ -97,7 +97,7 @@ export function useWatchForAutoPlayAssistantTTSResponse() {
      */
     function attemptToPlay() {
       const playBtn = document.querySelector(
-        `[data-auto-play-chat-id="${chatId}"]`
+        `[data-auto-play-chat-id="${chatId}"]`,
       );
       if (!playBtn) {
         autoPlayAttempts++;
@@ -121,12 +121,12 @@ export function useWatchForAutoPlayAssistantTTSResponse() {
     if (autoPlayAssistantTtsResponse) {
       window.addEventListener(
         ASSISTANT_MESSAGE_COMPLETE_EVENT,
-        handleAutoPlayTTSEvent
+        handleAutoPlayTTSEvent,
       );
       return () => {
         window.removeEventListener(
           ASSISTANT_MESSAGE_COMPLETE_EVENT,
-          handleAutoPlayTTSEvent
+          handleAutoPlayTTSEvent,
         );
       };
     } else {

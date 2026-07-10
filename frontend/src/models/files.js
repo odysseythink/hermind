@@ -10,7 +10,7 @@ const StorageFiles = {
   download: async function (storageFilename) {
     return await fetch(
       `${API_BASE}/agent-skills/generated-files/${encodeURIComponent(storageFilename)}`,
-      { headers: baseHeaders() }
+      { headers: baseHeaders() },
     )
       .then((res) => {
         if (!res.ok) throw new Error("Failed to download file");

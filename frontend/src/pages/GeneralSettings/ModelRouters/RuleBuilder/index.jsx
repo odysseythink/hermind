@@ -139,7 +139,7 @@ export default function RuleBuilder({
   const handleDelete = async (rule) => {
     if (
       !window.confirm(
-        t("model-router.rules.delete-confirm", { title: rule.title })
+        t("model-router.rules.delete-confirm", { title: rule.title }),
       )
     )
       return;
@@ -152,7 +152,7 @@ export default function RuleBuilder({
     const { rule: updated } = await ModelRouterAPI.updateRule(
       routerId,
       rule.id,
-      { enabled: !rule.enabled }
+      { enabled: !rule.enabled },
     );
     if (updated) onRulesChanged();
   };
@@ -179,7 +179,7 @@ export default function RuleBuilder({
 
     const { success } = await ModelRouterAPI.reorderRules(
       routerId,
-      ruleUpdates
+      ruleUpdates,
     );
     if (success) onRulesChanged();
     else showToast(t("model-router.rules.toast-reorder-failed"), "error");

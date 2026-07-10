@@ -48,7 +48,7 @@ function CohereModelSelection({ apiKey, settings }) {
       setLoading(true);
       const { models } = await System.customModels(
         "cohere",
-        typeof apiKey === "boolean" ? null : apiKey
+        typeof apiKey === "boolean" ? null : apiKey,
       );
       setModels(models || []);
       setLoading(false);

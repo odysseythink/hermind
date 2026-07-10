@@ -6,7 +6,7 @@ export default function AnthropicAiOptions({ settings }) {
   const [showAdvancedControls, setShowAdvancedControls] = useState(false);
   const [inputValue, setInputValue] = useState(settings?.AnthropicApiKey);
   const [anthropicApiKey, setAnthropicApiKey] = useState(
-    settings?.AnthropicApiKey
+    settings?.AnthropicApiKey,
   );
 
   return (
@@ -99,7 +99,7 @@ function AnthropicModelSelection({ apiKey, settings }) {
       setLoading(true);
       const { models } = await System.customModels(
         "anthropic",
-        typeof apiKey === "boolean" ? null : apiKey
+        typeof apiKey === "boolean" ? null : apiKey,
       );
       if (models.length > 0) setModels(models);
       setLoading(false);

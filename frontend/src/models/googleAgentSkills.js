@@ -31,7 +31,7 @@ const GoogleAgentSkills = {
         {
           method: "GET",
           headers: baseHeaders(),
-        }
+        },
       )
         .then((res) => res.json())
         .catch((e) => {

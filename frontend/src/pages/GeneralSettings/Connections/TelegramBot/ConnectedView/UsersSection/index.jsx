@@ -15,7 +15,7 @@ export default function UsersSection({
     if (!res.success) {
       showToast(
         res.error || t("telegram.connected.toast-approve-failed"),
-        "error"
+        "error",
       );
       return;
     }
@@ -27,7 +27,7 @@ export default function UsersSection({
     if (!res.success) {
       showToast(
         res.error || t("telegram.connected.toast-deny-failed"),
-        "error"
+        "error",
       );
       return;
     }
@@ -39,7 +39,7 @@ export default function UsersSection({
     if (!res.success) {
       showToast(
         res.error || t("telegram.connected.toast-revoke-failed"),
-        "error"
+        "error",
       );
       return;
     }

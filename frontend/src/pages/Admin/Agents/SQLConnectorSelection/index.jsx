@@ -37,7 +37,7 @@ export default function AgentSQLConnectorSelection({
     if (prevHasChanges.current === true && hasChanges === false) {
       Admin.systemPreferencesByFields(["agent_sql_connections"])
         .then((res) =>
-          setConnections(res?.settings?.agent_sql_connections ?? [])
+          setConnections(res?.settings?.agent_sql_connections ?? []),
         )
         .catch(() => {});
     }
@@ -56,7 +56,7 @@ export default function AgentSQLConnectorSelection({
         if (conn.database_id === databaseId)
           return { ...conn, action: "remove" };
         return conn;
-      })
+      }),
     );
   }
 
@@ -78,8 +78,8 @@ export default function AgentSQLConnectorSelection({
       prev.map((conn) =>
         conn.database_id === updatedConnection.originalDatabaseId
           ? updatedConnection
-          : conn
-      )
+          : conn,
+      ),
     );
   }
   /**
@@ -134,7 +134,7 @@ export default function AgentSQLConnectorSelection({
               <input
                 type="hidden"
                 value={JSON.stringify(
-                  connections.filter((conn) => conn.action !== "remove")
+                  connections.filter((conn) => conn.action !== "remove"),
                 )}
               />
               <div className="flex flex-col mt-2 gap-y-2">

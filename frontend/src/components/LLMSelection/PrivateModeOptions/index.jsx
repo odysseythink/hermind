@@ -22,7 +22,7 @@ export default function PrivateModeOptions({ settings }) {
         const { models, error } = await System.customModels(
           "privatemode",
           null,
-          basePath
+          basePath,
         );
         if (error) throw new Error(error);
         setModels(models);

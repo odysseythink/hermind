@@ -96,7 +96,7 @@ export default function JobFormModal({ job = null, onClose, onSaved }) {
       isEditing
         ? t("scheduledJobs.modal.jobUpdated")
         : t("scheduledJobs.modal.jobCreated"),
-      "success"
+      "success",
     );
     onSaved();
   };
@@ -125,7 +125,7 @@ export default function JobFormModal({ job = null, onClose, onSaved }) {
               <p className="text-sm text-red-400">
                 {t(
                   "scheduledJobs.modal.requiredFieldsBanner",
-                  "Please fill out all required fields in order to create job."
+                  "Please fill out all required fields in order to create job.",
                 )}
               </p>
             </div>

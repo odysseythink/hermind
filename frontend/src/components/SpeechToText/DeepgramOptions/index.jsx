@@ -4,7 +4,7 @@ import System from "@/models/system";
 export default function DeepgramSpeechToTextOptions({ settings }) {
   const [inputValue, setInputValue] = useState(settings?.STTDeepgramApiKey);
   const [deepgramApiKey, setDeepgramApiKey] = useState(
-    settings?.STTDeepgramApiKey
+    settings?.STTDeepgramApiKey,
   );
 
   return (
@@ -40,7 +40,7 @@ function DeepgramSttModelSelection({ apiKey, settings }) {
       setLoading(true);
       const { models } = await System.customModels(
         "deepgram-stt",
-        typeof apiKey === "boolean" ? null : apiKey
+        typeof apiKey === "boolean" ? null : apiKey,
       );
       setModels(models || []);
       setLoading(false);

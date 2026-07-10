@@ -146,7 +146,7 @@ export default function PromptInput({
         window.dispatchEvent(
           new CustomEvent(TOOLS_MENU_KEYBOARD_EVENT, {
             detail: { key: event.key },
-          })
+          }),
         );
         return;
       }
@@ -157,7 +157,7 @@ export default function PromptInput({
         window.dispatchEvent(
           new CustomEvent(TOOLS_MENU_KEYBOARD_EVENT, {
             detail: { key: "Enter" },
-          })
+          }),
         );
         return;
       }
@@ -212,7 +212,7 @@ export default function PromptInput({
       setTimeout(() => {
         textareaRef.current.setSelectionRange(
           nextState.cursorPositionStart,
-          nextState.cursorPositionEnd
+          nextState.cursorPositionEnd,
         );
       }, 0);
     }
@@ -236,7 +236,7 @@ export default function PromptInput({
       setTimeout(() => {
         textareaRef.current.setSelectionRange(
           lastState.cursorPositionStart,
-          lastState.cursorPositionEnd
+          lastState.cursorPositionEnd,
         );
       }, 0);
     }
@@ -259,7 +259,7 @@ export default function PromptInput({
         window.dispatchEvent(
           new CustomEvent(PASTE_ATTACHMENT_EVENT, {
             detail: { files: [file] },
-          })
+          }),
         );
         continue;
       }
@@ -270,7 +270,7 @@ export default function PromptInput({
         window.dispatchEvent(
           new CustomEvent(PASTE_ATTACHMENT_EVENT, {
             detail: { files: [file] },
-          })
+          }),
         );
         continue;
       }

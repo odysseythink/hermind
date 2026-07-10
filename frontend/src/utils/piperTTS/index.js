@@ -128,7 +128,7 @@ export default class PiperTTSClient {
       showToast(
         `Could not generate voice prediction. Error: ${error}`,
         "error",
-        { clear: true }
+        { clear: true },
       );
       return;
     }

@@ -4,7 +4,7 @@ import { useState, useEffect } from "react";
 export default function FireworksAiOptions({ settings }) {
   const [inputValue, setInputValue] = useState(settings?.FireworksAiLLMApiKey);
   const [fireworksAiApiKey, setFireworksAiApiKey] = useState(
-    settings?.FireworksAiLLMApiKey
+    settings?.FireworksAiLLMApiKey,
   );
 
   return (

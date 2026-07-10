@@ -8,7 +8,7 @@ import "react-loading-skeleton/dist/skeleton.css";
 
 export default forwardRef(function ChatPromptHistory(
   { show, workspaceSlug, onRestore, onClose, onPublishClick },
-  ref
+  ref,
 ) {
   const { t } = useTranslation();
   const [history, setHistory] = useState([]);

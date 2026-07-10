@@ -11,7 +11,7 @@ const WorkspaceThread = {
       {
         method: "GET",
         headers: baseHeaders(),
-      }
+      },
     )
       .then((res) => res.json())
       .catch(() => {
@@ -26,7 +26,7 @@ const WorkspaceThread = {
       {
         method: "POST",
         headers: baseHeaders(),
-      }
+      },
     )
       .then((res) => res.json())
       .catch((e) => {
@@ -42,7 +42,7 @@ const WorkspaceThread = {
         method: "POST",
         body: JSON.stringify(data),
         headers: baseHeaders(),
-      }
+      },
     )
       .then((res) => res.json())
       .catch((e) => {
@@ -57,7 +57,7 @@ const WorkspaceThread = {
       {
         method: "DELETE",
         headers: baseHeaders(),
-      }
+      },
     )
       .then((res) => res.ok)
       .catch(() => false);
@@ -69,7 +69,7 @@ const WorkspaceThread = {
         method: "DELETE",
         body: JSON.stringify({ slugs: threadSlugs }),
         headers: baseHeaders(),
-      }
+      },
     )
       .then((res) => res.ok)
       .catch(() => false);
@@ -80,7 +80,7 @@ const WorkspaceThread = {
       {
         method: "GET",
         headers: baseHeaders(),
-      }
+      },
     )
       .then((res) => res.json())
       .then((res) => res.history || [])
@@ -91,7 +91,7 @@ const WorkspaceThread = {
     { workspaceSlug, threadSlug },
     message,
     handleChat,
-    attachments = []
+    attachments = [],
   ) {
     const ctrl = new AbortController();
 
@@ -159,13 +159,13 @@ const WorkspaceThread = {
           ctrl.abort();
           throw new Error();
         },
-      }
+      },
     );
   },
   _deleteEditedChats: async function (
     workspaceSlug = "",
     threadSlug = "",
-    startingId
+    startingId,
   ) {
     return await fetch(
       `${API_BASE}/workspace/${workspaceSlug}/thread/${threadSlug}/delete-edited-chats`,
@@ -173,7 +173,7 @@ const WorkspaceThread = {
         method: "DELETE",
         headers: baseHeaders(),
         body: JSON.stringify({ startingId }),
-      }
+      },
     )
       .then((res) => {
         if (res.ok) return true;
@@ -189,7 +189,7 @@ const WorkspaceThread = {
     threadSlug = "",
     chatId,
     newText,
-    role = "assistant"
+    role = "assistant",
   ) {
     return await fetch(
       `${API_BASE}/workspace/${workspaceSlug}/thread/${threadSlug}/update-chat`,
@@ -197,7 +197,7 @@ const WorkspaceThread = {
         method: "POST",
         headers: baseHeaders(),
         body: JSON.stringify({ chatId, newText, role }),
-      }
+      },
     )
       .then((res) => {
         if (res.ok) return true;

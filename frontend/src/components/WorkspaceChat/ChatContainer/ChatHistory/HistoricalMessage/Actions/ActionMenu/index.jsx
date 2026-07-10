@@ -16,7 +16,7 @@ function ActionMenu({ chatId, forkThread, isEditing, role }) {
 
   const handleDelete = () => {
     window.dispatchEvent(
-      new CustomEvent("delete-message", { detail: { chatId } })
+      new CustomEvent("delete-message", { detail: { chatId } }),
     );
     setOpen(false);
   };

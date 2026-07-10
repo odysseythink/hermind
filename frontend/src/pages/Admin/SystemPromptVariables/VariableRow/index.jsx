@@ -22,7 +22,7 @@ export default function VariableRow({ variable, onRefresh }) {
     if (!variable.id) return;
     if (
       !window.confirm(
-        `Are you sure you want to delete the variable "${variable.key}"?\nThis action is irreversible.`
+        `Are you sure you want to delete the variable "${variable.key}"?\nThis action is irreversible.`,
       )
     )
       return false;

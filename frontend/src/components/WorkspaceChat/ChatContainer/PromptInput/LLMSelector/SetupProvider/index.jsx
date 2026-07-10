@@ -24,7 +24,7 @@ export default function SetupProvider({
     if (error) {
       showToast(
         `Failed to save ${llmProvider.name} settings: ${error}`,
-        "error"
+        "error",
       );
       return;
     }
@@ -84,7 +84,7 @@ export default function SetupProvider({
         </div>
       </div>
     </ModalWrapper>,
-    document.body
+    document.body,
   );
 }
 
@@ -106,7 +106,7 @@ export function NoSetupWarning({ showing, onSetupClick }) {
           role="button"
         >
           {t(
-            "chat_window.workspace_llm_manager.missing_credentials_description"
+            "chat_window.workspace_llm_manager.missing_credentials_description",
           )}
         </span>
       </p>

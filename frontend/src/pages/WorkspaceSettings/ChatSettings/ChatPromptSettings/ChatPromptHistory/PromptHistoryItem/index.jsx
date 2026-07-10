@@ -27,7 +27,7 @@ export default function PromptHistoryItem({
       const { success } = await PromptHistory.delete(id);
       if (success) {
         setHistory((prevHistory) =>
-          prevHistory.filter((item) => item.id !== id)
+          prevHistory.filter((item) => item.id !== id),
         );
       }
     }
