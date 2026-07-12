@@ -13,6 +13,7 @@ SOURCES += \
     main_chat_widget.cpp \
     main_setting_widget.cpp \
     mainwindow.cpp \
+    new_workspace_dialog.cpp \
     settings_store.cpp \
     theme_manager.cpp \
     api/api_response.cpp \
@@ -46,6 +47,7 @@ HEADERS += \
     main_chat_widget.h \
     main_setting_widget.h \
     mainwindow.h \
+    new_workspace_dialog.h \
     settings_store.h \
     theme_manager.h \
     api/api_response.h \

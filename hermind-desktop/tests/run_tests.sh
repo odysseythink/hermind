@@ -54,6 +54,10 @@ run_test sidebar sidebar_footer_widget_test.pro tst_sidebar_footer_widget
 run_test sidebar sidebar_widget_test.pro tst_sidebar_widget
 
 echo ""
+echo "=== dialogs tests ==="
+run_test dialogs new_workspace_dialog_test.pro tst_new_workspace_dialog
+
+echo ""
 echo "=== widgets tests ==="
 run_test widgets widgets_test.pro widgets_test
 

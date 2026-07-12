@@ -4,6 +4,7 @@
 #include "widgets/theme_colors.h"
 #include "theme_manager.h"
 #include "sidebar_widget.h"
+#include "new_workspace_dialog.h"
 #include "auth/auth_manager.h"
 #include "api/hermind_api_client.h"
 #include "navigation/navigation_manager.h"
@@ -73,7 +74,7 @@ void MainChatWidget::replaceSidebar()
     connect(m_sidebar, &SidebarWidget::openSettingsRequested,
             this, &MainChatWidget::bottomSettingClicked);
     connect(m_sidebar, &SidebarWidget::newWorkspaceRequested,
-            this, []() { qDebug() << "new workspace requested"; });
+            this, &MainChatWidget::onNewWorkspaceRequested);
 
     QBoxLayout *mainLayout = qobject_cast<QBoxLayout *>(ui->horizontalLayout_2);
     if (mainLayout && ui->sidebarFrame) {
@@ -284,6 +285,25 @@ void MainChatWidget::on_bottomSettingButton_clicked() {
     qDebug() << "bottom setting clicked";
     emit bottomSettingClicked();
 }
+
+void MainChatWidget::onNewWorkspaceRequested()
+{
+    HermindApiClient *client = AuthManager::instance().apiClient();
+    if (!client)
+        return;
+
+    NewWorkspaceDialog dialog(this);
+    dialog.setApiClient(client);
+    connect(&dialog, &NewWorkspaceDialog::workspaceCreated,
+            this, [](const HermindWorkspace &workspace) {
+        NavigationRoute route;
+        route.page = NavigationPage::WorkspaceChat;
+        route.workspaceSlug = workspace.slug();
+        NavigationManager::instance().navigateTo(route);
+    });
+    dialog.exec();
+}
+
 void MainChatWidget::on_headerSettingsButton_clicked() { qDebug() << "header settings clicked"; }
 void MainChatWidget::on_toolsButton_clicked() { qDebug() << "tools clicked"; }
 void MainChatWidget::on_micButton_clicked() { qDebug() << "mic clicked"; }

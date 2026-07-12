@@ -118,8 +118,11 @@ void HermindApiClient::createWorkspace(const QString &name, WorkspaceCallback ca
              const QJsonObject obj = resp.body().object();
              const HermindWorkspace ws = HermindWorkspace::fromJson(
                  obj.value(QStringLiteral("workspace")).toObject());
+             // Some endpoints report failures in the "error" field while still returning HTTP 200.
              const QString message = obj.value(QStringLiteral("message")).toString();
-             callback(ws, message, ApiError());
+             const QString errorText = obj.value(QStringLiteral("error")).toString();
+             const QString displayMessage = message.isEmpty() ? errorText : message;
+             callback(ws, displayMessage, ApiError());
          });
 }
 

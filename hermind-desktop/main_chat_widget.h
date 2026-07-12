@@ -40,6 +40,7 @@ private slots:
     void on_createAgentButton_clicked();
     void on_editWorkspaceButton_clicked();
     void on_uploadFileButton_clicked();
+    void onNewWorkspaceRequested();
     void onRouteChanged(const NavigationRoute &route);
 
 private:
