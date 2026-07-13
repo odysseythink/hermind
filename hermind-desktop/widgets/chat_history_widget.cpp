@@ -1,5 +1,6 @@
 #include "chat_history_widget.h"
-#include "chat_message_item.h"
+#include "plain_message_item.h"
+#include "markdown_message_item.h"
 #include "theme_colors.h"
 #include "theme_manager.h"
 
@@ -56,8 +57,13 @@ void ChatHistoryWidget::updateMessage(int index, const HermindChatMessage &messa
     if (index < 0 || index >= m_messages.size())
         return;
     m_messages[index] = message;
-    if (index < m_items.size())
-        m_items[index]->setMessage(message);
+    if (index < m_items.size()) {
+        QWidget *item = m_items[index];
+        if (auto *plain = dynamic_cast<PlainMessageItem *>(item))
+            plain->setMessage(message);
+        else if (auto *markdown = dynamic_cast<MarkdownMessageItem *>(item))
+            markdown->setMessage(message);
+    }
 }
 
 void ChatHistoryWidget::clear()
@@ -86,7 +92,7 @@ void ChatHistoryWidget::setWelcomeText(const QString &text)
 
 void ChatHistoryWidget::rebuild()
 {
-    for (ChatMessageItem *item : m_items) {
+    for (QWidget *item : m_items) {
         m_layout->removeWidget(item);
         item->deleteLater();
     }
@@ -112,9 +118,18 @@ void ChatHistoryWidget::rebuild()
 
 void ChatHistoryWidget::appendItem(const HermindChatMessage &message)
 {
-    ChatMessageItem *item = new ChatMessageItem(m_container);
-    item->setMessage(message);
-    item->setDarkMode(ThemeManager::instance().isDarkMode());
+    QWidget *item = nullptr;
+    if (message.role() == HermindChatMessage::User) {
+        auto *plain = new PlainMessageItem(m_container);
+        plain->setMessage(message);
+        plain->setDarkMode(ThemeManager::instance().isDarkMode());
+        item = plain;
+    } else {
+        auto *markdown = new MarkdownMessageItem(m_container);
+        markdown->setMessage(message);
+        markdown->setDarkMode(ThemeManager::instance().isDarkMode());
+        item = markdown;
+    }
     m_items.append(item);
     m_layout->insertWidget(m_layout->count() - 1, item);
 }
@@ -132,6 +147,10 @@ void ChatHistoryWidget::applyTheme()
     m_welcomeLabel->setStyleSheet(QStringLiteral(
         "#welcomeLabel { color: %1; font-size: 24px; font-weight: 500; }"
     ).arg(ThemeColors::textPrimary(dark).name()));
-    for (ChatMessageItem *item : m_items)
-        item->setDarkMode(dark);
+    for (QWidget *item : m_items) {
+        if (auto *plain = dynamic_cast<PlainMessageItem *>(item))
+            plain->setDarkMode(dark);
+        else if (auto *markdown = dynamic_cast<MarkdownMessageItem *>(item))
+            markdown->setDarkMode(dark);
+    }
 }

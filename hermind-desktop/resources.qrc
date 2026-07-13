@@ -2,4 +2,8 @@
     <qresource prefix="/images">
         <file alias="logo.svg">assets/logo.svg</file>
     </qresource>
+    <qresource prefix="/markdown">
+        <file alias="theme-dark.css">resources/markdown/theme-dark.css</file>
+        <file alias="theme-light.css">resources/markdown/theme-light.css</file>
+    </qresource>
 </RCC>

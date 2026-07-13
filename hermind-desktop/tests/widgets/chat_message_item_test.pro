@@ -8,14 +8,14 @@ INCLUDEPATH += $$PWD/../../widgets $$PWD/../../models $$PWD/../..
 
 SOURCES += \
     tst_chat_message_item.cpp \
-    ../../widgets/chat_message_item.cpp \
+    ../../widgets/plain_message_item.cpp \
     ../../widgets/theme_colors.cpp \
     ../../theme_manager.cpp \
     ../../settings_store.cpp \
     ../../models/hermind_chat_message.cpp
 
 HEADERS += \
-    ../../widgets/chat_message_item.h \
+    ../../widgets/plain_message_item.h \
     ../../widgets/theme_colors.h \
     ../../theme_manager.h \
     ../../settings_store.h \

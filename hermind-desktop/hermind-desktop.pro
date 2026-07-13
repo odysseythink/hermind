@@ -2,7 +2,7 @@ QT += widgets network websockets
 
 CONFIG += c++17
 
-INCLUDEPATH += $$PWD $$PWD/api $$PWD/models $$PWD/streaming $$PWD/auth $$PWD/navigation $$PWD/widgets $$PWD/sidebar $$PWD/chat
+INCLUDEPATH += $$PWD $$PWD/api $$PWD/models $$PWD/streaming $$PWD/auth $$PWD/navigation $$PWD/widgets $$PWD/sidebar $$PWD/chat $$PWD/markdown
 
 # You can make your code fail to compile if it uses deprecated APIs.
 # In order to do so, uncomment the following line.
@@ -45,9 +45,14 @@ SOURCES += \
     widgets/styled_separator.cpp \
     widgets/rounded_frame.cpp \
     widgets/setting_row.cpp \
-    widgets/chat_message_item.cpp \
     widgets/chat_history_widget.cpp \
-    widgets/chat_container_widget.cpp
+    widgets/chat_container_widget.cpp \
+    widgets/plain_message_item.cpp \
+    widgets/markdown_message_item.cpp \
+    markdown/html_sanitizer.cpp \
+    markdown/qt_builtin_parser.cpp \
+    markdown/html_generator.cpp \
+    markdown/markdown_renderer.cpp
 
 HEADERS += \
     main_chat_widget.h \
@@ -87,9 +92,15 @@ HEADERS += \
     widgets/styled_separator.h \
     widgets/rounded_frame.h \
     widgets/setting_row.h \
-    widgets/chat_message_item.h \
     widgets/chat_history_widget.h \
-    widgets/chat_container_widget.h
+    widgets/chat_container_widget.h \
+    widgets/plain_message_item.h \
+    widgets/markdown_message_item.h \
+    markdown/html_sanitizer.h \
+    markdown/i_markdown_parser.h \
+    markdown/qt_builtin_parser.h \
+    markdown/html_generator.h \
+    markdown/markdown_renderer.h
 
 FORMS += \
     main_chat_widget.ui \

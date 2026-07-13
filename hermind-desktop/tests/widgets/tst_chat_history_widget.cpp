@@ -1,6 +1,8 @@
 #include <QtTest>
 #include "chat_history_widget.h"
 #include "hermind_chat_message.h"
+#include "plain_message_item.h"
+#include "markdown_message_item.h"
 
 class TestChatHistoryWidget : public QObject
 {
@@ -8,6 +10,7 @@ class TestChatHistoryWidget : public QObject
 private slots:
     void setMessages_createsItems();
     void appendMessage_scrollsToBottom();
+    void userAndAssistant_createDifferentItemTypes();
 };
 
 void TestChatHistoryWidget::setMessages_createsItems()
@@ -42,6 +45,27 @@ void TestChatHistoryWidget::appendMessage_scrollsToBottom()
 
     QCOMPARE(widget.messageCount(), 1);
     QVERIFY(widget.isAtBottom());
+}
+
+void TestChatHistoryWidget::userAndAssistant_createDifferentItemTypes()
+{
+    ChatHistoryWidget widget(nullptr);
+
+    QVector<HermindChatMessage> msgs;
+    HermindChatMessage userMsg;
+    userMsg.setRole(HermindChatMessage::User);
+    userMsg.setContent("Question");
+    msgs.append(userMsg);
+
+    HermindChatMessage assistantMsg;
+    assistantMsg.setRole(HermindChatMessage::Assistant);
+    assistantMsg.setContent("Answer");
+    msgs.append(assistantMsg);
+
+    widget.setMessages(msgs);
+
+    QVERIFY(widget.findChild<PlainMessageItem *>() != nullptr);
+    QVERIFY(widget.findChild<MarkdownMessageItem *>() != nullptr);
 }
 
 QTEST_MAIN(TestChatHistoryWidget)

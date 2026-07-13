@@ -4,13 +4,14 @@ CONFIG += qt warn_on depend_includepath testcase c++17
 TEMPLATE = app
 TARGET = tst_chat_container_widget
 
-INCLUDEPATH += $$PWD/../../widgets $$PWD/../../api $$PWD/../../models $$PWD/../../chat $$PWD/../../streaming $$PWD/../..
+INCLUDEPATH += $$PWD/../../widgets $$PWD/../../api $$PWD/../../models $$PWD/../../chat $$PWD/../../streaming $$PWD/../../markdown $$PWD/../..
 
 SOURCES += \
     tst_chat_container_widget.cpp \
     ../../widgets/chat_container_widget.cpp \
     ../../widgets/chat_history_widget.cpp \
-    ../../widgets/chat_message_item.cpp \
+    ../../widgets/plain_message_item.cpp \
+    ../../widgets/markdown_message_item.cpp \
     ../../widgets/theme_colors.cpp \
     ../../theme_manager.cpp \
     ../../settings_store.cpp \
@@ -25,12 +26,17 @@ SOURCES += \
     ../../models/hermind_agent_event.cpp \
     ../../models/hermind_chat_message.cpp \
     ../../streaming/hermind_sse_client.cpp \
-    ../../streaming/hermind_websocket_client.cpp
+    ../../streaming/hermind_websocket_client.cpp \
+    ../../markdown/markdown_renderer.cpp \
+    ../../markdown/qt_builtin_parser.cpp \
+    ../../markdown/html_generator.cpp \
+    ../../markdown/html_sanitizer.cpp
 
 HEADERS += \
     ../../widgets/chat_container_widget.h \
     ../../widgets/chat_history_widget.h \
-    ../../widgets/chat_message_item.h \
+    ../../widgets/plain_message_item.h \
+    ../../widgets/markdown_message_item.h \
     ../../widgets/theme_colors.h \
     ../../theme_manager.h \
     ../../settings_store.h \
@@ -45,4 +51,11 @@ HEADERS += \
     ../../models/hermind_agent_event.h \
     ../../models/hermind_chat_message.h \
     ../../streaming/hermind_sse_client.h \
-    ../../streaming/hermind_websocket_client.h
+    ../../streaming/hermind_websocket_client.h \
+    ../../markdown/markdown_renderer.h \
+    ../../markdown/i_markdown_parser.h \
+    ../../markdown/qt_builtin_parser.h \
+    ../../markdown/html_generator.h \
+    ../../markdown/html_sanitizer.h
+
+RESOURCES += ../markdown/test_resources.qrc

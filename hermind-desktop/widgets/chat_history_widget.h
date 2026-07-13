@@ -7,7 +7,6 @@
 #include <QVector>
 #include "hermind_chat_message.h"
 
-class ChatMessageItem;
 class QLabel;
 
 class ChatHistoryWidget : public QWidget
@@ -37,7 +36,7 @@ private:
     QVBoxLayout *m_layout = nullptr;
     QLabel *m_welcomeLabel = nullptr;
     QVector<HermindChatMessage> m_messages;
-    QVector<ChatMessageItem *> m_items;
+    QVector<QWidget *> m_items;
 };
 
 #endif // CHAT_HISTORY_WIDGET_H

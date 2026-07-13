@@ -1,6 +1,8 @@
 #include <QtTest>
 #include <QApplication>
-#include "chat_message_item.h"
+#include <QHBoxLayout>
+#include <QFrame>
+#include "plain_message_item.h"
 #include "hermind_chat_message.h"
 
 class TestChatMessageItem : public QObject
@@ -8,7 +10,7 @@ class TestChatMessageItem : public QObject
     Q_OBJECT
 private slots:
     void userMessage_alignsRight();
-    void assistantMessage_alignsLeft();
+    void bubble_alignsRightInOuterLayout();
 };
 
 void TestChatMessageItem::userMessage_alignsRight()
@@ -17,23 +19,27 @@ void TestChatMessageItem::userMessage_alignsRight()
     msg.setRole(HermindChatMessage::User);
     msg.setContent("Hello");
 
-    ChatMessageItem item(nullptr);
+    PlainMessageItem item(nullptr);
     item.setMessage(msg);
 
     QCOMPARE(item.messageText(), QString("Hello"));
-    QVERIFY(item.isUserMessage());
 }
 
-void TestChatMessageItem::assistantMessage_alignsLeft()
+void TestChatMessageItem::bubble_alignsRightInOuterLayout()
 {
     HermindChatMessage msg;
-    msg.setRole(HermindChatMessage::Assistant);
-    msg.setContent("Hi there");
+    msg.setRole(HermindChatMessage::User);
+    msg.setContent("Hello");
 
-    ChatMessageItem item(nullptr);
+    PlainMessageItem item(nullptr);
     item.setMessage(msg);
 
-    QVERIFY(!item.isUserMessage());
+    QFrame *bubble = item.findChild<QFrame *>(QStringLiteral("bubbleFrame"));
+    QVERIFY(bubble != nullptr);
+
+    auto *outer = qobject_cast<QHBoxLayout *>(item.layout());
+    QVERIFY(outer != nullptr);
+    QVERIFY(outer->alignment() & Qt::AlignRight);
 }
 
 QTEST_MAIN(TestChatMessageItem)
