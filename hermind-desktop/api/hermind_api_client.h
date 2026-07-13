@@ -12,6 +12,7 @@
 #include "hermind_user.h"
 #include "hermind_workspace.h"
 #include "hermind_workspace_thread.h"
+#include "hermind_chat_message.h"
 #include "hermind_stream_chat_response.h"
 #include "hermind_sse_client.h"
 #include "hermind_websocket_client.h"
@@ -61,6 +62,9 @@ public:
     using ThreadOperationCallback = std::function<void(bool success, const ApiError &error)>;
     using StreamChatCallback = std::function<void(const HermindStreamChatResponse &response)>;
 
+    using ChatHistoryCallback = std::function<void(const QVector<HermindChatMessage> &messages,
+                                                   const ApiError &error)>;
+
     explicit HermindApiClient(QObject *parent = nullptr);
 
     void setBaseUrl(const QUrl &url);
@@ -88,6 +92,11 @@ public:
     void deleteThread(const QString &workspaceSlug,
                       const QString &threadSlug,
                       ThreadOperationCallback callback);
+
+    void chatHistory(const QString &workspaceSlug, ChatHistoryCallback callback);
+    void threadChatHistory(const QString &workspaceSlug,
+                           const QString &threadSlug,
+                           ChatHistoryCallback callback);
 
     void streamChat(const QString &workspaceSlug,
                     const QString &message,

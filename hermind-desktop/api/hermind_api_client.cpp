@@ -233,6 +233,44 @@ void HermindApiClient::deleteThread(const QString &workspaceSlug,
         });
 }
 
+void HermindApiClient::chatHistory(const QString &workspaceSlug, ChatHistoryCallback callback)
+{
+    get(QStringLiteral("/workspace/") + workspaceSlug + QStringLiteral("/chats"), QUrlQuery(),
+        [callback](const ApiResponse &resp) {
+            if (!resp.isSuccess()) {
+                callback(QVector<HermindChatMessage>(), resp.error());
+                return;
+            }
+            QVector<HermindChatMessage> list;
+            const QJsonArray arr = resp.body().object().value(QStringLiteral("history")).toArray();
+            list.reserve(arr.size());
+            for (const QJsonValue &v : arr)
+                list.append(HermindChatMessage::fromJson(v.toObject()));
+            callback(list, ApiError());
+        });
+}
+
+void HermindApiClient::threadChatHistory(const QString &workspaceSlug,
+                                         const QString &threadSlug,
+                                         ChatHistoryCallback callback)
+{
+    get(QStringLiteral("/workspace/") + workspaceSlug + QStringLiteral("/thread/") + threadSlug
+            + QStringLiteral("/chats"),
+        QUrlQuery(),
+        [callback](const ApiResponse &resp) {
+            if (!resp.isSuccess()) {
+                callback(QVector<HermindChatMessage>(), resp.error());
+                return;
+            }
+            QVector<HermindChatMessage> list;
+            const QJsonArray arr = resp.body().object().value(QStringLiteral("history")).toArray();
+            list.reserve(arr.size());
+            for (const QJsonValue &v : arr)
+                list.append(HermindChatMessage::fromJson(v.toObject()));
+            callback(list, ApiError());
+        });
+}
+
 void HermindApiClient::get(const QString &path, const QUrlQuery &query, GenericCallback callback)
 {
     sendRequest(QStringLiteral("GET"), path, query, QJsonObject(), callback);
