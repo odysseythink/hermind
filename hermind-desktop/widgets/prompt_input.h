@@ -8,6 +8,7 @@
 class QTextEdit;
 class QPushButton;
 class AgentMenu;
+class ToolsMenu;
 
 struct PromptCommand {
     QString text;
@@ -52,9 +53,12 @@ private:
 
     QTextEdit *m_textEdit = nullptr;
     QPushButton *m_agentButton = nullptr;
+    QPushButton *m_toolsButton = nullptr;
     QPushButton *m_sendButton = nullptr;
     QPushButton *m_stopButton = nullptr;
     AgentMenu *m_agentMenu = nullptr;
+    ToolsMenu *m_toolsMenu = nullptr;
+    bool m_autoOpenedTools = false;
 
     int m_maxHeight = 200;
 };

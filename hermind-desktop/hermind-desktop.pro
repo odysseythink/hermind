@@ -49,6 +49,8 @@ SOURCES += \
     widgets/chat_container_widget.cpp \
     widgets/prompt_input.cpp \
     widgets/agent_menu.cpp \
+    widgets/tools_menu.cpp \
+    widgets/slash_commands_tab.cpp \
     widgets/plain_message_item.cpp \
     widgets/markdown_message_item.cpp \
     markdown/html_sanitizer.cpp \
@@ -100,6 +102,8 @@ HEADERS += \
     widgets/chat_container_widget.h \
     widgets/prompt_input.h \
     widgets/agent_menu.h \
+    widgets/tools_menu.h \
+    widgets/slash_commands_tab.h \
     widgets/plain_message_item.h \
     widgets/markdown_message_item.h \
     markdown/html_sanitizer.h \

@@ -1,5 +1,6 @@
 #include "prompt_input.h"
 #include "agent_menu.h"
+#include "tools_menu.h"
 #include "theme_manager.h"
 #include "theme_colors.h"
 
@@ -32,12 +33,18 @@ PromptInput::PromptInput(QWidget *parent)
     m_agentButton->setToolTip(QStringLiteral("启动 Agent 会话"));
     m_agentButton->setFlat(true);
 
+    m_toolsButton = new QPushButton(QStringLiteral("工具"), this);
+    m_toolsButton->setCursor(Qt::PointingHandCursor);
+    m_toolsButton->setToolTip(QStringLiteral("工具与 Slash 命令"));
+    m_toolsButton->setFlat(true);
+
     m_sendButton = new QPushButton(QStringLiteral("发送"), this);
     m_stopButton = new QPushButton(QStringLiteral("停止"), this);
     m_stopButton->setVisible(false);
 
     QHBoxLayout *btnLayout = new QHBoxLayout();
     btnLayout->addWidget(m_agentButton);
+    btnLayout->addWidget(m_toolsButton);
     btnLayout->addStretch();
     btnLayout->addWidget(m_sendButton);
     btnLayout->addWidget(m_stopButton);
@@ -60,6 +67,24 @@ PromptInput::PromptInput(QWidget *parent)
         QPoint globalPos = m_agentButton->mapToGlobal(
             QPoint(m_agentButton->width() / 2, m_agentButton->height()));
         m_agentMenu->showAt(globalPos);
+    });
+
+    m_toolsMenu = new ToolsMenu(nullptr); // top-level popup
+    m_toolsMenu->setSendCommandCallback([this](const QString &text, const QString &mode) {
+        PromptCommand cmd;
+        cmd.text = text;
+        cmd.writeMode = mode;
+        emit sendCommand(cmd);
+    });
+    connect(m_toolsButton, &QPushButton::clicked, this, [this]() {
+        m_autoOpenedTools = false;
+        if (m_toolsMenu->isVisible())
+            m_toolsMenu->hide();
+        else
+            m_toolsMenu->showAbove(m_textEdit);
+    });
+    connect(m_toolsMenu, &ToolsMenu::closed, this, [this]() {
+        m_textEdit->setFocus();
     });
 
     connect(&ThemeManager::instance(), &ThemeManager::themeChanged,
@@ -120,6 +145,13 @@ bool PromptInput::eventFilter(QObject *obj, QEvent *event)
 {
     if (obj == m_textEdit && event->type() == QEvent::KeyPress) {
         QKeyEvent *keyEvent = static_cast<QKeyEvent *>(event);
+        if (keyEvent->key() == Qt::Key_Slash
+            && !(keyEvent->modifiers() & (Qt::ControlModifier | Qt::MetaModifier))
+            && m_textEdit->toPlainText().trimmed().isEmpty()) {
+            m_autoOpenedTools = true;
+            m_toolsMenu->showAbove(m_textEdit);
+            return true; // swallow the "/" character
+        }
         if (keyEvent->key() == Qt::Key_Return || keyEvent->key() == Qt::Key_Enter) {
             if (!(keyEvent->modifiers() & Qt::ShiftModifier)) {
                 keyEvent->accept();
