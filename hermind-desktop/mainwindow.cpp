@@ -19,7 +19,10 @@ MainWindow::MainWindow(QWidget *parent)
     auto *settingWidget = qobject_cast<MainSettingWidget*>(ui->stackedWidget->widget(1));
 
     if (chatWidget) {
+        // MainChatWidget handles both the default chat and workspace chat
+        // routes internally (see MainChatWidget::onRouteChanged).
         registerPage(NavigationPage::DefaultChat, chatWidget);
+        registerPage(NavigationPage::WorkspaceChat, chatWidget);
         connect(chatWidget, &MainChatWidget::bottomSettingClicked,
                 this, []() {
             NavigationRoute route;
@@ -64,7 +67,6 @@ void MainWindow::onCurrentRouteChanged(const NavigationRoute &route)
     }
 
     ui->stackedWidget->setCurrentIndex(index);
-    qDebug() << "switched to page" << static_cast<int>(route.page) << "at index" << index;
 }
 
 MainWindow::~MainWindow()

@@ -61,6 +61,10 @@ run_test navigation navigation_route_test.pro navigation_route_test
 run_test navigation navigation_manager_test.pro navigation_manager_test
 
 echo ""
+echo "=== mainwindow tests ==="
+run_test mainwindow mainwindow_test.pro tst_mainwindow
+
+echo ""
 echo "=== streaming sse tests ==="
 run_test streaming sse_test.pro tst_sse_client
 
