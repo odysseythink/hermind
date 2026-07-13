@@ -132,6 +132,12 @@ func (s *WorkspaceService) Update(ctx context.Context, slug string, req dto.Upda
 	if req.QueryRefusalResponse != nil {
 		updates["query_refusal_response"] = *req.QueryRefusalResponse
 	}
+	if req.AgentProvider != nil {
+		updates["agent_provider"] = *req.AgentProvider
+	}
+	if req.AgentModel != nil {
+		updates["agent_model"] = *req.AgentModel
+	}
 	if req.CompressEnabled != nil {
 		switch *req.CompressEnabled {
 		case "true":

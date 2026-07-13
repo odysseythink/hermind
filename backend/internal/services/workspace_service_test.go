@@ -107,3 +107,27 @@ func TestWorkspaceService_Update_PromptHistoryHook(t *testing.T) {
 }
 
 func strPtrFunc(s string) *string { return &s }
+
+func TestWorkspaceService_Update_AgentFields(t *testing.T) {
+	db := setupWSDB(t)
+	svc := NewWorkspaceService(db, &config.Config{}, nil)
+
+	ws := &models.Workspace{Name: "agent-ws", Slug: "agent-ws"}
+	require.NoError(t, db.Create(ws).Error)
+
+	uid := 1
+	provider := "openai"
+	model := "gpt-4o-mini"
+	err := svc.Update(context.Background(), ws.Slug, dto.UpdateWorkspaceRequest{
+		AgentProvider: &provider,
+		AgentModel:    &model,
+	}, &uid)
+	require.NoError(t, err)
+
+	var got models.Workspace
+	require.NoError(t, db.First(&got, ws.ID).Error)
+	require.NotNil(t, got.AgentProvider)
+	assert.Equal(t, provider, *got.AgentProvider)
+	require.NotNil(t, got.AgentModel)
+	assert.Equal(t, model, *got.AgentModel)
+}
