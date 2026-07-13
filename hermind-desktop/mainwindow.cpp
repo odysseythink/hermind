@@ -6,6 +6,7 @@
 #include "navigation_manager.h"
 #include "auth/auth_manager.h"
 #include "workspace_settings_widget.h"
+#include "general_appearance_tab.h"
 
 #include <QDebug>
 
@@ -46,6 +47,10 @@ MainWindow::MainWindow(QWidget *parent)
     workspaceSettingsWidget->setObjectName(QStringLiteral("workspaceSettingsWidget"));
     ui->stackedWidget->addWidget(workspaceSettingsWidget);
     registerPage(NavigationPage::WorkspaceSettings, workspaceSettingsWidget);
+
+    auto *generalTab = new GeneralAppearanceTab(
+        AuthManager::instance().apiClient(), workspaceSettingsWidget);
+    workspaceSettingsWidget->setTabWidget(QStringLiteral("general-appearance"), generalTab);
 
     connect(workspaceSettingsWidget, &WorkspaceSettingsWidget::returnClicked,
             this, []() {

@@ -1,11 +1,13 @@
 #include <QtTest>
 #include <QStackedWidget>
 #include <QToolButton>
+#include <QLineEdit>
 
 #include "mainwindow.h"
 #include "navigation_manager.h"
 #include "workspace_settings_widget.h"
 #include "workspace_settings_tab.h"
+#include "general_appearance_tab.h"
 
 class TestMainWindow : public QObject
 {
@@ -20,6 +22,7 @@ private slots:
     void workspaceSettingsPageIsReachable();
     void workspaceSettingsPageRestoresTabFromRoute();
     void workspaceSettingsReturnButtonGoesBack();
+    void generalAppearanceTabIsRegisteredForGeneralAppearanceRoute();
 };
 
 void TestMainWindow::init()
@@ -132,6 +135,27 @@ void TestMainWindow::workspaceSettingsReturnButtonGoesBack()
 
     QCOMPARE(NavigationManager::instance().currentPage(), NavigationPage::WorkspaceChat);
     QVERIFY(spy.count() >= 1);
+}
+
+void TestMainWindow::generalAppearanceTabIsRegisteredForGeneralAppearanceRoute()
+{
+    MainWindow w;
+
+    NavigationRoute route;
+    route.page = NavigationPage::WorkspaceSettings;
+    route.workspaceSlug = QStringLiteral("acme");
+    route.settingsPath = QStringLiteral("general-appearance");
+    NavigationManager::instance().navigateTo(route);
+
+    auto *settingsWidget = w.findChild<WorkspaceSettingsWidget *>();
+    QVERIFY(settingsWidget);
+    QCOMPARE(settingsWidget->currentTabId(), QStringLiteral("general-appearance"));
+
+    auto *generalTab = settingsWidget->findChild<GeneralAppearanceTab *>();
+    QVERIFY(generalTab);
+
+    auto *nameEdit = generalTab->findChild<QLineEdit *>(QStringLiteral("workspaceNameEdit"));
+    QVERIFY(nameEdit);
 }
 
 QTEST_MAIN(TestMainWindow)

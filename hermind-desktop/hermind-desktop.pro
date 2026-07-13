@@ -29,6 +29,8 @@ SOURCES += \
     widgets/llm_provider_info.cpp \
     widgets/workspace_settings_tab.cpp \
     widgets/workspace_settings_widget.cpp \
+    widgets/suggested_messages_editor.cpp \
+    widgets/general_appearance_tab.cpp \
     chat/chat_stream_handler.cpp \
     chat/agent_event_handler.cpp \
     streaming/hermind_sse_client.cpp \
@@ -100,6 +102,8 @@ HEADERS += \
     widgets/llm_provider_info.h \
     widgets/workspace_settings_tab.h \
     widgets/workspace_settings_widget.h \
+    widgets/suggested_messages_editor.h \
+    widgets/general_appearance_tab.h \
     chat/chat_stream_handler.h \
     chat/agent_event_handler.h \
     streaming/hermind_sse_client.h \
