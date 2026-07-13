@@ -58,6 +58,18 @@ void ChatStreamHandler::handleResponse(const HermindStreamChatResponse &response
     const QString type = response.type();
     const QString uuid = response.uuid();
 
+    const QJsonArray sources = response.sources();
+    if (!sources.isEmpty()) {
+        int idx = findMessageIndexByUuid(uuid);
+        if (idx < 0 && !m_messages.isEmpty())
+            idx = m_messages.size() - 1;
+        if (idx >= 0) {
+            m_messages[idx].appendSources(sources);
+            emit messagesChanged();
+        }
+        emit sourcesReceived(uuid, sources);
+    }
+
     if (type == QLatin1String("textResponse")) {
         if (const auto text = response.textResponse())
             appendOrUpdateAssistant(uuid, *text, response.close());

@@ -61,7 +61,6 @@ void ChatContainerWidget::setupThreePanelLayout()
     });
     connect(m_sourcesSidebar, &SourcesSidebar::closeRequested, this, [this]() {
         m_leftPanel->setFixedWidth(0);
-        m_sourcesSidebar->close();
     });
 
     // === CENTER PANEL ===
@@ -122,7 +121,6 @@ void ChatContainerWidget::setupThreePanelLayout()
     m_memoriesSidebar->setFixedWidth(0);
     connect(m_memoriesSidebar, &MemoriesSidebar::closeRequested, this, [this]() {
         m_memoriesSidebar->setFixedWidth(0);
-        m_memoriesSidebar->close();
     });
 
     root->addWidget(m_leftPanel);
@@ -183,6 +181,9 @@ void ChatContainerWidget::newChat()
     m_threadSlug.clear();
     m_streaming = false;
     m_input->setStopVisible(false);
+    m_sourcesSidebar->clear();
+    m_sourcesSidebar->close();
+    m_leftPanel->setFixedWidth(0);
     showDefaultChat();
 }
 
@@ -208,6 +209,11 @@ void ChatContainerWidget::connectHandlers()
 
     connect(m_agentHandler.get(), &AgentEventHandler::messagesChanged,
             this, &ChatContainerWidget::onHistoryChanged);
+
+    connect(m_agentHandler.get(), &AgentEventHandler::citationsReceived,
+            this, &ChatContainerWidget::showSources);
+    connect(m_streamHandler.get(), &ChatStreamHandler::sourcesReceived,
+            this, &ChatContainerWidget::showSources);
 
     connect(m_agentHandler.get(), &AgentEventHandler::statusReceived,
             m_statusBanner, &AgentStatusBanner::showStatus);
@@ -241,6 +247,13 @@ void ChatContainerWidget::connectHandlers()
 
     connect(m_agentHandler.get(), &AgentEventHandler::threadRenameRequested,
             this, &ChatContainerWidget::requestThreadRename);
+}
+
+void ChatContainerWidget::showSources(const QString &, const QJsonArray &sources)
+{
+    m_sourcesSidebar->setSources(sources);
+    m_leftPanel->setFixedWidth(300);
+    m_sourcesSidebar->open();
 }
 
 void ChatContainerWidget::onHistoryChanged()

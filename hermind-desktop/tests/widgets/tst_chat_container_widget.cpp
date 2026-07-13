@@ -2,6 +2,9 @@
 #include <QSignalSpy>
 #include <QStackedWidget>
 #include "chat_container_widget.h"
+#include "chat_stream_handler.h"
+#include "agent_event_handler.h"
+#include "sources_sidebar.h"
 #include "hermind_api_client.h"
 
 class TestChatContainerWidget : public QObject
@@ -17,6 +20,8 @@ private slots:
     void initialState_showsWelcomeView();
     void sendCommand_switchesToChatView();
     void newChat_switchesBackToWelcomeView();
+    void agentCitations_openSourcesSidebar();
+    void streamSources_openSourcesSidebar();
 };
 
 void TestChatContainerWidget::setWorkspace_updatesWelcomeLabel()
@@ -136,6 +141,42 @@ void TestChatContainerWidget::newChat_switchesBackToWelcomeView()
     QStackedWidget *stack = widget.findChild<QStackedWidget *>(QStringLiteral("chatStack"));
     QVERIFY(stack != nullptr);
     QCOMPARE(stack->currentIndex(), 0);
+}
+
+void TestChatContainerWidget::agentCitations_openSourcesSidebar()
+{
+    HermindApiClient client;
+    ChatContainerWidget widget(&client, nullptr);
+
+    AgentEventHandler *handler = widget.findChild<AgentEventHandler *>();
+    SourcesSidebar *sidebar = widget.findChild<SourcesSidebar *>();
+    QVERIFY(handler != nullptr);
+    QVERIFY(sidebar != nullptr);
+    QVERIFY(!sidebar->isOpen());
+
+    QJsonArray citations;
+    citations.append(QJsonObject{{"title", "doc1"}, {"chunk", "text"}});
+    handler->citationsReceived(QStringLiteral("u1"), citations);
+
+    QVERIFY(sidebar->isOpen());
+}
+
+void TestChatContainerWidget::streamSources_openSourcesSidebar()
+{
+    HermindApiClient client;
+    ChatContainerWidget widget(&client, nullptr);
+
+    ChatStreamHandler *handler = widget.findChild<ChatStreamHandler *>();
+    SourcesSidebar *sidebar = widget.findChild<SourcesSidebar *>();
+    QVERIFY(handler != nullptr);
+    QVERIFY(sidebar != nullptr);
+    QVERIFY(!sidebar->isOpen());
+
+    QJsonArray sources;
+    sources.append(QJsonObject{{"title", "doc1"}, {"chunk", "text"}});
+    handler->sourcesReceived(QStringLiteral("u1"), sources);
+
+    QVERIFY(sidebar->isOpen());
 }
 
 QTEST_MAIN(TestChatContainerWidget)

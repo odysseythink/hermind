@@ -10,6 +10,7 @@ private slots:
     void textResponseChunk_appendsToAssistantMessage();
     void finalizeResponseStream_marksMessageClosed();
     void stopGenerationAction_clearsPendingStream();
+    void sources_attachedToMessageAndEmitted();
 };
 
 static HermindStreamChatResponse makeResponse(const QString &uuid,
@@ -58,6 +59,27 @@ void TestChatStreamHandler::stopGenerationAction_clearsPendingStream()
     handler.handleResponse(makeResponse("", "stopGeneration"));
 
     QVERIFY(handler.messages().first().isClosed());
+}
+
+void TestChatStreamHandler::sources_attachedToMessageAndEmitted()
+{
+    ChatStreamHandler handler;
+    handler.handleResponse(makeResponse("u1", "textResponseChunk", "Hello"));
+
+    QSignalSpy spy(&handler, &ChatStreamHandler::sourcesReceived);
+
+    QJsonObject obj;
+    obj.insert("uuid", "u1");
+    obj.insert("type", "textResponse");
+    QJsonArray sources;
+    sources.append(QJsonObject{{"title", "doc1"}, {"chunk", "relevant text"}});
+    obj.insert("sources", sources);
+    handler.handleResponse(HermindStreamChatResponse::fromJson(obj));
+
+    QCOMPARE(handler.messages().first().sources().size(), 1);
+    QCOMPARE(spy.count(), 1);
+    QCOMPARE(spy.at(0).at(0).toString(), QStringLiteral("u1"));
+    QCOMPARE(spy.at(0).at(1).toJsonArray().size(), 1);
 }
 
 QTEST_APPLESS_MAIN(TestChatStreamHandler)

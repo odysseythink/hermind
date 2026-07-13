@@ -55,6 +55,7 @@ private slots:
     void onAgentEvent(const HermindAgentEvent &event);
     void applyTheme();
     void onHistoryChanged();
+    void showSources(const QString &uuid, const QJsonArray &sources);
 
 private:
     void setupThreePanelLayout();

@@ -24,6 +24,7 @@ signals:
     void streamFinished();
     void errorReceived(const QString &message);
     void agentWebSocketRequested(const QString &socketId, const QString &token);
+    void sourcesReceived(const QString &uuid, const QJsonArray &sources);
 
 private:
     int findMessageIndexByUuid(const QString &uuid) const;
