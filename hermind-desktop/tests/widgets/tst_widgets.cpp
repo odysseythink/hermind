@@ -8,6 +8,7 @@
 #include "rounded_frame.h"
 #include "setting_row.h"
 #include "llm_provider_info.h"
+#include "workspace_settings_tab.h"
 
 class TestWidgets : public QObject
 {
@@ -28,6 +29,10 @@ private slots:
     void llmProviderDefaultExists();
     void llmProviderOpenAiSupportsModelSelection();
     void llmProviderByIdReturnsNullForUnknown();
+    void workspaceSettingsTabs_all_hasFiveTabs();
+    void workspaceSettingsTabs_indexOfFindsTab();
+    void workspaceSettingsTabs_indexOfInvalidReturnsNegativeOne();
+    void workspaceSettingsTabs_titleOfFindsTitle();
 };
 
 void TestWidgets::iconButtonHasFixedSize()
@@ -124,6 +129,28 @@ void TestWidgets::llmProviderOpenAiSupportsModelSelection()
 void TestWidgets::llmProviderByIdReturnsNullForUnknown()
 {
     QVERIFY(!LlmProviderInfo::byId(QStringLiteral("zzzzz")));
+}
+
+void TestWidgets::workspaceSettingsTabs_all_hasFiveTabs()
+{
+    QCOMPARE(WorkspaceSettingsTabs::all().size(), 5);
+}
+
+void TestWidgets::workspaceSettingsTabs_indexOfFindsTab()
+{
+    QCOMPARE(WorkspaceSettingsTabs::indexOf(QStringLiteral("vector-database")), 2);
+    QCOMPARE(WorkspaceSettingsTabs::indexOf(QStringLiteral("members")), 3);
+}
+
+void TestWidgets::workspaceSettingsTabs_indexOfInvalidReturnsNegativeOne()
+{
+    QCOMPARE(WorkspaceSettingsTabs::indexOf(QStringLiteral("not-a-tab")), -1);
+}
+
+void TestWidgets::workspaceSettingsTabs_titleOfFindsTitle()
+{
+    QVERIFY(WorkspaceSettingsTabs::titleOf(QStringLiteral("chat")).contains(
+                QStringLiteral("Chat"), Qt::CaseInsensitive));
 }
 
 QTEST_MAIN(TestWidgets)

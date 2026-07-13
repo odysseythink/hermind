@@ -27,6 +27,8 @@ SOURCES += \
     models/hermind_memory.cpp \
     models/hermind_workspace_user.cpp \
     widgets/llm_provider_info.cpp \
+    widgets/workspace_settings_tab.cpp \
+    widgets/workspace_settings_widget.cpp \
     chat/chat_stream_handler.cpp \
     chat/agent_event_handler.cpp \
     streaming/hermind_sse_client.cpp \
@@ -96,6 +98,8 @@ HEADERS += \
     models/hermind_memory.h \
     models/hermind_workspace_user.h \
     widgets/llm_provider_info.h \
+    widgets/workspace_settings_tab.h \
+    widgets/workspace_settings_widget.h \
     chat/chat_stream_handler.h \
     chat/agent_event_handler.h \
     streaming/hermind_sse_client.h \

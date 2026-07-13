@@ -4,6 +4,8 @@
 #include "main_chat_widget.h"
 #include "main_setting_widget.h"
 #include "navigation_manager.h"
+#include "auth/auth_manager.h"
+#include "workspace_settings_widget.h"
 
 #include <QDebug>
 
@@ -39,6 +41,17 @@ MainWindow::MainWindow(QWidget *parent)
         });
     }
 
+    auto *workspaceSettingsWidget = new WorkspaceSettingsWidget(
+        AuthManager::instance().apiClient(), this);
+    workspaceSettingsWidget->setObjectName(QStringLiteral("workspaceSettingsWidget"));
+    ui->stackedWidget->addWidget(workspaceSettingsWidget);
+    registerPage(NavigationPage::WorkspaceSettings, workspaceSettingsWidget);
+
+    connect(workspaceSettingsWidget, &WorkspaceSettingsWidget::returnClicked,
+            this, []() {
+        NavigationManager::instance().goBack();
+    });
+
     connect(&NavigationManager::instance(), &NavigationManager::currentRouteChanged,
             this, &MainWindow::onCurrentRouteChanged);
 
@@ -67,6 +80,17 @@ void MainWindow::onCurrentRouteChanged(const NavigationRoute &route)
     }
 
     ui->stackedWidget->setCurrentIndex(index);
+
+    if (route.page == NavigationPage::WorkspaceSettings) {
+        auto *w = qobject_cast<WorkspaceSettingsWidget *>(
+            m_pageRegistry.value(NavigationPage::WorkspaceSettings));
+        if (w) {
+            w->setWorkspaceSlug(route.workspaceSlug);
+            w->setActiveTab(route.settingsPath.isEmpty()
+                                ? QStringLiteral("general-appearance")
+                                : route.settingsPath);
+        }
+    }
 }
 
 MainWindow::~MainWindow()

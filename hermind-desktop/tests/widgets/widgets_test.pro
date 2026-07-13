@@ -7,6 +7,7 @@ INCLUDEPATH += $$PWD/../../widgets $$PWD/../..
 
 SOURCES += \
     tst_widgets.cpp \
+    ../../widgets/workspace_settings_tab.cpp \
     ../../widgets/icon_button.cpp \
     ../../widgets/sidebar_menu_button.cpp \
     ../../widgets/search_input.cpp \
@@ -20,6 +21,7 @@ SOURCES += \
     ../../settings_store.cpp
 
 HEADERS += \
+    ../../widgets/workspace_settings_tab.h \
     ../../widgets/icon_button.h \
     ../../widgets/sidebar_menu_button.h \
     ../../widgets/search_input.h \

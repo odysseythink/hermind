@@ -26,6 +26,7 @@ SOURCES += \
     ../../models/hermind_chat_message.cpp \
     ../../models/hermind_agent_event.cpp \
     ../../models/hermind_memory.cpp \
+    ../../models/hermind_workspace_user.cpp \
     ../../chat/chat_stream_handler.cpp \
     ../../chat/agent_event_handler.cpp \
     ../../streaming/hermind_sse_client.cpp \
@@ -47,6 +48,8 @@ SOURCES += \
     ../../widgets/styled_separator.cpp \
     ../../widgets/rounded_frame.cpp \
     ../../widgets/setting_row.cpp \
+    ../../widgets/workspace_settings_tab.cpp \
+    ../../widgets/workspace_settings_widget.cpp \
     ../../widgets/chat_history_widget.cpp \
     ../../widgets/chat_container_widget.cpp \
     ../../widgets/prompt_input.cpp \
@@ -99,6 +102,7 @@ HEADERS += \
     ../../models/hermind_chat_message.h \
     ../../models/hermind_agent_event.h \
     ../../models/hermind_memory.h \
+    ../../models/hermind_workspace_user.h \
     ../../chat/chat_stream_handler.h \
     ../../chat/agent_event_handler.h \
     ../../streaming/hermind_sse_client.h \
@@ -122,6 +126,8 @@ HEADERS += \
     ../../widgets/styled_separator.h \
     ../../widgets/rounded_frame.h \
     ../../widgets/setting_row.h \
+    ../../widgets/workspace_settings_tab.h \
+    ../../widgets/workspace_settings_widget.h \
     ../../widgets/chat_history_widget.h \
     ../../widgets/chat_container_widget.h \
     ../../widgets/prompt_input.h \
