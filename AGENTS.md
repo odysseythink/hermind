@@ -58,9 +58,29 @@ hermind/
 │   ├── vite.config.js           # Vite configuration
 │   ├── eslint.config.js         # ESLint flat config
 │   └── package.json             # Yarn-based dependencies
+├── hermind-desktop/             # Qt 6 (C++17, qmake) native desktop client
+│   ├── api/                     # HermindApiClient (REST + SSE streaming + WebSocket)
+│   ├── auth/                    # AuthManager (login, token persistence)
+│   ├── chat/                    # ChatStreamHandler, AgentEventHandler (agent WS events)
+│   ├── models/                  # HermindWorkspace, HermindChatMessage, HermindMemory, ...
+│   ├── navigation/              # MainChatWidget / window navigation
+│   ├── sidebar/                 # Workspace/thread sidebar widgets
+│   ├── widgets/                 # Chat UI: PromptInput (QTextEdit + @agent/tools/attachments),
+│   │                            #   ChatContainerWidget (three-panel: sources | chat | memories),
+│   │                            #   DefaultChatWidget (welcome screen), sidebars, dialogs
+│   ├── theme/                   # ThemeManager/ThemeColors (dark/light, themeChanged signal)
+│   └── tests/                   # Qt Test (testlib) suites per module; run via tests/run_tests.sh
 ├── .github/workflows/           # CI: Go tests, lint, goreleaser, desktop builds
 └── .ody-code/                    # Design docs & ADRs (not shipped)
 ```
+
+### Desktop client build & test (hermind-desktop/)
+
+Qt 6 llvm-mingw toolchain. Build: `qmake hermind-desktop.pro && mingw32-make` → `release/hermind-desktop.exe`.
+Tests are per-module `.pro` files under `tests/<module>/*_test.pro` (Qt Test + QTEST_MAIN for widget tests);
+they share one `release/` dir, so re-run `qmake <target>.pro` before `mingw32-make` when switching targets.
+Run headless with `QT_QPA_PLATFORM=offscreen ./release/<target>.exe`; the full suite is `tests/run_tests.sh`.
+Widget style: private `applyTheme()` called from ctor + connected to `ThemeManager::themeChanged(const QString&)`.
 
 ## Technology Stack
 
