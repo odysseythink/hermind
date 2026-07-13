@@ -18,6 +18,7 @@ SOURCES += \
     ../../models/hermind_user.cpp \
     ../../models/hermind_stream_chat_response.cpp \
     ../../models/hermind_agent_event.cpp \
+    ../../models/hermind_chat_message.cpp \
     ../../streaming/hermind_sse_client.cpp \
     ../../streaming/hermind_websocket_client.cpp \
     ../../widgets/theme_colors.cpp \
@@ -34,6 +35,7 @@ HEADERS += \
     ../../models/hermind_user.h \
     ../../models/hermind_stream_chat_response.h \
     ../../models/hermind_agent_event.h \
+    ../../models/hermind_chat_message.h \
     ../../streaming/hermind_sse_client.h \
     ../../streaming/hermind_websocket_client.h \
     ../../widgets/theme_colors.h \

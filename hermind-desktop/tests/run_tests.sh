@@ -25,6 +25,7 @@ run_test() {
 
 echo "=== models tests ==="
 run_test models models_test.pro tst_models
+run_test models hermind_memory_test.pro tst_hermind_memory
 
 echo ""
 echo "=== api tests ==="
@@ -60,6 +61,16 @@ run_test dialogs new_workspace_dialog_test.pro tst_new_workspace_dialog
 echo ""
 echo "=== widgets tests ==="
 run_test widgets widgets_test.pro widgets_test
+run_test widgets prompt_input_test.pro tst_prompt_input
+run_test widgets agent_menu_test.pro tst_agent_menu
+run_test widgets tools_menu_test.pro tst_tools_menu
+run_test widgets attachment_manager_test.pro tst_attachment_manager
+run_test widgets tool_approval_dialog_test.pro tst_tool_approval_dialog
+run_test widgets sources_sidebar_test.pro tst_sources_sidebar
+run_test widgets memories_sidebar_test.pro tst_memories_sidebar
+run_test widgets suggested_messages_test.pro tst_suggested_messages
+run_test widgets default_chat_widget_test.pro tst_default_chat_widget
+run_test widgets chat_container_widget_test.pro tst_chat_container_widget
 
 echo ""
 echo "=== all desktop unit tests passed ==="

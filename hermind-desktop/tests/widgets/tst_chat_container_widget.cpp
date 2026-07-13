@@ -1,5 +1,6 @@
 #include <QtTest>
 #include <QSignalSpy>
+#include <QStackedWidget>
 #include "chat_container_widget.h"
 #include "hermind_api_client.h"
 
@@ -13,6 +14,9 @@ private slots:
     void sendCommand_prependMode_putsTextBeforeCursor();
     void sendCommand_appendMode_putsTextAfterCursor();
     void stopRequested_callsAbort();
+    void initialState_showsWelcomeView();
+    void sendCommand_switchesToChatView();
+    void newChat_switchesBackToWelcomeView();
 };
 
 void TestChatContainerWidget::setWorkspace_updatesWelcomeLabel()
@@ -95,6 +99,43 @@ void TestChatContainerWidget::stopRequested_callsAbort()
     widget.sendCommand(QStringLiteral("test"));
 
     QCOMPARE(spy.count(), 1);
+}
+
+void TestChatContainerWidget::initialState_showsWelcomeView()
+{
+    HermindApiClient client;
+    ChatContainerWidget widget(&client, nullptr);
+
+    QStackedWidget *stack = widget.findChild<QStackedWidget *>(QStringLiteral("chatStack"));
+    QVERIFY(stack != nullptr);
+    QCOMPARE(stack->currentIndex(), 0); // DefaultChatWidget welcome page
+}
+
+void TestChatContainerWidget::sendCommand_switchesToChatView()
+{
+    HermindApiClient client;
+    ChatContainerWidget widget(&client, nullptr);
+    widget.setWorkspace(QStringLiteral("ws-1"), QStringLiteral("My Workspace"));
+
+    widget.sendCommand(QStringLiteral("Hello"));
+
+    QStackedWidget *stack = widget.findChild<QStackedWidget *>(QStringLiteral("chatStack"));
+    QVERIFY(stack != nullptr);
+    QCOMPARE(stack->currentIndex(), 1); // chat history page
+}
+
+void TestChatContainerWidget::newChat_switchesBackToWelcomeView()
+{
+    HermindApiClient client;
+    ChatContainerWidget widget(&client, nullptr);
+    widget.setWorkspace(QStringLiteral("ws-1"), QStringLiteral("My Workspace"));
+
+    widget.sendCommand(QStringLiteral("Hello"));
+    widget.newChat();
+
+    QStackedWidget *stack = widget.findChild<QStackedWidget *>(QStringLiteral("chatStack"));
+    QVERIFY(stack != nullptr);
+    QCOMPARE(stack->currentIndex(), 0);
 }
 
 QTEST_MAIN(TestChatContainerWidget)

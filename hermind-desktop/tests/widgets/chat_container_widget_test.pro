@@ -18,10 +18,20 @@ SOURCES += \
     ../../widgets/tool_approval_dialog.cpp \
     ../../widgets/agent_status_banner.cpp \
     ../../widgets/download_card.cpp \
+    ../../widgets/sources_sidebar.cpp \
+    ../../widgets/source_item.cpp \
+    ../../widgets/citation_detail_modal.cpp \
+    ../../widgets/memories_sidebar.cpp \
+    ../../widgets/memory_card.cpp \
+    ../../widgets/memory_modal.cpp \
+    ../../widgets/default_chat_widget.cpp \
+    ../../widgets/quick_actions.cpp \
+    ../../widgets/suggested_messages.cpp \
     ../../widgets/chat_history_widget.cpp \
     ../../widgets/plain_message_item.cpp \
     ../../widgets/markdown_message_item.cpp \
     ../../widgets/theme_colors.cpp \
+    ../../widgets/theme_style_helper.cpp \
     ../../theme_manager.cpp \
     ../../settings_store.cpp \
     ../../chat/chat_stream_handler.cpp \
@@ -55,10 +65,20 @@ HEADERS += \
     ../../widgets/tool_approval_dialog.h \
     ../../widgets/agent_status_banner.h \
     ../../widgets/download_card.h \
+    ../../widgets/sources_sidebar.h \
+    ../../widgets/source_item.h \
+    ../../widgets/citation_detail_modal.h \
+    ../../widgets/memories_sidebar.h \
+    ../../widgets/memory_card.h \
+    ../../widgets/memory_modal.h \
+    ../../widgets/default_chat_widget.h \
+    ../../widgets/quick_actions.h \
+    ../../widgets/suggested_messages.h \
     ../../widgets/chat_history_widget.h \
     ../../widgets/plain_message_item.h \
     ../../widgets/markdown_message_item.h \
     ../../widgets/theme_colors.h \
+    ../../widgets/theme_style_helper.h \
     ../../theme_manager.h \
     ../../settings_store.h \
     ../../chat/chat_stream_handler.h \

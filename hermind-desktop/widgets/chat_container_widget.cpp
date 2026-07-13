@@ -1,9 +1,13 @@
 #include "chat_container_widget.h"
 #include "hermind_api_client.h"
+#include "hermind_workspace.h"
 #include "chat_history_widget.h"
 #include "chat_stream_handler.h"
 #include "agent_event_handler.h"
 #include "agent_status_banner.h"
+#include "sources_sidebar.h"
+#include "memories_sidebar.h"
+#include "default_chat_widget.h"
 #include "tool_approval_dialog.h"
 #include "download_card.h"
 #include "theme_manager.h"
@@ -12,7 +16,9 @@
 #include <QVBoxLayout>
 #include <QHBoxLayout>
 #include <QLabel>
+#include <QPushButton>
 #include <QScrollBar>
+#include <QStackedWidget>
 
 ChatContainerWidget::ChatContainerWidget(HermindApiClient *apiClient, QWidget *parent)
     : QWidget(parent)
@@ -20,29 +26,12 @@ ChatContainerWidget::ChatContainerWidget(HermindApiClient *apiClient, QWidget *p
     , m_streamHandler(std::make_unique<ChatStreamHandler>(this))
     , m_agentHandler(std::make_unique<AgentEventHandler>(this))
 {
-    QVBoxLayout *root = new QVBoxLayout(this);
-    root->setContentsMargins(0, 0, 0, 0);
-    root->setSpacing(0);
-
-    m_historyWidget = new ChatHistoryWidget(this);
-    root->addWidget(m_historyWidget, 1);
-
-    m_statusBanner = new AgentStatusBanner(this);
-    root->addWidget(m_statusBanner);
-
-    m_input = new PromptInput(this);
-    m_input->setMaxHeight(200);
-    root->addWidget(m_input);
-
-    connect(m_input, &PromptInput::sendCommand,
-            this, QOverload<const PromptCommand &>::of(&ChatContainerWidget::sendCommand));
-    connect(m_input, &PromptInput::stopRequested,
-            this, [this]() { if (m_apiClient) m_apiClient->abortStream(); });
-    connect(&ThemeManager::instance(), &ThemeManager::themeChanged,
-            this, &ChatContainerWidget::applyTheme);
-
+    setupThreePanelLayout();
     connectHandlers();
     applyTheme();
+
+    // Start in welcome state
+    showDefaultChat();
 }
 
 ChatContainerWidget::~ChatContainerWidget()
@@ -50,10 +39,153 @@ ChatContainerWidget::~ChatContainerWidget()
     disconnectAgentSocket();
 }
 
+void ChatContainerWidget::setupThreePanelLayout()
+{
+    QHBoxLayout *root = new QHBoxLayout(this);
+    root->setContentsMargins(0, 0, 0, 0);
+    root->setSpacing(0);
+
+    // === LEFT PANEL: sources sidebar (partial — constructed, hidden) ===
+    m_leftPanel = new QWidget(this);
+    QVBoxLayout *leftLayout = new QVBoxLayout(m_leftPanel);
+    leftLayout->setContentsMargins(0, 0, 0, 0);
+    leftLayout->setSpacing(0);
+    QPushButton *renameBtn = new QPushButton(QStringLiteral("重命名"), m_leftPanel);
+    renameBtn->setFlat(true);
+    leftLayout->addWidget(renameBtn);
+    m_sourcesSidebar = new SourcesSidebar(m_leftPanel);
+    leftLayout->addWidget(m_sourcesSidebar, 1);
+    m_leftPanel->setFixedWidth(0); // hidden for now
+    connect(renameBtn, &QPushButton::clicked, this, [this]() {
+        emit requestThreadRename(m_threadSlug);
+    });
+    connect(m_sourcesSidebar, &SourcesSidebar::closeRequested, this, [this]() {
+        m_leftPanel->setFixedWidth(0);
+        m_sourcesSidebar->close();
+    });
+
+    // === CENTER PANEL ===
+    m_centerPanel = new QWidget(this);
+    QVBoxLayout *centerLayout = new QVBoxLayout(m_centerPanel);
+    centerLayout->setContentsMargins(0, 0, 0, 0);
+    centerLayout->setSpacing(0);
+
+    // Toolbar row
+    QHBoxLayout *toolbar = new QHBoxLayout();
+    toolbar->setContentsMargins(8, 4, 8, 4);
+    m_wsLabel = new QLabel(m_centerPanel);
+    m_wsLabel->setObjectName(QStringLiteral("workspaceNameLabel"));
+    m_newChatBtn = new QPushButton(QStringLiteral("新建聊天"), m_centerPanel);
+    m_stopBtn = new QPushButton(QStringLiteral("停止生成"), m_centerPanel);
+    m_newChatBtn->setFlat(true);
+    m_stopBtn->setFlat(true);
+    m_newChatBtn->setCursor(Qt::PointingHandCursor);
+    m_stopBtn->setCursor(Qt::PointingHandCursor);
+    toolbar->addWidget(m_wsLabel);
+    toolbar->addStretch();
+    toolbar->addWidget(m_newChatBtn);
+    toolbar->addWidget(m_stopBtn);
+    centerLayout->addLayout(toolbar);
+
+    // Stacked widget: welcome page (DefaultChat) vs chat page (history + banner)
+    m_stack = new QStackedWidget(m_centerPanel);
+    m_stack->setObjectName(QStringLiteral("chatStack"));
+
+    // Page 0: DefaultChat welcome page
+    m_defaultChat = new DefaultChatWidget(m_apiClient, m_stack);
+    m_stack->addWidget(m_defaultChat);
+
+    // Page 1: chat page
+    QWidget *chatPage = new QWidget(m_stack);
+    QVBoxLayout *chatPageLayout = new QVBoxLayout(chatPage);
+    chatPageLayout->setContentsMargins(0, 0, 0, 0);
+    chatPageLayout->setSpacing(0);
+    m_historyWidget = new ChatHistoryWidget(chatPage);
+    m_statusBanner = new AgentStatusBanner(chatPage);
+    chatPageLayout->addWidget(m_historyWidget, 1);
+    chatPageLayout->addWidget(m_statusBanner);
+    m_stack->addWidget(chatPage);
+
+    centerLayout->addWidget(m_stack, 1);
+
+    // Shared prompt input below the stack — usable in both welcome and chat views
+    m_input = new PromptInput(m_centerPanel);
+    m_input->setMaxHeight(200);
+    centerLayout->addWidget(m_input);
+
+    // === RIGHT PANEL: memories sidebar (partial — constructed, hidden) ===
+    m_memoriesSidebar = new MemoriesSidebar(m_apiClient, this);
+    m_memoriesSidebar->setFixedWidth(0);
+    connect(m_memoriesSidebar, &MemoriesSidebar::closeRequested, this, [this]() {
+        m_memoriesSidebar->setFixedWidth(0);
+        m_memoriesSidebar->close();
+    });
+
+    root->addWidget(m_leftPanel);
+    root->addWidget(m_centerPanel, 1);
+    root->addWidget(m_memoriesSidebar);
+
+    // Toolbar actions
+    connect(m_newChatBtn, &QPushButton::clicked, this, &ChatContainerWidget::newChat);
+    connect(m_stopBtn, &QPushButton::clicked, this, [this]() {
+        if (m_apiClient)
+            m_apiClient->abortStream();
+    });
+
+    // Shared PromptInput wiring
+    connect(m_input, &PromptInput::sendCommand,
+            this, QOverload<const PromptCommand &>::of(&ChatContainerWidget::sendCommand));
+    connect(m_input, &PromptInput::stopRequested,
+            this, [this]() { if (m_apiClient) m_apiClient->abortStream(); });
+
+    // DefaultChatWidget wiring
+    connect(m_defaultChat, &DefaultChatWidget::sendRequested,
+            this, [this](const QString &text) { sendCommand(text); });
+    connect(m_defaultChat->promptInput(), &PromptInput::sendCommand,
+            this, QOverload<const PromptCommand &>::of(&ChatContainerWidget::sendCommand));
+    connect(m_defaultChat->promptInput(), &PromptInput::stopRequested,
+            this, [this]() { if (m_apiClient) m_apiClient->abortStream(); });
+    connect(m_defaultChat, &DefaultChatWidget::createAgentClicked, this, []() {
+        qDebug() << "Create agent clicked — navigation TBD";
+    });
+    connect(m_defaultChat, &DefaultChatWidget::editWorkspaceClicked, this, [this]() {
+        qDebug() << "Edit workspace clicked for" << m_workspaceSlug;
+    });
+    connect(m_defaultChat, &DefaultChatWidget::uploadDocumentClicked, this, []() {
+        qDebug() << "Upload document clicked";
+    });
+
+    connect(&ThemeManager::instance(), &ThemeManager::themeChanged,
+            this, [this](const QString &) { applyTheme(); });
+}
+
+void ChatContainerWidget::showDefaultChat()
+{
+    m_stack->setCurrentIndex(0);
+}
+
+void ChatContainerWidget::showChatState()
+{
+    m_stack->setCurrentIndex(1);
+}
+
+void ChatContainerWidget::newChat()
+{
+    if (m_apiClient)
+        m_apiClient->abortStream();
+    m_streamHandler->clear();
+    m_agentHandler->clear();
+    m_historyWidget->clear();
+    m_threadSlug.clear();
+    m_streaming = false;
+    m_input->setStopVisible(false);
+    showDefaultChat();
+}
+
 void ChatContainerWidget::connectHandlers()
 {
     connect(m_streamHandler.get(), &ChatStreamHandler::messagesChanged,
-            this, [this]() { m_historyWidget->setMessages(m_streamHandler->messages()); });
+            this, &ChatContainerWidget::onHistoryChanged);
     connect(m_streamHandler.get(), &ChatStreamHandler::streamFinished,
             this, [this]() {
                 m_streaming = false;
@@ -71,7 +203,7 @@ void ChatContainerWidget::connectHandlers()
             });
 
     connect(m_agentHandler.get(), &AgentEventHandler::messagesChanged,
-            this, [this]() { m_historyWidget->setMessages(m_agentHandler->messages()); });
+            this, &ChatContainerWidget::onHistoryChanged);
 
     connect(m_agentHandler.get(), &AgentEventHandler::statusReceived,
             m_statusBanner, &AgentStatusBanner::showStatus);
@@ -100,11 +232,25 @@ void ChatContainerWidget::connectHandlers()
             this, [this](const QJsonObject &payload) {
                 DownloadCard *card = new DownloadCard(payload, window());
                 card->setAttribute(Qt::WA_DeleteOnClose);
-                card->show(); // standalone for now; Task 9 will integrate into history
+                card->show();
             });
 
     connect(m_agentHandler.get(), &AgentEventHandler::threadRenameRequested,
             this, &ChatContainerWidget::requestThreadRename);
+}
+
+void ChatContainerWidget::onHistoryChanged()
+{
+    QVector<HermindChatMessage> msgs = m_streamHandler->messages();
+    if (msgs.isEmpty())
+        msgs = m_agentHandler->messages();
+
+    if (msgs.isEmpty()) {
+        showDefaultChat();
+    } else {
+        showChatState();
+        m_historyWidget->setMessages(msgs);
+    }
 }
 
 void ChatContainerWidget::setWorkspace(const QString &slug, const QString &name)
@@ -112,6 +258,21 @@ void ChatContainerWidget::setWorkspace(const QString &slug, const QString &name)
     m_workspaceSlug = slug;
     m_workspaceName = name;
     m_historyWidget->setWelcomeText(tr("欢迎来到 %1").arg(name));
+    m_defaultChat->setWorkspaceSlug(slug);
+
+    if (m_apiClient && !slug.isEmpty()) {
+        m_apiClient->getWorkspace(slug,
+            [this, slug](const HermindWorkspace &ws, const QString &, const ApiError &err) {
+                if (!err.isEmpty())
+                    return;
+                m_defaultChat->setSuggestedMessages(ws.suggestedMessages());
+                m_memoriesSidebar->setWorkspace(slug, ws.id());
+                m_wsLabel->setText(slug);
+            });
+    } else {
+        m_wsLabel->setText(slug);
+    }
+
     loadHistory();
 }
 
@@ -147,6 +308,7 @@ void ChatContainerWidget::sendCommand(const QString &text, const QString &writeM
         return;
     }
     // "replace" mode — send directly
+    showChatState();
     autoSubmit(text, attachments);
 }
 
