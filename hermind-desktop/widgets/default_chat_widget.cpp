@@ -46,6 +46,9 @@ DefaultChatWidget::DefaultChatWidget(HermindApiClient *apiClient, QWidget *paren
     centerLayout->addWidget(m_promptInput, 0, Qt::AlignCenter);
 
     m_quickActions = new QuickActions(center);
+    // Quick actions target workspace-settings pages (Phase 2) and have no
+    // frontend equivalent; keep them hidden rather than clickable no-ops.
+    m_quickActions->setVisible(false);
     centerLayout->addWidget(m_quickActions, 0, Qt::AlignCenter);
 
     m_suggestedMsgs = new SuggestedMessages(center);
@@ -85,6 +88,11 @@ void DefaultChatWidget::applyTheme()
 
 void DefaultChatWidget::setUsername(const QString &username)
 {
+    if (username.isEmpty()) {
+        // Single-user mode has no username; avoid a dangling "欢迎回来, !".
+        m_greetingLabel->setText(QStringLiteral("欢迎回来!"));
+        return;
+    }
     m_greetingLabel->setText(QStringLiteral("欢迎回来, %1!").arg(username));
 }
 
