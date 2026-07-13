@@ -2,6 +2,7 @@
 #define LLM_PROVIDER_INFO_H
 
 #include <QString>
+#include <QStringList>
 #include <QVector>
 
 struct LlmProviderInfo
@@ -10,6 +11,7 @@ struct LlmProviderInfo
     QString name;
     QString description;
     bool supportsModelSelection = true;
+    QStringList defaultModels;
 
     static const QVector<LlmProviderInfo> &all();
     static const LlmProviderInfo *byId(const QString &id);

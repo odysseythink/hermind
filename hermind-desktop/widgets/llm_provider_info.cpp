@@ -20,9 +20,19 @@ static const QVector<LlmProviderInfo> &providerList()
         { QStringLiteral("gemini"), QStringLiteral("Gemini"),
           QStringLiteral("Google Gemini API."), true },
         { QStringLiteral("mistral"), QStringLiteral("Mistral"),
-          QStringLiteral("Mistral API."), true },
+          QStringLiteral("Mistral API."), true,
+          { QStringLiteral("mistral-large-latest"), QStringLiteral("mistral-medium-latest"), QStringLiteral("mistral-small-latest") } },
         { QStringLiteral("deepseek"), QStringLiteral("DeepSeek"),
-          QStringLiteral("DeepSeek API."), true },
+          QStringLiteral("DeepSeek API."), true,
+          { QStringLiteral("deepseek-chat"), QStringLiteral("deepseek-reasoner") } },
+        { QStringLiteral("cohere"), QStringLiteral("Cohere"),
+          QStringLiteral("Cohere API."), true,
+          { QStringLiteral("command-r"), QStringLiteral("command-r-plus"),
+            QStringLiteral("command"), QStringLiteral("command-light"),
+            QStringLiteral("command-nightly"), QStringLiteral("command-light-nightly") } },
+        { QStringLiteral("xai"), QStringLiteral("xAI"),
+          QStringLiteral("xAI Grok API."), true,
+          { QStringLiteral("grok-beta") } },
     };
     return list;
 }

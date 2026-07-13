@@ -7,6 +7,7 @@ INCLUDEPATH += $$PWD/../../widgets $$PWD/../..
 
 SOURCES += \
     tst_widgets.cpp \
+    tst_llm_provider_info.cpp \
     ../../widgets/workspace_settings_tab.cpp \
     ../../widgets/suggested_messages_editor.cpp \
     ../../widgets/icon_button.cpp \
@@ -22,6 +23,7 @@ SOURCES += \
     ../../settings_store.cpp
 
 HEADERS += \
+    tst_llm_provider_info.h \
     ../../widgets/workspace_settings_tab.h \
     ../../widgets/suggested_messages_editor.h \
     ../../widgets/icon_button.h \

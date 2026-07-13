@@ -1,6 +1,7 @@
 #include <QtTest>
 #include <QApplication>
 #include <QComboBox>
+#include "tst_llm_provider_info.h"
 #include "icon_button.h"
 #include "sidebar_menu_button.h"
 #include "search_input.h"
@@ -218,5 +219,24 @@ void TestWidgets::suggestedMessagesEditor_markSavedClearsChanges()
     QVERIFY(!editor.hasChanges());
 }
 
-QTEST_MAIN(TestWidgets)
+int main(int argc, char *argv[])
+{
+    QApplication app(argc, argv);
+    Q_UNUSED(app)
+
+    int status = 0;
+
+    {
+        TestWidgets tc;
+        status |= QTest::qExec(&tc, argc, argv);
+    }
+
+    {
+        TestLlmProviderInfo tc;
+        status |= QTest::qExec(&tc, argc, argv);
+    }
+
+    return status;
+}
+
 #include "tst_widgets.moc"
