@@ -12,6 +12,8 @@ class HermindApiClient;
 class ChatHistoryWidget;
 class ChatStreamHandler;
 class AgentEventHandler;
+class AgentStatusBanner;
+class ToolApprovalDialog;
 
 class ChatContainerWidget : public QWidget
 {
@@ -56,6 +58,7 @@ private:
     QString m_threadSlug;
 
     ChatHistoryWidget *m_historyWidget = nullptr;
+    AgentStatusBanner *m_statusBanner = nullptr;
     PromptInput *m_input = nullptr;
 
     std::unique_ptr<ChatStreamHandler> m_streamHandler;

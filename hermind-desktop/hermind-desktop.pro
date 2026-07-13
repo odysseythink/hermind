@@ -53,6 +53,9 @@ SOURCES += \
     widgets/slash_commands_tab.cpp \
     widgets/attach_item.cpp \
     widgets/attachment_manager.cpp \
+    widgets/tool_approval_dialog.cpp \
+    widgets/agent_status_banner.cpp \
+    widgets/download_card.cpp \
     widgets/plain_message_item.cpp \
     widgets/markdown_message_item.cpp \
     markdown/html_sanitizer.cpp \
@@ -108,6 +111,9 @@ HEADERS += \
     widgets/slash_commands_tab.h \
     widgets/attach_item.h \
     widgets/attachment_manager.h \
+    widgets/tool_approval_dialog.h \
+    widgets/agent_status_banner.h \
+    widgets/download_card.h \
     widgets/plain_message_item.h \
     widgets/markdown_message_item.h \
     markdown/html_sanitizer.h \

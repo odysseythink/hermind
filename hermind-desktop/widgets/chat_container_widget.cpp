@@ -3,6 +3,9 @@
 #include "chat_history_widget.h"
 #include "chat_stream_handler.h"
 #include "agent_event_handler.h"
+#include "agent_status_banner.h"
+#include "tool_approval_dialog.h"
+#include "download_card.h"
 #include "theme_manager.h"
 #include "theme_colors.h"
 
@@ -23,6 +26,9 @@ ChatContainerWidget::ChatContainerWidget(HermindApiClient *apiClient, QWidget *p
 
     m_historyWidget = new ChatHistoryWidget(this);
     root->addWidget(m_historyWidget, 1);
+
+    m_statusBanner = new AgentStatusBanner(this);
+    root->addWidget(m_statusBanner);
 
     m_input = new PromptInput(this);
     m_input->setMaxHeight(200);
@@ -49,7 +55,12 @@ void ChatContainerWidget::connectHandlers()
     connect(m_streamHandler.get(), &ChatStreamHandler::messagesChanged,
             this, [this]() { m_historyWidget->setMessages(m_streamHandler->messages()); });
     connect(m_streamHandler.get(), &ChatStreamHandler::streamFinished,
-            this, [this]() { m_streaming = false; m_input->setStopVisible(false); emit streamFinished(); });
+            this, [this]() {
+                m_streaming = false;
+                m_input->setStopVisible(false);
+                m_statusBanner->hideBanner();
+                emit streamFinished();
+            });
     connect(m_streamHandler.get(), &ChatStreamHandler::agentWebSocketRequested,
             this, [this](const QString &socketId, const QString &token) {
                 if (m_apiClient)
@@ -61,6 +72,39 @@ void ChatContainerWidget::connectHandlers()
 
     connect(m_agentHandler.get(), &AgentEventHandler::messagesChanged,
             this, [this]() { m_historyWidget->setMessages(m_agentHandler->messages()); });
+
+    connect(m_agentHandler.get(), &AgentEventHandler::statusReceived,
+            m_statusBanner, &AgentStatusBanner::showStatus);
+    connect(m_agentHandler.get(), &AgentEventHandler::clarificationRequested,
+            m_statusBanner, &AgentStatusBanner::showClarification);
+    connect(m_agentHandler.get(), &AgentEventHandler::errorReceived,
+            this, [this](const QString &error) {
+                m_statusBanner->showStatus(QStringLiteral("错误: %1").arg(error));
+            });
+
+    connect(m_agentHandler.get(), &AgentEventHandler::toolApprovalRequested,
+            this, [this](const QString &requestId, const QString &skillName,
+                         const QString &description) {
+                ToolApprovalDialog *dlg = new ToolApprovalDialog(requestId, skillName, description, this);
+                connect(dlg, &ToolApprovalDialog::approved, this, [this](const QString &rid) {
+                    if (m_apiClient) m_apiClient->sendToolApprovalResponse(rid, true);
+                });
+                connect(dlg, &ToolApprovalDialog::rejected, this, [this](const QString &rid) {
+                    if (m_apiClient) m_apiClient->sendToolApprovalResponse(rid, false);
+                });
+                dlg->setAttribute(Qt::WA_DeleteOnClose);
+                dlg->show();
+            });
+
+    connect(m_agentHandler.get(), &AgentEventHandler::downloadCardReceived,
+            this, [this](const QJsonObject &payload) {
+                DownloadCard *card = new DownloadCard(payload, window());
+                card->setAttribute(Qt::WA_DeleteOnClose);
+                card->show(); // standalone for now; Task 9 will integrate into history
+            });
+
+    connect(m_agentHandler.get(), &AgentEventHandler::threadRenameRequested,
+            this, &ChatContainerWidget::requestThreadRename);
 }
 
 void ChatContainerWidget::setWorkspace(const QString &slug, const QString &name)
