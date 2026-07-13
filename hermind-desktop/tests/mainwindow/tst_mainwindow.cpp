@@ -2,12 +2,15 @@
 #include <QStackedWidget>
 #include <QToolButton>
 #include <QLineEdit>
+#include <QComboBox>
+#include <QDoubleSpinBox>
 
 #include "mainwindow.h"
 #include "navigation_manager.h"
 #include "workspace_settings_widget.h"
 #include "workspace_settings_tab.h"
 #include "general_appearance_tab.h"
+#include "chat_settings_tab.h"
 
 class TestMainWindow : public QObject
 {
@@ -23,6 +26,7 @@ private slots:
     void workspaceSettingsPageRestoresTabFromRoute();
     void workspaceSettingsReturnButtonGoesBack();
     void generalAppearanceTabIsRegisteredForGeneralAppearanceRoute();
+    void chatSettingsTabIsRegisteredForChatSettingsRoute();
 };
 
 void TestMainWindow::init()
@@ -156,6 +160,29 @@ void TestMainWindow::generalAppearanceTabIsRegisteredForGeneralAppearanceRoute()
 
     auto *nameEdit = generalTab->findChild<QLineEdit *>(QStringLiteral("workspaceNameEdit"));
     QVERIFY(nameEdit);
+}
+
+void TestMainWindow::chatSettingsTabIsRegisteredForChatSettingsRoute()
+{
+    MainWindow w;
+
+    NavigationRoute route;
+    route.page = NavigationPage::WorkspaceSettings;
+    route.workspaceSlug = QStringLiteral("acme");
+    route.settingsPath = QStringLiteral("chat");
+    NavigationManager::instance().navigateTo(route);
+
+    auto *settingsWidget = w.findChild<WorkspaceSettingsWidget *>();
+    QVERIFY(settingsWidget);
+    QCOMPARE(settingsWidget->currentTabId(), QStringLiteral("chat"));
+
+    auto *chatTab = settingsWidget->findChild<ChatSettingsTab *>();
+    QVERIFY(chatTab);
+
+    auto *providerCombo = chatTab->findChild<QComboBox *>(QStringLiteral("providerCombo"));
+    QVERIFY(providerCombo);
+    auto *temperatureSpin = chatTab->findChild<QDoubleSpinBox *>(QStringLiteral("temperatureSpin"));
+    QVERIFY(temperatureSpin);
 }
 
 QTEST_MAIN(TestMainWindow)

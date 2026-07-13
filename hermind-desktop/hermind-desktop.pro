@@ -27,10 +27,12 @@ SOURCES += \
     models/hermind_memory.cpp \
     models/hermind_workspace_user.cpp \
     widgets/llm_provider_info.cpp \
+    widgets/llm_model_selector.cpp \
     widgets/workspace_settings_tab.cpp \
     widgets/workspace_settings_widget.cpp \
     widgets/suggested_messages_editor.cpp \
     widgets/general_appearance_tab.cpp \
+    widgets/chat_settings_tab.cpp \
     chat/chat_stream_handler.cpp \
     chat/agent_event_handler.cpp \
     streaming/hermind_sse_client.cpp \
@@ -100,10 +102,12 @@ HEADERS += \
     models/hermind_memory.h \
     models/hermind_workspace_user.h \
     widgets/llm_provider_info.h \
+    widgets/llm_model_selector.h \
     widgets/workspace_settings_tab.h \
     widgets/workspace_settings_widget.h \
     widgets/suggested_messages_editor.h \
     widgets/general_appearance_tab.h \
+    widgets/chat_settings_tab.h \
     chat/chat_stream_handler.h \
     chat/agent_event_handler.h \
     streaming/hermind_sse_client.h \

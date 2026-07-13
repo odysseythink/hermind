@@ -48,10 +48,13 @@ SOURCES += \
     ../../widgets/styled_separator.cpp \
     ../../widgets/rounded_frame.cpp \
     ../../widgets/setting_row.cpp \
+    ../../widgets/llm_provider_info.cpp \
+    ../../widgets/llm_model_selector.cpp \
     ../../widgets/workspace_settings_tab.cpp \
     ../../widgets/workspace_settings_widget.cpp \
     ../../widgets/suggested_messages_editor.cpp \
     ../../widgets/general_appearance_tab.cpp \
+    ../../widgets/chat_settings_tab.cpp \
     ../../widgets/chat_history_widget.cpp \
     ../../widgets/chat_container_widget.cpp \
     ../../widgets/prompt_input.cpp \
@@ -128,10 +131,13 @@ HEADERS += \
     ../../widgets/styled_separator.h \
     ../../widgets/rounded_frame.h \
     ../../widgets/setting_row.h \
+    ../../widgets/llm_provider_info.h \
+    ../../widgets/llm_model_selector.h \
     ../../widgets/workspace_settings_tab.h \
     ../../widgets/workspace_settings_widget.h \
     ../../widgets/suggested_messages_editor.h \
     ../../widgets/general_appearance_tab.h \
+    ../../widgets/chat_settings_tab.h \
     ../../widgets/chat_history_widget.h \
     ../../widgets/chat_container_widget.h \
     ../../widgets/prompt_input.h \

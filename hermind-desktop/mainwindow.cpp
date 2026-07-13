@@ -7,6 +7,7 @@
 #include "auth/auth_manager.h"
 #include "workspace_settings_widget.h"
 #include "general_appearance_tab.h"
+#include "chat_settings_tab.h"
 
 #include <QDebug>
 
@@ -51,6 +52,10 @@ MainWindow::MainWindow(QWidget *parent)
     auto *generalTab = new GeneralAppearanceTab(
         AuthManager::instance().apiClient(), workspaceSettingsWidget);
     workspaceSettingsWidget->setTabWidget(QStringLiteral("general-appearance"), generalTab);
+
+    auto *chatTab = new ChatSettingsTab(
+        AuthManager::instance().apiClient(), workspaceSettingsWidget);
+    workspaceSettingsWidget->setTabWidget(QStringLiteral("chat"), chatTab);
 
     connect(workspaceSettingsWidget, &WorkspaceSettingsWidget::returnClicked,
             this, []() {
