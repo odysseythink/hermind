@@ -183,7 +183,7 @@ void ChatContainerWidget::setupThreePanelLayout()
     connect(m_input, &PromptInput::sendCommand,
             this, QOverload<const PromptCommand &>::of(&ChatContainerWidget::sendCommand));
     connect(m_input, &PromptInput::stopRequested,
-            this, [this]() { if (m_apiClient) m_apiClient->abortStream(); });
+            this, &ChatContainerWidget::onStopRequested);
 
     // DefaultChatWidget wiring
     connect(m_defaultChat, &DefaultChatWidget::sendRequested,
@@ -191,7 +191,7 @@ void ChatContainerWidget::setupThreePanelLayout()
     connect(m_defaultChat->promptInput(), &PromptInput::sendCommand,
             this, QOverload<const PromptCommand &>::of(&ChatContainerWidget::sendCommand));
     connect(m_defaultChat->promptInput(), &PromptInput::stopRequested,
-            this, [this]() { if (m_apiClient) m_apiClient->abortStream(); });
+            this, &ChatContainerWidget::onStopRequested);
     // Quick-action buttons are hidden in DefaultChatWidget until their
     // Phase 2 settings targets exist; their signals are intentionally
     // unwired (no qDebug stubs).
@@ -259,6 +259,8 @@ void ChatContainerWidget::connectHandlers()
             this, &ChatContainerWidget::showSources);
 
     connect(m_agentHandler.get(), &AgentEventHandler::statusReceived,
+            m_statusBanner, &AgentStatusBanner::showStatus);
+    connect(m_streamHandler.get(), &ChatStreamHandler::statusReceived,
             m_statusBanner, &AgentStatusBanner::showStatus);
     connect(m_agentHandler.get(), &AgentEventHandler::clarificationRequested,
             m_statusBanner, &AgentStatusBanner::showClarification);
@@ -356,9 +358,16 @@ void ChatContainerWidget::setWorkspace(const QString &slug, const QString &name)
             [this, slug](const HermindWorkspace &ws, const QString &, const ApiError &err) {
                 if (!err.isEmpty())
                     return;
+                if (slug != m_workspaceSlug)
+                    return; // stale response: user navigated elsewhere
+                // Replace the placeholder slug-as-name with the real name.
+                if (!ws.name().isEmpty() && ws.name() != m_workspaceName) {
+                    m_workspaceName = ws.name();
+                    m_historyWidget->setWelcomeText(tr("欢迎来到 %1").arg(ws.name()));
+                }
                 m_defaultChat->setSuggestedMessages(ws.suggestedMessages());
                 m_memoriesSidebar->setWorkspace(slug, ws.id());
-                m_wsLabel->setText(slug);
+                m_wsLabel->setText(ws.name().isEmpty() ? slug : ws.name());
             });
     } else {
         m_wsLabel->setText(slug);
@@ -390,15 +399,15 @@ void ChatContainerWidget::sendCommand(const PromptCommand &command)
 void ChatContainerWidget::sendCommand(const QString &text, const QString &writeMode,
                                       const QStringList &attachments)
 {
-    if (writeMode == QStringLiteral("prepend")) {
+    if (writeMode == WriteMode::Prepend) {
         m_input->setText(text + QStringLiteral(" ") + m_input->text());
         return;
     }
-    if (writeMode == QStringLiteral("append")) {
+    if (writeMode == WriteMode::Append) {
         m_input->setText(m_input->text() + text);
         return;
     }
-    // "replace" mode — send directly
+    // WriteMode::Replace — send directly
     showChatState();
     autoSubmit(text, attachments);
 }
@@ -480,6 +489,20 @@ void ChatContainerWidget::onStreamResponse(const HermindStreamChatResponse &resp
 void ChatContainerWidget::onAgentEvent(const HermindAgentEvent &event)
 {
     m_agentHandler->handleEvent(event);
+}
+
+void ChatContainerWidget::onStopRequested()
+{
+    // During an agent WebSocket session there is no SSE stream to abort;
+    // stopping terminates the agent session (closes the socket) so the next
+    // message starts a fresh stream instead of going to a dead session.
+    if (m_agentSessionActive) {
+        disconnectAgentSocket();
+        m_statusBanner->hideBanner();
+        return;
+    }
+    if (m_apiClient)
+        m_apiClient->abortStream();
 }
 
 void ChatContainerWidget::disconnectAgentSocket()

@@ -43,7 +43,7 @@ signals:
 
 public slots:
     void sendCommand(const PromptCommand &command);
-    void sendCommand(const QString &text, const QString &writeMode = QStringLiteral("replace"),
+    void sendCommand(const QString &text, const QString &writeMode = WriteMode::Replace,
                      const QStringList &attachments = QStringList());
     void newChat();
     void showDefaultChat();
@@ -62,6 +62,7 @@ private:
     void setupThreePanelLayout();
     void connectHandlers();
     void disconnectAgentSocket();
+    void onStopRequested();
     void autoSubmit(const QString &text, const QStringList &attachments);
 
     HermindApiClient *m_apiClient = nullptr;

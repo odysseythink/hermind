@@ -2,14 +2,44 @@
 #include <QSignalSpy>
 #include <QStackedWidget>
 #include <QPushButton>
+#include <QTcpServer>
+#include <QTcpSocket>
 #include "chat_container_widget.h"
 #include "chat_stream_handler.h"
 #include "agent_event_handler.h"
 #include "chat_history_widget.h"
 #include "default_chat_widget.h"
+#include "prompt_input.h"
 #include "sources_sidebar.h"
 #include "memories_sidebar.h"
 #include "hermind_api_client.h"
+
+// Minimal in-process HTTP server returning a canned getWorkspace payload.
+class MockWorkspaceServer : public QTcpServer
+{
+    Q_OBJECT
+public:
+    bool start() { return listen(QHostAddress::LocalHost, 0); }
+    quint16 port() const { return serverPort(); }
+
+protected:
+    void incomingConnection(qintptr fd) override
+    {
+        auto *socket = new QTcpSocket(this);
+        connect(socket, &QTcpSocket::readyRead, this, [socket]() {
+            socket->readAll();
+            QByteArray body = R"({"workspace":{"id":7,"name":"Real Name","slug":"ws-1","suggestedMessages":[]}})";
+            QByteArray resp = "HTTP/1.1 200 OK\r\nContent-Type: application/json\r\nContent-Length: "
+                              + QByteArray::number(body.size())
+                              + "\r\nConnection: close\r\n\r\n" + body;
+            socket->write(resp);
+            socket->flush();
+            socket->close();
+            socket->deleteLater();
+        });
+        socket->setSocketDescriptor(fd);
+    }
+};
 
 class TestChatContainerWidget : public QObject
 {
@@ -31,7 +61,9 @@ private slots:
     void regenerate_resendsLastUserMessage();
     void agentMessages_renderAlongsideUserMessage();
     void agentSessionActive_sendCommandGoesOverWebSocket();
+    void stopRequestedDuringAgentSession_endsAgentSession();
     void workspaceSelectedFromWelcome_switchesToChatView();
+    void setWorkspace_fetchesRealWorkspaceName();
 };
 
 void TestChatContainerWidget::setWorkspace_updatesWelcomeLabel()
@@ -317,6 +349,34 @@ void TestChatContainerWidget::agentSessionActive_sendCommandGoesOverWebSocket()
     QCOMPARE(stream->messages().first().content(), QStringLiteral("here is my feedback"));
 }
 
+// Stopping during an agent WebSocket session must terminate the session
+// (close the socket) so the next message starts a fresh SSE stream instead
+// of being routed to the dead session as feedback.
+void TestChatContainerWidget::stopRequestedDuringAgentSession_endsAgentSession()
+{
+    HermindApiClient client;
+    ChatContainerWidget widget(&client, nullptr);
+    widget.setWorkspace(QStringLiteral("ws-1"), QStringLiteral("My Workspace"));
+
+    ChatStreamHandler *stream = widget.findChild<ChatStreamHandler *>();
+    QVERIFY(stream != nullptr);
+
+    QJsonObject init;
+    init.insert("type", QStringLiteral("agentInitWebsocketConnection"));
+    init.insert("websocketUUID", QStringLiteral("sock-1"));
+    init.insert("websocketToken", QStringLiteral("tok-1"));
+    stream->handleResponse(HermindStreamChatResponse::fromJson(init));
+
+    PromptInput *input = widget.findChild<PromptInput *>();
+    QVERIFY(input != nullptr);
+    input->stopRequested();
+
+    // Session must be over: a new message now starts a fresh SSE stream.
+    QSignalSpy streamSpy(&widget, &ChatContainerWidget::streamStarted);
+    widget.sendCommand(QStringLiteral("new question"));
+    QCOMPARE(streamSpy.count(), 1);
+}
+
 // The welcome page's "进入 <ws> →" button must take the user to the chat
 // view of the current workspace (mirrors the frontend NavLink to the
 // workspace chat route).
@@ -335,6 +395,24 @@ void TestChatContainerWidget::workspaceSelectedFromWelcome_switchesToChatView()
     welcome->workspaceSelected(QStringLiteral("ws-1"));
 
     QCOMPARE(stack->currentIndex(), 1);
+}
+
+// MainChatWidget only knows the workspace slug when navigating, so it
+// passes slug as a placeholder name. Once getWorkspace() returns, the real
+// name must replace it everywhere the container exposes it.
+void TestChatContainerWidget::setWorkspace_fetchesRealWorkspaceName()
+{
+    MockWorkspaceServer server;
+    QVERIFY(server.start());
+
+    HermindApiClient client;
+    client.setBaseUrl(QUrl(QStringLiteral("http://127.0.0.1:%1/api").arg(server.port())));
+
+    ChatContainerWidget widget(&client, nullptr);
+    widget.setWorkspace(QStringLiteral("ws-1"), QStringLiteral("ws-1"));
+    QCOMPARE(widget.workspaceName(), QStringLiteral("ws-1")); // placeholder first
+
+    QTRY_COMPARE(widget.workspaceName(), QStringLiteral("Real Name"));
 }
 
 QTEST_MAIN(TestChatContainerWidget)

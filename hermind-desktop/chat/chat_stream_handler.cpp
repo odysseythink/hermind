@@ -90,7 +90,9 @@ void ChatStreamHandler::handleResponse(const HermindStreamChatResponse &response
         appendOrUpdateAssistant(uuid.isEmpty() ? m_messages.isEmpty() ? QString() : m_messages.last().uuid() : uuid,
                                 QString(), true);
     } else if (type == QLatin1String("statusResponse")) {
-        // 本阶段仅记录，不渲染状态卡片
+        const QString status = response.raw().value(QLatin1String("content")).toString();
+        if (!status.isEmpty())
+            emit statusReceived(status);
     } else if (type == QLatin1String("stopGeneration")) {
         if (!m_messages.isEmpty())
             m_messages.last().setClosed(true);

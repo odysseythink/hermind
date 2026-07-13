@@ -12,6 +12,7 @@ private slots:
     void stopGenerationAction_clearsPendingStream();
     void sources_attachedToMessageAndEmitted();
     void closeLastMessage_marksOpenMessageClosed();
+    void statusResponse_emitsStatusReceived();
 };
 
 static HermindStreamChatResponse makeResponse(const QString &uuid,
@@ -92,6 +93,28 @@ void TestChatStreamHandler::closeLastMessage_marksOpenMessageClosed()
     handler.closeLastMessage();
 
     QVERIFY(handler.messages().first().isClosed());
+}
+
+void TestChatStreamHandler::statusResponse_emitsStatusReceived()
+{
+    ChatStreamHandler handler;
+    QSignalSpy spy(&handler, &ChatStreamHandler::statusReceived);
+
+    QJsonObject obj;
+    obj.insert("uuid", "u1");
+    obj.insert("type", "statusResponse");
+    obj.insert("content", "Searching knowledge base...");
+    handler.handleResponse(HermindStreamChatResponse::fromJson(obj));
+
+    QCOMPARE(spy.count(), 1);
+    QCOMPARE(spy.at(0).at(0).toString(), QStringLiteral("Searching knowledge base..."));
+
+    // Empty content should not surface an empty banner.
+    QJsonObject empty;
+    empty.insert("uuid", "u1");
+    empty.insert("type", "statusResponse");
+    handler.handleResponse(HermindStreamChatResponse::fromJson(empty));
+    QCOMPARE(spy.count(), 1);
 }
 
 QTEST_APPLESS_MAIN(TestChatStreamHandler)
