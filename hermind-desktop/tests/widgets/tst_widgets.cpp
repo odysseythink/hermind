@@ -9,6 +9,7 @@
 #include "setting_row.h"
 #include "llm_provider_info.h"
 #include "workspace_settings_tab.h"
+#include "suggested_messages_editor.h"
 
 class TestWidgets : public QObject
 {
@@ -33,6 +34,11 @@ private slots:
     void workspaceSettingsTabs_indexOfFindsTab();
     void workspaceSettingsTabs_indexOfInvalidReturnsNegativeOne();
     void workspaceSettingsTabs_titleOfFindsTitle();
+    void suggestedMessagesEditor_setMessagesPopulatesRows();
+    void suggestedMessagesEditor_cannotExceedFourMessages();
+    void suggestedMessagesEditor_removeMessageReducesCount();
+    void suggestedMessagesEditor_validMessagesFiltersEmpty();
+    void suggestedMessagesEditor_markSavedClearsChanges();
 };
 
 void TestWidgets::iconButtonHasFixedSize()
@@ -151,6 +157,65 @@ void TestWidgets::workspaceSettingsTabs_titleOfFindsTitle()
 {
     QVERIFY(WorkspaceSettingsTabs::titleOf(QStringLiteral("chat")).contains(
                 QStringLiteral("Chat"), Qt::CaseInsensitive));
+}
+
+void TestWidgets::suggestedMessagesEditor_setMessagesPopulatesRows()
+{
+    SuggestedMessagesEditor editor;
+    editor.setMessages(QStringList()
+                       << QStringLiteral("Hello")
+                       << QStringLiteral("World"));
+    QCOMPARE(editor.findChildren<QLineEdit *>().size(), 2);
+}
+
+void TestWidgets::suggestedMessagesEditor_cannotExceedFourMessages()
+{
+    SuggestedMessagesEditor editor;
+    editor.setMessages(QStringList() << "1" << "2" << "3" << "4");
+    QPushButton *addBtn = editor.findChild<QPushButton *>(QStringLiteral("addMessageButton"));
+    QVERIFY(addBtn);
+    QVERIFY(addBtn->isEnabled());
+
+    QTest::mouseClick(addBtn, Qt::LeftButton);
+    QCOMPARE(editor.findChildren<QLineEdit *>().size(), 4);
+    QVERIFY(!addBtn->isEnabled());
+}
+
+void TestWidgets::suggestedMessagesEditor_removeMessageReducesCount()
+{
+    SuggestedMessagesEditor editor;
+    editor.setMessages(QStringList() << "a" << "b" << "c");
+    QList<QAbstractButton *> removeBtns = editor.findChildren<QAbstractButton *>(
+        QStringLiteral("removeMessageButton"));
+    QCOMPARE(removeBtns.size(), 3);
+
+    QTest::mouseClick(removeBtns.first(), Qt::LeftButton);
+    QCOMPARE(editor.findChildren<QLineEdit *>().size(), 2);
+}
+
+void TestWidgets::suggestedMessagesEditor_validMessagesFiltersEmpty()
+{
+    SuggestedMessagesEditor editor;
+    editor.setMessages(QStringList() << "keep" << "" << "   " << "also keep");
+    const QStringList valid = editor.validMessages();
+    QCOMPARE(valid.size(), 2);
+    QVERIFY(valid.contains(QStringLiteral("keep")));
+    QVERIFY(valid.contains(QStringLiteral("also keep")));
+}
+
+void TestWidgets::suggestedMessagesEditor_markSavedClearsChanges()
+{
+    SuggestedMessagesEditor editor;
+    editor.setMessages(QStringList() << "old");
+    QSignalSpy spy(&editor, &SuggestedMessagesEditor::saveRequested);
+
+    QList<QLineEdit *> edits = editor.findChildren<QLineEdit *>();
+    QVERIFY(!edits.isEmpty());
+    edits.first()->setText(QStringLiteral("new"));
+    QVERIFY(editor.hasChanges());
+
+    editor.markSaved();
+    QVERIFY(!editor.hasChanges());
 }
 
 QTEST_MAIN(TestWidgets)
