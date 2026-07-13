@@ -56,6 +56,9 @@ SOURCES += \
     widgets/tool_approval_dialog.cpp \
     widgets/agent_status_banner.cpp \
     widgets/download_card.cpp \
+    widgets/sources_sidebar.cpp \
+    widgets/source_item.cpp \
+    widgets/citation_detail_modal.cpp \
     widgets/plain_message_item.cpp \
     widgets/markdown_message_item.cpp \
     markdown/html_sanitizer.cpp \
@@ -114,6 +117,9 @@ HEADERS += \
     widgets/tool_approval_dialog.h \
     widgets/agent_status_banner.h \
     widgets/download_card.h \
+    widgets/sources_sidebar.h \
+    widgets/source_item.h \
+    widgets/citation_detail_modal.h \
     widgets/plain_message_item.h \
     widgets/markdown_message_item.h \
     markdown/html_sanitizer.h \
