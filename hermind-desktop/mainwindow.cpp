@@ -9,6 +9,7 @@
 #include "general_appearance_tab.h"
 #include "chat_settings_tab.h"
 #include "vector_database_tab.h"
+#include "widgets/agent_config_tab.h"
 
 #include <QDebug>
 
@@ -61,6 +62,11 @@ MainWindow::MainWindow(QWidget *parent)
     auto *vectorTab = new VectorDatabaseTab(
         AuthManager::instance().apiClient(), workspaceSettingsWidget);
     workspaceSettingsWidget->setTabWidget(QStringLiteral("vector-database"), vectorTab);
+
+    auto *agentConfigTab = new AgentConfigTab(
+        AuthManager::instance().apiClient(), workspaceSettingsWidget);
+    agentConfigTab->setObjectName(QStringLiteral("agentConfigTab"));
+    workspaceSettingsWidget->setTabWidget(QStringLiteral("agent-config"), agentConfigTab);
 
     connect(workspaceSettingsWidget, &WorkspaceSettingsWidget::returnClicked,
             this, []() {

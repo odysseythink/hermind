@@ -1,9 +1,11 @@
-QT += widgets testlib
+QT += widgets testlib network websockets
 CONFIG += qt warn_on depend_includepath testcase c++17
 
 TEMPLATE = app
 
-INCLUDEPATH += $$PWD/../../widgets $$PWD/../../models $$PWD/../..
+INCLUDEPATH += $$PWD/../.. $$PWD/../../api $$PWD/../../models $$PWD/../../streaming \
+    $$PWD/../../auth $$PWD/../../navigation $$PWD/../../widgets $$PWD/../../sidebar \
+    $$PWD/../../chat $$PWD/../../markdown
 
 SOURCES += \
     tst_widgets.cpp \
@@ -26,6 +28,19 @@ SOURCES += \
     ../../widgets/agent_config_state.cpp \
     ../../widgets/agent_config_tab.cpp \
     ../../models/hermind_workspace.cpp \
+    ../../api/api_response.cpp \
+    ../../api/hermind_api_client.cpp \
+    ../../models/hermind_user.cpp \
+    ../../models/hermind_workspace_thread.cpp \
+    ../../models/hermind_stream_chat_response.cpp \
+    ../../models/hermind_chat_message.cpp \
+    ../../models/hermind_agent_event.cpp \
+    ../../models/hermind_memory.cpp \
+    ../../models/hermind_workspace_user.cpp \
+    ../../streaming/hermind_sse_client.cpp \
+    ../../streaming/hermind_websocket_client.cpp \
+    ../../chat/chat_stream_handler.cpp \
+    ../../chat/agent_event_handler.cpp \
     ../../theme_manager.cpp \
     ../../settings_store.cpp
 
@@ -49,5 +64,18 @@ HEADERS += \
     ../../widgets/agent_config_state.h \
     ../../widgets/agent_config_tab.h \
     ../../models/hermind_workspace.h \
+    ../../api/api_response.h \
+    ../../api/hermind_api_client.h \
+    ../../models/hermind_user.h \
+    ../../models/hermind_workspace_thread.h \
+    ../../models/hermind_stream_chat_response.h \
+    ../../models/hermind_chat_message.h \
+    ../../models/hermind_agent_event.h \
+    ../../models/hermind_memory.h \
+    ../../models/hermind_workspace_user.h \
+    ../../streaming/hermind_sse_client.h \
+    ../../streaming/hermind_websocket_client.h \
+    ../../chat/chat_stream_handler.h \
+    ../../chat/agent_event_handler.h \
     ../../theme_manager.h \
     ../../settings_store.h

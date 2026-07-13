@@ -1,5 +1,6 @@
 #include "agent_config_tab.h"
 #include "agent_config_state.h"
+#include "hermind_api_client.h"
 #include "hermind_workspace.h"
 #include "llm_model_selector.h"
 #include "llm_provider_info.h"
@@ -11,10 +12,13 @@
 #include <QHBoxLayout>
 #include <QLabel>
 #include <QLineEdit>
+#include <QMessageBox>
+#include <QPushButton>
 #include <QVBoxLayout>
 
-AgentConfigTab::AgentConfigTab(QWidget *parent)
+AgentConfigTab::AgentConfigTab(HermindApiClient *apiClient, QWidget *parent)
     : QWidget(parent)
+    , m_apiClient(apiClient)
 {
     buildUi();
     applyTheme();
@@ -22,7 +26,40 @@ AgentConfigTab::AgentConfigTab(QWidget *parent)
             this, &AgentConfigTab::applyTheme);
 }
 
-AgentConfigTab::~AgentConfigTab() = default;
+QString AgentConfigTab::workspaceSlug() const
+{
+    return m_workspaceSlug;
+}
+
+void AgentConfigTab::setWorkspaceSlug(const QString &slug)
+{
+    if (m_workspaceSlug == slug)
+        return;
+
+    m_workspaceSlug = slug;
+    m_state = AgentConfigState();
+    reload();
+}
+
+void AgentConfigTab::reload()
+{
+    if (!m_apiClient || m_workspaceSlug.isEmpty()) {
+        emit configLoaded(false);
+        return;
+    }
+
+    loadWorkspace();
+}
+
+bool AgentConfigTab::isDirty() const
+{
+    return m_state.isDirty();
+}
+
+QJsonObject AgentConfigTab::buildUpdatePayload() const
+{
+    return m_state.buildUpdatePayload();
+}
 
 void AgentConfigTab::loadFromWorkspace(const HermindWorkspace &workspace)
 {
@@ -41,33 +78,75 @@ void AgentConfigTab::loadFromWorkspace(const HermindWorkspace &workspace)
 
     refreshModelList();
     updateWarning();
+    updateSaveButton();
 
     m_blockSignals = false;
 }
 
-bool AgentConfigTab::isDirty() const
+void AgentConfigTab::onWorkspaceLoaded(const HermindWorkspace &workspace,
+                                       const QString &,
+                                       const ApiError &error)
 {
-    return m_state.isDirty();
+    if (!error.isEmpty() || workspace.id() == 0) {
+        emit configLoaded(false);
+        return;
+    }
+
+    loadFromWorkspace(workspace);
+    loadCustomModels();
+    emit configLoaded(true);
 }
 
-QJsonObject AgentConfigTab::buildUpdatePayload() const
+void AgentConfigTab::onModelsLoaded(const QStringList &models,
+                                    const ApiError &error)
 {
-    return m_state.buildUpdatePayload();
+    if (error.isEmpty()) {
+        m_blockSignals = true;
+
+        const QString previousModel = m_modelCombo->currentText();
+        const QStringList allModels = LlmModelSelector::modelsForProvider(
+            m_state.provider(), models);
+
+        m_modelCombo->clear();
+        for (const QString &model : allModels) {
+            if (m_state.isModelSupported(m_state.provider(), model))
+                m_modelCombo->addItem(model);
+        }
+
+        const QString workspaceModel = m_state.model();
+        if (!workspaceModel.isEmpty()) {
+            if (allModels.contains(workspaceModel)) {
+                m_modelCombo->setCurrentText(workspaceModel);
+            } else if (m_state.isModelSupported(m_state.provider(), workspaceModel)) {
+                m_modelCombo->insertItem(0, workspaceModel);
+                m_modelCombo->setCurrentIndex(0);
+            }
+        } else if (allModels.contains(previousModel)) {
+            m_modelCombo->setCurrentText(previousModel);
+        }
+
+        m_state.setModel(m_modelCombo->currentText().trimmed());
+        updateWarning();
+        updateSaveButton();
+
+        m_blockSignals = false;
+    }
 }
 
-void AgentConfigTab::reset()
+void AgentConfigTab::onUpdateFinished(const HermindWorkspace &workspace,
+                                      const QString &,
+                                      const ApiError &error)
 {
-    m_blockSignals = true;
+    m_saveButton->setEnabled(true);
+    if (!error.isEmpty()) {
+        QMessageBox::warning(this, tr("Update failed"), error.message());
+        return;
+    }
 
-    m_state.reset();
-
-    const int idx = m_providerCombo->findData(m_state.provider());
-    m_providerCombo->setCurrentIndex(idx >= 0 ? idx : 0);
-
-    refreshModelList();
-    updateWarning();
-
-    m_blockSignals = false;
+    m_state.setOriginalProvider(m_state.provider());
+    m_state.setOriginalModel(m_state.model());
+    updateSaveButton();
+    emit workspaceUpdated(workspace);
 }
 
 void AgentConfigTab::onProviderChanged(int)
@@ -79,9 +158,12 @@ void AgentConfigTab::onProviderChanged(int)
     m_state.setProvider(provider);
 
     refreshModelList();
+    loadCustomModels();
     updateWarning();
+    updateSaveButton();
 
     emit dirtyChanged(m_state.isDirty());
+    emit configLoaded(true);
 }
 
 void AgentConfigTab::onModelChanged(const QString &model)
@@ -91,8 +173,22 @@ void AgentConfigTab::onModelChanged(const QString &model)
 
     m_state.setModel(model.trimmed());
     updateWarning();
+    updateSaveButton();
 
     emit dirtyChanged(m_state.isDirty());
+}
+
+void AgentConfigTab::onSaveClicked()
+{
+    if (!m_state.isDirty() || !m_apiClient || m_workspaceSlug.isEmpty())
+        return;
+
+    m_saveButton->setEnabled(false);
+    m_apiClient->updateWorkspace(m_workspaceSlug, m_state.buildUpdatePayload(),
+        [this](const HermindWorkspace &workspace, const QString &message,
+               const ApiError &error) {
+            onUpdateFinished(workspace, message, error);
+        });
 }
 
 void AgentConfigTab::buildUi()
@@ -101,7 +197,7 @@ void AgentConfigTab::buildUi()
     m_layout->setContentsMargins(0, 0, 0, 0);
     m_layout->setSpacing(20);
 
-    // Header
+    // Header + save
     auto *headerLayout = new QHBoxLayout();
     auto *title = new QLabel(tr("Agent Configuration"), this);
     QFont titleFont = title->font();
@@ -110,6 +206,13 @@ void AgentConfigTab::buildUi()
     title->setFont(titleFont);
     headerLayout->addWidget(title);
     headerLayout->addStretch();
+
+    m_saveButton = new QPushButton(tr("Update Workspace"), this);
+    m_saveButton->setObjectName(QStringLiteral("agentConfigSaveButton"));
+    m_saveButton->setEnabled(false);
+    connect(m_saveButton, &QPushButton::clicked,
+            this, &AgentConfigTab::onSaveClicked);
+    headerLayout->addWidget(m_saveButton);
     m_layout->addLayout(headerLayout);
 
     // Provider row
@@ -128,16 +231,16 @@ void AgentConfigTab::buildUi()
     m_layout->addWidget(providerRow);
 
     // Model row
-    m_modelSelector = new QComboBox(this);
-    m_modelSelector->setObjectName(QStringLiteral("agentModelCombo"));
-    m_modelSelector->setEditable(true);
-    connect(m_modelSelector, &QComboBox::currentTextChanged,
+    m_modelCombo = new QComboBox(this);
+    m_modelCombo->setObjectName(QStringLiteral("agentModelCombo"));
+    m_modelCombo->setEditable(true);
+    connect(m_modelCombo, &QComboBox::currentTextChanged,
             this, &AgentConfigTab::onModelChanged);
 
     auto *modelRow = new SettingRow(this);
     modelRow->setTitle(tr("Agent Model"));
     modelRow->setDescription(tr("Model used for agent reasoning and tool calls."));
-    modelRow->setControl(m_modelSelector);
+    modelRow->setControl(m_modelCombo);
     m_layout->addWidget(modelRow);
 
     // Warning label
@@ -181,12 +284,38 @@ void AgentConfigTab::applyTheme()
     )").arg(textPrimary, border, warningText, warningBackground));
 }
 
+void AgentConfigTab::loadWorkspace()
+{
+    m_apiClient->getWorkspace(m_workspaceSlug,
+        [this](const HermindWorkspace &workspace, const QString &message,
+               const ApiError &error) {
+            onWorkspaceLoaded(workspace, message, error);
+        });
+}
+
+void AgentConfigTab::loadCustomModels()
+{
+    if (!m_apiClient || m_workspaceSlug.isEmpty())
+        return;
+
+    const QString provider = m_state.provider();
+    if (provider == QStringLiteral("default") ||
+        !LlmModelSelector::supportsModelSelection(provider)) {
+        return;
+    }
+
+    m_apiClient->customModels(provider,
+        [this](const QStringList &models, const ApiError &error) {
+            onModelsLoaded(models, error);
+        });
+}
+
 void AgentConfigTab::refreshModelList()
 {
     const QString provider = m_providerCombo->currentData().toString();
     const bool supportsSelection = LlmModelSelector::supportsModelSelection(provider);
 
-    m_modelSelector->setVisible(supportsSelection);
+    m_modelCombo->setVisible(supportsSelection);
 
     if (!supportsSelection) {
         m_state.setModel(QString());
@@ -195,26 +324,28 @@ void AgentConfigTab::refreshModelList()
 
     m_blockSignals = true;
 
-    const QString previousModel = m_modelSelector->currentText();
+    const QString previousModel = m_modelCombo->currentText();
     const QStringList models = LlmModelSelector::modelsForProvider(provider, QStringList());
 
-    m_modelSelector->clear();
-    m_modelSelector->addItems(models);
+    m_modelCombo->clear();
+    for (const QString &model : models) {
+        if (m_state.isModelSupported(provider, model))
+            m_modelCombo->addItem(model);
+    }
 
     const QString workspaceModel = m_state.model();
     if (!workspaceModel.isEmpty()) {
         if (models.contains(workspaceModel)) {
-            m_modelSelector->setCurrentText(workspaceModel);
-        } else {
-            // Custom model: prepend it so it appears in the list.
-            m_modelSelector->insertItem(0, workspaceModel);
-            m_modelSelector->setCurrentIndex(0);
+            m_modelCombo->setCurrentText(workspaceModel);
+        } else if (m_state.isModelSupported(provider, workspaceModel)) {
+            m_modelCombo->insertItem(0, workspaceModel);
+            m_modelCombo->setCurrentIndex(0);
         }
     } else if (models.contains(previousModel)) {
-        m_modelSelector->setCurrentText(previousModel);
+        m_modelCombo->setCurrentText(previousModel);
     }
 
-    m_state.setModel(m_modelSelector->currentText().trimmed());
+    m_state.setModel(m_modelCombo->currentText().trimmed());
 
     m_blockSignals = false;
 }
@@ -235,4 +366,9 @@ void AgentConfigTab::updateWarning()
     }
 
     emit performanceWarningChanged(warning || !supported);
+}
+
+void AgentConfigTab::updateSaveButton()
+{
+    m_saveButton->setEnabled(m_state.isDirty());
 }

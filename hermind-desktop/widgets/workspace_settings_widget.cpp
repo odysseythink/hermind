@@ -41,6 +41,14 @@ void WorkspaceSettingsWidget::setWorkspaceSlug(const QString &slug)
     m_workspaceSlug = slug;
     m_workspace = HermindWorkspace();
     loadWorkspace();
+
+    if (QWidget *widget = m_contentStack->currentWidget()) {
+        if (widget->metaObject()->indexOfMethod("setWorkspaceSlug(QString)") >= 0) {
+            QMetaObject::invokeMethod(widget, "setWorkspaceSlug",
+                                      Qt::DirectConnection,
+                                      Q_ARG(QString, m_workspaceSlug));
+        }
+    }
 }
 
 void WorkspaceSettingsWidget::setActiveTab(const QString &tabId)
@@ -61,6 +69,15 @@ void WorkspaceSettingsWidget::setActiveTab(const QString &tabId)
         btn->setChecked(true);
 
     m_headerTitleLabel->setText(WorkspaceSettingsTabs::titleOf(actualId));
+
+    if (QWidget *widget = m_contentStack->widget(idx)) {
+        if (widget->metaObject()->indexOfMethod("setWorkspaceSlug(QString)") >= 0) {
+            QMetaObject::invokeMethod(widget, "setWorkspaceSlug",
+                                      Qt::DirectConnection,
+                                      Q_ARG(QString, m_workspaceSlug));
+        }
+    }
+
     emit tabChanged(actualId);
 }
 

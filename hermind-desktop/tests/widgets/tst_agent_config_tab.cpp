@@ -25,7 +25,7 @@ static HermindWorkspace workspaceWithAgent(const QString &provider,
 
 void TestAgentConfigTab::loadWorkspaceSetsProviderAndModel()
 {
-    AgentConfigTab tab;
+    AgentConfigTab tab(nullptr);
     tab.loadFromWorkspace(workspaceWithAgent(QStringLiteral("openai"),
                                              QStringLiteral("gpt-4o-mini")));
 
@@ -41,7 +41,7 @@ void TestAgentConfigTab::loadWorkspaceSetsProviderAndModel()
 
 void TestAgentConfigTab::changingProviderEmitsDirty()
 {
-    AgentConfigTab tab;
+    AgentConfigTab tab(nullptr);
     tab.loadFromWorkspace(workspaceWithAgent(QStringLiteral("default"), QString()));
 
     QSignalSpy spy(&tab, &AgentConfigTab::dirtyChanged);
@@ -59,7 +59,7 @@ void TestAgentConfigTab::changingProviderEmitsDirty()
 
 void TestAgentConfigTab::localProviderShowsPerformanceWarning()
 {
-    AgentConfigTab tab;
+    AgentConfigTab tab(nullptr);
     tab.show();
     tab.loadFromWorkspace(workspaceWithAgent(QStringLiteral("default"), QString()));
 
@@ -81,7 +81,7 @@ void TestAgentConfigTab::localProviderShowsPerformanceWarning()
 
 void TestAgentConfigTab::unsupportedOpenAiModelShowsWarning()
 {
-    AgentConfigTab tab;
+    AgentConfigTab tab(nullptr);
     tab.show();
     tab.loadFromWorkspace(workspaceWithAgent(QStringLiteral("openai"),
                                              QStringLiteral("gpt-4o-mini")));
@@ -102,7 +102,7 @@ void TestAgentConfigTab::unsupportedOpenAiModelShowsWarning()
 
 void TestAgentConfigTab::buildUpdatePayloadContainsAgentFields()
 {
-    AgentConfigTab tab;
+    AgentConfigTab tab(nullptr);
     tab.loadFromWorkspace(workspaceWithAgent(QStringLiteral("anthropic"),
                                              QStringLiteral("claude-3-5-sonnet")));
 

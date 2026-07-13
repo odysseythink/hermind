@@ -14,6 +14,7 @@
 #include "general_appearance_tab.h"
 #include "chat_settings_tab.h"
 #include "vector_database_tab.h"
+#include "widgets/agent_config_tab.h"
 
 class TestMainWindow : public QObject
 {
@@ -31,6 +32,7 @@ private slots:
     void generalAppearanceTabIsRegisteredForGeneralAppearanceRoute();
     void chatSettingsTabIsRegisteredForChatSettingsRoute();
     void vectorDatabaseTabIsRegisteredForVectorDatabaseRoute();
+    void agentConfigTabIsRegisteredForAgentConfigRoute();
 };
 
 void TestMainWindow::init()
@@ -212,6 +214,29 @@ void TestMainWindow::vectorDatabaseTabIsRegisteredForVectorDatabaseRoute()
     QVERIFY(topNSpin);
     auto *thresholdCombo = vectorTab->findChild<QComboBox *>(QStringLiteral("thresholdCombo"));
     QVERIFY(thresholdCombo);
+}
+
+void TestMainWindow::agentConfigTabIsRegisteredForAgentConfigRoute()
+{
+    MainWindow w;
+
+    NavigationRoute route;
+    route.page = NavigationPage::WorkspaceSettings;
+    route.workspaceSlug = QStringLiteral("acme");
+    route.settingsPath = QStringLiteral("agent-config");
+    NavigationManager::instance().navigateTo(route);
+
+    auto *settingsWidget = w.findChild<WorkspaceSettingsWidget *>();
+    QVERIFY(settingsWidget);
+    QCOMPARE(settingsWidget->currentTabId(), QStringLiteral("agent-config"));
+
+    auto *stack = settingsWidget->findChild<QStackedWidget *>(QStringLiteral("contentStack"));
+    QVERIFY(stack);
+    QCOMPARE(stack->currentIndex(), WorkspaceSettingsTabs::indexOf(QStringLiteral("agent-config")));
+
+    auto *agentTab = qobject_cast<AgentConfigTab *>(stack->currentWidget());
+    QVERIFY(agentTab);
+    QCOMPARE(agentTab->workspaceSlug(), QStringLiteral("acme"));
 }
 
 QTEST_MAIN(TestMainWindow)

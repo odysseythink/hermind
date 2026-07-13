@@ -3,8 +3,8 @@
  *
  * This tab is part of the workspace settings dialog. It allows the user to
  * pick a default LLM provider and model for agentic chat in this workspace,
- * overriding the global server defaults. Changes are only submitted when the
- * user explicitly saves the workspace settings.
+ * overriding the global server defaults. Changes are submitted by clicking the
+ * save button, which calls the workspace update API.
  *****************************************************************************/
 #ifndef AGENT_CONFIG_TAB_H
 #define AGENT_CONFIG_TAB_H
@@ -15,8 +15,12 @@
 #include "agent_config_state.h"
 #include "hermind_workspace.h"
 
+class ApiError;
+
+class HermindApiClient;
 class QComboBox;
 class QLabel;
+class QPushButton;
 class QVBoxLayout;
 struct LlmProviderInfo;
 
@@ -25,44 +29,59 @@ class AgentConfigTab : public QWidget
     Q_OBJECT
 
 public:
-    explicit AgentConfigTab(QWidget *parent = nullptr);
-    ~AgentConfigTab() override;
+    explicit AgentConfigTab(HermindApiClient *apiClient,
+                            QWidget *parent = nullptr);
 
+    QString workspaceSlug() const;
+
+public slots:
+    void setWorkspaceSlug(const QString &slug);
+    void reload();
+
+    // Direct load path, mainly used by tests.
     void loadFromWorkspace(const HermindWorkspace &workspace);
 
-    // Returns true if the current selection differs from the loaded workspace.
     bool isDirty() const;
-
-    // JSON payload fragment for the workspace update API.
     QJsonObject buildUpdatePayload() const;
 
-    // Reset the form to the last loaded workspace values.
-    void reset();
-
 signals:
-    // Emitted whenever the dirty state changes.
+    void configLoaded(bool success);
+    void workspaceUpdated(const HermindWorkspace &workspace);
     void dirtyChanged(bool dirty);
-
-    // Emitted when a model is selected that is not on the recommended list.
     void performanceWarningChanged(bool warning);
 
 private slots:
+    void onWorkspaceLoaded(const HermindWorkspace &workspace,
+                           const QString &message,
+                           const ApiError &error);
+    void onModelsLoaded(const QStringList &models,
+                        const ApiError &error);
+    void onUpdateFinished(const HermindWorkspace &workspace,
+                          const QString &message,
+                          const ApiError &error);
     void onProviderChanged(int index);
     void onModelChanged(const QString &model);
+    void onSaveClicked();
+    void applyTheme();
 
 private:
     void buildUi();
-    void applyTheme();
+    void loadWorkspace();
+    void loadCustomModels();
     void refreshModelList();
     void updateWarning();
+    void updateSaveButton();
 
+    HermindApiClient *m_apiClient = nullptr;
+    QString m_workspaceSlug;
     AgentConfigState m_state;
     bool m_blockSignals = false;
 
     QVBoxLayout *m_layout = nullptr;
     QComboBox *m_providerCombo = nullptr;
-    QComboBox *m_modelSelector = nullptr;
+    QComboBox *m_modelCombo = nullptr;
     QLabel *m_warningLabel = nullptr;
+    QPushButton *m_saveButton = nullptr;
 };
 
 #endif // AGENT_CONFIG_TAB_H

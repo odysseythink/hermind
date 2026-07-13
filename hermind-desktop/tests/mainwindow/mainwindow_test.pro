@@ -56,6 +56,8 @@ SOURCES += \
     ../../widgets/general_appearance_tab.cpp \
     ../../widgets/chat_settings_tab.cpp \
     ../../widgets/vector_database_tab.cpp \
+    ../../widgets/agent_config_state.cpp \
+    ../../widgets/agent_config_tab.cpp \
     ../../widgets/chat_history_widget.cpp \
     ../../widgets/chat_container_widget.cpp \
     ../../widgets/prompt_input.cpp \
@@ -140,6 +142,8 @@ HEADERS += \
     ../../widgets/general_appearance_tab.h \
     ../../widgets/chat_settings_tab.h \
     ../../widgets/vector_database_tab.h \
+    ../../widgets/agent_config_state.h \
+    ../../widgets/agent_config_tab.h \
     ../../widgets/chat_history_widget.h \
     ../../widgets/chat_container_widget.h \
     ../../widgets/prompt_input.h \
