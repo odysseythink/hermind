@@ -36,6 +36,7 @@ SOURCES += \
     ../../settings_store.cpp \
     ../../chat/chat_stream_handler.cpp \
     ../../chat/agent_event_handler.cpp \
+    ../../auth/auth_manager.cpp \
     ../../api/hermind_api_client.cpp \
     ../../models/hermind_memory.cpp \
     ../../api/api_response.cpp \
@@ -83,6 +84,7 @@ HEADERS += \
     ../../settings_store.h \
     ../../chat/chat_stream_handler.h \
     ../../chat/agent_event_handler.h \
+    ../../auth/auth_manager.h \
     ../../api/hermind_api_client.h \
     ../../api/api_response.h \
     ../../models/hermind_user.h \

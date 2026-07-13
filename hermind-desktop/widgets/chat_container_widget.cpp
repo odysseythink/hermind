@@ -12,6 +12,7 @@
 #include "download_card.h"
 #include "theme_manager.h"
 #include "theme_colors.h"
+#include "auth/auth_manager.h"
 
 #include <QVBoxLayout>
 #include <QHBoxLayout>
@@ -29,6 +30,13 @@ ChatContainerWidget::ChatContainerWidget(HermindApiClient *apiClient, QWidget *p
     setupThreePanelLayout();
     connectHandlers();
     applyTheme();
+
+    // Greet the logged-in user (empty in single-user mode → default text).
+    m_defaultChat->setUsername(AuthManager::instance().currentUser().username());
+    connect(&AuthManager::instance(), &AuthManager::userChanged,
+            this, [this](const HermindUser &user) {
+                m_defaultChat->setUsername(user.username());
+            });
 
     // Start in welcome state
     showDefaultChat();
@@ -184,15 +192,11 @@ void ChatContainerWidget::setupThreePanelLayout()
             this, QOverload<const PromptCommand &>::of(&ChatContainerWidget::sendCommand));
     connect(m_defaultChat->promptInput(), &PromptInput::stopRequested,
             this, [this]() { if (m_apiClient) m_apiClient->abortStream(); });
-    connect(m_defaultChat, &DefaultChatWidget::createAgentClicked, this, []() {
-        qDebug() << "Create agent clicked — navigation TBD";
-    });
-    connect(m_defaultChat, &DefaultChatWidget::editWorkspaceClicked, this, [this]() {
-        qDebug() << "Edit workspace clicked for" << m_workspaceSlug;
-    });
-    connect(m_defaultChat, &DefaultChatWidget::uploadDocumentClicked, this, []() {
-        qDebug() << "Upload document clicked";
-    });
+    // Quick-action buttons are hidden in DefaultChatWidget until their
+    // Phase 2 settings targets exist; their signals are intentionally
+    // unwired (no qDebug stubs).
+    connect(m_defaultChat, &DefaultChatWidget::workspaceSelected,
+            this, &ChatContainerWidget::showChatState);
 
     connect(&ThemeManager::instance(), &ThemeManager::themeChanged,
             this, [this](const QString &) { applyTheme(); });
@@ -217,6 +221,7 @@ void ChatContainerWidget::newChat()
     m_historyWidget->clear();
     m_threadSlug.clear();
     m_streaming = false;
+    m_agentSessionActive = false;
     m_input->setStopVisible(false);
     m_sourcesSidebar->clear();
     m_sourcesSidebar->close();
@@ -237,6 +242,7 @@ void ChatContainerWidget::connectHandlers()
             });
     connect(m_streamHandler.get(), &ChatStreamHandler::agentWebSocketRequested,
             this, [this](const QString &socketId, const QString &token) {
+                m_agentSessionActive = true;
                 if (m_apiClient)
                     m_apiClient->openAgentWebSocket(socketId, token,
                         [this](const QJsonObject &obj) { onAgentEvent(HermindAgentEvent::fromJson(obj)); },
@@ -305,6 +311,9 @@ void ChatContainerWidget::onRegenerateRequested()
 
     const QString text = msgs.at(idx).content();
     msgs.resize(idx); // autoSubmit() re-appends the user message
+    // Drop live agent replies from the previous turn; the resubmitted
+    // message starts a fresh exchange.
+    m_agentHandler->clear();
     m_streamHandler->setMessages(msgs);
     autoSubmit(text, QStringList());
 }
@@ -318,9 +327,12 @@ void ChatContainerWidget::showSources(const QString &, const QJsonArray &sources
 
 void ChatContainerWidget::onHistoryChanged()
 {
+    // Normal streams keep everything in the stream handler; agent sessions
+    // keep only the user message there (the SSE stream ends right after
+    // agentInitWebsocketConnection) while replies accumulate in the agent
+    // handler. Merge both so agent replies are actually rendered.
     QVector<HermindChatMessage> msgs = m_streamHandler->messages();
-    if (msgs.isEmpty())
-        msgs = m_agentHandler->messages();
+    msgs += m_agentHandler->messages();
 
     if (msgs.isEmpty()) {
         showDefaultChat();
@@ -406,6 +418,15 @@ void ChatContainerWidget::autoSubmit(const QString &text, const QStringList &att
     m_streamHandler->setMessages(msgs);
 
     m_input->clear();
+
+    // While the agent WebSocket session is open, user messages are feedback
+    // to the agent and go over the socket — not a new SSE stream
+    // (mirrors frontend WorkspaceChat/ChatContainer/index.jsx).
+    if (m_agentSessionActive) {
+        m_apiClient->sendAgentFeedback(text, attachments);
+        return;
+    }
+
     m_streaming = true;
     m_input->setStopVisible(true);
     emit streamStarted();
@@ -439,6 +460,9 @@ void ChatContainerWidget::loadHistory()
             qWarning() << "load history error:" << err.message();
             return;
         }
+        // Server history is authoritative and complete; drop any live
+        // agent-session messages to avoid rendering duplicates.
+        m_agentHandler->clear();
         m_streamHandler->setMessages(msgs);
     };
 
@@ -460,6 +484,7 @@ void ChatContainerWidget::onAgentEvent(const HermindAgentEvent &event)
 
 void ChatContainerWidget::disconnectAgentSocket()
 {
+    m_agentSessionActive = false;
     if (m_apiClient)
         m_apiClient->closeAgentWebSocket();
 }

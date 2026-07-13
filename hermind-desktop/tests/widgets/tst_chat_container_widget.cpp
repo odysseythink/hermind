@@ -5,6 +5,8 @@
 #include "chat_container_widget.h"
 #include "chat_stream_handler.h"
 #include "agent_event_handler.h"
+#include "chat_history_widget.h"
+#include "default_chat_widget.h"
 #include "sources_sidebar.h"
 #include "memories_sidebar.h"
 #include "hermind_api_client.h"
@@ -27,6 +29,9 @@ private slots:
     void sourcesToggleButton_togglesLeftPanel();
     void memoriesToggleButton_togglesRightPanel();
     void regenerate_resendsLastUserMessage();
+    void agentMessages_renderAlongsideUserMessage();
+    void agentSessionActive_sendCommandGoesOverWebSocket();
+    void workspaceSelectedFromWelcome_switchesToChatView();
 };
 
 void TestChatContainerWidget::setWorkspace_updatesWelcomeLabel()
@@ -254,6 +259,82 @@ void TestChatContainerWidget::regenerate_resendsLastUserMessage()
     QCOMPARE(handler->messages().size(), 1);
     QCOMPARE(handler->messages().first().content(), QStringLiteral("first question"));
     QCOMPARE(streamSpy.count(), 2);
+}
+
+// Regression: in an agent session the SSE stream only delivers the
+// agentInitWebsocketConnection frame, so the stream handler holds just the
+// user message while all agent replies accumulate in the agent handler.
+// The history view must show both.
+void TestChatContainerWidget::agentMessages_renderAlongsideUserMessage()
+{
+    HermindApiClient client;
+    ChatContainerWidget widget(&client, nullptr);
+    widget.setWorkspace(QStringLiteral("ws-1"), QStringLiteral("My Workspace"));
+
+    widget.sendCommand(QStringLiteral("hello agent")); // user msg -> stream handler
+
+    ChatHistoryWidget *history = widget.findChild<ChatHistoryWidget *>();
+    AgentEventHandler *agent = widget.findChild<AgentEventHandler *>();
+    QVERIFY(history != nullptr);
+    QVERIFY(agent != nullptr);
+    QCOMPARE(history->messageCount(), 1);
+
+    // Agent WS main text path: frame with no "type" field (bridge.go OnMessage).
+    agent->handleEvent(HermindAgentEvent::fromJson(
+        QJsonObject{{"content", "agent reply"}}));
+
+    QCOMPARE(history->messageCount(), 2);
+}
+
+// Frontend contract (WorkspaceChat/ChatContainer/index.jsx): while the agent
+// WebSocket is open, a new user message is sent over the socket as
+// "awaitingFeedback" instead of starting a new SSE stream.
+void TestChatContainerWidget::agentSessionActive_sendCommandGoesOverWebSocket()
+{
+    HermindApiClient client;
+    ChatContainerWidget widget(&client, nullptr);
+    widget.setWorkspace(QStringLiteral("ws-1"), QStringLiteral("My Workspace"));
+
+    ChatStreamHandler *stream = widget.findChild<ChatStreamHandler *>();
+    QVERIFY(stream != nullptr);
+
+    // Simulate the SSE frame that hands the session over to the agent WS.
+    QSignalSpy wsSpy(stream, &ChatStreamHandler::agentWebSocketRequested);
+    QJsonObject init;
+    init.insert("type", QStringLiteral("agentInitWebsocketConnection"));
+    init.insert("websocketUUID", QStringLiteral("sock-1"));
+    init.insert("websocketToken", QStringLiteral("tok-1"));
+    stream->handleResponse(HermindStreamChatResponse::fromJson(init));
+    QCOMPARE(wsSpy.count(), 1);
+
+    QSignalSpy streamSpy(&widget, &ChatContainerWidget::streamStarted);
+    widget.sendCommand(QStringLiteral("here is my feedback"));
+
+    // No new SSE stream; the user message is appended to the visible history.
+    QCOMPARE(streamSpy.count(), 0);
+    QCOMPARE(stream->messages().size(), 1);
+    QCOMPARE(stream->messages().first().role(), HermindChatMessage::User);
+    QCOMPARE(stream->messages().first().content(), QStringLiteral("here is my feedback"));
+}
+
+// The welcome page's "进入 <ws> →" button must take the user to the chat
+// view of the current workspace (mirrors the frontend NavLink to the
+// workspace chat route).
+void TestChatContainerWidget::workspaceSelectedFromWelcome_switchesToChatView()
+{
+    HermindApiClient client;
+    ChatContainerWidget widget(&client, nullptr);
+    widget.setWorkspace(QStringLiteral("ws-1"), QStringLiteral("My Workspace"));
+
+    QStackedWidget *stack = widget.findChild<QStackedWidget *>(QStringLiteral("chatStack"));
+    DefaultChatWidget *welcome = widget.findChild<DefaultChatWidget *>();
+    QVERIFY(stack != nullptr);
+    QVERIFY(welcome != nullptr);
+    QCOMPARE(stack->currentIndex(), 0);
+
+    welcome->workspaceSelected(QStringLiteral("ws-1"));
+
+    QCOMPARE(stack->currentIndex(), 1);
 }
 
 QTEST_MAIN(TestChatContainerWidget)

@@ -92,6 +92,7 @@ private:
     std::unique_ptr<ChatStreamHandler> m_streamHandler;
     std::unique_ptr<AgentEventHandler> m_agentHandler;
     bool m_streaming = false;
+    bool m_agentSessionActive = false;
 };
 
 #endif // CHAT_CONTAINER_WIDGET_H

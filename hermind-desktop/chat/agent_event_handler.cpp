@@ -46,6 +46,10 @@ void AgentEventHandler::handleEvent(const HermindAgentEvent &event)
         emit toolApprovalRequested(event.requestId(), event.skillName(), event.description());
     } else if (type == QLatin1String("clarificationRequest")) {
         emit clarificationRequested(event.question());
+    } else if (type == QLatin1String("WAITING_ON_INPUT")) {
+        // Backend bridge.go OnInterrupt: agent paused and asks the user for
+        // input. Surface it like a clarification so the UI can prompt a reply.
+        emit clarificationRequested(event.question());
     } else if (type == QLatin1String("wssFailure")) {
         emit errorReceived(event.content());
     } else if (type == QLatin1String("action")) {

@@ -24,6 +24,7 @@ private slots:
     void statusResponse_emitsStatusSignal();
     void fileDownloadCard_emitsDownloadCardSignal();
     void clarificationRequest_emitsRequestSignal();
+    void waitingOnInput_emitsClarificationSignal();
 };
 
 static QJsonObject streamEventObj(const QString &subType, const QString &uuid,
@@ -221,6 +222,23 @@ void TestAgentEventHandler::clarificationRequest_emitsRequestSignal()
 
     QCOMPARE(spy.count(), 1);
     QCOMPARE(spy.first().first().toString(), QStringLiteral("Which file?"));
+}
+
+// Backend contract (bridge.go OnInterrupt): the agent asks for user input
+// with a WAITING_ON_INPUT frame carrying a question. Surface it the same
+// way as a clarification request so the user can reply.
+void TestAgentEventHandler::waitingOnInput_emitsClarificationSignal()
+{
+    AgentEventHandler handler;
+    QSignalSpy spy(&handler, &AgentEventHandler::clarificationRequested);
+
+    handler.handleEvent(HermindAgentEvent::fromJson(
+        QJsonObject{{"type", "WAITING_ON_INPUT"},
+                    {"question", "Provide feedback to user as agent."}}));
+
+    QCOMPARE(spy.count(), 1);
+    QCOMPARE(spy.first().first().toString(),
+             QStringLiteral("Provide feedback to user as agent."));
 }
 
 QTEST_APPLESS_MAIN(TestAgentEventHandler)
