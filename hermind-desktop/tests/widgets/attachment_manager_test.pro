@@ -2,28 +2,18 @@ QT += widgets testlib
 CONFIG += qt warn_on depend_includepath testcase c++17
 
 TEMPLATE = app
-TARGET = tst_prompt_input
+TARGET = tst_attachment_manager
 
 INCLUDEPATH += $$PWD/../../widgets $$PWD/../../models $$PWD/../..
 
 SOURCES += \
-    tst_prompt_input.cpp \
-    ../../widgets/prompt_input.cpp \
-    ../../widgets/agent_menu.cpp \
-    ../../widgets/tools_menu.cpp \
-    ../../widgets/slash_commands_tab.cpp \
-    ../../widgets/attach_item.cpp \
+    tst_attachment_manager.cpp \
     ../../widgets/attachment_manager.cpp \
     ../../widgets/theme_colors.cpp \
     ../../settings_store.cpp \
     ../../theme_manager.cpp
 
 HEADERS += \
-    ../../widgets/prompt_input.h \
-    ../../widgets/agent_menu.h \
-    ../../widgets/tools_menu.h \
-    ../../widgets/slash_commands_tab.h \
-    ../../widgets/attach_item.h \
     ../../widgets/attachment_manager.h \
     ../../widgets/theme_colors.h \
     ../../settings_store.h \

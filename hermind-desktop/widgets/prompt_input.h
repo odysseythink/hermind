@@ -9,6 +9,8 @@ class QTextEdit;
 class QPushButton;
 class AgentMenu;
 class ToolsMenu;
+class AttachItem;
+class AttachmentManager;
 
 struct PromptCommand {
     QString text;
@@ -35,6 +37,7 @@ public:
     void setStopVisible(bool visible);
 
     QTextEdit *textEdit() const; // for external focus/font control
+    QStringList attachments() const; // currently attached file paths
 
 signals:
     void sendCommand(const PromptCommand &command);
@@ -58,6 +61,8 @@ private:
     QPushButton *m_stopButton = nullptr;
     AgentMenu *m_agentMenu = nullptr;
     ToolsMenu *m_toolsMenu = nullptr;
+    AttachItem *m_attachItem = nullptr;
+    AttachmentManager *m_attachManager = nullptr;
     bool m_autoOpenedTools = false;
 
     int m_maxHeight = 200;

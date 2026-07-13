@@ -1,6 +1,10 @@
 #include <QtTest>
 #include <QSignalSpy>
 #include <QTextEdit>
+#include <QDropEvent>
+#include <QDragEnterEvent>
+#include <QMimeData>
+#include <QUrl>
 #include "prompt_input.h"
 
 class TestPromptInput : public QObject
@@ -15,6 +19,8 @@ private slots:
     void enterEmitsSendCommand();
     void shiftEnterInsertsNewlineWithoutSending();
     void emptyTextDoesNotEmitSendOnEnter();
+    void dropWithLocalFileAddsAttachment();
+    void dropWithNonUrlMimeIsIgnored();
 };
 
 void TestPromptInput::initTestCase()
@@ -95,6 +101,45 @@ void TestPromptInput::emptyTextDoesNotEmitSendOnEnter()
 
     QTest::qWait(50);
     QCOMPARE(spy.count(), 0);
+}
+
+void TestPromptInput::dropWithLocalFileAddsAttachment()
+{
+    PromptInput input;
+
+    QMimeData mime;
+    mime.setUrls({ QUrl::fromLocalFile(QStringLiteral("/tmp/test.txt")) });
+
+    // QApplication::notify only delivers Drop events to QDragManager's
+    // currentTarget, which is set when a preceding DragEnter is accepted.
+    QDragEnterEvent enter(QPoint(10, 10), Qt::CopyAction, &mime,
+                          Qt::LeftButton, Qt::NoModifier);
+    QApplication::sendEvent(input.textEdit(), &enter);
+    QVERIFY(enter.isAccepted());
+
+    QDropEvent drop(QPointF(10, 10), Qt::CopyAction, &mime,
+                    Qt::LeftButton, Qt::NoModifier);
+    QApplication::sendEvent(input.textEdit(), &drop);
+
+    QVERIFY(input.attachments().contains(QStringLiteral("/tmp/test.txt")));
+}
+
+void TestPromptInput::dropWithNonUrlMimeIsIgnored()
+{
+    PromptInput input;
+
+    QMimeData mime;
+    mime.setText(QStringLiteral("not a file"));
+
+    QDragEnterEvent enter(QPoint(10, 10), Qt::CopyAction, &mime,
+                          Qt::LeftButton, Qt::NoModifier);
+    QApplication::sendEvent(input.textEdit(), &enter);
+
+    QDropEvent drop(QPointF(10, 10), Qt::CopyAction, &mime,
+                    Qt::LeftButton, Qt::NoModifier);
+    QApplication::sendEvent(input.textEdit(), &drop);
+
+    QVERIFY(input.attachments().isEmpty());
 }
 
 QTEST_MAIN(TestPromptInput)

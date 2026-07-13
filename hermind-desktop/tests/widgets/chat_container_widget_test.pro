@@ -13,6 +13,8 @@ SOURCES += \
     ../../widgets/agent_menu.cpp \
     ../../widgets/tools_menu.cpp \
     ../../widgets/slash_commands_tab.cpp \
+    ../../widgets/attach_item.cpp \
+    ../../widgets/attachment_manager.cpp \
     ../../widgets/chat_history_widget.cpp \
     ../../widgets/plain_message_item.cpp \
     ../../widgets/markdown_message_item.cpp \
@@ -44,6 +46,8 @@ HEADERS += \
     ../../widgets/agent_menu.h \
     ../../widgets/tools_menu.h \
     ../../widgets/slash_commands_tab.h \
+    ../../widgets/attach_item.h \
+    ../../widgets/attachment_manager.h \
     ../../widgets/chat_history_widget.h \
     ../../widgets/plain_message_item.h \
     ../../widgets/markdown_message_item.h \

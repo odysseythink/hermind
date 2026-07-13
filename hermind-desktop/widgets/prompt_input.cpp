@@ -1,6 +1,8 @@
 #include "prompt_input.h"
 #include "agent_menu.h"
 #include "tools_menu.h"
+#include "attach_item.h"
+#include "attachment_manager.h"
 #include "theme_manager.h"
 #include "theme_colors.h"
 
@@ -9,6 +11,10 @@
 #include <QVBoxLayout>
 #include <QHBoxLayout>
 #include <QKeyEvent>
+#include <QDragEnterEvent>
+#include <QDropEvent>
+#include <QMimeData>
+#include <QUrl>
 
 PromptInput::PromptInput(QWidget *parent)
     : QWidget(parent)
@@ -25,6 +31,7 @@ PromptInput::PromptInput(QWidget *parent)
     m_textEdit->setFrameShape(QFrame::NoFrame);
     m_textEdit->document()->setDocumentMargin(8);
     m_textEdit->setTabChangesFocus(false);
+    m_textEdit->setAcceptDrops(true); // drag-drop handled in eventFilter
 
     m_agentButton = new QPushButton(QStringLiteral("@"), this);
     m_agentButton->setFixedWidth(28);
@@ -42,15 +49,25 @@ PromptInput::PromptInput(QWidget *parent)
     m_stopButton = new QPushButton(QStringLiteral("停止"), this);
     m_stopButton->setVisible(false);
 
+    m_attachItem = new AttachItem(this);
+
     QHBoxLayout *btnLayout = new QHBoxLayout();
+    btnLayout->addWidget(m_attachItem);
     btnLayout->addWidget(m_agentButton);
     btnLayout->addWidget(m_toolsButton);
     btnLayout->addStretch();
     btnLayout->addWidget(m_sendButton);
     btnLayout->addWidget(m_stopButton);
 
+    m_attachManager = new AttachmentManager(this);
+    m_attachManager->setVisible(false);
+
+    root->addWidget(m_attachManager);
     root->addWidget(m_textEdit, 1);
     root->addLayout(btnLayout);
+
+    connect(m_attachItem, &AttachItem::filesSelected,
+            m_attachManager, &AttachmentManager::addFiles);
 
     connect(m_textEdit, &QTextEdit::textChanged, this, &PromptInput::onTextChanged);
     connect(m_sendButton, &QPushButton::clicked, this, &PromptInput::sendCurrent);
@@ -141,8 +158,34 @@ QTextEdit *PromptInput::textEdit() const
     return m_textEdit;
 }
 
+QStringList PromptInput::attachments() const
+{
+    return m_attachManager->filePaths();
+}
+
 bool PromptInput::eventFilter(QObject *obj, QEvent *event)
 {
+    if (obj == m_textEdit
+        && (event->type() == QEvent::DragEnter || event->type() == QEvent::DragMove)) {
+        auto *dragEvent = static_cast<QDragMoveEvent *>(event);
+        if (dragEvent->mimeData()->hasUrls()) {
+            dragEvent->acceptProposedAction();
+            return true;
+        }
+    }
+    if (obj == m_textEdit && event->type() == QEvent::Drop) {
+        auto *dropEvent = static_cast<QDropEvent *>(event);
+        QStringList paths;
+        for (const QUrl &url : dropEvent->mimeData()->urls()) {
+            if (url.isLocalFile())
+                paths.append(url.toLocalFile());
+        }
+        if (!paths.isEmpty()) {
+            m_attachManager->addFiles(paths);
+            dropEvent->accept();
+            return true;
+        }
+    }
     if (obj == m_textEdit && event->type() == QEvent::KeyPress) {
         QKeyEvent *keyEvent = static_cast<QKeyEvent *>(event);
         if (keyEvent->key() == Qt::Key_Slash
@@ -183,13 +226,15 @@ void PromptInput::adjustHeight()
 void PromptInput::sendCurrent()
 {
     const QString content = text();
-    if (content.isEmpty())
+    if (content.isEmpty() && m_attachManager->count() == 0)
         return;
 
     PromptCommand cmd;
     cmd.text = content;
     cmd.writeMode = QStringLiteral("replace");
+    cmd.attachments = m_attachManager->filePaths();
     emit sendCommand(cmd);
+    m_attachManager->clear();
 }
 
 void PromptInput::applyTheme()
