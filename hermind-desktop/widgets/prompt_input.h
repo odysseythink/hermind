@@ -7,6 +7,7 @@
 
 class QTextEdit;
 class QPushButton;
+class AgentMenu;
 
 struct PromptCommand {
     QString text;
@@ -50,8 +51,10 @@ private:
     void applyTheme();
 
     QTextEdit *m_textEdit = nullptr;
+    QPushButton *m_agentButton = nullptr;
     QPushButton *m_sendButton = nullptr;
     QPushButton *m_stopButton = nullptr;
+    AgentMenu *m_agentMenu = nullptr;
 
     int m_maxHeight = 200;
 };

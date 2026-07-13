@@ -1,4 +1,5 @@
 #include "prompt_input.h"
+#include "agent_menu.h"
 #include "theme_manager.h"
 #include "theme_colors.h"
 
@@ -24,11 +25,19 @@ PromptInput::PromptInput(QWidget *parent)
     m_textEdit->document()->setDocumentMargin(8);
     m_textEdit->setTabChangesFocus(false);
 
+    m_agentButton = new QPushButton(QStringLiteral("@"), this);
+    m_agentButton->setFixedWidth(28);
+    m_agentButton->setFixedHeight(28);
+    m_agentButton->setCursor(Qt::PointingHandCursor);
+    m_agentButton->setToolTip(QStringLiteral("启动 Agent 会话"));
+    m_agentButton->setFlat(true);
+
     m_sendButton = new QPushButton(QStringLiteral("发送"), this);
     m_stopButton = new QPushButton(QStringLiteral("停止"), this);
     m_stopButton->setVisible(false);
 
     QHBoxLayout *btnLayout = new QHBoxLayout();
+    btnLayout->addWidget(m_agentButton);
     btnLayout->addStretch();
     btnLayout->addWidget(m_sendButton);
     btnLayout->addWidget(m_stopButton);
@@ -39,6 +48,19 @@ PromptInput::PromptInput(QWidget *parent)
     connect(m_textEdit, &QTextEdit::textChanged, this, &PromptInput::onTextChanged);
     connect(m_sendButton, &QPushButton::clicked, this, &PromptInput::sendCurrent);
     connect(m_stopButton, &QPushButton::clicked, this, &PromptInput::stopRequested);
+
+    m_agentMenu = new AgentMenu(nullptr); // top-level popup
+    m_agentMenu->setSendCommandCallback([this](const QString &text, const QString &mode) {
+        PromptCommand cmd;
+        cmd.text = text;
+        cmd.writeMode = mode;
+        emit sendCommand(cmd);
+    });
+    connect(m_agentButton, &QPushButton::clicked, this, [this]() {
+        QPoint globalPos = m_agentButton->mapToGlobal(
+            QPoint(m_agentButton->width() / 2, m_agentButton->height()));
+        m_agentMenu->showAt(globalPos);
+    });
 
     connect(&ThemeManager::instance(), &ThemeManager::themeChanged,
             this, [this](const QString &) { applyTheme(); });
