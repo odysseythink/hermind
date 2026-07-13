@@ -9,6 +9,7 @@ SOURCES += \
     tst_widgets.cpp \
     tst_llm_provider_info.cpp \
     tst_llm_model_selector.cpp \
+    tst_agent_config_state.cpp \
     ../../widgets/workspace_settings_tab.cpp \
     ../../widgets/suggested_messages_editor.cpp \
     ../../widgets/icon_button.cpp \
@@ -21,12 +22,14 @@ SOURCES += \
     ../../widgets/theme_style_helper.cpp \
     ../../widgets/llm_provider_info.cpp \
     ../../widgets/llm_model_selector.cpp \
+    ../../widgets/agent_config_state.cpp \
     ../../theme_manager.cpp \
     ../../settings_store.cpp
 
 HEADERS += \
     tst_llm_provider_info.h \
     tst_llm_model_selector.h \
+    tst_agent_config_state.h \
     ../../widgets/workspace_settings_tab.h \
     ../../widgets/suggested_messages_editor.h \
     ../../widgets/icon_button.h \
@@ -39,5 +42,6 @@ HEADERS += \
     ../../widgets/theme_style_helper.h \
     ../../widgets/llm_provider_info.h \
     ../../widgets/llm_model_selector.h \
+    ../../widgets/agent_config_state.h \
     ../../theme_manager.h \
     ../../settings_store.h

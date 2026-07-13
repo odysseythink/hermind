@@ -3,6 +3,7 @@
 #include <QComboBox>
 #include "tst_llm_provider_info.h"
 #include "tst_llm_model_selector.h"
+#include "tst_agent_config_state.h"
 #include "icon_button.h"
 #include "sidebar_menu_button.h"
 #include "search_input.h"
@@ -239,6 +240,11 @@ int main(int argc, char *argv[])
 
     {
         TestLlmModelSelector tc;
+        status |= QTest::qExec(&tc, argc, argv);
+    }
+
+    {
+        TestAgentConfigState tc;
         status |= QTest::qExec(&tc, argc, argv);
     }
 
