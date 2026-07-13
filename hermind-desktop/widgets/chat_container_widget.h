@@ -77,6 +77,8 @@ private:
     QLabel *m_wsLabel = nullptr;
     QPushButton *m_newChatBtn = nullptr;
     QPushButton *m_stopBtn = nullptr;
+    QPushButton *m_sourcesToggleBtn = nullptr;
+    QPushButton *m_memoriesToggleBtn = nullptr;
     QStackedWidget *m_stack = nullptr;
     DefaultChatWidget *m_defaultChat = nullptr;
     ChatHistoryWidget *m_historyWidget = nullptr;

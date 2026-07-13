@@ -76,12 +76,22 @@ void ChatContainerWidget::setupThreePanelLayout()
     m_wsLabel->setObjectName(QStringLiteral("workspaceNameLabel"));
     m_newChatBtn = new QPushButton(QStringLiteral("新建聊天"), m_centerPanel);
     m_stopBtn = new QPushButton(QStringLiteral("停止生成"), m_centerPanel);
+    m_sourcesToggleBtn = new QPushButton(QStringLiteral("引用来源"), m_centerPanel);
+    m_sourcesToggleBtn->setObjectName(QStringLiteral("sourcesToggleBtn"));
+    m_memoriesToggleBtn = new QPushButton(QStringLiteral("记忆"), m_centerPanel);
+    m_memoriesToggleBtn->setObjectName(QStringLiteral("memoriesToggleBtn"));
     m_newChatBtn->setFlat(true);
     m_stopBtn->setFlat(true);
+    m_sourcesToggleBtn->setFlat(true);
+    m_memoriesToggleBtn->setFlat(true);
     m_newChatBtn->setCursor(Qt::PointingHandCursor);
     m_stopBtn->setCursor(Qt::PointingHandCursor);
+    m_sourcesToggleBtn->setCursor(Qt::PointingHandCursor);
+    m_memoriesToggleBtn->setCursor(Qt::PointingHandCursor);
     toolbar->addWidget(m_wsLabel);
     toolbar->addStretch();
+    toolbar->addWidget(m_sourcesToggleBtn);
+    toolbar->addWidget(m_memoriesToggleBtn);
     toolbar->addWidget(m_newChatBtn);
     toolbar->addWidget(m_stopBtn);
     centerLayout->addLayout(toolbar);
@@ -132,6 +142,33 @@ void ChatContainerWidget::setupThreePanelLayout()
     connect(m_stopBtn, &QPushButton::clicked, this, [this]() {
         if (m_apiClient)
             m_apiClient->abortStream();
+    });
+    connect(m_sourcesToggleBtn, &QPushButton::clicked, this, [this]() {
+        if (m_sourcesSidebar->isOpen()) {
+            m_sourcesSidebar->close(); // emits closeRequested -> panel collapses
+            return;
+        }
+        // Populate from the most recent message that carries sources.
+        QJsonArray latest;
+        const QVector<HermindChatMessage> msgs = !m_streamHandler->messages().isEmpty()
+            ? m_streamHandler->messages() : m_agentHandler->messages();
+        for (int i = msgs.size() - 1; i >= 0; --i) {
+            if (!msgs.at(i).sources().isEmpty()) {
+                latest = msgs.at(i).sources();
+                break;
+            }
+        }
+        m_sourcesSidebar->setSources(latest);
+        m_leftPanel->setFixedWidth(300);
+        m_sourcesSidebar->open();
+    });
+    connect(m_memoriesToggleBtn, &QPushButton::clicked, this, [this]() {
+        if (m_memoriesSidebar->isOpen()) {
+            m_memoriesSidebar->close(); // emits closeRequested -> panel collapses
+            return;
+        }
+        m_memoriesSidebar->setFixedWidth(300);
+        m_memoriesSidebar->open();
     });
 
     // Shared PromptInput wiring

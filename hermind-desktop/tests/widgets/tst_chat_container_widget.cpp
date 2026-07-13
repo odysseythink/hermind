@@ -1,10 +1,12 @@
 #include <QtTest>
 #include <QSignalSpy>
 #include <QStackedWidget>
+#include <QPushButton>
 #include "chat_container_widget.h"
 #include "chat_stream_handler.h"
 #include "agent_event_handler.h"
 #include "sources_sidebar.h"
+#include "memories_sidebar.h"
 #include "hermind_api_client.h"
 
 class TestChatContainerWidget : public QObject
@@ -22,6 +24,8 @@ private slots:
     void newChat_switchesBackToWelcomeView();
     void agentCitations_openSourcesSidebar();
     void streamSources_openSourcesSidebar();
+    void sourcesToggleButton_togglesLeftPanel();
+    void memoriesToggleButton_togglesRightPanel();
 };
 
 void TestChatContainerWidget::setWorkspace_updatesWelcomeLabel()
@@ -177,6 +181,42 @@ void TestChatContainerWidget::streamSources_openSourcesSidebar()
     handler->sourcesReceived(QStringLiteral("u1"), sources);
 
     QVERIFY(sidebar->isOpen());
+}
+
+void TestChatContainerWidget::sourcesToggleButton_togglesLeftPanel()
+{
+    HermindApiClient client;
+    ChatContainerWidget widget(&client, nullptr);
+
+    QPushButton *btn = widget.findChild<QPushButton *>(QStringLiteral("sourcesToggleBtn"));
+    SourcesSidebar *sidebar = widget.findChild<SourcesSidebar *>();
+    QVERIFY(btn != nullptr);
+    QVERIFY(sidebar != nullptr);
+    QVERIFY(!sidebar->isOpen());
+
+    btn->click();
+    QVERIFY(sidebar->isOpen());
+
+    btn->click();
+    QVERIFY(!sidebar->isOpen());
+}
+
+void TestChatContainerWidget::memoriesToggleButton_togglesRightPanel()
+{
+    HermindApiClient client;
+    ChatContainerWidget widget(&client, nullptr);
+
+    QPushButton *btn = widget.findChild<QPushButton *>(QStringLiteral("memoriesToggleBtn"));
+    MemoriesSidebar *sidebar = widget.findChild<MemoriesSidebar *>();
+    QVERIFY(btn != nullptr);
+    QVERIFY(sidebar != nullptr);
+    QVERIFY(!sidebar->isOpen());
+
+    btn->click();
+    QVERIFY(sidebar->isOpen());
+
+    btn->click();
+    QVERIFY(!sidebar->isOpen());
 }
 
 QTEST_MAIN(TestChatContainerWidget)
