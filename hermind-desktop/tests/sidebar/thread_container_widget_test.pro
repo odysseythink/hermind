@@ -11,6 +11,7 @@ SOURCES += \
     ../../sidebar/thread_container_widget.cpp \
     ../../sidebar/thread_item_widget.cpp \
     ../../api/hermind_api_client.cpp \
+    ../../models/hermind_memory.cpp \
     ../../api/api_response.cpp \
     ../../models/hermind_workspace.cpp \
     ../../models/hermind_workspace_thread.cpp \

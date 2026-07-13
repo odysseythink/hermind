@@ -27,6 +27,7 @@ SOURCES += \
     ../../chat/chat_stream_handler.cpp \
     ../../chat/agent_event_handler.cpp \
     ../../api/hermind_api_client.cpp \
+    ../../models/hermind_memory.cpp \
     ../../api/api_response.cpp \
     ../../models/hermind_user.cpp \
     ../../models/hermind_workspace.cpp \

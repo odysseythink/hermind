@@ -24,6 +24,7 @@ SOURCES += \
     models/hermind_stream_chat_response.cpp \
     models/hermind_chat_message.cpp \
     models/hermind_agent_event.cpp \
+    models/hermind_memory.cpp \
     chat/chat_stream_handler.cpp \
     chat/agent_event_handler.cpp \
     streaming/hermind_sse_client.cpp \
@@ -59,6 +60,9 @@ SOURCES += \
     widgets/sources_sidebar.cpp \
     widgets/source_item.cpp \
     widgets/citation_detail_modal.cpp \
+    widgets/memories_sidebar.cpp \
+    widgets/memory_card.cpp \
+    widgets/memory_modal.cpp \
     widgets/plain_message_item.cpp \
     widgets/markdown_message_item.cpp \
     markdown/html_sanitizer.cpp \
@@ -83,6 +87,7 @@ HEADERS += \
     models/hermind_stream_chat_response.h \
     models/hermind_agent_event.h \
     models/hermind_chat_message.h \
+    models/hermind_memory.h \
     chat/chat_stream_handler.h \
     chat/agent_event_handler.h \
     streaming/hermind_sse_client.h \
@@ -120,6 +125,9 @@ HEADERS += \
     widgets/sources_sidebar.h \
     widgets/source_item.h \
     widgets/citation_detail_modal.h \
+    widgets/memories_sidebar.h \
+    widgets/memory_card.h \
+    widgets/memory_modal.h \
     widgets/plain_message_item.h \
     widgets/markdown_message_item.h \
     markdown/html_sanitizer.h \

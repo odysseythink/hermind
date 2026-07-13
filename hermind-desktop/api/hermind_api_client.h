@@ -14,6 +14,7 @@
 #include "hermind_workspace_thread.h"
 #include "hermind_chat_message.h"
 #include "hermind_stream_chat_response.h"
+#include "hermind_memory.h"
 #include "hermind_sse_client.h"
 #include "hermind_websocket_client.h"
 
@@ -64,6 +65,17 @@ public:
 
     using ChatHistoryCallback = std::function<void(const QVector<HermindChatMessage> &messages,
                                                    const ApiError &error)>;
+
+    struct MemoriesResult {
+        QVector<HermindMemory> workspace;
+        QVector<HermindMemory> global;
+    };
+    using MemoriesCallback = std::function<void(const MemoriesResult &memories,
+                                                const ApiError &error)>;
+    using MemoryCallback = std::function<void(const HermindMemory &memory,
+                                              const QString &message,
+                                              const ApiError &error)>;
+    using MemoryDeleteCallback = std::function<void(bool success, const ApiError &error)>;
 
     explicit HermindApiClient(QObject *parent = nullptr);
 
@@ -129,7 +141,18 @@ public:
 
     void get(const QString &path, const QUrlQuery &query, GenericCallback callback);
     void post(const QString &path, const QJsonObject &body, GenericCallback callback);
+    void patch(const QString &path, const QJsonObject &body, GenericCallback callback);
     void del(const QString &path, const QJsonObject &body, GenericCallback callback);
+
+    void listMemories(const QString &workspaceSlug, MemoriesCallback callback);
+    void createMemory(int workspaceId,
+                      const QString &content,
+                      const QString &scope,
+                      MemoryCallback callback);
+    void updateMemory(int memoryId, const QString &content, MemoryCallback callback);
+    void deleteMemory(int memoryId, MemoryDeleteCallback callback);
+    void promoteMemory(int memoryId, MemoryCallback callback);
+    void demoteMemory(int memoryId, int workspaceId, MemoryCallback callback);
 
 private:
     void sendRequest(const QString &method,

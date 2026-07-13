@@ -11,6 +11,7 @@ SOURCES += \
     tst_new_workspace_dialog.cpp \
     ../../new_workspace_dialog.cpp \
     ../../api/hermind_api_client.cpp \
+    ../../models/hermind_memory.cpp \
     ../../api/api_response.cpp \
     ../../models/hermind_workspace.cpp \
     ../../models/hermind_workspace_thread.cpp \

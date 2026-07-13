@@ -10,6 +10,7 @@ INCLUDEPATH += ../../api ../../models ../../streaming
 SOURCES += \
     tst_api_client.cpp \
     ../../api/hermind_api_client.cpp \
+    ../../models/hermind_memory.cpp \
     ../../api/api_response.cpp \
     ../../models/hermind_user.cpp \
     ../../models/hermind_workspace.cpp \

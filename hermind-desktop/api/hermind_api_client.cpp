@@ -281,6 +281,11 @@ void HermindApiClient::post(const QString &path, const QJsonObject &body, Generi
     sendRequest(QStringLiteral("POST"), path, QUrlQuery(), body, callback);
 }
 
+void HermindApiClient::patch(const QString &path, const QJsonObject &body, GenericCallback callback)
+{
+    sendRequest(QStringLiteral("PATCH"), path, QUrlQuery(), body, callback);
+}
+
 void HermindApiClient::del(const QString &path, const QJsonObject &body, GenericCallback callback)
 {
     sendRequest(QStringLiteral("DELETE"), path, QUrlQuery(), body, callback);
@@ -312,6 +317,8 @@ void HermindApiClient::sendRequest(const QString &method,
     } else if (method == QStringLiteral("POST")) {
         reply = m_manager->post(request, payload);
     } else if (method == QStringLiteral("DELETE")) {
+        reply = m_manager->sendCustomRequest(request, method.toUtf8(), payload);
+    } else if (method == QStringLiteral("PATCH")) {
         reply = m_manager->sendCustomRequest(request, method.toUtf8(), payload);
     } else {
         callback(ApiResponse(0, QJsonDocument(),
@@ -484,4 +491,114 @@ void HermindApiClient::closeAgentWebSocket()
 {
     if (m_wsClient)
         m_wsClient->close();
+}
+
+void HermindApiClient::listMemories(const QString &workspaceSlug, MemoriesCallback callback)
+{
+    get(QStringLiteral("/memory/workspace/") + workspaceSlug, QUrlQuery(),
+        [callback](const ApiResponse &resp) {
+            if (!resp.isSuccess()) {
+                callback(MemoriesResult(), resp.error());
+                return;
+            }
+            MemoriesResult result;
+            const QJsonObject obj = resp.body().object();
+            const QJsonArray wsArr = obj.value(QStringLiteral("workspace")).toArray();
+            const QJsonArray glArr = obj.value(QStringLiteral("global")).toArray();
+            result.workspace.reserve(wsArr.size());
+            for (const QJsonValue &v : wsArr)
+                result.workspace.append(HermindMemory::fromJson(v.toObject()));
+            result.global.reserve(glArr.size());
+            for (const QJsonValue &v : glArr)
+                result.global.append(HermindMemory::fromJson(v.toObject()));
+            callback(result, ApiError());
+        });
+}
+
+void HermindApiClient::createMemory(int workspaceId,
+                                    const QString &content,
+                                    const QString &scope,
+                                    MemoryCallback callback)
+{
+    QJsonObject body;
+    body.insert(QStringLiteral("content"), content);
+    body.insert(QStringLiteral("scope"), scope);
+    if (scope == QStringLiteral("global"))
+        body.insert(QStringLiteral("workspaceId"), QJsonValue());
+    else
+        body.insert(QStringLiteral("workspaceId"), workspaceId);
+
+    post(QStringLiteral("/memory"), body,
+         [callback](const ApiResponse &resp) {
+             if (!resp.isSuccess()) {
+                 callback(HermindMemory(),
+                          resp.body().object().value(QStringLiteral("error")).toString(),
+                          resp.error());
+                 return;
+             }
+             const HermindMemory mem = HermindMemory::fromJson(
+                 resp.body().object().value(QStringLiteral("memory")).toObject());
+             callback(mem, QString(), ApiError());
+         });
+}
+
+void HermindApiClient::updateMemory(int memoryId, const QString &content, MemoryCallback callback)
+{
+    QJsonObject body;
+    body.insert(QStringLiteral("content"), content);
+    patch(QStringLiteral("/memory/") + QString::number(memoryId), body,
+          [callback](const ApiResponse &resp) {
+              if (!resp.isSuccess()) {
+                  callback(HermindMemory(),
+                           resp.body().object().value(QStringLiteral("error")).toString(),
+                           resp.error());
+                  return;
+              }
+              const HermindMemory mem = HermindMemory::fromJson(
+                  resp.body().object().value(QStringLiteral("memory")).toObject());
+              callback(mem, QString(), ApiError());
+          });
+}
+
+void HermindApiClient::deleteMemory(int memoryId, MemoryDeleteCallback callback)
+{
+    del(QStringLiteral("/memory/") + QString::number(memoryId), QJsonObject(),
+        [callback](const ApiResponse &resp) {
+            callback(resp.isSuccess(), resp.error());
+        });
+}
+
+void HermindApiClient::promoteMemory(int memoryId, MemoryCallback callback)
+{
+    post(QStringLiteral("/memory/") + QString::number(memoryId) + QStringLiteral("/promote"),
+         QJsonObject(),
+         [callback](const ApiResponse &resp) {
+             if (!resp.isSuccess()) {
+                 callback(HermindMemory(),
+                          resp.body().object().value(QStringLiteral("error")).toString(),
+                          resp.error());
+                 return;
+             }
+             const HermindMemory mem = HermindMemory::fromJson(
+                 resp.body().object().value(QStringLiteral("memory")).toObject());
+             callback(mem, QString(), ApiError());
+         });
+}
+
+void HermindApiClient::demoteMemory(int memoryId, int workspaceId, MemoryCallback callback)
+{
+    post(QStringLiteral("/memory/") + QString::number(memoryId) + QStringLiteral("/demote/")
+             + QString::number(workspaceId),
+         QJsonObject(),
+         [callback](const ApiResponse &resp) {
+             if (!resp.isSuccess()) {
+                 callback(HermindMemory(),
+                          resp.body().object().value(QStringLiteral("error")).toString(),
+                          resp.error());
+                 return;
+             }
+             const HermindMemory mem = HermindMemory::fromJson(
+                 resp.body().object().value(QStringLiteral("memory")).toObject());
+             callback(mem, QString(), ApiError());
+         });
 }
