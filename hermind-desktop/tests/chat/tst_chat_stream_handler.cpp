@@ -11,6 +11,7 @@ private slots:
     void finalizeResponseStream_marksMessageClosed();
     void stopGenerationAction_clearsPendingStream();
     void sources_attachedToMessageAndEmitted();
+    void closeLastMessage_marksOpenMessageClosed();
 };
 
 static HermindStreamChatResponse makeResponse(const QString &uuid,
@@ -80,6 +81,17 @@ void TestChatStreamHandler::sources_attachedToMessageAndEmitted()
     QCOMPARE(spy.count(), 1);
     QCOMPARE(spy.at(0).at(0).toString(), QStringLiteral("u1"));
     QCOMPARE(spy.at(0).at(1).toJsonArray().size(), 1);
+}
+
+void TestChatStreamHandler::closeLastMessage_marksOpenMessageClosed()
+{
+    ChatStreamHandler handler;
+    handler.handleResponse(makeResponse("u1", "textResponseChunk", "Hel"));
+    QVERIFY(!handler.messages().first().isClosed());
+
+    handler.closeLastMessage();
+
+    QVERIFY(handler.messages().first().isClosed());
 }
 
 QTEST_APPLESS_MAIN(TestChatStreamHandler)

@@ -2,6 +2,7 @@
 #include <QTcpServer>
 #include <QTcpSocket>
 #include <QNetworkAccessManager>
+#include <QNetworkReply>
 #include "hermind_sse_client.h"
 
 class TestSseClient : public QObject
@@ -13,6 +14,7 @@ private slots:
     void cleanupTestCase();
     void receivesMultipleEvents();
     void abortStopsStream();
+    void stop_deletesReply();
 
 private:
     class MockSseServer;
@@ -30,11 +32,19 @@ public:
     quint16 port() const { return serverPort(); }
     void setHandler(Handler h) { m_handler = std::move(h); }
     QHash<QString, QString> lastHeaders;
+    // When true, keep the connection open without responding (simulates a
+    // long-lived SSE stream that never ends on its own).
+    bool hang = false;
 
 protected:
     void incomingConnection(qintptr socketDescriptor) override
     {
         QTcpSocket *socket = new QTcpSocket(this);
+        if (hang) {
+            m_heldSockets.append(socket);
+            socket->setSocketDescriptor(socketDescriptor);
+            return;
+        }
         connect(socket, &QTcpSocket::readyRead, this, [this, socket]() {
             QByteArray data = socket->readAll();
             QString text = QString::fromUtf8(data);
@@ -84,6 +94,7 @@ protected:
 
 private:
     Handler m_handler;
+    QVector<QTcpSocket *> m_heldSockets;
 };
 
 void TestSseClient::initTestCase()
@@ -160,6 +171,29 @@ void TestSseClient::abortStopsStream()
 
     QTRY_VERIFY_WITH_TIMEOUT(finished, 5000);
     QVERIFY(events.size() < 2);
+}
+
+void TestSseClient::stop_deletesReply()
+{
+    m_server->hang = true;
+
+    HermindSseClient client(m_manager);
+    client.start(QUrl(QStringLiteral("http://127.0.0.1:%1/api/workspace/default/stream-chat")
+                          .arg(m_server->port())),
+                 QJsonObject(),
+                 QByteArray(),
+                 [](const HermindStreamChatResponse &) {},
+                 [](const ApiError &) {},
+                 []() {});
+
+    QTRY_VERIFY_WITH_TIMEOUT(!m_manager->findChildren<QNetworkReply *>().isEmpty(), 5000);
+
+    client.stop();
+
+    // stop() must release the QNetworkReply (deleteLater), not just abort it.
+    QTRY_VERIFY_WITH_TIMEOUT(m_manager->findChildren<QNetworkReply *>().isEmpty(), 5000);
+
+    m_server->hang = false;
 }
 
 QTEST_MAIN(TestSseClient)

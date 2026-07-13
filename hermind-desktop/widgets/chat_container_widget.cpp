@@ -394,6 +394,7 @@ void ChatContainerWidget::autoSubmit(const QString &text, const QStringList &att
         m_input->setStopVisible(false);
     };
     auto onFinished = [this]() {
+        m_streamHandler->closeLastMessage();
         m_streaming = false;
         m_input->setStopVisible(false);
         emit streamFinished();

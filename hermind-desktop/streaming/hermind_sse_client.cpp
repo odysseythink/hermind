@@ -44,6 +44,7 @@ void HermindSseClient::stop()
     if (m_reply) {
         disconnect(m_reply, nullptr, this, nullptr);
         m_reply->abort();
+        m_reply->deleteLater();
         m_reply = nullptr;
     }
     if (!m_finishedEmitted && m_onFinished) {

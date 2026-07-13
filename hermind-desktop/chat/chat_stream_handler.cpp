@@ -53,6 +53,14 @@ void ChatStreamHandler::appendOrUpdateAssistant(const QString &uuid,
     emit messagesChanged();
 }
 
+void ChatStreamHandler::closeLastMessage()
+{
+    if (!m_messages.isEmpty() && !m_messages.last().isClosed()) {
+        m_messages.last().setClosed(true);
+        emit messagesChanged();
+    }
+}
+
 void ChatStreamHandler::handleResponse(const HermindStreamChatResponse &response)
 {
     const QString type = response.type();

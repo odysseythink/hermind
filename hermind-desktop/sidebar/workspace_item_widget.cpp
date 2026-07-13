@@ -13,7 +13,6 @@
 
 WorkspaceItemWidget::WorkspaceItemWidget(QWidget *parent)
     : QWidget(parent)
-    , m_workspace(new HermindWorkspace())
     , m_nameLabel(new QLabel(this))
     , m_expandLabel(new QLabel(QStringLiteral("▶"), this))
     , m_header(new QWidget(this))
@@ -73,14 +72,14 @@ WorkspaceItemWidget::WorkspaceItemWidget(QWidget *parent)
 
 void WorkspaceItemWidget::setWorkspace(const HermindWorkspace &workspace)
 {
-    *m_workspace = workspace;
+    m_workspace = workspace;
     m_nameLabel->setText(workspace.name());
     m_threadContainer->setWorkspaceSlug(workspace.slug());
 }
 
 QString WorkspaceItemWidget::workspaceSlug() const
 {
-    return m_workspace ? m_workspace->slug() : QString();
+    return m_workspace.slug();
 }
 
 void WorkspaceItemWidget::setActive(bool active)

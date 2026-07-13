@@ -3,7 +3,8 @@
 
 #include <QWidget>
 
-class HermindWorkspace;
+#include "hermind_workspace.h"
+
 class HermindApiClient;
 class QLabel;
 class ThreadContainerWidget;
@@ -50,7 +51,7 @@ private slots:
 private:
     void updateExpandArrow();
 
-    HermindWorkspace *m_workspace = nullptr;
+    HermindWorkspace m_workspace;
     QLabel *m_nameLabel = nullptr;
     QLabel *m_expandLabel = nullptr;
     QWidget *m_header = nullptr;

@@ -19,6 +19,10 @@ public:
 
     void handleResponse(const HermindStreamChatResponse &response);
 
+    // Close the last message if it is still open (e.g. after a user abort,
+    // where no finalizing frame ever arrives from the server).
+    void closeLastMessage();
+
 signals:
     void messagesChanged();
     void streamFinished();

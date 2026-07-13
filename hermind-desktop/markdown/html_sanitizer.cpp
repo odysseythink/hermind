@@ -21,8 +21,8 @@ WhiteList defaultWhitelist()
         QStringLiteral("strong"), QStringLiteral("em"), QStringLiteral("del"),
         QStringLiteral("hr"), QStringLiteral("br"), QStringLiteral("span"),
         QStringLiteral("div"), QStringLiteral("input"), QStringLiteral("html"),
-        QStringLiteral("head"), QStringLiteral("body"), QStringLiteral("meta"),
-        QStringLiteral("style"), QStringLiteral("link"), QStringLiteral("title"),
+        QStringLiteral("head"), QStringLiteral("body"), QStringLiteral("style"),
+        QStringLiteral("title"),
     };
     w.allowedAttrs[QStringLiteral("a")] = {QStringLiteral("href"), QStringLiteral("class")};
     w.allowedAttrs[QStringLiteral("img")] = {QStringLiteral("src"), QStringLiteral("alt"), QStringLiteral("class")};
@@ -31,8 +31,6 @@ WhiteList defaultWhitelist()
     w.allowedAttrs[QStringLiteral("code")] = {QStringLiteral("class")};
     w.allowedAttrs[QStringLiteral("span")] = {QStringLiteral("class")};
     w.allowedAttrs[QStringLiteral("div")] = {QStringLiteral("class"), QStringLiteral("id")};
-    w.allowedAttrs[QStringLiteral("link")] = {QStringLiteral("rel"), QStringLiteral("href")};
-    w.allowedAttrs[QStringLiteral("meta")] = {QStringLiteral("charset"), QStringLiteral("content"), QStringLiteral("http-equiv")};
     w.allowedAttrs[QStringLiteral("")] = {QStringLiteral("class"), QStringLiteral("id")}; // global fallback
     w.allowedSchemes = {QStringLiteral("http"), QStringLiteral("https"), QStringLiteral("qrc")};
     return w;

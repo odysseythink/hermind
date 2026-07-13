@@ -13,7 +13,7 @@ private slots:
     void keepsHttpHref();
     void keepsHttpsHref();
     void keepsRelativePath();
-    void keepsQrcPath();
+    void removesLinkAndMetaTags();
     void removesUnknownTags();
     void stripsDangerousAttributes();
 };
@@ -106,12 +106,17 @@ void TestHtmlSanitizer::keepsRelativePath()
     QVERIFY(out.contains(QStringLiteral("src=\"/images/logo.png\"")));
 }
 
-void TestHtmlSanitizer::keepsQrcPath()
+void TestHtmlSanitizer::removesLinkAndMetaTags()
 {
-    const QString in = QStringLiteral("<link href=\"qrc:///katex/katex.min.css\" rel=\"stylesheet\">");
+    const QString in = QStringLiteral(
+        "<link href=\"http://evil.example/x.css\" rel=\"stylesheet\"/>"
+        "<meta http-equiv=\"refresh\" content=\"0;url=http://evil.example\"/>"
+        "<p>kept</p>");
     const QString out = HtmlSanitizer::sanitize(in);
-    QVERIFY(out.contains(QStringLiteral("href=\"qrc:///katex/katex.min.css\"")));
-    QVERIFY(out.contains(QStringLiteral("rel=\"stylesheet\"")));
+    QVERIFY(!out.contains(QStringLiteral("<link"), Qt::CaseInsensitive));
+    QVERIFY(!out.contains(QStringLiteral("<meta"), Qt::CaseInsensitive));
+    QVERIFY(!out.contains(QStringLiteral("evil.example")));
+    QVERIFY(out.contains(QStringLiteral("kept")));
 }
 
 void TestHtmlSanitizer::removesUnknownTags()

@@ -47,9 +47,11 @@ void ChatHistoryWidget::setMessages(const QVector<HermindChatMessage> &messages)
 
 void ChatHistoryWidget::appendMessage(const HermindChatMessage &message)
 {
+    const bool wasAtBottom = isAtBottom();
     m_messages.append(message);
     appendItem(message);
-    scrollToBottom();
+    if (wasAtBottom)
+        scrollToBottom();
 }
 
 void ChatHistoryWidget::updateMessage(int index, const HermindChatMessage &message)
@@ -92,6 +94,8 @@ void ChatHistoryWidget::setWelcomeText(const QString &text)
 
 void ChatHistoryWidget::rebuild()
 {
+    const bool wasAtBottom = isAtBottom();
+
     for (QWidget *item : m_items) {
         m_layout->removeWidget(item);
         item->deleteLater();
@@ -113,7 +117,8 @@ void ChatHistoryWidget::rebuild()
         appendItem(msg);
 
     m_layout->addStretch();
-    scrollToBottom();
+    if (wasAtBottom)
+        scrollToBottom();
 }
 
 void ChatHistoryWidget::appendItem(const HermindChatMessage &message)
