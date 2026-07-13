@@ -26,10 +26,34 @@ run_test() {
 echo "=== models tests ==="
 run_test models models_test.pro tst_models
 run_test models hermind_memory_test.pro tst_hermind_memory
+run_test models chat_message_test.pro tst_chat_message
 
 echo ""
 echo "=== api tests ==="
 run_test api api_client_test.pro tst_api_client
+run_test api chat_history_test.pro tst_api_client_chat_history
+
+echo ""
+echo "=== auth tests (live-backend tests excluded) ==="
+run_test auth auth_state_test.pro auth_state_test
+run_test auth auth_manager_test.pro auth_manager_test
+
+echo ""
+echo "=== theme tests ==="
+run_test theme theme_manager_test.pro theme_manager_test
+
+echo ""
+echo "=== chat stream/agent tests ==="
+run_test chat chat_stream_handler_test.pro tst_chat_stream_handler
+run_test chat agent_event_handler_test.pro tst_agent_event_handler
+
+echo ""
+echo "=== markdown tests ==="
+run_test markdown test_markdown_sanitizer.pro tst_html_sanitizer
+run_test markdown test_html_generator.pro tst_html_generator
+run_test markdown test_markdown_renderer.pro tst_markdown_renderer
+run_test markdown test_syntax_highlighter.pro tst_syntax_highlighter
+run_test markdown test_formula_renderer.pro tst_formula_renderer
 
 echo ""
 echo "=== navigation tests ==="
@@ -71,6 +95,10 @@ run_test widgets memories_sidebar_test.pro tst_memories_sidebar
 run_test widgets suggested_messages_test.pro tst_suggested_messages
 run_test widgets default_chat_widget_test.pro tst_default_chat_widget
 run_test widgets chat_container_widget_test.pro tst_chat_container_widget
+run_test widgets chat_history_widget_test.pro tst_chat_history_widget
+run_test widgets chat_message_item_test.pro tst_chat_message_item
+run_test widgets markdown_message_item_test.pro tst_markdown_message_item
+run_test widgets theme_colors_test.pro theme_colors_test
 
 echo ""
 echo "=== all desktop unit tests passed ==="

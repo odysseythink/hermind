@@ -37,6 +37,8 @@ public:
     void setContent(const QString &content);
     void appendContent(const QString &chunk);
     void setClosed(bool closed);
+    void setSources(const QJsonArray &sources);
+    void appendSources(const QJsonArray &sources);
 
 private:
     static Role roleFromString(const QString &role);

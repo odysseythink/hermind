@@ -26,9 +26,17 @@ signals:
     void clarificationRequested(const QString &question);
     void errorReceived(const QString &error);
     void threadRenameRequested(const QString &newName);
+    void citationsReceived(const QString &uuid, const QJsonArray &citations);
 
 private:
+    void handleStreamEvent(const QJsonObject &content);
+    void appendStreamMessage(const QString &uuid, const QString &content);
+    QJsonArray takeBufferedCitations(const QString &uuid);
+
     QVector<HermindChatMessage> m_messages;
+    // Citations can arrive before their message exists (empty->chat remount);
+    // buffer by uuid and attach when the message appears (frontend agent.js).
+    QHash<QString, QJsonArray> m_bufferedCitations;
 };
 
 #endif // AGENT_EVENT_HANDLER_H

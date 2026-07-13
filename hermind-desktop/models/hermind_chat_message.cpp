@@ -44,3 +44,9 @@ void HermindChatMessage::setRole(Role role) { m_role = role; }
 void HermindChatMessage::setContent(const QString &content) { m_content = content; }
 void HermindChatMessage::appendContent(const QString &chunk) { m_content += chunk; }
 void HermindChatMessage::setClosed(bool closed) { m_closed = closed; }
+void HermindChatMessage::setSources(const QJsonArray &sources) { m_sources = sources; }
+void HermindChatMessage::appendSources(const QJsonArray &sources)
+{
+    for (const QJsonValue &v : sources)
+        m_sources.append(v);
+}

@@ -4,7 +4,8 @@ HermindAgentEvent HermindAgentEvent::fromJson(const QJsonObject &obj)
 {
     HermindAgentEvent ev;
     ev.m_type = obj.value("type").toString();
-    ev.m_content = obj.value("content").toString();
+    ev.m_uuid = obj.value("uuid").toString();
+    ev.m_content = obj.value("content");
     ev.m_animate = obj.value("animate").toBool();
     ev.m_question = obj.value("question").toString();
     ev.m_requestId = obj.value("requestId").toString();
@@ -23,7 +24,9 @@ QJsonObject HermindAgentEvent::toJson() const
     QJsonObject obj;
     if (!m_type.isEmpty())
         obj.insert("type", m_type);
-    if (!m_content.isEmpty())
+    if (!m_uuid.isEmpty())
+        obj.insert("uuid", m_uuid);
+    if (!m_content.isUndefined() && !m_content.isNull())
         obj.insert("content", m_content);
     if (m_animate)
         obj.insert("animate", m_animate);
@@ -49,7 +52,13 @@ QJsonObject HermindAgentEvent::toJson() const
 }
 
 QString HermindAgentEvent::type() const { return m_type; }
-QString HermindAgentEvent::content() const { return m_content; }
+QString HermindAgentEvent::uuid() const { return m_uuid; }
+QString HermindAgentEvent::content() const
+{
+    return m_content.isString() ? m_content.toString() : QString();
+}
+QJsonObject HermindAgentEvent::contentObject() const { return m_content.toObject(); }
+QJsonValue HermindAgentEvent::contentValue() const { return m_content; }
 bool HermindAgentEvent::animate() const { return m_animate; }
 QString HermindAgentEvent::question() const { return m_question; }
 QString HermindAgentEvent::requestId() const { return m_requestId; }

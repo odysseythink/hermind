@@ -14,7 +14,12 @@ public:
     QJsonObject toJson() const;
 
     QString type() const;
+    QString uuid() const;
+    // String content, or empty when the frame carries an object payload
+    // (e.g. reportStreamEvent). Use contentObject()/contentValue() for those.
     QString content() const;
+    QJsonObject contentObject() const;
+    QJsonValue contentValue() const;
     bool animate() const;
     QString question() const;
     QString requestId() const;
@@ -28,7 +33,8 @@ public:
 
 private:
     QString m_type;
-    QString m_content;
+    QString m_uuid;
+    QJsonValue m_content;
     bool m_animate = false;
     QString m_question;
     QString m_requestId;
