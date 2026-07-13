@@ -2,7 +2,7 @@ QT += widgets network websockets
 
 CONFIG += c++17
 
-INCLUDEPATH += $$PWD $$PWD/api $$PWD/models $$PWD/streaming $$PWD/auth $$PWD/navigation $$PWD/widgets $$PWD/sidebar
+INCLUDEPATH += $$PWD $$PWD/api $$PWD/models $$PWD/streaming $$PWD/auth $$PWD/navigation $$PWD/widgets $$PWD/sidebar $$PWD/chat
 
 # You can make your code fail to compile if it uses deprecated APIs.
 # In order to do so, uncomment the following line.
@@ -24,6 +24,8 @@ SOURCES += \
     models/hermind_stream_chat_response.cpp \
     models/hermind_chat_message.cpp \
     models/hermind_agent_event.cpp \
+    chat/chat_stream_handler.cpp \
+    chat/agent_event_handler.cpp \
     streaming/hermind_sse_client.cpp \
     streaming/hermind_websocket_client.cpp \
     auth/auth_manager.cpp \
@@ -59,6 +61,8 @@ HEADERS += \
     models/hermind_stream_chat_response.h \
     models/hermind_agent_event.h \
     models/hermind_chat_message.h \
+    chat/chat_stream_handler.h \
+    chat/agent_event_handler.h \
     streaming/hermind_sse_client.h \
     streaming/hermind_websocket_client.h \
     auth/auth_state.h \
