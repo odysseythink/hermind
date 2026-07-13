@@ -23,6 +23,7 @@ public:
 
     QString workspaceSlug() const;
     QString currentTabId() const;
+    void setTabWidget(const QString &tabId, QWidget *widget);
 
 public slots:
     void setWorkspaceSlug(const QString &slug);

@@ -64,6 +64,28 @@ void WorkspaceSettingsWidget::setActiveTab(const QString &tabId)
     emit tabChanged(actualId);
 }
 
+void WorkspaceSettingsWidget::setTabWidget(const QString &tabId, QWidget *widget)
+{
+    if (!widget || !m_contentStack)
+        return;
+
+    const int idx = WorkspaceSettingsTabs::indexOf(tabId);
+    if (idx < 0)
+        return;
+
+    QWidget *old = m_contentStack->widget(idx);
+    if (old) {
+        m_contentStack->removeWidget(old);
+        old->deleteLater();
+    }
+
+    widget->setParent(m_contentStack);
+    m_contentStack->insertWidget(idx, widget);
+
+    if (m_currentTabId == tabId)
+        m_contentStack->setCurrentIndex(idx);
+}
+
 void WorkspaceSettingsWidget::onTabButtonClicked()
 {
     auto *btn = qobject_cast<SidebarMenuButton *>(sender());
