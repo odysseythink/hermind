@@ -121,6 +121,8 @@ public:
                          WorkspaceCallback callback);
     void deleteWorkspace(const QString &slug,
                          ThreadOperationCallback callback);
+    void wipeVectorDb(const QString &slug,
+                      ThreadOperationCallback callback);
     void searchWorkspaceOrThread(const QString &searchTerm, SearchCallback callback);
 
     void listThreads(const QString &workspaceSlug, ThreadsCallback callback);

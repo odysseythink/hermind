@@ -46,6 +46,7 @@ private slots:
     void listUsers();
     void listWorkspaceUsers();
     void updateWorkspaceUsers();
+    void wipeVectorDb();
 
     void streamChat();
     void streamThreadChat();
@@ -1045,6 +1046,30 @@ void TestApiClient::updateWorkspaceUsers()
                                    [&](bool s, const QString &, const ApiError &) { done = true; ok = s; });
     QTRY_VERIFY_WITH_TIMEOUT(done, 5000);
     QVERIFY(ok);
+}
+
+void TestApiClient::wipeVectorDb()
+{
+    bool done = false;
+    bool success = false;
+    m_server->recordedPaths.clear();
+    m_server->setHandler([](const QString &method, const QString &path,
+                            const QHash<QString, QString> &,
+                            const QByteArray &) {
+        if (method == QStringLiteral("DELETE")
+            && path == QStringLiteral("/api/workspace/demo/reset-vector-db"))
+            return QByteArray(R"({"success":true})");
+        return QByteArray(R"({"success":false})");
+    });
+
+    m_client->wipeVectorDb(QStringLiteral("demo"), [&](bool ok, const ApiError &err) {
+        done = true;
+        success = ok;
+        QVERIFY(err.isEmpty());
+    });
+    QTRY_VERIFY_WITH_TIMEOUT(done, 5000);
+    QVERIFY(success);
+    QVERIFY(m_server->recordedPaths.contains(QStringLiteral("/api/workspace/demo/reset-vector-db")));
 }
 
 QTEST_MAIN(TestApiClient)

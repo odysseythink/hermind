@@ -170,6 +170,21 @@ void HermindApiClient::deleteWorkspace(const QString &slug,
         });
 }
 
+void HermindApiClient::wipeVectorDb(const QString &slug,
+                                    ThreadOperationCallback callback)
+{
+    del(QStringLiteral("/workspace/") + slug + QStringLiteral("/reset-vector-db"),
+        QJsonObject(),
+        [callback](const ApiResponse &resp) {
+            if (!resp.isSuccess()) {
+                callback(false, resp.error());
+                return;
+            }
+            const QJsonObject obj = resp.body().object();
+            callback(obj.value(QStringLiteral("success")).toBool(), ApiError());
+        });
+}
+
 void HermindApiClient::searchWorkspaceOrThread(const QString &searchTerm, SearchCallback callback)
 {
     QJsonObject body;
