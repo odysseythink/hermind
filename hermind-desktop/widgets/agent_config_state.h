@@ -22,6 +22,7 @@ public:
     bool isModelSupported(const QString &provider, const QString &model) const;
 
     QJsonObject buildUpdatePayload() const;
+    void reset();
 
 private:
     QString m_originalProvider = QStringLiteral("default");

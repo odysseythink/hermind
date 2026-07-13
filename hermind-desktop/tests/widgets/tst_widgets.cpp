@@ -4,6 +4,7 @@
 #include "tst_llm_provider_info.h"
 #include "tst_llm_model_selector.h"
 #include "tst_agent_config_state.h"
+#include "tst_agent_config_tab.h"
 #include "icon_button.h"
 #include "sidebar_menu_button.h"
 #include "search_input.h"
@@ -245,6 +246,11 @@ int main(int argc, char *argv[])
 
     {
         TestAgentConfigState tc;
+        status |= QTest::qExec(&tc, argc, argv);
+    }
+
+    {
+        TestAgentConfigTab tc;
         status |= QTest::qExec(&tc, argc, argv);
     }
 

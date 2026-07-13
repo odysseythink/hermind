@@ -56,3 +56,17 @@ void TestAgentConfigState::payloadForSelectedProvider()
     QCOMPARE(payload.value(QStringLiteral("agentProvider")).toString(), QStringLiteral("openai"));
     QCOMPARE(payload.value(QStringLiteral("agentModel")).toString(), QStringLiteral("gpt-4o-mini"));
 }
+void TestAgentConfigState::resetRestoresOriginalValues()
+{
+    AgentConfigState state;
+    state.setOriginalProvider(QStringLiteral("openai"));
+    state.setOriginalModel(QStringLiteral("gpt-4o-mini"));
+    state.setProvider(QStringLiteral("anthropic"));
+    state.setModel(QStringLiteral("claude-3-5-sonnet"));
+    QVERIFY(state.isDirty());
+
+    state.reset();
+    QCOMPARE(state.provider(), QStringLiteral("openai"));
+    QCOMPARE(state.model(), QStringLiteral("gpt-4o-mini"));
+    QVERIFY(!state.isDirty());
+}

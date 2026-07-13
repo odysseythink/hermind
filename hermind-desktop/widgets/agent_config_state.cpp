@@ -90,3 +90,9 @@ QJsonObject AgentConfigState::buildUpdatePayload() const
     obj.insert(QStringLiteral("agentModel"), m_model);
     return obj;
 }
+
+void AgentConfigState::reset()
+{
+    m_provider = m_originalProvider;
+    m_model = m_originalModel;
+}

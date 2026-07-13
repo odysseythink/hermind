@@ -3,13 +3,14 @@ CONFIG += qt warn_on depend_includepath testcase c++17
 
 TEMPLATE = app
 
-INCLUDEPATH += $$PWD/../../widgets $$PWD/../..
+INCLUDEPATH += $$PWD/../../widgets $$PWD/../../models $$PWD/../..
 
 SOURCES += \
     tst_widgets.cpp \
     tst_llm_provider_info.cpp \
     tst_llm_model_selector.cpp \
     tst_agent_config_state.cpp \
+    tst_agent_config_tab.cpp \
     ../../widgets/workspace_settings_tab.cpp \
     ../../widgets/suggested_messages_editor.cpp \
     ../../widgets/icon_button.cpp \
@@ -23,6 +24,8 @@ SOURCES += \
     ../../widgets/llm_provider_info.cpp \
     ../../widgets/llm_model_selector.cpp \
     ../../widgets/agent_config_state.cpp \
+    ../../widgets/agent_config_tab.cpp \
+    ../../models/hermind_workspace.cpp \
     ../../theme_manager.cpp \
     ../../settings_store.cpp
 
@@ -30,6 +33,7 @@ HEADERS += \
     tst_llm_provider_info.h \
     tst_llm_model_selector.h \
     tst_agent_config_state.h \
+    tst_agent_config_tab.h \
     ../../widgets/workspace_settings_tab.h \
     ../../widgets/suggested_messages_editor.h \
     ../../widgets/icon_button.h \
@@ -43,5 +47,7 @@ HEADERS += \
     ../../widgets/llm_provider_info.h \
     ../../widgets/llm_model_selector.h \
     ../../widgets/agent_config_state.h \
+    ../../widgets/agent_config_tab.h \
+    ../../models/hermind_workspace.h \
     ../../theme_manager.h \
     ../../settings_store.h

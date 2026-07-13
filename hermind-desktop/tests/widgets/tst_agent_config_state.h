@@ -13,6 +13,7 @@ private slots:
     void unsupportedOpenAiModelsAreRejected();
     void payloadForDefaultProviderEmptiesAgentProvider();
     void payloadForSelectedProvider();
+    void resetRestoresOriginalValues();
 };
 
 #endif // TST_AGENT_CONFIG_STATE_H
