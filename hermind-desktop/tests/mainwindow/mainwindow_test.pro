@@ -55,6 +55,7 @@ SOURCES += \
     ../../widgets/suggested_messages_editor.cpp \
     ../../widgets/general_appearance_tab.cpp \
     ../../widgets/chat_settings_tab.cpp \
+    ../../widgets/vector_database_tab.cpp \
     ../../widgets/chat_history_widget.cpp \
     ../../widgets/chat_container_widget.cpp \
     ../../widgets/prompt_input.cpp \
@@ -138,6 +139,7 @@ HEADERS += \
     ../../widgets/suggested_messages_editor.h \
     ../../widgets/general_appearance_tab.h \
     ../../widgets/chat_settings_tab.h \
+    ../../widgets/vector_database_tab.h \
     ../../widgets/chat_history_widget.h \
     ../../widgets/chat_container_widget.h \
     ../../widgets/prompt_input.h \

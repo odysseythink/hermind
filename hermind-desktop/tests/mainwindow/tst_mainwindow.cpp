@@ -2,8 +2,10 @@
 #include <QStackedWidget>
 #include <QToolButton>
 #include <QLineEdit>
+#include <QLabel>
 #include <QComboBox>
 #include <QDoubleSpinBox>
+#include <QSpinBox>
 
 #include "mainwindow.h"
 #include "navigation_manager.h"
@@ -11,6 +13,7 @@
 #include "workspace_settings_tab.h"
 #include "general_appearance_tab.h"
 #include "chat_settings_tab.h"
+#include "vector_database_tab.h"
 
 class TestMainWindow : public QObject
 {
@@ -27,6 +30,7 @@ private slots:
     void workspaceSettingsReturnButtonGoesBack();
     void generalAppearanceTabIsRegisteredForGeneralAppearanceRoute();
     void chatSettingsTabIsRegisteredForChatSettingsRoute();
+    void vectorDatabaseTabIsRegisteredForVectorDatabaseRoute();
 };
 
 void TestMainWindow::init()
@@ -183,6 +187,31 @@ void TestMainWindow::chatSettingsTabIsRegisteredForChatSettingsRoute()
     QVERIFY(providerCombo);
     auto *temperatureSpin = chatTab->findChild<QDoubleSpinBox *>(QStringLiteral("temperatureSpin"));
     QVERIFY(temperatureSpin);
+}
+
+void TestMainWindow::vectorDatabaseTabIsRegisteredForVectorDatabaseRoute()
+{
+    MainWindow w;
+
+    NavigationRoute route;
+    route.page = NavigationPage::WorkspaceSettings;
+    route.workspaceSlug = QStringLiteral("acme");
+    route.settingsPath = QStringLiteral("vector-database");
+    NavigationManager::instance().navigateTo(route);
+
+    auto *settingsWidget = w.findChild<WorkspaceSettingsWidget *>();
+    QVERIFY(settingsWidget);
+    QCOMPARE(settingsWidget->currentTabId(), QStringLiteral("vector-database"));
+
+    auto *vectorTab = settingsWidget->findChild<VectorDatabaseTab *>();
+    QVERIFY(vectorTab);
+
+    auto *identifier = vectorTab->findChild<QLabel *>(QStringLiteral("vectorDbIdentifier"));
+    QVERIFY(identifier);
+    auto *topNSpin = vectorTab->findChild<QSpinBox *>(QStringLiteral("topNSpin"));
+    QVERIFY(topNSpin);
+    auto *thresholdCombo = vectorTab->findChild<QComboBox *>(QStringLiteral("thresholdCombo"));
+    QVERIFY(thresholdCombo);
 }
 
 QTEST_MAIN(TestMainWindow)

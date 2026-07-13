@@ -33,6 +33,7 @@ SOURCES += \
     widgets/suggested_messages_editor.cpp \
     widgets/general_appearance_tab.cpp \
     widgets/chat_settings_tab.cpp \
+    widgets/vector_database_tab.cpp \
     chat/chat_stream_handler.cpp \
     chat/agent_event_handler.cpp \
     streaming/hermind_sse_client.cpp \
@@ -108,6 +109,7 @@ HEADERS += \
     widgets/suggested_messages_editor.h \
     widgets/general_appearance_tab.h \
     widgets/chat_settings_tab.h \
+    widgets/vector_database_tab.h \
     chat/chat_stream_handler.h \
     chat/agent_event_handler.h \
     streaming/hermind_sse_client.h \
