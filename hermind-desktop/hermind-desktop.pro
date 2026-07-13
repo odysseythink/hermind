@@ -46,7 +46,8 @@ SOURCES += \
     widgets/rounded_frame.cpp \
     widgets/setting_row.cpp \
     widgets/chat_message_item.cpp \
-    widgets/chat_history_widget.cpp
+    widgets/chat_history_widget.cpp \
+    widgets/chat_container_widget.cpp
 
 HEADERS += \
     main_chat_widget.h \
@@ -87,7 +88,8 @@ HEADERS += \
     widgets/rounded_frame.h \
     widgets/setting_row.h \
     widgets/chat_message_item.h \
-    widgets/chat_history_widget.h
+    widgets/chat_history_widget.h \
+    widgets/chat_container_widget.h
 
 FORMS += \
     main_chat_widget.ui \
