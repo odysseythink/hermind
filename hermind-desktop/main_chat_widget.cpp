@@ -7,6 +7,7 @@
 #include "new_workspace_dialog.h"
 #include "auth/auth_manager.h"
 #include "api/hermind_api_client.h"
+#include "widgets/chat_container_widget.h"
 #include "navigation/navigation_manager.h"
 #include "navigation/navigation_route.h"
 
@@ -40,16 +41,11 @@ MainChatWidget::MainChatWidget(QWidget *parent)
     ui->setupUi(this);
 
     replaceSidebar();
+    setupChatContainer();
     replaceToolButtons();
     setupStyleSheet();
 
     connect(ui->headerSettingsButton, &QToolButton::clicked, this, &MainChatWidget::on_headerSettingsButton_clicked);
-    connect(ui->toolsButton, &QPushButton::clicked, this, &MainChatWidget::on_toolsButton_clicked);
-    connect(ui->micButton, &QToolButton::clicked, this, &MainChatWidget::on_micButton_clicked);
-    connect(ui->sendButton, &QToolButton::clicked, this, &MainChatWidget::on_sendButton_clicked);
-    connect(ui->createAgentButton, &QPushButton::clicked, this, &MainChatWidget::on_createAgentButton_clicked);
-    connect(ui->editWorkspaceButton, &QPushButton::clicked, this, &MainChatWidget::on_editWorkspaceButton_clicked);
-    connect(ui->uploadFileButton, &QPushButton::clicked, this, &MainChatWidget::on_uploadFileButton_clicked);
 
     connect(&NavigationManager::instance(), &NavigationManager::currentRouteChanged,
             this, &MainChatWidget::onRouteChanged);
@@ -96,6 +92,33 @@ void MainChatWidget::replaceSidebar()
     ui->sidebarFrame = nullptr;
 }
 
+void MainChatWidget::setupChatContainer()
+{
+    if (!ui->chatContainerPlaceholder)
+        return;
+
+    m_chatContainer = new ChatContainerWidget(AuthManager::instance().apiClient(), this);
+    m_chatContainer->setObjectName(QStringLiteral("chatContainerWidget"));
+
+    QVBoxLayout *layout = qobject_cast<QVBoxLayout *>(ui->chatFrame->layout());
+    if (layout) {
+        int idx = -1;
+        for (int i = 0; i < layout->count(); ++i) {
+            if (layout->itemAt(i)->widget() == ui->chatContainerPlaceholder) {
+                idx = i;
+                break;
+            }
+        }
+        if (idx >= 0) {
+            layout->removeWidget(ui->chatContainerPlaceholder);
+            layout->insertWidget(idx, m_chatContainer);
+        }
+    }
+
+    ui->chatContainerPlaceholder->deleteLater();
+    ui->chatContainerPlaceholder = nullptr;
+}
+
 void MainChatWidget::replaceToolButtons()
 {
     auto replaceOne = [this](const QString &name, const QString &iconText) {
@@ -125,13 +148,9 @@ void MainChatWidget::replaceToolButtons()
         oldBtn->deleteLater();
 
         if (name == QLatin1String("headerSettingsButton")) ui->headerSettingsButton = newBtn;
-        else if (name == QLatin1String("micButton")) ui->micButton = newBtn;
-        else if (name == QLatin1String("sendButton")) ui->sendButton = newBtn;
     };
 
     replaceOne(QStringLiteral("headerSettingsButton"), QString::fromUtf8("⚙"));
-    replaceOne(QStringLiteral("micButton"), QString::fromUtf8("🎤"));
-    replaceOne(QStringLiteral("sendButton"), QString::fromUtf8("➤"));
 }
 
 void MainChatWidget::setupStyleSheet()
@@ -315,6 +334,20 @@ void MainChatWidget::on_uploadFileButton_clicked() { qDebug() << "upload file cl
 void MainChatWidget::onRouteChanged(const NavigationRoute &route)
 {
     updateSidebarSelection(route);
+
+    if (!m_chatContainer)
+        return;
+
+    switch (route.page) {
+    case NavigationPage::WorkspaceChat:
+        m_chatContainer->setWorkspace(route.workspaceSlug, route.workspaceSlug);
+        m_chatContainer->setThreadSlug(route.threadSlug);
+        break;
+    default:
+        m_chatContainer->setWorkspace(QString(), QString());
+        m_chatContainer->setThreadSlug(QString());
+        break;
+    }
 }
 
 void MainChatWidget::updateSidebarSelection(const NavigationRoute &route)

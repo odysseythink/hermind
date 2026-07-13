@@ -13,6 +13,7 @@ class MainChatWidget;
 class IconButton;
 class SearchInput;
 class SidebarWidget;
+class ChatContainerWidget;
 
 class MainChatWidget : public QWidget
 {
@@ -47,10 +48,12 @@ private:
     void setupStyleSheet();
     void replaceToolButtons();
     void replaceSidebar();
+    void setupChatContainer();
     void updateSidebarSelection(const NavigationRoute &route);
 
     Ui::MainChatWidget *ui;
     SidebarWidget *m_sidebar = nullptr;
+    ChatContainerWidget *m_chatContainer = nullptr;
 };
 
 #endif // MAIN_CHAT_WIDGET_H
