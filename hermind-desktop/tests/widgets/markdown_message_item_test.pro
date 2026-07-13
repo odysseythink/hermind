@@ -17,7 +17,8 @@ SOURCES += \
     ../../markdown/markdown_renderer.cpp \
     ../../markdown/qt_builtin_parser.cpp \
     ../../markdown/html_generator.cpp \
-    ../../markdown/html_sanitizer.cpp
+    ../../markdown/html_sanitizer.cpp \
+    ../../markdown/syntax_highlighter.cpp
 
 HEADERS += \
     ../../widgets/plain_message_item.h \
@@ -30,6 +31,7 @@ HEADERS += \
     ../../markdown/qt_builtin_parser.h \
     ../../markdown/html_generator.h \
     ../../markdown/html_sanitizer.h \
-    ../../markdown/i_markdown_parser.h
+    ../../markdown/i_markdown_parser.h \
+    ../../markdown/syntax_highlighter.h
 
 RESOURCES += ../markdown/test_resources.qrc

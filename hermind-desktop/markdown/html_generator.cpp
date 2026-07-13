@@ -28,6 +28,21 @@ QString extractLanguage(const QString &preAttrs, const QString &codeAttrs)
     return m.hasMatch() ? m.captured(1) : QStringLiteral("text");
 }
 
+// QTextDocument::toHtml() already HTML-escapes code content; highlighters
+// expect raw text, so undo the escaping first. There is no QString::fromHtml,
+// so do a minimal entity replacement. "&amp;" must be replaced LAST: in
+// "&amp;lt;" the other replacements must not see the "&lt;" produced by
+// unescaping "&amp;" (that would double-unescape to "<").
+QString unescapeHtml(const QString &escaped)
+{
+    QString s = escaped;
+    s.replace(QStringLiteral("&lt;"), QLatin1String("<"));
+    s.replace(QStringLiteral("&gt;"), QLatin1String(">"));
+    s.replace(QStringLiteral("&quot;"), QLatin1String("\""));
+    s.replace(QStringLiteral("&amp;"), QLatin1String("&"));
+    return s;
+}
+
 // Wraps <pre>... blocks in a container with a header bar (language label +
 // copy button). Handles both "<pre><code>..." (rich parsers that tag code
 // elements with class="language-xxx") and plain "<pre>..." (QTextDocument).
@@ -51,6 +66,13 @@ QString wrapCodeBlocks(const QString &bodyHtml, const HtmlGenerationOptions &opt
         const QString content = m.captured(3); // already HTML-escaped by the parser
         const QString lang = extractLanguage(preAttrs, codeAttrs);
 
+        // When a highlighter is configured, its output replaces the inner
+        // body of the <pre> block (including any <code> wrapper); the outer
+        // code-block/code-header/copy-btn structure is preserved.
+        QString highlighted;
+        if (options.highlighter)
+            highlighted = options.highlighter->highlight(unescapeHtml(content), lang, options.darkMode);
+
         out += QStringLiteral("<div class=\"code-block\">"
                               "<div class=\"code-header\">"
                               "<span class=\"code-lang\">%1</span>"
@@ -59,7 +81,9 @@ QString wrapCodeBlocks(const QString &bodyHtml, const HtmlGenerationOptions &opt
                               "<pre%4>")
                    .arg(lang.toHtmlEscaped(), QString::number(codeId++),
                         options.codeBlockCopyButtonText.toHtmlEscaped(), preAttrs);
-        if (!codeAttrs.isEmpty())
+        if (!highlighted.isEmpty())
+            out += highlighted;
+        else if (!codeAttrs.isEmpty())
             out += QStringLiteral("<code%1>%2</code>").arg(codeAttrs, content);
         else
             out += content;
