@@ -7,6 +7,7 @@
 #include "styled_separator.h"
 #include "rounded_frame.h"
 #include "setting_row.h"
+#include "llm_provider_info.h"
 
 class TestWidgets : public QObject
 {
@@ -24,6 +25,9 @@ private slots:
     void roundedFrameRadiusCanChange();
     void settingRowHoldsTitleAndDescription();
     void settingRowCanEmbedControl();
+    void llmProviderDefaultExists();
+    void llmProviderOpenAiSupportsModelSelection();
+    void llmProviderByIdReturnsNullForUnknown();
 };
 
 void TestWidgets::iconButtonHasFixedSize()
@@ -101,6 +105,25 @@ void TestWidgets::settingRowCanEmbedControl()
     auto *combo = new QComboBox(&row);
     row.setControl(combo);
     QVERIFY(row.findChild<QComboBox *>() == combo);
+}
+
+void TestWidgets::llmProviderDefaultExists()
+{
+    const LlmProviderInfo *p = LlmProviderInfo::byId(QStringLiteral("default"));
+    QVERIFY(p);
+    QCOMPARE(p->name, QStringLiteral("System default"));
+}
+
+void TestWidgets::llmProviderOpenAiSupportsModelSelection()
+{
+    const LlmProviderInfo *p = LlmProviderInfo::byId(QStringLiteral("openai"));
+    QVERIFY(p);
+    QVERIFY(p->supportsModelSelection);
+}
+
+void TestWidgets::llmProviderByIdReturnsNullForUnknown()
+{
+    QVERIFY(!LlmProviderInfo::byId(QStringLiteral("zzzzz")));
 }
 
 QTEST_MAIN(TestWidgets)

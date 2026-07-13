@@ -12,6 +12,7 @@
 #include "hermind_user.h"
 #include "hermind_workspace.h"
 #include "hermind_workspace_thread.h"
+#include "hermind_workspace_user.h"
 #include "hermind_chat_message.h"
 #include "hermind_stream_chat_response.h"
 #include "hermind_memory.h"
@@ -79,6 +80,25 @@ public:
 
     using DocumentCallback = std::function<void(const QJsonObject &document,
                                                 const ApiError &error)>;
+    using SuggestedMessagesCallback = std::function<void(const QStringList &messages,
+                                                         const ApiError &error)>;
+    using OperationCallback = std::function<void(bool success,
+                                                 const QString &message,
+                                                 const ApiError &error)>;
+    using SystemKeysCallback = std::function<void(const QJsonObject &settings,
+                                                  const ApiError &error)>;
+    using SystemVectorsCallback = std::function<void(int count,
+                                                     const ApiError &error)>;
+    using CustomModelsCallback = std::function<void(const QStringList &models,
+                                                    const ApiError &error)>;
+    using DefaultSystemPromptCallback = std::function<void(const QString &prompt,
+                                                           const ApiError &error)>;
+    using PromptVariablesCallback = std::function<void(const QJsonArray &variables,
+                                                       const ApiError &error)>;
+    using UsersCallback = std::function<void(const QVector<HermindUser> &users,
+                                             const ApiError &error)>;
+    using WorkspaceUsersCallback = std::function<void(const QVector<HermindWorkspaceUser> &users,
+                                                      const ApiError &error)>;
 
     explicit HermindApiClient(QObject *parent = nullptr);
 
@@ -96,6 +116,11 @@ public:
     void listWorkspaces(WorkspacesCallback callback);
     void getWorkspace(const QString &slug, WorkspaceCallback callback);
     void createWorkspace(const QString &name, WorkspaceCallback callback);
+    void updateWorkspace(const QString &slug,
+                         const QJsonObject &fields,
+                         WorkspaceCallback callback);
+    void deleteWorkspace(const QString &slug,
+                         ThreadOperationCallback callback);
     void searchWorkspaceOrThread(const QString &searchTerm, SearchCallback callback);
 
     void listThreads(const QString &workspaceSlug, ThreadsCallback callback);
@@ -139,6 +164,25 @@ public:
                           std::function<void()> onFinished);
 
     void abortStream();
+
+    void getSuggestedMessages(const QString &slug, SuggestedMessagesCallback callback);
+    void setSuggestedMessages(const QString &slug,
+                              const QStringList &messages,
+                              OperationCallback callback);
+
+    void systemKeys(SystemKeysCallback callback);
+    void systemVectors(const QString &slug, SystemVectorsCallback callback);
+    void customModels(const QString &provider, CustomModelsCallback callback);
+    void updateSystemEnv(const QJsonObject &env, SystemKeysCallback callback);
+    void updateSystemPreferences(const QJsonObject &prefs, OperationCallback callback);
+    void defaultSystemPrompt(DefaultSystemPromptCallback callback);
+    void promptVariables(PromptVariablesCallback callback);
+
+    void listUsers(UsersCallback callback);
+    void listWorkspaceUsers(int workspaceId, WorkspaceUsersCallback callback);
+    void updateWorkspaceUsers(int workspaceId,
+                              const QVector<int> &userIds,
+                              OperationCallback callback);
 
     void openAgentWebSocket(const QString &socketId,
                             const QString &token,

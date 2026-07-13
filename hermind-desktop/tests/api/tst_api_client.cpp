@@ -32,6 +32,20 @@ private slots:
     void createThread();
     void updateThread();
     void deleteThread();
+    void updateWorkspace();
+    void deleteWorkspace();
+    void getSuggestedMessages();
+    void setSuggestedMessages();
+    void systemKeys();
+    void systemVectors();
+    void customModels();
+    void updateSystemEnv();
+    void updateSystemPreferences();
+    void defaultSystemPrompt();
+    void promptVariables();
+    void listUsers();
+    void listWorkspaceUsers();
+    void updateWorkspaceUsers();
 
     void streamChat();
     void streamThreadChat();
@@ -758,6 +772,279 @@ void TestApiClient::removeAndUnembed()
     QCOMPARE(seenMethod, QStringLiteral("DELETE"));
     QVERIFY(seenPath.contains(QStringLiteral("/workspace/demo/remove-and-unembed")));
     QVERIFY(seenPath.contains(QStringLiteral("docId=doc-42")));
+}
+
+void TestApiClient::updateWorkspace()
+{
+    bool done = false;
+    HermindWorkspace result;
+    m_server->recordedPaths.clear();
+    m_server->setHandler([](const QString &, const QString &path,
+                            const QHash<QString, QString> &,
+                            const QByteArray &body) {
+        if (path == QStringLiteral("/api/workspace/demo/update")) {
+            QJsonObject b = QJsonDocument::fromJson(body).object();
+            if (b.value(QStringLiteral("name")).toString() == QStringLiteral("Demo 2")) {
+                return QByteArray(R"({"workspace":{"id":1,"name":"Demo 2","slug":"demo","openAiHistory":20,"chatMode":"chat","vectorSearchMode":"default"},"message":"Workspace updated"})");
+            }
+        }
+        return QByteArray(R"({"workspace":null,"message":"nope"})");
+    });
+
+    QJsonObject fields;
+    fields.insert(QStringLiteral("name"), QStringLiteral("Demo 2"));
+    m_client->updateWorkspace(QStringLiteral("demo"), fields,
+                              [&](const HermindWorkspace &ws, const QString &, const ApiError &err) {
+                                  done = true;
+                                  result = ws;
+                                  QVERIFY(err.isEmpty());
+                              });
+    QTRY_VERIFY_WITH_TIMEOUT(done, 5000);
+    QCOMPARE(result.name(), QStringLiteral("Demo 2"));
+    QVERIFY(m_server->recordedPaths.contains(QStringLiteral("/api/workspace/demo/update")));
+}
+
+void TestApiClient::deleteWorkspace()
+{
+    bool done = false;
+    bool success = false;
+    m_server->recordedPaths.clear();
+    m_server->setHandler([](const QString &method, const QString &path,
+                            const QHash<QString, QString> &,
+                            const QByteArray &) {
+        if (method == QStringLiteral("DELETE") && path == QStringLiteral("/api/workspace/demo"))
+            return QByteArray(R"({"success":true})");
+        return QByteArray(R"({"success":false})");
+    });
+
+    m_client->deleteWorkspace(QStringLiteral("demo"), [&](bool ok, const ApiError &err) {
+        done = true;
+        success = ok;
+        QVERIFY(err.isEmpty());
+    });
+    QTRY_VERIFY_WITH_TIMEOUT(done, 5000);
+    QVERIFY(success);
+    QVERIFY(m_server->recordedPaths.contains(QStringLiteral("/api/workspace/demo")));
+}
+
+void TestApiClient::getSuggestedMessages()
+{
+    bool done = false;
+    QStringList result;
+    m_server->setHandler([](const QString &, const QString &path,
+                            const QHash<QString, QString> &, const QByteArray &) {
+        if (path == QStringLiteral("/api/workspace/demo/suggested-messages"))
+            return QByteArray(R"({"suggestedMessages":["hello","world"]})");
+        return QByteArray("{}");
+    });
+    m_client->getSuggestedMessages(QStringLiteral("demo"), [&](const QStringList &msgs, const ApiError &) {
+        done = true;
+        result = msgs;
+    });
+    QTRY_VERIFY_WITH_TIMEOUT(done, 5000);
+    QCOMPARE(result.size(), 2);
+    QCOMPARE(result.at(0), QStringLiteral("hello"));
+}
+
+void TestApiClient::setSuggestedMessages()
+{
+    bool done = false;
+    bool ok = false;
+    m_server->setHandler([](const QString &, const QString &path,
+                            const QHash<QString, QString> &, const QByteArray &body) {
+        if (path == QStringLiteral("/api/workspace/demo/suggested-messages")) {
+            QJsonObject b = QJsonDocument::fromJson(body).object();
+            if (b.value(QStringLiteral("messages")).toArray().size() == 1)
+                return QByteArray(R"({"success":true})");
+        }
+        return QByteArray(R"({"success":false,"error":"bad"})");
+    });
+    m_client->setSuggestedMessages(QStringLiteral("demo"), QStringList() << QStringLiteral("tip"),
+                                   [&](bool success, const QString &, const ApiError &) {
+                                       done = true;
+                                       ok = success;
+                                   });
+    QTRY_VERIFY_WITH_TIMEOUT(done, 5000);
+    QVERIFY(ok);
+}
+
+void TestApiClient::systemKeys()
+{
+    bool done = false;
+    QJsonObject result;
+    m_server->setHandler([](const QString &, const QString &path,
+                            const QHash<QString, QString> &, const QByteArray &) {
+        if (path == QStringLiteral("/api/setup-complete"))
+            return QByteArray(R"({"results":{"LLMProvider":"openai","VectorDB":"lancedb"}})");
+        return QByteArray("{}");
+    });
+    m_client->systemKeys([&](const QJsonObject &s, const ApiError &) { done = true; result = s; });
+    QTRY_VERIFY_WITH_TIMEOUT(done, 5000);
+    QCOMPARE(result.value(QStringLiteral("LLMProvider")).toString(), QStringLiteral("openai"));
+}
+
+void TestApiClient::systemVectors()
+{
+    bool done = false;
+    int count = -1;
+    m_server->setHandler([](const QString &, const QString &path,
+                            const QHash<QString, QString> &, const QByteArray &) {
+        if (path.startsWith(QStringLiteral("/api/system/system-vectors")))
+            return QByteArray(R"({"vectorCount":42})");
+        return QByteArray("{}");
+    });
+    m_client->systemVectors(QStringLiteral("demo"), [&](int c, const ApiError &) { done = true; count = c; });
+    QTRY_VERIFY_WITH_TIMEOUT(done, 5000);
+    QCOMPARE(count, 42);
+}
+
+void TestApiClient::customModels()
+{
+    bool done = false;
+    QStringList result;
+    m_server->setHandler([](const QString &, const QString &path,
+                            const QHash<QString, QString> &, const QByteArray &body) {
+        if (path == QStringLiteral("/api/system/custom-models")) {
+            QJsonObject b = QJsonDocument::fromJson(body).object();
+            if (b.value(QStringLiteral("provider")).toString() == QStringLiteral("ollama"))
+                return QByteArray(R"({"models":[{"id":"llama3","name":"Llama 3"}],"error":null})");
+        }
+        return QByteArray(R"({"models":[],"error":null})");
+    });
+    m_client->customModels(QStringLiteral("ollama"), [&](const QStringList &models, const ApiError &) {
+        done = true;
+        result = models;
+    });
+    QTRY_VERIFY_WITH_TIMEOUT(done, 5000);
+    QCOMPARE(result, QStringList() << QStringLiteral("llama3"));
+}
+
+void TestApiClient::updateSystemEnv()
+{
+    bool done = false;
+    QJsonObject result;
+    m_server->setHandler([](const QString &, const QString &path,
+                            const QHash<QString, QString> &, const QByteArray &body) {
+        if (path == QStringLiteral("/api/system/update-env")) {
+            QJsonObject b = QJsonDocument::fromJson(body).object();
+            if (b.contains(QStringLiteral("OpenAiModelPref")))
+                return QByteArray(R"({"newValues":{"OpenAiModelPref":"gpt-4o"},"error":null})");
+        }
+        return QByteArray(R"({"newValues":{},"error":"bad"})");
+    });
+    QJsonObject env;
+    env.insert(QStringLiteral("OpenAiModelPref"), QStringLiteral("gpt-4o"));
+    m_client->updateSystemEnv(env, [&](const QJsonObject &v, const ApiError &) { done = true; result = v; });
+    QTRY_VERIFY_WITH_TIMEOUT(done, 5000);
+    QCOMPARE(result.value(QStringLiteral("OpenAiModelPref")).toString(), QStringLiteral("gpt-4o"));
+}
+
+void TestApiClient::updateSystemPreferences()
+{
+    bool done = false;
+    bool ok = false;
+    m_server->setHandler([](const QString &, const QString &path,
+                            const QHash<QString, QString> &, const QByteArray &body) {
+        if (path == QStringLiteral("/api/admin/system-preferences")) {
+            QJsonObject b = QJsonDocument::fromJson(body).object();
+            if (b.contains(QStringLiteral("feature_flags")))
+                return QByteArray(R"({"success":true,"error":null})");
+        }
+        return QByteArray(R"({"success":false})");
+    });
+    QJsonObject prefs;
+    prefs.insert(QStringLiteral("feature_flags"), QJsonObject());
+    m_client->updateSystemPreferences(prefs, [&](bool success, const QString &, const ApiError &) {
+        done = true;
+        ok = success;
+    });
+    QTRY_VERIFY_WITH_TIMEOUT(done, 5000);
+    QVERIFY(ok);
+}
+
+void TestApiClient::defaultSystemPrompt()
+{
+    bool done = false;
+    QString prompt;
+    m_server->setHandler([](const QString &, const QString &path,
+                            const QHash<QString, QString> &, const QByteArray &) {
+        if (path == QStringLiteral("/api/system/default-system-prompt"))
+            return QByteArray(R"({"defaultSystemPrompt":"You are helpful.","saneDefaultSystemPrompt":"..."})");
+        return QByteArray("{}");
+    });
+    m_client->defaultSystemPrompt([&](const QString &p, const ApiError &) { done = true; prompt = p; });
+    QTRY_VERIFY_WITH_TIMEOUT(done, 5000);
+    QCOMPARE(prompt, QStringLiteral("You are helpful."));
+}
+
+void TestApiClient::promptVariables()
+{
+    bool done = false;
+    QJsonArray result;
+    m_server->setHandler([](const QString &, const QString &path,
+                            const QHash<QString, QString> &, const QByteArray &) {
+        if (path == QStringLiteral("/api/system/prompt-variables"))
+            return QByteArray(R"({"variables":[{"key":"foo"}]})");
+        return QByteArray("{}");
+    });
+    m_client->promptVariables([&](const QJsonArray &vars, const ApiError &) { done = true; result = vars; });
+    QTRY_VERIFY_WITH_TIMEOUT(done, 5000);
+    QCOMPARE(result.size(), 1);
+}
+
+void TestApiClient::listUsers()
+{
+    bool done = false;
+    QVector<HermindUser> result;
+    m_server->setHandler([](const QString &, const QString &path,
+                            const QHash<QString, QString> &, const QByteArray &) {
+        if (path == QStringLiteral("/api/admin/users"))
+            return QByteArray(R"({"users":[{"id":1,"username":"alice","role":"admin","suspended":0}]})");
+        return QByteArray(R"({"users":[]})");
+    });
+    m_client->listUsers([&](const QVector<HermindUser> &us, const ApiError &) { done = true; result = us; });
+    QTRY_VERIFY_WITH_TIMEOUT(done, 5000);
+    QCOMPARE(result.size(), 1);
+    QCOMPARE(result.first().username(), QStringLiteral("alice"));
+}
+
+void TestApiClient::listWorkspaceUsers()
+{
+    bool done = false;
+    QVector<HermindWorkspaceUser> result;
+    m_server->setHandler([](const QString &, const QString &path,
+                            const QHash<QString, QString> &, const QByteArray &) {
+        if (path == QStringLiteral("/api/admin/workspaces/5/users"))
+            return QByteArray(R"({"users":[{"userId":1,"username":"a","role":"admin"}]})");
+        return QByteArray(R"({"users":[]})");
+    });
+    m_client->listWorkspaceUsers(5, [&](const QVector<HermindWorkspaceUser> &us, const ApiError &) {
+        done = true;
+        result = us;
+    });
+    QTRY_VERIFY_WITH_TIMEOUT(done, 5000);
+    QCOMPARE(result.size(), 1);
+    QCOMPARE(result.first().username(), QStringLiteral("a"));
+}
+
+void TestApiClient::updateWorkspaceUsers()
+{
+    bool done = false;
+    bool ok = false;
+    m_server->setHandler([](const QString &, const QString &path,
+                            const QHash<QString, QString> &, const QByteArray &body) {
+        if (path == QStringLiteral("/api/admin/workspaces/5/update-users")) {
+            QJsonObject b = QJsonDocument::fromJson(body).object();
+            QJsonArray arr = b.value(QStringLiteral("userIds")).toArray();
+            if (arr.size() == 1 && arr.at(0).toInt() == 2)
+                return QByteArray(R"({"success":true,"error":null})");
+        }
+        return QByteArray(R"({"success":false})");
+    });
+    m_client->updateWorkspaceUsers(5, QVector<int>() << 2,
+                                   [&](bool s, const QString &, const ApiError &) { done = true; ok = s; });
+    QTRY_VERIFY_WITH_TIMEOUT(done, 5000);
+    QVERIFY(ok);
 }
 
 QTEST_MAIN(TestApiClient)

@@ -5,6 +5,7 @@
 #include "hermind_workspace_thread.h"
 #include "hermind_stream_chat_response.h"
 #include "hermind_agent_event.h"
+#include "hermind_workspace_user.h"
 
 class TestModels : public QObject
 {
@@ -19,6 +20,7 @@ private slots:
     void workspaceThreadFromJson();
     void streamChatResponseFromJson();
     void agentEventFromJson();
+    void workspaceUserFromJson();
 };
 
 void TestModels::apiErrorDefaults()
@@ -162,6 +164,28 @@ void TestModels::agentEventFromJson()
 
     QJsonObject roundTrip = ev.toJson();
     QCOMPARE(roundTrip.value("type").toString(), QString("toolApprovalRequest"));
+}
+
+void TestModels::workspaceUserFromJson()
+{
+    QJsonObject obj;
+    obj.insert("userId", 7);
+    obj.insert("username", QString("alice"));
+    obj.insert("role", QString("admin"));
+    obj.insert("lastUpdatedAt", QString("2026-07-13T10:00:00Z"));
+
+    HermindWorkspaceUser u = HermindWorkspaceUser::fromJson(obj);
+    QCOMPARE(u.userId(), 7);
+    QCOMPARE(u.username(), QString("alice"));
+    QCOMPARE(u.role(), QString("admin"));
+    QVERIFY(u.lastUpdatedAt().isValid());
+
+    QJsonObject missingRole;
+    missingRole.insert("userId", 3);
+    missingRole.insert("username", QString("bob"));
+    HermindWorkspaceUser u2 = HermindWorkspaceUser::fromJson(missingRole);
+    QCOMPARE(u2.userId(), 3);
+    QCOMPARE(u2.role(), QString("default"));
 }
 
 QTEST_MAIN(TestModels)

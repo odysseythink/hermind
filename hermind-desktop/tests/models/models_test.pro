@@ -13,7 +13,8 @@ SOURCES += \
     ../../models/hermind_workspace.cpp \
     ../../models/hermind_workspace_thread.cpp \
     ../../models/hermind_stream_chat_response.cpp \
-    ../../models/hermind_agent_event.cpp
+    ../../models/hermind_agent_event.cpp \
+    ../../models/hermind_workspace_user.cpp
 
 HEADERS += \
     ../../api/api_response.h \
@@ -21,4 +22,5 @@ HEADERS += \
     ../../models/hermind_workspace.h \
     ../../models/hermind_workspace_thread.h \
     ../../models/hermind_stream_chat_response.h \
-    ../../models/hermind_agent_event.h
+    ../../models/hermind_agent_event.h \
+    ../../models/hermind_workspace_user.h

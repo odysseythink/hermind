@@ -130,6 +130,46 @@ void HermindApiClient::createWorkspace(const QString &name, WorkspaceCallback ca
          });
 }
 
+void HermindApiClient::updateWorkspace(const QString &slug,
+                                       const QJsonObject &fields,
+                                       WorkspaceCallback callback)
+{
+    post(QStringLiteral("/workspace/") + slug + QStringLiteral("/update"),
+         fields,
+         [callback](const ApiResponse &resp) {
+             if (!resp.isSuccess()) {
+                 callback(HermindWorkspace(), QString(), resp.error());
+                 return;
+             }
+             const QJsonObject obj = resp.body().object();
+             const QJsonValue wsVal = obj.value(QStringLiteral("workspace"));
+             if (wsVal.isNull() || !wsVal.isObject()) {
+                 const QString message = obj.value(QStringLiteral("message")).toString();
+                 callback(HermindWorkspace(),
+                          message,
+                          ApiError(message, resp.statusCode()));
+                 return;
+             }
+             callback(HermindWorkspace::fromJson(wsVal.toObject()),
+                      obj.value(QStringLiteral("message")).toString(),
+                      ApiError());
+         });
+}
+
+void HermindApiClient::deleteWorkspace(const QString &slug,
+                                       ThreadOperationCallback callback)
+{
+    del(QStringLiteral("/workspace/") + slug, QJsonObject(),
+        [callback](const ApiResponse &resp) {
+            if (!resp.isSuccess()) {
+                callback(false, resp.error());
+                return;
+            }
+            const QJsonObject obj = resp.body().object();
+            callback(obj.value(QStringLiteral("success")).toBool(), ApiError());
+        });
+}
+
 void HermindApiClient::searchWorkspaceOrThread(const QString &searchTerm, SearchCallback callback)
 {
     QJsonObject body;
@@ -510,6 +550,202 @@ void HermindApiClient::abortStream()
 {
     if (m_sseClient)
         m_sseClient->stop();
+}
+
+void HermindApiClient::getSuggestedMessages(const QString &slug,
+                                            SuggestedMessagesCallback callback)
+{
+    get(QStringLiteral("/workspace/") + slug + QStringLiteral("/suggested-messages"),
+        QUrlQuery(),
+        [callback](const ApiResponse &resp) {
+            if (!resp.isSuccess()) {
+                callback(QStringList(), resp.error());
+                return;
+            }
+            QStringList list;
+            const QJsonArray arr = resp.body().object().value(QStringLiteral("suggestedMessages")).toArray();
+            for (const QJsonValue &v : arr)
+                list.append(v.toString());
+            callback(list, ApiError());
+        });
+}
+
+void HermindApiClient::setSuggestedMessages(const QString &slug,
+                                            const QStringList &messages,
+                                            OperationCallback callback)
+{
+    QJsonObject body;
+    QJsonArray arr;
+    for (const QString &m : messages)
+        arr.append(m);
+    body.insert(QStringLiteral("messages"), arr);
+
+    post(QStringLiteral("/workspace/") + slug + QStringLiteral("/suggested-messages"),
+         body,
+         [callback](const ApiResponse &resp) {
+             if (!resp.isSuccess()) {
+                 callback(false, QString(), resp.error());
+                 return;
+             }
+             const QJsonObject obj = resp.body().object();
+             callback(obj.value(QStringLiteral("success")).toBool(),
+                      obj.value(QStringLiteral("error")).toString(),
+                      ApiError());
+         });
+}
+
+void HermindApiClient::systemKeys(SystemKeysCallback callback)
+{
+    get(QStringLiteral("/setup-complete"), QUrlQuery(),
+        [callback](const ApiResponse &resp) {
+            if (!resp.isSuccess()) {
+                callback(QJsonObject(), resp.error());
+                return;
+            }
+            callback(resp.body().object().value(QStringLiteral("results")).toObject(), ApiError());
+        });
+}
+
+void HermindApiClient::systemVectors(const QString &slug, SystemVectorsCallback callback)
+{
+    QUrlQuery query;
+    query.addQueryItem(QStringLiteral("slug"), slug);
+    get(QStringLiteral("/system/system-vectors"), query,
+        [callback](const ApiResponse &resp) {
+            if (!resp.isSuccess()) {
+                callback(0, resp.error());
+                return;
+            }
+            callback(static_cast<int>(resp.body().object().value(QStringLiteral("vectorCount")).toDouble()),
+                     ApiError());
+        });
+}
+
+void HermindApiClient::customModels(const QString &provider, CustomModelsCallback callback)
+{
+    QJsonObject body;
+    body.insert(QStringLiteral("provider"), provider);
+    post(QStringLiteral("/system/custom-models"), body,
+         [callback](const ApiResponse &resp) {
+             if (!resp.isSuccess()) {
+                 callback(QStringList(), resp.error());
+                 return;
+             }
+             QStringList ids;
+             const QJsonArray arr = resp.body().object().value(QStringLiteral("models")).toArray();
+             for (const QJsonValue &v : arr) {
+                 if (v.isObject())
+                     ids.append(v.toObject().value(QStringLiteral("id")).toString());
+                 else
+                     ids.append(v.toString());
+             }
+             callback(ids, ApiError());
+         });
+}
+
+void HermindApiClient::updateSystemEnv(const QJsonObject &env, SystemKeysCallback callback)
+{
+    post(QStringLiteral("/system/update-env"), env,
+         [callback](const ApiResponse &resp) {
+             if (!resp.isSuccess()) {
+                 callback(QJsonObject(), resp.error());
+                 return;
+             }
+             callback(resp.body().object().value(QStringLiteral("newValues")).toObject(), ApiError());
+         });
+}
+
+void HermindApiClient::updateSystemPreferences(const QJsonObject &prefs, OperationCallback callback)
+{
+    post(QStringLiteral("/admin/system-preferences"), prefs,
+         [callback](const ApiResponse &resp) {
+             if (!resp.isSuccess()) {
+                 callback(false, QString(), resp.error());
+                 return;
+             }
+             const QJsonObject obj = resp.body().object();
+             callback(obj.value(QStringLiteral("success")).toBool(),
+                      obj.value(QStringLiteral("error")).toString(),
+                      ApiError());
+         });
+}
+
+void HermindApiClient::defaultSystemPrompt(DefaultSystemPromptCallback callback)
+{
+    get(QStringLiteral("/system/default-system-prompt"), QUrlQuery(),
+        [callback](const ApiResponse &resp) {
+            if (!resp.isSuccess()) {
+                callback(QString(), resp.error());
+                return;
+            }
+            callback(resp.body().object().value(QStringLiteral("defaultSystemPrompt")).toString(), ApiError());
+        });
+}
+
+void HermindApiClient::promptVariables(PromptVariablesCallback callback)
+{
+    get(QStringLiteral("/system/prompt-variables"), QUrlQuery(),
+        [callback](const ApiResponse &resp) {
+            if (!resp.isSuccess()) {
+                callback(QJsonArray(), resp.error());
+                return;
+            }
+            callback(resp.body().object().value(QStringLiteral("variables")).toArray(), ApiError());
+        });
+}
+
+void HermindApiClient::listUsers(UsersCallback callback)
+{
+    get(QStringLiteral("/admin/users"), QUrlQuery(),
+        [callback](const ApiResponse &resp) {
+            if (!resp.isSuccess()) {
+                callback(QVector<HermindUser>(), resp.error());
+                return;
+            }
+            QVector<HermindUser> list;
+            const QJsonArray arr = resp.body().object().value(QStringLiteral("users")).toArray();
+            for (const QJsonValue &v : arr)
+                list.append(HermindUser::fromJson(v.toObject()));
+            callback(list, ApiError());
+        });
+}
+
+void HermindApiClient::listWorkspaceUsers(int workspaceId, WorkspaceUsersCallback callback)
+{
+    get(QStringLiteral("/admin/workspaces/%1/users").arg(workspaceId), QUrlQuery(),
+        [callback](const ApiResponse &resp) {
+            if (!resp.isSuccess()) {
+                callback(QVector<HermindWorkspaceUser>(), resp.error());
+                return;
+            }
+            QVector<HermindWorkspaceUser> list;
+            const QJsonArray arr = resp.body().object().value(QStringLiteral("users")).toArray();
+            for (const QJsonValue &v : arr)
+                list.append(HermindWorkspaceUser::fromJson(v.toObject()));
+            callback(list, ApiError());
+        });
+}
+
+void HermindApiClient::updateWorkspaceUsers(int workspaceId,
+                                            const QVector<int> &userIds,
+                                            OperationCallback callback)
+{
+    QJsonObject body;
+    QJsonArray arr;
+    for (int id : userIds)
+        arr.append(id);
+    body.insert(QStringLiteral("userIds"), arr);
+    post(QStringLiteral("/admin/workspaces/%1/update-users").arg(workspaceId), body,
+         [callback](const ApiResponse &resp) {
+             if (!resp.isSuccess()) {
+                 callback(false, QString(), resp.error());
+                 return;
+             }
+             const QJsonObject obj = resp.body().object();
+             callback(obj.value(QStringLiteral("success")).toBool(),
+                      obj.value(QStringLiteral("error")).toString(),
+                      ApiError());
+         });
 }
 
 void HermindApiClient::openAgentWebSocket(const QString &socketId,

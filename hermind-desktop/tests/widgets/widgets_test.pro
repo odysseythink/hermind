@@ -15,6 +15,7 @@ SOURCES += \
     ../../widgets/setting_row.cpp \
     ../../widgets/theme_colors.cpp \
     ../../widgets/theme_style_helper.cpp \
+    ../../widgets/llm_provider_info.cpp \
     ../../theme_manager.cpp \
     ../../settings_store.cpp
 
@@ -27,5 +28,6 @@ HEADERS += \
     ../../widgets/setting_row.h \
     ../../widgets/theme_colors.h \
     ../../widgets/theme_style_helper.h \
+    ../../widgets/llm_provider_info.h \
     ../../theme_manager.h \
     ../../settings_store.h
