@@ -42,7 +42,7 @@
    <item>
     <layout class="QHBoxLayout" name="searchLayout">
      <item>
-      <widget class="SearchInput" name="searchEdit"/>
+      <widget class="SearchBoxWidget" name="searchBox"/>
      </item>
      <item>
       <widget class="IconButton" name="newWorkspaceButton"/>
@@ -64,9 +64,10 @@
    <header>icon_button.h</header>
   </customwidget>
   <customwidget>
-   <class>SearchInput</class>
-   <extends>QLineEdit</extends>
-   <header>search_input.h</header>
+   <class>SearchBoxWidget</class>
+   <extends>QWidget</extends>
+   <header>search_box_widget.h</header>
+   <container>1</container>
   </customwidget>
   <customwidget>
    <class>ActiveWorkspacesWidget</class>

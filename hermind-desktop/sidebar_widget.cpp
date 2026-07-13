@@ -2,10 +2,11 @@
 #include "ui_sidebar_widget.h"
 #include "sidebar/active_workspaces_widget.h"
 #include "sidebar/sidebar_footer_widget.h"
-#include "widgets/search_input.h"
+#include "widgets/search_box_widget.h"
 #include "widgets/icon_button.h"
 #include "widgets/theme_colors.h"
 #include "theme_manager.h"
+#include "navigation/navigation_manager.h"
 #include "api/hermind_api_client.h"
 
 #include <QPixmap>
@@ -17,7 +18,7 @@ SidebarWidget::SidebarWidget(QWidget *parent)
 {
     ui->setupUi(this);
 
-    ui->searchEdit->setPlaceholderText(tr("搜索"));
+    ui->searchBox->setPlaceholderText(tr("搜索"));
     ui->popoutButton->setIconText(QString::fromUtf8("⧉"));
     ui->popoutButton->setToolTip(tr("Pop out sidebar"));
     ui->newWorkspaceButton->setIconText(QStringLiteral("+"));
@@ -26,6 +27,8 @@ SidebarWidget::SidebarWidget(QWidget *parent)
     connect(ui->newWorkspaceButton, &IconButton::clicked, this, &SidebarWidget::newWorkspaceRequested);
     connect(ui->footer, &SidebarFooterWidget::openSettingsRequested,
             this, &SidebarWidget::openSettingsRequested);
+    connect(ui->searchBox, &SearchBoxWidget::resultSelected,
+            this, &SidebarWidget::onSearchResultSelected);
 
     setupLogo();
     setupStyleSheet();
@@ -43,6 +46,16 @@ void SidebarWidget::setApiClient(HermindApiClient *apiClient)
 {
     m_apiClient = apiClient;
     ui->activeWorkspaces->setApiClient(apiClient);
+    ui->searchBox->setApiClient(apiClient);
+}
+
+void SidebarWidget::onSearchResultSelected(const QString &workspaceSlug, const QString &threadSlug)
+{
+    NavigationRoute route;
+    route.page = NavigationPage::WorkspaceChat;
+    route.workspaceSlug = workspaceSlug;
+    route.threadSlug = threadSlug;
+    NavigationManager::instance().navigateTo(route);
 }
 
 void SidebarWidget::refreshWorkspaces()

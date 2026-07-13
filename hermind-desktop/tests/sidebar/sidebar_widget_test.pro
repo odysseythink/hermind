@@ -28,6 +28,7 @@ SOURCES += \
     ../../streaming/hermind_websocket_client.cpp \
     ../../navigation/navigation_manager.cpp \
     ../../widgets/search_input.cpp \
+    ../../widgets/search_box_widget.cpp \
     ../../widgets/icon_button.cpp \
     ../../widgets/theme_colors.cpp \
     ../../widgets/theme_style_helper.cpp \
@@ -56,6 +57,7 @@ HEADERS += \
     ../../navigation/navigation_manager.h \
     ../../navigation/navigation_route.h \
     ../../widgets/search_input.h \
+    ../../widgets/search_box_widget.h \
     ../../widgets/icon_button.h \
     ../../widgets/theme_colors.h \
     ../../widgets/theme_style_helper.h \

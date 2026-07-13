@@ -33,6 +33,7 @@ signals:
 private:
     void setupLogo();
     void setupStyleSheet();
+    void onSearchResultSelected(const QString &workspaceSlug, const QString &threadSlug);
 
     Ui::SidebarWidget *ui;
     HermindApiClient *m_apiClient = nullptr;

@@ -43,6 +43,7 @@ SOURCES += \
     widgets/icon_button.cpp \
     widgets/sidebar_menu_button.cpp \
     widgets/search_input.cpp \
+    widgets/search_box_widget.cpp \
     widgets/styled_separator.cpp \
     widgets/rounded_frame.cpp \
     widgets/setting_row.cpp \
@@ -111,6 +112,7 @@ HEADERS += \
     widgets/icon_button.h \
     widgets/sidebar_menu_button.h \
     widgets/search_input.h \
+    widgets/search_box_widget.h \
     widgets/styled_separator.h \
     widgets/rounded_frame.h \
     widgets/setting_row.h \
