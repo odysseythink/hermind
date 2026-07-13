@@ -5,6 +5,7 @@
 #include <memory>
 
 class ISyntaxHighlighter;
+class IFormulaRenderer;
 
 struct HtmlGenerationOptions {
     bool darkMode = true;
@@ -13,6 +14,7 @@ struct HtmlGenerationOptions {
     QString highlightTheme = "github-dark";
     QString katexCssPath = ":/katex/katex.min.css";
     ISyntaxHighlighter *highlighter = nullptr; // non-owning; null = no highlighting
+    IFormulaRenderer *formulaRenderer = nullptr; // non-owning; null = no formula CSS injection
 };
 
 // Produces highlighted HTML for a single code block. Implementations must
@@ -23,6 +25,16 @@ public:
     virtual ~ISyntaxHighlighter() = default;
     virtual QString highlight(const QString &code, const QString &language, bool darkMode) const = 0;
     virtual QStringList supportedLanguages() const = 0;
+};
+
+// Renders a LaTeX formula to HTML. Implementations must escape the latex
+// text and must only emit markup that survives HtmlSanitizer (span/div/code
+// with class attributes; never style attributes).
+class IFormulaRenderer {
+public:
+    virtual ~IFormulaRenderer() = default;
+    virtual QString render(const QString &latex, bool displayMode) const = 0;
+    virtual QString requiredCss() const = 0;
 };
 
 class MarkdownDocument {

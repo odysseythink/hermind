@@ -8,6 +8,7 @@
 
 class IMarkdownParser;
 class ISyntaxHighlighter;
+class IFormulaRenderer;
 class QWidget;
 
 // Facade: markdown -> parse -> HTML generate -> sanitize -> QTextBrowser,
@@ -34,6 +35,7 @@ private:
 
     std::unique_ptr<IMarkdownParser> m_parser;
     std::unique_ptr<ISyntaxHighlighter> m_highlighter;
+    std::unique_ptr<IFormulaRenderer> m_formulaRenderer;
     QWidget *m_currentWidget = nullptr;
     QString m_markdown;
     bool m_darkMode = true;

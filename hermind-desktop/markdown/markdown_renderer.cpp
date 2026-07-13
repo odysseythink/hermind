@@ -2,6 +2,7 @@
 
 #include "html_generator.h"
 #include "html_sanitizer.h"
+#include "formula_renderer.h"
 #include "qt_builtin_parser.h"
 #include "syntax_highlighter.h"
 
@@ -14,6 +15,7 @@ MarkdownRenderer::MarkdownRenderer(QObject *parent)
     : QObject(parent)
     , m_parser(std::make_unique<QtBuiltinParser>())
     , m_highlighter(std::make_unique<NullSyntaxHighlighter>())
+    , m_formulaRenderer(std::make_unique<NullFormulaRenderer>())
 {
 }
 
@@ -70,6 +72,7 @@ void MarkdownRenderer::renderInternal()
     options.darkMode = m_darkMode;
     options.enableRawHtml = false;
     options.highlighter = m_highlighter.get();
+    options.formulaRenderer = m_formulaRenderer.get();
     const QString rawHtml = HtmlGenerator::generate(*doc, options);
     if (rawHtml.isEmpty()) {
         const QString reason = QStringLiteral("HTML generation produced empty output");

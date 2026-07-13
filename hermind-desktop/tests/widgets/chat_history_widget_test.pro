@@ -18,7 +18,9 @@ SOURCES += \
     ../../markdown/markdown_renderer.cpp \
     ../../markdown/qt_builtin_parser.cpp \
     ../../markdown/html_generator.cpp \
-    ../../markdown/html_sanitizer.cpp
+    ../../markdown/html_sanitizer.cpp \
+    ../../markdown/syntax_highlighter.cpp \
+    ../../markdown/formula_renderer.cpp
 
 HEADERS += \
     ../../widgets/chat_history_widget.h \
@@ -32,6 +34,8 @@ HEADERS += \
     ../../markdown/i_markdown_parser.h \
     ../../markdown/qt_builtin_parser.h \
     ../../markdown/html_generator.h \
-    ../../markdown/html_sanitizer.h
+    ../../markdown/html_sanitizer.h \
+    ../../markdown/syntax_highlighter.h \
+    ../../markdown/formula_renderer.h
 
 RESOURCES += ../markdown/test_resources.qrc

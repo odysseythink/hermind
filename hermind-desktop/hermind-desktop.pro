@@ -53,6 +53,7 @@ SOURCES += \
     markdown/qt_builtin_parser.cpp \
     markdown/html_generator.cpp \
     markdown/syntax_highlighter.cpp \
+    markdown/formula_renderer.cpp \
     markdown/markdown_renderer.cpp
 
 HEADERS += \
@@ -102,6 +103,7 @@ HEADERS += \
     markdown/qt_builtin_parser.h \
     markdown/html_generator.h \
     markdown/syntax_highlighter.h \
+    markdown/formula_renderer.h \
     markdown/markdown_renderer.h
 
 FORMS += \

@@ -6,4 +6,7 @@
         <file alias="theme-dark.css">resources/markdown/theme-dark.css</file>
         <file alias="theme-light.css">resources/markdown/theme-light.css</file>
     </qresource>
+    <qresource prefix="/katex">
+        <file alias="katex.min.css">resources/katex/katex.min.css</file>
+    </qresource>
 </RCC>

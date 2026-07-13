@@ -109,7 +109,9 @@ QString HtmlGenerator::loadThemeCss(bool darkMode)
 
 QString HtmlGenerator::generate(const MarkdownDocument &doc, const HtmlGenerationOptions &options)
 {
-    const QString css = loadThemeCss(options.darkMode);
+    QString css = loadThemeCss(options.darkMode);
+    if (options.formulaRenderer)
+        css += QLatin1Char('\n') + options.formulaRenderer->requiredCss();
     QString bodyHtml = extractBody(doc.toHtml(options));
     bodyHtml = wrapCodeBlocks(bodyHtml, options);
     return QStringLiteral("<!DOCTYPE html><html><head><meta charset=\"utf-8\"/><style>%1</style></head>"
