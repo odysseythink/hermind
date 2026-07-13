@@ -52,7 +52,6 @@ ToolsMenu::ToolsMenu(QWidget *parent)
 void ToolsMenu::setSendCommandCallback(std::function<void(const QString &, const QString &)> cb)
 {
     m_callback = std::move(cb);
-    m_slashTab->setSendCommandCallback(m_callback);
 }
 
 void ToolsMenu::showAbove(QWidget *anchor)

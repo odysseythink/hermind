@@ -19,7 +19,6 @@ class SlashCommandsTab : public QWidget
 public:
     explicit SlashCommandsTab(QWidget *parent = nullptr);
 
-    void setSendCommandCallback(std::function<void(const QString &, const QString &)> callback);
     void handleArrowKey(int key);
     void activateHighlighted();
 
@@ -31,7 +30,6 @@ private:
 
     QListWidget *m_list = nullptr;
     QVector<SlashCommand> m_commands;
-    std::function<void(const QString &, const QString &)> m_callback;
 };
 
 #endif // SLASH_COMMANDS_TAB_H

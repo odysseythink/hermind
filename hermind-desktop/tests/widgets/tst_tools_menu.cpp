@@ -10,6 +10,8 @@ class TestToolsMenu : public QObject
 private slots:
     void menuShowsAndHides();
     void clickingSlashCommandEmitsSignal();
+    void clickingSlashCommand_invokesCallbackExactlyOnce();
+    void enterKey_invokesCallbackExactlyOnce();
     void escapeKeyHidesMenu();
 };
 
@@ -56,6 +58,60 @@ void TestToolsMenu::clickingSlashCommandEmitsSignal()
                       itemRect.center());
 
     QCOMPARE(cmdSpy.count(), 1);
+}
+
+// Regression: a slash command click must reach the send-command callback
+// exactly once. Previously SlashCommandsTab invoked the callback directly AND
+// emitted commandSelected (which ToolsMenu also forwarded to the callback),
+// so every command was sent twice.
+void TestToolsMenu::clickingSlashCommand_invokesCallbackExactlyOnce()
+{
+    QWidget anchor;
+    anchor.show();
+
+    ToolsMenu menu;
+    int calls = 0;
+    menu.setSendCommandCallback([&calls](const QString &, const QString &) { ++calls; });
+    menu.showBelow(&anchor);
+    QTest::qWait(50);
+
+    SlashCommandsTab *tab = menu.findChild<SlashCommandsTab *>();
+    QVERIFY(tab != nullptr);
+    QListWidget *list = tab->findChild<QListWidget *>();
+    QVERIFY(list != nullptr);
+    QVERIFY(list->count() > 0);
+
+    list->setCurrentRow(0);
+    QListWidgetItem *item = list->item(0);
+    QRect itemRect = list->visualItemRect(item);
+    QTest::mouseClick(list->viewport(), Qt::LeftButton, Qt::NoModifier,
+                      itemRect.center());
+
+    QCOMPARE(calls, 1);
+}
+
+// Keyboard activation (Enter on the highlighted item) must also fire once.
+void TestToolsMenu::enterKey_invokesCallbackExactlyOnce()
+{
+    QWidget anchor;
+    anchor.show();
+
+    ToolsMenu menu;
+    int calls = 0;
+    menu.setSendCommandCallback([&calls](const QString &, const QString &) { ++calls; });
+    menu.showBelow(&anchor);
+    QTest::qWait(50);
+
+    SlashCommandsTab *tab = menu.findChild<SlashCommandsTab *>();
+    QVERIFY(tab != nullptr);
+    QListWidget *list = tab->findChild<QListWidget *>();
+    QVERIFY(list != nullptr);
+    QVERIFY(list->count() > 0);
+    list->setCurrentRow(0);
+
+    QTest::keyClick(&menu, Qt::Key_Return);
+
+    QCOMPARE(calls, 1);
 }
 
 void TestToolsMenu::escapeKeyHidesMenu()

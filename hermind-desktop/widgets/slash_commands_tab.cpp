@@ -33,19 +33,14 @@ SlashCommandsTab::SlashCommandsTab(QWidget *parent)
     connect(m_list, &QListWidget::itemClicked, this, [this](QListWidgetItem *item) {
         QString text = item->data(Qt::UserRole).toString();
         QString mode = item->data(Qt::UserRole + 1).toString();
+        // The parent (ToolsMenu) owns the send-command callback and listens
+        // to this signal; invoking a callback here too would double-send.
         emit commandSelected(text, mode);
-        if (m_callback)
-            m_callback(text, mode);
     });
 
     connect(&ThemeManager::instance(), &ThemeManager::themeChanged,
             this, [this](const QString &) { applyTheme(); });
     applyTheme();
-}
-
-void SlashCommandsTab::setSendCommandCallback(std::function<void(const QString &, const QString &)> callback)
-{
-    m_callback = std::move(callback);
 }
 
 void SlashCommandsTab::handleArrowKey(int key)
