@@ -268,7 +268,7 @@ hermind-desktop/
 | 1.3 | 聊天容器与消息历史 | `WorkspaceChat/ChatContainer/index.jsx`, `ChatHistory/*` | [plan] | 0.0, 0.4, 0.5 |
 | 1.4 | Markdown 渲染组件 | 引入 `QTextDocument`/Markdown 库 | [design] | 1.3 |
 | 1.5 | Prompt 输入框（含附件/DnD） | `PromptInput/index.jsx`, `PromptInput/Attachments`, `DnDWrapper` | [plan] | 1.3, 0.5 |
-| 1.6 | Agent 调用与工具菜单（@Agent） | `PromptInput/ToolsMenu`, `SpeechToText` | [plan] | 1.3, 0.0 |
+| 1.6 | Agent 调用与工具菜单（@Agent） | `PromptInput/ToolsMenu` | [plan] | 1.3, 0.0 |
 | 1.7 | 欢迎页 / 快捷操作 / Sources 侧边栏 | `DefaultChat/index.jsx`, `SourcesSidebar`, `MemoriesSidebar` | [normal] | 1.0, 1.3 |
 
 **依赖图**（阶段 1 内部）：
@@ -290,6 +290,8 @@ hermind-desktop/
 **可并行**：1.1/1.2 与 1.3 主干可并行开发（均需 1.0 与阶段 0 基础）；1.4/1.5/1.6/1.7 均依赖 1.3，可在 1.3 接口确定后并行。
 
 **跨阶段依赖**：整阶段依赖阶段 0（0.0 API、0.4 导航、0.5 控件）；1.6 额外依赖后端 Agent WebSocket 契约（已存在，无需新增后端代码）。
+
+**范围调整（2026-07-13）**：`SpeechToText`（语音输入）从 1.6 移出，标记为**后续阶段**；阶段 1 验收不再要求语音输入。
 
 **模式说明**：
 - 1.0 `[plan]`：Sidebar 是聊天页与工作区导航的共享入口，需定义 `WorkspaceModel` 数据类与 `NavigationManager` 的集成契约。
