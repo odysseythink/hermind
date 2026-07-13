@@ -26,6 +26,7 @@ private slots:
     void streamSources_openSourcesSidebar();
     void sourcesToggleButton_togglesLeftPanel();
     void memoriesToggleButton_togglesRightPanel();
+    void regenerate_resendsLastUserMessage();
 };
 
 void TestChatContainerWidget::setWorkspace_updatesWelcomeLabel()
@@ -217,6 +218,42 @@ void TestChatContainerWidget::memoriesToggleButton_togglesRightPanel()
 
     btn->click();
     QVERIFY(!sidebar->isOpen());
+}
+
+void TestChatContainerWidget::regenerate_resendsLastUserMessage()
+{
+    HermindApiClient client;
+    ChatContainerWidget widget(&client, nullptr);
+    widget.setWorkspace(QStringLiteral("ws-1"), QStringLiteral("My Workspace"));
+
+    // Send a message, then simulate a completed assistant reply.
+    QSignalSpy streamSpy(&widget, &ChatContainerWidget::streamStarted);
+    widget.sendCommand(QStringLiteral("first question"));
+    QCOMPARE(streamSpy.count(), 1);
+
+    ChatStreamHandler *handler = widget.findChild<ChatStreamHandler *>();
+    QVERIFY(handler != nullptr);
+    QJsonObject resp;
+    resp.insert("uuid", QStringLiteral("a1"));
+    resp.insert("type", QStringLiteral("textResponse"));
+    resp.insert("textResponse", QStringLiteral("an answer"));
+    resp.insert("close", true);
+    handler->handleResponse(HermindStreamChatResponse::fromJson(resp));
+    QCOMPARE(handler->messages().size(), 2);
+
+    // Click the regenerate button on the assistant bubble.
+    QPushButton *regenBtn = nullptr;
+    const QList<QPushButton *> buttons = widget.findChildren<QPushButton *>(QStringLiteral("regenerateBtn"));
+    if (!buttons.isEmpty())
+        regenBtn = buttons.last();
+    QVERIFY(regenBtn != nullptr);
+    regenBtn->click();
+
+    // The assistant reply must be dropped and the user message re-sent:
+    // history back to just the (re-appended) user message, new stream started.
+    QCOMPARE(handler->messages().size(), 1);
+    QCOMPARE(handler->messages().first().content(), QStringLiteral("first question"));
+    QCOMPARE(streamSpy.count(), 2);
 }
 
 QTEST_MAIN(TestChatContainerWidget)

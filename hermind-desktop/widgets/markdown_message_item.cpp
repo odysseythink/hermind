@@ -5,8 +5,11 @@
 
 #include <QAbstractScrollArea>
 #include <QFrame>
+#include <QGuiApplication>
+#include <QClipboard>
 #include <QHBoxLayout>
 #include <QLabel>
+#include <QPushButton>
 #include <QScrollBar>
 #include <QTimer>
 #include <QVBoxLayout>
@@ -108,6 +111,11 @@ void MarkdownMessageItem::showMarkdown(const QString &text, bool dark)
     }
 }
 
+void MarkdownMessageItem::copyToClipboard()
+{
+    QGuiApplication::clipboard()->setText(m_message.content());
+}
+
 void MarkdownMessageItem::applyBubbleStyle()
 {
     QHBoxLayout *outer = qobject_cast<QHBoxLayout *>(layout());
@@ -133,6 +141,26 @@ void MarkdownMessageItem::applyBubbleStyle()
     m_currentContent->setParent(bubble);
     bubbleLayout->addWidget(m_currentContent);
     m_currentContent->show();
+
+    // Action row: copy + regenerate (regenerate only once the message is final)
+    QHBoxLayout *actions = new QHBoxLayout();
+    actions->setContentsMargins(0, 4, 0, 0);
+    QPushButton *copyBtn = new QPushButton(QStringLiteral("复制"), bubble);
+    copyBtn->setObjectName(QStringLiteral("copyBtn"));
+    copyBtn->setFlat(true);
+    copyBtn->setCursor(Qt::PointingHandCursor);
+    connect(copyBtn, &QPushButton::clicked, this, &MarkdownMessageItem::copyToClipboard);
+    actions->addWidget(copyBtn);
+
+    QPushButton *regenBtn = new QPushButton(QStringLiteral("重新生成"), bubble);
+    regenBtn->setObjectName(QStringLiteral("regenerateBtn"));
+    regenBtn->setFlat(true);
+    regenBtn->setCursor(Qt::PointingHandCursor);
+    regenBtn->setVisible(m_message.isClosed());
+    connect(regenBtn, &QPushButton::clicked, this, &MarkdownMessageItem::regenerateRequested);
+    actions->addWidget(regenBtn);
+    actions->addStretch();
+    bubbleLayout->addLayout(actions);
 
     outer->addWidget(bubble);
 

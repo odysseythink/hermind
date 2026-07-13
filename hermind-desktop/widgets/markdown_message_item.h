@@ -21,10 +21,14 @@ public:
     void setMessage(const HermindChatMessage &message);
     void setDarkMode(bool dark);
 
+signals:
+    void regenerateRequested();
+
 private:
     void showPlainText(const QString &text);
     void showMarkdown(const QString &text, bool dark);
     void applyBubbleStyle();
+    void copyToClipboard();
 
     HermindChatMessage m_message;
     MarkdownRenderer *m_renderer = nullptr;

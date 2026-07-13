@@ -133,6 +133,8 @@ void ChatHistoryWidget::appendItem(const HermindChatMessage &message)
         auto *markdown = new MarkdownMessageItem(m_container);
         markdown->setMessage(message);
         markdown->setDarkMode(ThemeManager::instance().isDarkMode());
+        connect(markdown, &MarkdownMessageItem::regenerateRequested,
+                this, &ChatHistoryWidget::regenerateRequested);
         item = markdown;
     }
     m_items.append(item);

@@ -56,6 +56,7 @@ private slots:
     void applyTheme();
     void onHistoryChanged();
     void showSources(const QString &uuid, const QJsonArray &sources);
+    void onRegenerateRequested();
 
 private:
     void setupThreePanelLayout();

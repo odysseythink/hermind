@@ -284,6 +284,29 @@ void ChatContainerWidget::connectHandlers()
 
     connect(m_agentHandler.get(), &AgentEventHandler::threadRenameRequested,
             this, &ChatContainerWidget::requestThreadRename);
+
+    connect(m_historyWidget, &ChatHistoryWidget::regenerateRequested,
+            this, &ChatContainerWidget::onRegenerateRequested);
+}
+
+void ChatContainerWidget::onRegenerateRequested()
+{
+    // Drop the last assistant exchange and re-send the last user message.
+    QVector<HermindChatMessage> msgs = m_streamHandler->messages();
+    int idx = -1;
+    for (int i = msgs.size() - 1; i >= 0; --i) {
+        if (msgs.at(i).role() == HermindChatMessage::User) {
+            idx = i;
+            break;
+        }
+    }
+    if (idx < 0)
+        return;
+
+    const QString text = msgs.at(idx).content();
+    msgs.resize(idx); // autoSubmit() re-appends the user message
+    m_streamHandler->setMessages(msgs);
+    autoSubmit(text, QStringList());
 }
 
 void ChatContainerWidget::showSources(const QString &, const QJsonArray &sources)

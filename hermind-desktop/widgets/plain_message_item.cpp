@@ -1,8 +1,11 @@
 #include "plain_message_item.h"
 #include "theme_colors.h"
 
+#include <QGuiApplication>
+#include <QClipboard>
 #include <QHBoxLayout>
 #include <QFrame>
+#include <QPushButton>
 
 PlainMessageItem::PlainMessageItem(QWidget *parent)
     : QWidget(parent)
@@ -24,9 +27,18 @@ void PlainMessageItem::setupLayout()
 
     QFrame *bubble = new QFrame(this);
     bubble->setObjectName(QStringLiteral("bubbleFrame"));
-    QHBoxLayout *bubbleLayout = new QHBoxLayout(bubble);
+    QVBoxLayout *bubbleLayout = new QVBoxLayout(bubble);
     bubbleLayout->setContentsMargins(12, 8, 12, 8);
     bubbleLayout->addWidget(m_textLabel);
+
+    QPushButton *copyBtn = new QPushButton(QStringLiteral("复制"), bubble);
+    copyBtn->setObjectName(QStringLiteral("copyBtn"));
+    copyBtn->setFlat(true);
+    copyBtn->setCursor(Qt::PointingHandCursor);
+    connect(copyBtn, &QPushButton::clicked, this, [this]() {
+        QGuiApplication::clipboard()->setText(m_textLabel->text());
+    });
+    bubbleLayout->addWidget(copyBtn, 0, Qt::AlignRight);
 
     layout->addWidget(bubble);
 }

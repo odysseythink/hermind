@@ -25,6 +25,9 @@ public:
 
     void setWelcomeText(const QString &text);
 
+signals:
+    void regenerateRequested();
+
 private:
     void rebuild();
     void appendItem(const HermindChatMessage &message);

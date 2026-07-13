@@ -1,6 +1,8 @@
 #include <QtTest>
 #include <QApplication>
+#include <QClipboard>
 #include <QLabel>
+#include <QPushButton>
 #include <QTextBrowser>
 
 #include "markdown_message_item.h"
@@ -15,6 +17,10 @@ private slots:
     void closedMessage_usesRenderer();
     void streamThenClose_switchesToMarkdown();
     void plainItem_showsText();
+    void copyButton_copiesContentToClipboard();
+    void plainItem_copyButton_copiesContent();
+    void regenerateButton_emitsSignal();
+    void streamingMessage_hidesRegenerateButton();
 };
 
 static HermindChatMessage makeAssistantMessage(const QString &content, bool closed)
@@ -68,6 +74,62 @@ void TestMarkdownMessageItem::plainItem_showsText()
     item.setMessage(msg);
 
     QCOMPARE(item.messageText(), QStringLiteral("Hello"));
+}
+
+void TestMarkdownMessageItem::copyButton_copiesContentToClipboard()
+{
+    MarkdownMessageItem item(nullptr);
+    item.setMessage(makeAssistantMessage(QStringLiteral("copy me"), true));
+
+    QPushButton *copyBtn = item.findChild<QPushButton *>(QStringLiteral("copyBtn"));
+    QVERIFY(copyBtn != nullptr);
+
+    // Retry: the Windows clipboard is a global resource and can be briefly
+    // locked by another test process when suites run back-to-back.
+    QTRY_VERIFY_WITH_TIMEOUT((copyBtn->click(),
+        QGuiApplication::clipboard()->text() == QStringLiteral("copy me")), 5000);
+}
+
+void TestMarkdownMessageItem::plainItem_copyButton_copiesContent()
+{
+    HermindChatMessage msg;
+    msg.setRole(HermindChatMessage::User);
+    msg.setContent(QStringLiteral("user copy text"));
+
+    PlainMessageItem item(nullptr);
+    item.setMessage(msg);
+
+    QPushButton *copyBtn = item.findChild<QPushButton *>(QStringLiteral("copyBtn"));
+    QVERIFY(copyBtn != nullptr);
+
+    QTRY_VERIFY_WITH_TIMEOUT((copyBtn->click(),
+        QGuiApplication::clipboard()->text() == QStringLiteral("user copy text")), 5000);
+}
+
+void TestMarkdownMessageItem::regenerateButton_emitsSignal()
+{
+    MarkdownMessageItem item(nullptr);
+    item.setMessage(makeAssistantMessage(QStringLiteral("answer"), true));
+
+    QPushButton *regenBtn = item.findChild<QPushButton *>(QStringLiteral("regenerateBtn"));
+    QVERIFY(regenBtn != nullptr);
+    QVERIFY(!regenBtn->isHidden());
+
+    QSignalSpy spy(&item, &MarkdownMessageItem::regenerateRequested);
+    regenBtn->click();
+
+    QCOMPARE(spy.count(), 1);
+}
+
+void TestMarkdownMessageItem::streamingMessage_hidesRegenerateButton()
+{
+    MarkdownMessageItem item(nullptr);
+    item.setMessage(makeAssistantMessage(QStringLiteral("partial"), false));
+
+    QPushButton *regenBtn = item.findChild<QPushButton *>(QStringLiteral("regenerateBtn"));
+    if (regenBtn)
+        QVERIFY(regenBtn->isHidden());
+    // Absence of the button is also acceptable while streaming.
 }
 
 QTEST_MAIN(TestMarkdownMessageItem)
