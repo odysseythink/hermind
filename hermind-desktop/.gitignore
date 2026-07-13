@@ -84,3 +84,4 @@ CMakeLists.txt.user*
 release/
 debug/
 /.qtcreator/
+target_wrapper.sh
