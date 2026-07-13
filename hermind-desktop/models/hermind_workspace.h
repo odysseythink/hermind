@@ -2,6 +2,7 @@
 #define HERMIND_WORKSPACE_H
 
 #include <QString>
+#include <QStringList>
 #include <QJsonObject>
 #include <QDateTime>
 #include <optional>
@@ -36,6 +37,8 @@ public:
     std::optional<bool> compressEnabled() const;
     std::optional<double> compressThreshold() const;
     std::optional<int> compressContextLen() const;
+    QStringList suggestedMessages() const;
+    void setSuggestedMessages(const QStringList &msgs);
 
 private:
     static std::optional<QString> optionalString(const QJsonObject &obj, const char *key);
@@ -65,6 +68,7 @@ private:
     std::optional<bool> m_compressEnabled;
     std::optional<double> m_compressThreshold;
     std::optional<int> m_compressContextLen;
+    QStringList m_suggestedMessages;
 };
 
 #endif // HERMIND_WORKSPACE_H

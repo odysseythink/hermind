@@ -1,5 +1,7 @@
 #include "hermind_workspace.h"
 
+#include <QJsonArray>
+
 std::optional<QString> HermindWorkspace::optionalString(const QJsonObject &obj, const char *key)
 {
     if (!obj.contains(key) || obj.value(key).isNull())
@@ -53,6 +55,11 @@ HermindWorkspace HermindWorkspace::fromJson(const QJsonObject &obj)
     ws.m_compressEnabled = optionalBool(obj, "compressEnabled");
     ws.m_compressThreshold = optionalDouble(obj, "compressThreshold");
     ws.m_compressContextLen = optionalInt(obj, "compressContextLen");
+    if (obj.contains(QStringLiteral("suggestedMessages"))) {
+        const QJsonArray arr = obj.value(QStringLiteral("suggestedMessages")).toArray();
+        for (const QJsonValue &v : arr)
+            ws.m_suggestedMessages.append(v.toString());
+    }
     return ws;
 }
 
@@ -106,3 +113,5 @@ QString HermindWorkspace::vectorSearchMode() const { return m_vectorSearchMode; 
 std::optional<bool> HermindWorkspace::compressEnabled() const { return m_compressEnabled; }
 std::optional<double> HermindWorkspace::compressThreshold() const { return m_compressThreshold; }
 std::optional<int> HermindWorkspace::compressContextLen() const { return m_compressContextLen; }
+QStringList HermindWorkspace::suggestedMessages() const { return m_suggestedMessages; }
+void HermindWorkspace::setSuggestedMessages(const QStringList &msgs) { m_suggestedMessages = msgs; }

@@ -63,6 +63,9 @@ SOURCES += \
     widgets/memories_sidebar.cpp \
     widgets/memory_card.cpp \
     widgets/memory_modal.cpp \
+    widgets/default_chat_widget.cpp \
+    widgets/quick_actions.cpp \
+    widgets/suggested_messages.cpp \
     widgets/plain_message_item.cpp \
     widgets/markdown_message_item.cpp \
     markdown/html_sanitizer.cpp \
@@ -128,6 +131,9 @@ HEADERS += \
     widgets/memories_sidebar.h \
     widgets/memory_card.h \
     widgets/memory_modal.h \
+    widgets/default_chat_widget.h \
+    widgets/quick_actions.h \
+    widgets/suggested_messages.h \
     widgets/plain_message_item.h \
     widgets/markdown_message_item.h \
     markdown/html_sanitizer.h \
