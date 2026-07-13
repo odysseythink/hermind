@@ -13,9 +13,18 @@ class AttachItem;
 class AttachmentManager;
 class HermindApiClient;
 
+// writeMode values for PromptCommand (see below). Kept as constants so the
+// contract between producers (menus, suggested messages) and the consumer
+// (ChatContainerWidget::sendCommand) cannot drift.
+namespace WriteMode {
+inline const QString Replace = QStringLiteral("replace");
+inline const QString Prepend = QStringLiteral("prepend");
+inline const QString Append = QStringLiteral("append");
+}
+
 struct PromptCommand {
     QString text;
-    QString writeMode; // "replace" | "append" | "prepend"
+    QString writeMode; // one of WriteMode::{Replace,Append,Prepend}
     QStringList attachments;
 };
 
@@ -70,7 +79,6 @@ private:
     ToolsMenu *m_toolsMenu = nullptr;
     AttachItem *m_attachItem = nullptr;
     AttachmentManager *m_attachManager = nullptr;
-    bool m_autoOpenedTools = false;
     bool m_sendEnabled = true;
 
     int m_maxHeight = 200;

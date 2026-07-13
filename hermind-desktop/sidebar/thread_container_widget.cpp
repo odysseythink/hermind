@@ -197,11 +197,6 @@ void ThreadContainerWidget::onThreadRenamed(const HermindWorkspaceThread &thread
     rebuildItems();
 }
 
-void ThreadContainerWidget::onThreadDeleted(bool, const ApiError &)
-{
-    // Handled inline with captured threadSlug.
-}
-
 void ThreadContainerWidget::rebuildItems()
 {
     // 移除除默认项与新建按钮外的旧项
@@ -231,16 +226,6 @@ void ThreadContainerWidget::rebuildItems()
 
     m_layout->addWidget(m_newThreadButton);
     m_newThreadButton->setVisible(!m_workspaceSlug.isEmpty());
-}
-
-ThreadItemWidget *ThreadContainerWidget::findItem(const QString &threadSlug) const
-{
-    const auto items = findChildren<ThreadItemWidget *>();
-    for (ThreadItemWidget *item : items) {
-        if (!item->isDefaultThread() && item->threadSlug() == threadSlug)
-            return item;
-    }
-    return nullptr;
 }
 
 bool ThreadContainerWidget::eventFilter(QObject *watched, QEvent *event)

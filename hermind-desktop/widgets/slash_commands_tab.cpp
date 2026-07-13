@@ -1,4 +1,5 @@
 #include "slash_commands_tab.h"
+#include "prompt_input.h"
 #include "theme_manager.h"
 #include "theme_colors.h"
 
@@ -18,9 +19,9 @@ SlashCommandsTab::SlashCommandsTab(QWidget *parent)
 
     // Predefined slash commands (matches frontend SlashPresets/constants.js)
     m_commands = {
-        { QStringLiteral("/reset — 重置聊天"),             QStringLiteral("/reset"), QStringLiteral("replace") },
-        { QStringLiteral("/new — 清除上下文并开始新话题"), QStringLiteral("/new"),   QStringLiteral("replace") },
-        { QStringLiteral("/help — 显示帮助"),              QStringLiteral("/help"),  QStringLiteral("replace") },
+        { QStringLiteral("/reset — 重置聊天"),             QStringLiteral("/reset"), WriteMode::Replace },
+        { QStringLiteral("/new — 清除上下文并开始新话题"), QStringLiteral("/new"),   WriteMode::Replace },
+        { QStringLiteral("/help — 显示帮助"),              QStringLiteral("/help"),  WriteMode::Replace },
     };
 
     for (const SlashCommand &cmd : m_commands) {

@@ -45,7 +45,9 @@ MainChatWidget::MainChatWidget(QWidget *parent)
     replaceToolButtons();
     setupStyleSheet();
 
-    connect(ui->headerSettingsButton, &QToolButton::clicked, this, &MainChatWidget::on_headerSettingsButton_clicked);
+    // Header settings button → GeneralSettings (same entry as the sidebar's).
+    connect(ui->headerSettingsButton, &QToolButton::clicked,
+            this, &MainChatWidget::bottomSettingClicked);
 
     connect(&NavigationManager::instance(), &NavigationManager::currentRouteChanged,
             this, &MainChatWidget::onRouteChanged);
@@ -294,17 +296,6 @@ void MainChatWidget::setupStyleSheet()
     )").arg(windowBg, sidebarBg, textPrimary, textSecondary, hoverBg, selectedBg));
 }
 
-void MainChatWidget::on_popoutButton_clicked() { qDebug() << "popout clicked"; }
-void MainChatWidget::on_newSearchButton_clicked() { qDebug() << "new search clicked"; }
-void MainChatWidget::on_uploadButton_clicked() { qDebug() << "upload clicked"; }
-void MainChatWidget::on_workspaceSettingsButton_clicked() { qDebug() << "workspace settings clicked"; }
-void MainChatWidget::on_newThreadButton_clicked() { qDebug() << "new thread clicked"; }
-void MainChatWidget::on_assistantChatsButton_clicked() { qDebug() << "assistant chats clicked"; }
-void MainChatWidget::on_bottomSettingButton_clicked() {
-    qDebug() << "bottom setting clicked";
-    emit bottomSettingClicked();
-}
-
 void MainChatWidget::onNewWorkspaceRequested()
 {
     HermindApiClient *client = AuthManager::instance().apiClient();
@@ -322,14 +313,6 @@ void MainChatWidget::onNewWorkspaceRequested()
     });
     dialog.exec();
 }
-
-void MainChatWidget::on_headerSettingsButton_clicked() { qDebug() << "header settings clicked"; }
-void MainChatWidget::on_toolsButton_clicked() { qDebug() << "tools clicked"; }
-void MainChatWidget::on_micButton_clicked() { qDebug() << "mic clicked"; }
-void MainChatWidget::on_sendButton_clicked() { qDebug() << "send clicked"; }
-void MainChatWidget::on_createAgentButton_clicked() { qDebug() << "create agent clicked"; }
-void MainChatWidget::on_editWorkspaceButton_clicked() { qDebug() << "edit workspace clicked"; }
-void MainChatWidget::on_uploadFileButton_clicked() { qDebug() << "upload file clicked"; }
 
 void MainChatWidget::onRouteChanged(const NavigationRoute &route)
 {

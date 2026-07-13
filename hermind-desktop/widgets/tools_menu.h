@@ -4,8 +4,6 @@
 #include <QWidget>
 #include <functional>
 
-class QTabBar;
-class QStackedWidget;
 class SlashCommandsTab;
 
 class ToolsMenu : public QWidget
@@ -28,8 +26,6 @@ protected:
 private:
     void applyTheme();
 
-    QTabBar *m_tabBar = nullptr;
-    QStackedWidget *m_tabs = nullptr;
     SlashCommandsTab *m_slashTab = nullptr;
     std::function<void(const QString &, const QString &)> m_callback;
 };

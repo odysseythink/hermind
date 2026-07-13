@@ -40,6 +40,8 @@ WorkspaceItemWidget::WorkspaceItemWidget(QWidget *parent)
     uploadButton->setIconText(QStringLiteral("↑"));
     uploadButton->setToolTip(tr("Upload documents"));
     connect(uploadButton, &IconButton::clicked, this, &WorkspaceItemWidget::onUploadClicked);
+    // 文档上传属于阶段 2 功能，前端无等价入口，暂时隐藏（保留信号链以便启用）
+    uploadButton->setVisible(false);
     headerLayout->addWidget(uploadButton);
 
     IconButton *settingsButton = new IconButton(m_header);

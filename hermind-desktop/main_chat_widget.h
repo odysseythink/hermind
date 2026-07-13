@@ -27,20 +27,6 @@ signals:
     void bottomSettingClicked();
 
 private slots:
-    void on_popoutButton_clicked();
-    void on_newSearchButton_clicked();
-    void on_uploadButton_clicked();
-    void on_workspaceSettingsButton_clicked();
-    void on_newThreadButton_clicked();
-    void on_assistantChatsButton_clicked();
-    void on_bottomSettingButton_clicked();
-    void on_headerSettingsButton_clicked();
-    void on_toolsButton_clicked();
-    void on_micButton_clicked();
-    void on_sendButton_clicked();
-    void on_createAgentButton_clicked();
-    void on_editWorkspaceButton_clicked();
-    void on_uploadFileButton_clicked();
     void onNewWorkspaceRequested();
     void onRouteChanged(const NavigationRoute &route);
 

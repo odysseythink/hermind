@@ -97,7 +97,6 @@ PromptInput::PromptInput(QWidget *parent)
         emit sendCommand(cmd);
     });
     connect(m_toolsButton, &QPushButton::clicked, this, [this]() {
-        m_autoOpenedTools = false;
         if (m_toolsMenu->isVisible())
             m_toolsMenu->hide();
         else
@@ -220,7 +219,6 @@ bool PromptInput::eventFilter(QObject *obj, QEvent *event)
         if (keyEvent->key() == Qt::Key_Slash
             && !(keyEvent->modifiers() & (Qt::ControlModifier | Qt::MetaModifier))
             && m_textEdit->toPlainText().trimmed().isEmpty()) {
-            m_autoOpenedTools = true;
             m_toolsMenu->showAbove(m_textEdit);
             return true; // swallow the "/" character
         }
@@ -264,7 +262,7 @@ void PromptInput::sendCurrent()
 
     PromptCommand cmd;
     cmd.text = content;
-    cmd.writeMode = QStringLiteral("replace");
+    cmd.writeMode = WriteMode::Replace;
     cmd.attachments = m_attachManager->imageDataUrls();
     emit sendCommand(cmd);
     m_attachManager->clear();

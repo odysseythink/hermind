@@ -37,11 +37,9 @@ private slots:
     void onRenameRequested(const QString &workspaceSlug, const QString &threadSlug);
     void onDeleteRequested(const QString &workspaceSlug, const QString &threadSlug);
     void onThreadRenamed(const HermindWorkspaceThread &thread, const QString &message, const ApiError &error);
-    void onThreadDeleted(bool success, const ApiError &error);
 
 private:
     void rebuildItems();
-    ThreadItemWidget *findItem(const QString &threadSlug) const;
 
     HermindApiClient *m_apiClient = nullptr;
     QString m_workspaceSlug;

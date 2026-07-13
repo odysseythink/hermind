@@ -3,8 +3,6 @@
 #include "theme_manager.h"
 #include "theme_colors.h"
 
-#include <QTabBar>
-#include <QStackedWidget>
 #include <QVBoxLayout>
 #include <QKeyEvent>
 #include <QFocusEvent>
@@ -19,23 +17,8 @@ ToolsMenu::ToolsMenu(QWidget *parent)
     layout->setContentsMargins(8, 8, 8, 8);
     layout->setSpacing(8);
 
-    m_tabBar = new QTabBar(this);
-    m_tabBar->setExpanding(false);
-    m_tabBar->addTab(QStringLiteral("Slash 命令"));
-    m_tabBar->addTab(QStringLiteral("Agent 技能")); // placeholder
-    m_tabBar->setTabEnabled(1, false); // disable Agent Skills for now
-
-    m_tabs = new QStackedWidget(this);
-
     m_slashTab = new SlashCommandsTab(this);
-    m_tabs->addWidget(m_slashTab);
-    m_tabs->addWidget(new QWidget(this)); // placeholder for Agent Skills
-
-    layout->addWidget(m_tabBar);
-    layout->addWidget(m_tabs, 1);
-
-    connect(m_tabBar, &QTabBar::currentChanged,
-            m_tabs, &QStackedWidget::setCurrentIndex);
+    layout->addWidget(m_slashTab, 1);
 
     connect(m_slashTab, &SlashCommandsTab::commandSelected,
             this, [this](const QString &text, const QString &mode) {

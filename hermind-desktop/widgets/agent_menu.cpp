@@ -1,4 +1,5 @@
 #include "agent_menu.h"
+#include "prompt_input.h"
 #include "theme_colors.h"
 #include "theme_manager.h"
 
@@ -25,7 +26,7 @@ AgentMenu::AgentMenu(QWidget *parent)
 
     connect(m_agentItem, &QPushButton::clicked, this, [this]() {
         if (m_callback)
-            m_callback(QStringLiteral("@agent "), QStringLiteral("prepend"));
+            m_callback(QStringLiteral("@agent "), WriteMode::Prepend);
         hide();
         emit agentSelected();
     });

@@ -1,4 +1,5 @@
 #include "suggested_messages.h"
+#include "prompt_input.h"
 #include "theme_colors.h"
 #include "theme_manager.h"
 
@@ -48,7 +49,7 @@ void SuggestedMessages::rebuild()
               dark ? QStringLiteral("#27272a") : QStringLiteral("#f1f5f9")));
         connect(btn, &QPushButton::clicked, this, [this, msg]() {
             if (m_callback)
-                m_callback(msg, QStringLiteral("replace"));
+                m_callback(msg, WriteMode::Replace);
         });
         m_layout->insertWidget(m_layout->count() - 1, btn);
     }
