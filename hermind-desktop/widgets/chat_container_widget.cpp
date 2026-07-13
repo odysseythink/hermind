@@ -24,21 +24,14 @@ ChatContainerWidget::ChatContainerWidget(HermindApiClient *apiClient, QWidget *p
     m_historyWidget = new ChatHistoryWidget(this);
     root->addWidget(m_historyWidget, 1);
 
-    QHBoxLayout *inputLayout = new QHBoxLayout();
-    m_inputEdit = new QLineEdit(this);
-    m_inputEdit->setPlaceholderText(tr("发送消息"));
-    m_sendButton = new QPushButton(tr("发送"), this);
-    m_stopButton = new QPushButton(tr("停止"), this);
-    m_stopButton->setVisible(false);
+    m_input = new PromptInput(this);
+    m_input->setMaxHeight(200);
+    root->addWidget(m_input);
 
-    inputLayout->addWidget(m_inputEdit, 1);
-    inputLayout->addWidget(m_sendButton);
-    inputLayout->addWidget(m_stopButton);
-    root->addLayout(inputLayout);
-
-    connect(m_sendButton, &QPushButton::clicked, this, &ChatContainerWidget::onSendClicked);
-    connect(m_stopButton, &QPushButton::clicked, this, &ChatContainerWidget::onStopClicked);
-    connect(m_inputEdit, &QLineEdit::returnPressed, this, &ChatContainerWidget::onSendClicked);
+    connect(m_input, &PromptInput::sendCommand,
+            this, QOverload<const PromptCommand &>::of(&ChatContainerWidget::sendCommand));
+    connect(m_input, &PromptInput::stopRequested,
+            this, [this]() { if (m_apiClient) m_apiClient->abortStream(); });
     connect(&ThemeManager::instance(), &ThemeManager::themeChanged,
             this, &ChatContainerWidget::applyTheme);
 
@@ -56,7 +49,7 @@ void ChatContainerWidget::connectHandlers()
     connect(m_streamHandler.get(), &ChatStreamHandler::messagesChanged,
             this, [this]() { m_historyWidget->setMessages(m_streamHandler->messages()); });
     connect(m_streamHandler.get(), &ChatStreamHandler::streamFinished,
-            this, [this]() { m_streaming = false; m_stopButton->setVisible(false); emit streamFinished(); });
+            this, [this]() { m_streaming = false; m_input->setStopVisible(false); emit streamFinished(); });
     connect(m_streamHandler.get(), &ChatStreamHandler::agentWebSocketRequested,
             this, [this](const QString &socketId, const QString &token) {
                 if (m_apiClient)
@@ -90,15 +83,33 @@ QString ChatContainerWidget::threadSlug() const { return m_threadSlug; }
 
 void ChatContainerWidget::setInputText(const QString &text)
 {
-    m_inputEdit->setText(text);
+    m_input->setText(text);
 }
 
-void ChatContainerWidget::onSendClicked()
+void ChatContainerWidget::sendCommand(const PromptCommand &command)
+{
+    sendCommand(command.text, command.writeMode, command.attachments);
+}
+
+void ChatContainerWidget::sendCommand(const QString &text, const QString &writeMode,
+                                      const QStringList &attachments)
+{
+    if (writeMode == QStringLiteral("prepend")) {
+        m_input->setText(text + QStringLiteral(" ") + m_input->text());
+        return;
+    }
+    if (writeMode == QStringLiteral("append")) {
+        m_input->setText(m_input->text() + text);
+        return;
+    }
+    // "replace" mode — send directly
+    autoSubmit(text, attachments);
+}
+
+void ChatContainerWidget::autoSubmit(const QString &text, const QStringList &attachments)
 {
     if (!m_apiClient || m_workspaceSlug.isEmpty())
         return;
-
-    const QString text = m_inputEdit->text().trimmed();
     if (text.isEmpty())
         return;
 
@@ -109,33 +120,27 @@ void ChatContainerWidget::onSendClicked()
     msgs.append(userMsg);
     m_streamHandler->setMessages(msgs);
 
-    m_inputEdit->clear();
+    m_input->clear();
     m_streaming = true;
-    m_stopButton->setVisible(true);
+    m_input->setStopVisible(true);
     emit streamStarted();
 
     auto onChunk = [this](const HermindStreamChatResponse &resp) { onStreamResponse(resp); };
     auto onError = [this](const ApiError &err) {
         qWarning() << "stream error:" << err.message();
         m_streaming = false;
-        m_stopButton->setVisible(false);
+        m_input->setStopVisible(false);
     };
     auto onFinished = [this]() {
         m_streaming = false;
-        m_stopButton->setVisible(false);
+        m_input->setStopVisible(false);
         emit streamFinished();
     };
 
     if (m_threadSlug.isEmpty())
-        m_apiClient->streamChat(m_workspaceSlug, text, QStringList(), onChunk, onError, onFinished);
+        m_apiClient->streamChat(m_workspaceSlug, text, attachments, onChunk, onError, onFinished);
     else
-        m_apiClient->streamThreadChat(m_workspaceSlug, m_threadSlug, text, QStringList(), onChunk, onError, onFinished);
-}
-
-void ChatContainerWidget::onStopClicked()
-{
-    if (m_apiClient)
-        m_apiClient->abortStream();
+        m_apiClient->streamThreadChat(m_workspaceSlug, m_threadSlug, text, attachments, onChunk, onError, onFinished);
 }
 
 void ChatContainerWidget::loadHistory()

@@ -1,0 +1,59 @@
+#ifndef PROMPT_INPUT_H
+#define PROMPT_INPUT_H
+
+#include <QWidget>
+#include <QStringList>
+#include <QMetaType>
+
+class QTextEdit;
+class QPushButton;
+
+struct PromptCommand {
+    QString text;
+    QString writeMode; // "replace" | "append" | "prepend"
+    QStringList attachments;
+};
+
+Q_DECLARE_METATYPE(PromptCommand)
+
+class PromptInput : public QWidget
+{
+    Q_OBJECT
+public:
+    explicit PromptInput(QWidget *parent = nullptr);
+
+    QString text() const;
+    void setText(const QString &text);
+    void clear();
+    void setPlaceholderText(const QString &text);
+    void setMaxHeight(int px);
+    int maxHeight() const;
+
+    void setSendEnabled(bool enabled);
+    void setStopVisible(bool visible);
+
+    QTextEdit *textEdit() const; // for external focus/font control
+
+signals:
+    void sendCommand(const PromptCommand &command);
+    void stopRequested();
+
+protected:
+    bool eventFilter(QObject *obj, QEvent *event) override;
+
+private slots:
+    void onTextChanged();
+    void adjustHeight();
+    void sendCurrent();
+
+private:
+    void applyTheme();
+
+    QTextEdit *m_textEdit = nullptr;
+    QPushButton *m_sendButton = nullptr;
+    QPushButton *m_stopButton = nullptr;
+
+    int m_maxHeight = 200;
+};
+
+#endif // PROMPT_INPUT_H

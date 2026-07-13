@@ -2,9 +2,8 @@
 #define CHAT_CONTAINER_WIDGET_H
 
 #include <QWidget>
-#include <QLineEdit>
-#include <QPushButton>
 #include <memory>
+#include "prompt_input.h"
 #include "hermind_chat_message.h"
 #include "hermind_stream_chat_response.h"
 #include "hermind_agent_event.h"
@@ -36,8 +35,9 @@ signals:
     void requestThreadRename(const QString &newName);
 
 public slots:
-    void onSendClicked();
-    void onStopClicked();
+    void sendCommand(const PromptCommand &command);
+    void sendCommand(const QString &text, const QString &writeMode = QStringLiteral("replace"),
+                     const QStringList &attachments = QStringList());
 
 private slots:
     void loadHistory();
@@ -48,6 +48,7 @@ private slots:
 private:
     void connectHandlers();
     void disconnectAgentSocket();
+    void autoSubmit(const QString &text, const QStringList &attachments);
 
     HermindApiClient *m_apiClient = nullptr;
     QString m_workspaceSlug;
@@ -55,9 +56,7 @@ private:
     QString m_threadSlug;
 
     ChatHistoryWidget *m_historyWidget = nullptr;
-    QLineEdit *m_inputEdit = nullptr;
-    QPushButton *m_sendButton = nullptr;
-    QPushButton *m_stopButton = nullptr;
+    PromptInput *m_input = nullptr;
 
     std::unique_ptr<ChatStreamHandler> m_streamHandler;
     std::unique_ptr<AgentEventHandler> m_agentHandler;
