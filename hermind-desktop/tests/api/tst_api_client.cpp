@@ -1,6 +1,8 @@
 #include <QtTest>
 #include <QTcpServer>
 #include <QTcpSocket>
+#include <QTemporaryFile>
+#include <QDir>
 #include <QJsonDocument>
 #include <QWebSocketServer>
 #include <QWebSocket>
@@ -35,6 +37,8 @@ private slots:
     void streamThreadChat();
     void abortStream();
     void openAgentWebSocket();
+    void uploadAndEmbedFile();
+    void removeAndUnembed();
 
 private:
     class MockHttpServer;
@@ -683,6 +687,77 @@ void TestApiClient::openAgentWebSocket()
 
     m_client->closeAgentWebSocket();
     QTRY_VERIFY_WITH_TIMEOUT(closed, 5000);
+}
+
+void TestApiClient::uploadAndEmbedFile()
+{
+    // openAgentWebSocket repoints baseUrl to the WS server port; restore it.
+    m_client->setBaseUrl(QUrl(QStringLiteral("http://127.0.0.1:%1/api").arg(m_server->port())));
+
+    QTemporaryFile tmp(QDir::tempPath() + QStringLiteral("/hm-upload-XXXXXX.txt"));
+    QVERIFY(tmp.open());
+    tmp.write("hello attachment");
+    tmp.flush();
+
+    QString seenMethod, seenPath, seenContentType;
+    QByteArray seenBody;
+    m_server->setHandler([&](const QString &method, const QString &path,
+                             const QHash<QString, QString> &headers, const QByteArray &body) {
+        seenMethod = method;
+        seenPath = path;
+        seenContentType = headers.value(QStringLiteral("content-type"));
+        seenBody = body;
+        return QByteArray(R"({"success":true,"document":{"docId":"doc-42","filename":"hm-upload-test.txt"}})");
+    });
+
+    bool done = false;
+    QJsonObject document;
+    ApiError error;
+    m_client->uploadAndEmbedFile(QStringLiteral("demo"), tmp.fileName(),
+                                 [&](const QJsonObject &doc, const ApiError &err) {
+                                     document = doc;
+                                     error = err;
+                                     done = true;
+                                 });
+    QTRY_VERIFY_WITH_TIMEOUT(done, 5000);
+
+    QVERIFY(error.isEmpty());
+    QCOMPARE(document.value(QStringLiteral("docId")).toString(), QStringLiteral("doc-42"));
+    QCOMPARE(seenMethod, QStringLiteral("POST"));
+    QVERIFY(seenPath.endsWith(QStringLiteral("/workspace/demo/upload-and-embed")));
+    QVERIFY(seenContentType.contains(QStringLiteral("multipart/form-data")));
+    QVERIFY(seenBody.contains("name=\"file\""));
+    QVERIFY(seenBody.contains("hello attachment"));
+}
+
+void TestApiClient::removeAndUnembed()
+{
+    m_client->setBaseUrl(QUrl(QStringLiteral("http://127.0.0.1:%1/api").arg(m_server->port())));
+
+    QString seenMethod, seenPath;
+    m_server->setHandler([&](const QString &method, const QString &path,
+                             const QHash<QString, QString> &, const QByteArray &) {
+        seenMethod = method;
+        seenPath = path;
+        return QByteArray(R"({"success":true})");
+    });
+
+    bool done = false;
+    bool ok = false;
+    ApiError error;
+    m_client->removeAndUnembed(QStringLiteral("demo"), QStringLiteral("doc-42"),
+                               [&](bool success, const ApiError &err) {
+                                   ok = success;
+                                   error = err;
+                                   done = true;
+                               });
+    QTRY_VERIFY_WITH_TIMEOUT(done, 5000);
+
+    QVERIFY(ok);
+    QVERIFY(error.isEmpty());
+    QCOMPARE(seenMethod, QStringLiteral("DELETE"));
+    QVERIFY(seenPath.contains(QStringLiteral("/workspace/demo/remove-and-unembed")));
+    QVERIFY(seenPath.contains(QStringLiteral("docId=doc-42")));
 }
 
 QTEST_MAIN(TestApiClient)

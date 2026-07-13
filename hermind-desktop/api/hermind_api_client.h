@@ -77,6 +77,9 @@ public:
                                               const ApiError &error)>;
     using MemoryDeleteCallback = std::function<void(bool success, const ApiError &error)>;
 
+    using DocumentCallback = std::function<void(const QJsonObject &document,
+                                                const ApiError &error)>;
+
     explicit HermindApiClient(QObject *parent = nullptr);
 
     void setBaseUrl(const QUrl &url);
@@ -109,6 +112,16 @@ public:
     void threadChatHistory(const QString &workspaceSlug,
                            const QString &threadSlug,
                            ChatHistoryCallback callback);
+
+    // Upload + embed a non-image attachment into the workspace (RAG context).
+    // Returns the created document object (contains "docId") on success.
+    void uploadAndEmbedFile(const QString &workspaceSlug,
+                            const QString &filePath,
+                            DocumentCallback callback);
+    // Remove a previously uploaded document and its embeddings.
+    void removeAndUnembed(const QString &workspaceSlug,
+                          const QString &docId,
+                          ThreadOperationCallback callback);
 
     void streamChat(const QString &workspaceSlug,
                     const QString &message,

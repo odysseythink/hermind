@@ -5,6 +5,7 @@
 #include "attachment_manager.h"
 #include "theme_manager.h"
 #include "theme_colors.h"
+#include "hermind_api_client.h"
 
 #include <QTextEdit>
 #include <QPushButton>
@@ -68,6 +69,8 @@ PromptInput::PromptInput(QWidget *parent)
 
     connect(m_attachItem, &AttachItem::filesSelected,
             m_attachManager, &AttachmentManager::addFiles);
+    connect(m_attachManager, &AttachmentManager::processingChanged,
+            this, [this](bool) { updateSendEnabled(); });
 
     connect(m_textEdit, &QTextEdit::textChanged, this, &PromptInput::onTextChanged);
     connect(m_sendButton, &QPushButton::clicked, this, &PromptInput::sendCurrent);
@@ -145,12 +148,38 @@ int PromptInput::maxHeight() const
 
 void PromptInput::setSendEnabled(bool enabled)
 {
-    m_sendButton->setEnabled(enabled);
+    m_sendEnabled = enabled;
+    updateSendEnabled();
+}
+
+bool PromptInput::isSendEnabled() const
+{
+    return m_sendButton->isEnabled();
+}
+
+void PromptInput::updateSendEnabled()
+{
+    m_sendButton->setEnabled(m_sendEnabled && !m_attachManager->isProcessing());
 }
 
 void PromptInput::setStopVisible(bool visible)
 {
     m_stopButton->setVisible(visible);
+}
+
+void PromptInput::setApiClient(HermindApiClient *client)
+{
+    m_attachManager->setApiClient(client);
+}
+
+void PromptInput::setWorkspaceSlug(const QString &slug)
+{
+    m_attachManager->setWorkspaceSlug(slug);
+}
+
+bool PromptInput::isProcessingAttachments() const
+{
+    return m_attachManager->isProcessing();
 }
 
 QTextEdit *PromptInput::textEdit() const
@@ -228,11 +257,15 @@ void PromptInput::sendCurrent()
     const QString content = text();
     if (content.isEmpty() && m_attachManager->count() == 0)
         return;
+    // Wait for upload+embed to finish; embedded documents reach the LLM
+    // through workspace RAG context, images ride along as data URLs.
+    if (m_attachManager->isProcessing())
+        return;
 
     PromptCommand cmd;
     cmd.text = content;
     cmd.writeMode = QStringLiteral("replace");
-    cmd.attachments = m_attachManager->filePaths();
+    cmd.attachments = m_attachManager->imageDataUrls();
     emit sendCommand(cmd);
     m_attachManager->clear();
 }

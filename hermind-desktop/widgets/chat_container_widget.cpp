@@ -111,6 +111,10 @@ void ChatContainerWidget::setupThreePanelLayout()
     // Shared prompt input below the stack — usable in both welcome and chat views
     m_input = new PromptInput(m_centerPanel);
     m_input->setMaxHeight(200);
+    if (m_apiClient) {
+        m_input->setApiClient(m_apiClient);
+        m_defaultChat->promptInput()->setApiClient(m_apiClient);
+    }
     centerLayout->addWidget(m_input);
 
     // === RIGHT PANEL: memories sidebar (partial — constructed, hidden) ===
@@ -259,6 +263,8 @@ void ChatContainerWidget::setWorkspace(const QString &slug, const QString &name)
     m_workspaceName = name;
     m_historyWidget->setWelcomeText(tr("欢迎来到 %1").arg(name));
     m_defaultChat->setWorkspaceSlug(slug);
+    m_input->setWorkspaceSlug(slug);
+    m_defaultChat->promptInput()->setWorkspaceSlug(slug);
 
     if (m_apiClient && !slug.isEmpty()) {
         m_apiClient->getWorkspace(slug,

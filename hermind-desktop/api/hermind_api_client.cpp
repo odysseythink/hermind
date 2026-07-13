@@ -3,6 +3,10 @@
 #include <QNetworkAccessManager>
 #include <QNetworkReply>
 #include <QNetworkRequest>
+#include <QHttpMultiPart>
+#include <QFile>
+#include <QFileInfo>
+#include <QMimeDatabase>
 #include <QJsonDocument>
 #include <QJsonArray>
 
@@ -269,6 +273,80 @@ void HermindApiClient::threadChatHistory(const QString &workspaceSlug,
                 list.append(HermindChatMessage::fromJson(v.toObject()));
             callback(list, ApiError());
         });
+}
+
+void HermindApiClient::uploadAndEmbedFile(const QString &workspaceSlug,
+                                          const QString &filePath,
+                                          DocumentCallback callback)
+{
+    QFile *file = new QFile(filePath);
+    if (!file->open(QIODevice::ReadOnly)) {
+        callback(QJsonObject(), ApiError(QStringLiteral("Cannot open file: ") + filePath));
+        delete file;
+        return;
+    }
+
+    QHttpMultiPart *multiPart = new QHttpMultiPart(QHttpMultiPart::FormDataType);
+    QHttpPart filePart;
+    filePart.setHeader(QNetworkRequest::ContentTypeHeader,
+                       QVariant(QMimeDatabase().mimeTypeForFile(filePath).name()));
+    filePart.setHeader(QNetworkRequest::ContentDispositionHeader,
+                       QVariant(QStringLiteral("form-data; name=\"file\"; filename=\"%1\"")
+                                    .arg(QFileInfo(filePath).fileName())));
+    filePart.setBodyDevice(file);
+    file->setParent(multiPart);
+    multiPart->append(filePart);
+
+    QUrl url = m_baseUrl;
+    url.setPath(url.path() + QStringLiteral("/workspace/%1/upload-and-embed").arg(workspaceSlug));
+    QNetworkRequest request(url);
+    if (!m_authToken.isEmpty()) {
+        request.setRawHeader(QByteArrayLiteral("Authorization"),
+                             QByteArrayLiteral("Bearer ") + m_authToken.toUtf8());
+    }
+
+    QNetworkReply *reply = m_manager->post(request, multiPart);
+    multiPart->setParent(reply);
+
+    connect(reply, &QNetworkReply::finished, this, [reply, callback]() {
+        const int status = reply->attribute(QNetworkRequest::HttpStatusCodeAttribute).toInt();
+        ApiError error;
+        QJsonObject document;
+
+        if (reply->error() != QNetworkReply::NoError) {
+            error = parseNetworkError(reply);
+        } else {
+            QJsonParseError parseErr;
+            const QJsonDocument doc = QJsonDocument::fromJson(readReplyBody(reply), &parseErr);
+            if (parseErr.error != QJsonParseError::NoError) {
+                error = ApiError(parseErr.errorString(), status);
+            } else if (status < 200 || status >= 300) {
+                QString msg = doc.object().value(QStringLiteral("error")).toString();
+                if (msg.isEmpty())
+                    msg = QStringLiteral("HTTP error %1").arg(status);
+                error = ApiError(msg, status);
+            } else {
+                document = doc.object().value(QStringLiteral("document")).toObject();
+            }
+        }
+
+        callback(document, error);
+        reply->deleteLater();
+    });
+}
+
+void HermindApiClient::removeAndUnembed(const QString &workspaceSlug,
+                                        const QString &docId,
+                                        ThreadOperationCallback callback)
+{
+    QUrlQuery query;
+    query.addQueryItem(QStringLiteral("docId"), docId);
+    sendRequest(QStringLiteral("DELETE"),
+                QStringLiteral("/workspace/%1/remove-and-unembed").arg(workspaceSlug),
+                query, QJsonObject(),
+                [callback](const ApiResponse &resp) {
+                    callback(resp.isSuccess(), resp.error());
+                });
 }
 
 void HermindApiClient::get(const QString &path, const QUrlQuery &query, GenericCallback callback)

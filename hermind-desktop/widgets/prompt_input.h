@@ -11,6 +11,7 @@ class AgentMenu;
 class ToolsMenu;
 class AttachItem;
 class AttachmentManager;
+class HermindApiClient;
 
 struct PromptCommand {
     QString text;
@@ -34,7 +35,12 @@ public:
     int maxHeight() const;
 
     void setSendEnabled(bool enabled);
+    bool isSendEnabled() const;
     void setStopVisible(bool visible);
+
+    void setApiClient(HermindApiClient *client);
+    void setWorkspaceSlug(const QString &slug);
+    bool isProcessingAttachments() const;
 
     QTextEdit *textEdit() const; // for external focus/font control
     QStringList attachments() const; // currently attached file paths
@@ -53,6 +59,7 @@ private slots:
 
 private:
     void applyTheme();
+    void updateSendEnabled();
 
     QTextEdit *m_textEdit = nullptr;
     QPushButton *m_agentButton = nullptr;
@@ -64,6 +71,7 @@ private:
     AttachItem *m_attachItem = nullptr;
     AttachmentManager *m_attachManager = nullptr;
     bool m_autoOpenedTools = false;
+    bool m_sendEnabled = true;
 
     int m_maxHeight = 200;
 };
