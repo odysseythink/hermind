@@ -99,6 +99,9 @@ void MemoriesSidebar::open()
     m_open = true;
     show();
     raise();
+    // Fetch on every open: setWorkspace() only fetches while already open,
+    // so without this the first open always showed a stale/empty list.
+    fetchAndRefresh();
 }
 
 void MemoriesSidebar::close()
