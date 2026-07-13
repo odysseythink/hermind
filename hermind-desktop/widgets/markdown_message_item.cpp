@@ -93,6 +93,8 @@ void MarkdownMessageItem::showMarkdown(const QString &text, bool dark)
                 this, [](const QString &reason) {
                     qWarning() << "MarkdownMessageItem: render failed:" << reason;
                 });
+        connect(m_renderer, &MarkdownRenderer::linkActivated,
+                this, &MarkdownMessageItem::linkActivated);
     }
     m_renderer->setMarkdown(text, dark);
     // Re-fetch after every setMarkdown(): the renderer may deleteLater()

@@ -6,6 +6,7 @@
 #include <QTextBrowser>
 
 #include "markdown_message_item.h"
+#include "markdown_renderer.h"
 #include "plain_message_item.h"
 #include "hermind_chat_message.h"
 
@@ -21,6 +22,7 @@ private slots:
     void plainItem_copyButton_copiesContent();
     void regenerateButton_emitsSignal();
     void streamingMessage_hidesRegenerateButton();
+    void rendererLinkClick_reemitsLinkActivated();
 };
 
 static HermindChatMessage makeAssistantMessage(const QString &content, bool closed)
@@ -130,6 +132,25 @@ void TestMarkdownMessageItem::streamingMessage_hidesRegenerateButton()
     if (regenBtn)
         QVERIFY(regenBtn->isHidden());
     // Absence of the button is also acceptable while streaming.
+}
+
+// A link click inside the rendered QTextBrowser must propagate out of the
+// bubble so the container can open it in the system browser. Previously the
+// renderer's linkActivated signal had no receiver at all.
+void TestMarkdownMessageItem::rendererLinkClick_reemitsLinkActivated()
+{
+    MarkdownMessageItem item(nullptr);
+    item.setMessage(makeAssistantMessage(
+        QStringLiteral("see [example](https://example.com)"), true));
+
+    MarkdownRenderer *renderer = item.findChild<MarkdownRenderer *>();
+    QVERIFY(renderer != nullptr);
+
+    QSignalSpy spy(&item, &MarkdownMessageItem::linkActivated);
+    renderer->linkActivated(QUrl(QStringLiteral("https://example.com")));
+
+    QCOMPARE(spy.count(), 1);
+    QCOMPARE(spy.first().first().toUrl(), QUrl(QStringLiteral("https://example.com")));
 }
 
 QTEST_MAIN(TestMarkdownMessageItem)

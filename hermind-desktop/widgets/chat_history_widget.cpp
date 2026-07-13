@@ -6,6 +6,8 @@
 
 #include <QScrollBar>
 #include <QLabel>
+#include <QDesktopServices>
+#include <QUrl>
 
 ChatHistoryWidget::ChatHistoryWidget(QWidget *parent)
     : QWidget(parent)
@@ -135,6 +137,8 @@ void ChatHistoryWidget::appendItem(const HermindChatMessage &message)
         markdown->setDarkMode(ThemeManager::instance().isDarkMode());
         connect(markdown, &MarkdownMessageItem::regenerateRequested,
                 this, &ChatHistoryWidget::regenerateRequested);
+        connect(markdown, &MarkdownMessageItem::linkActivated,
+                this, [](const QUrl &url) { QDesktopServices::openUrl(url); });
         item = markdown;
     }
     m_items.append(item);

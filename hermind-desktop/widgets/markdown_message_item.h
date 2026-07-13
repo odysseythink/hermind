@@ -3,6 +3,7 @@
 
 #include <QWidget>
 #include <QPointer>
+#include <QUrl>
 
 #include "hermind_chat_message.h"
 
@@ -23,6 +24,9 @@ public:
 
 signals:
     void regenerateRequested();
+    // Emitted when the user clicks a link in the rendered markdown. The
+    // container decides how to open it (system browser).
+    void linkActivated(const QUrl &url);
 
 private:
     void showPlainText(const QString &text);
