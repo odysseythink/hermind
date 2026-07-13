@@ -26,7 +26,6 @@ public:
 
 signals:
     void linkActivated(const QUrl &url);
-    void copyCodeRequested(const QString &code);
     void renderFailed(const QString &reason);
 
 private:

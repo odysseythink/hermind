@@ -87,13 +87,3 @@ img { max-width: 100%; }
     font-family: "Cascadia Code", "Fira Code", Consolas, monospace;
     text-transform: lowercase;
 }
-.copy-btn {
-    background: transparent;
-    border: 1px solid #30363d;
-    border-radius: 4px;
-    color: #8b949e;
-    font-size: 12px;
-    padding: 1px 8px;
-    cursor: pointer;
-}
-.copy-btn:hover { color: #e1e4e8; border-color: #8b949e; }

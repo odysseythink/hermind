@@ -69,7 +69,7 @@ void TestHtmlGenerator::codeBlockPostProcessing()
     const QString page = HtmlGenerator::generate(*doc, HtmlGenerationOptions());
     QVERIFY(page.contains(QStringLiteral("code-block")));
     QVERIFY(page.contains(QStringLiteral("code-header")));
-    QVERIFY(page.contains(QStringLiteral("copy-btn")));
+    QVERIFY(!page.contains(QStringLiteral("copy-btn")));
     QVERIFY(page.contains(QStringLiteral("int main()")));
 }
 

@@ -10,7 +10,6 @@ class IFormulaRenderer;
 struct HtmlGenerationOptions {
     bool darkMode = true;
     bool enableRawHtml = false;
-    QString codeBlockCopyButtonText = "Copy";
     QString highlightTheme = "github-dark";
     QString katexCssPath = ":/katex/katex.min.css";
     ISyntaxHighlighter *highlighter = nullptr; // non-owning; null = no highlighting

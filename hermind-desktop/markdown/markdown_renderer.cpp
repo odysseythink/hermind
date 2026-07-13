@@ -14,6 +14,11 @@
 MarkdownRenderer::MarkdownRenderer(QObject *parent)
     : QObject(parent)
     , m_parser(std::make_unique<QtBuiltinParser>())
+    // Deliberate degradation (M11): QTextBrowser cannot run JavaScript, so
+    // full syntax highlighting / KaTeX typesetting is impossible without a
+    // JS-capable view. The Null* implementations escape and wrap content so
+    // code and latex remain readable; swap in real implementations here if a
+    // QWebEngine-based view is ever adopted.
     , m_highlighter(std::make_unique<NullSyntaxHighlighter>())
     , m_formulaRenderer(std::make_unique<NullFormulaRenderer>())
 {

@@ -83,7 +83,7 @@ void TestSyntaxHighlighter::generator_usesHighlighter()
     const QString page = HtmlGenerator::generate(*doc, options);
     QVERIFY(page.contains(QStringLiteral("language-cpp")));
     QVERIFY(page.contains(QStringLiteral("code-block")));
-    QVERIFY(page.contains(QStringLiteral("copy-btn")));
+    QVERIFY(!page.contains(QStringLiteral("copy-btn")));
     QVERIFY(page.contains(QStringLiteral("int main()")));
 
     // Must survive the sanitizer without truncation (strip the DOCTYPE first,

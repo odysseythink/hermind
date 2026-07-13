@@ -56,7 +56,6 @@ QString wrapCodeBlocks(const QString &bodyHtml, const HtmlGenerationOptions &opt
 
     QString out;
     int last = 0;
-    int codeId = 0;
     QRegularExpressionMatch m;
     int pos = bodyHtml.indexOf(blockRe, last, &m);
     while (pos != -1) {
@@ -68,7 +67,8 @@ QString wrapCodeBlocks(const QString &bodyHtml, const HtmlGenerationOptions &opt
 
         // When a highlighter is configured, its output replaces the inner
         // body of the <pre> block (including any <code> wrapper); the outer
-        // code-block/code-header/copy-btn structure is preserved.
+        // code-block/code-header structure is preserved. QTextBrowser cannot
+        // run scripts, so no copy button is emitted in the HTML.
         QString highlighted;
         if (options.highlighter)
             highlighted = options.highlighter->highlight(unescapeHtml(content), lang, options.darkMode);
@@ -76,11 +76,9 @@ QString wrapCodeBlocks(const QString &bodyHtml, const HtmlGenerationOptions &opt
         out += QStringLiteral("<div class=\"code-block\">"
                               "<div class=\"code-header\">"
                               "<span class=\"code-lang\">%1</span>"
-                              "<button class=\"copy-btn\" data-code-id=\"%2\">%3</button>"
                               "</div>"
-                              "<pre%4>")
-                   .arg(lang.toHtmlEscaped(), QString::number(codeId++),
-                        options.codeBlockCopyButtonText.toHtmlEscaped(), preAttrs);
+                              "<pre%2>")
+                   .arg(lang.toHtmlEscaped(), preAttrs);
         if (!highlighted.isEmpty())
             out += highlighted;
         else if (!codeAttrs.isEmpty())
