@@ -33,6 +33,8 @@ static const QVector<LlmProviderInfo> &providerList()
         { QStringLiteral("xai"), QStringLiteral("xAI"),
           QStringLiteral("xAI Grok API."), true,
           { QStringLiteral("grok-beta") } },
+        { QStringLiteral("anythingllm-router"), QStringLiteral("Model Router"),
+          QStringLiteral("Route requests through a configured model router."), false },
     };
     return list;
 }

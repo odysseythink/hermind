@@ -95,6 +95,8 @@ public:
                                                            const ApiError &error)>;
     using PromptVariablesCallback = std::function<void(const QJsonArray &variables,
                                                        const ApiError &error)>;
+    using ModelRoutersCallback = std::function<void(const QJsonArray &routers,
+                                                    const ApiError &error)>;
     using UsersCallback = std::function<void(const QVector<HermindUser> &users,
                                              const ApiError &error)>;
     using WorkspaceUsersCallback = std::function<void(const QVector<HermindWorkspaceUser> &users,
@@ -179,6 +181,7 @@ public:
     void updateSystemPreferences(const QJsonObject &prefs, OperationCallback callback);
     void defaultSystemPrompt(DefaultSystemPromptCallback callback);
     void promptVariables(PromptVariablesCallback callback);
+    void modelRouters(ModelRoutersCallback callback);
 
     void listUsers(UsersCallback callback);
     void listWorkspaceUsers(int workspaceId, WorkspaceUsersCallback callback);

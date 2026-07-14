@@ -709,6 +709,19 @@ void HermindApiClient::promptVariables(PromptVariablesCallback callback)
         });
 }
 
+void HermindApiClient::modelRouters(ModelRoutersCallback callback)
+{
+    get(QStringLiteral("/model-routers"), QUrlQuery(),
+        [callback](const ApiResponse &resp) {
+            if (!resp.isSuccess()) {
+                callback(QJsonArray(), resp.error());
+                return;
+            }
+            callback(resp.body().object().value(QStringLiteral("routers")).toArray(),
+                     ApiError());
+        });
+}
+
 void HermindApiClient::listUsers(UsersCallback callback)
 {
     get(QStringLiteral("/admin/users"), QUrlQuery(),

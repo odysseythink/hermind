@@ -10,10 +10,12 @@
 #include <QComboBox>
 #include <QDoubleSpinBox>
 #include <QHBoxLayout>
+#include <QJsonArray>
 #include <QLabel>
 #include <QLineEdit>
 #include <QMessageBox>
 #include <QPushButton>
+#include <QSignalBlocker>
 #include <QSpinBox>
 #include <QTextEdit>
 #include <QVBoxLayout>
@@ -330,6 +332,34 @@ void ChatSettingsTab::buildUi()
     modelRow->setControl(modelStack);
     rootLayout->addWidget(modelRow);
 
+    // Router selection (anythingllm-router provider)
+    m_routerCombo = new QComboBox(this);
+    m_routerCombo->setObjectName(QStringLiteral("routerCombo"));
+    connect(m_routerCombo, QOverload<int>::of(&QComboBox::currentIndexChanged),
+            this, &ChatSettingsTab::onFieldEdited);
+
+    m_routerEmptyLabel = new QLabel(
+        tr("No model routers are configured. Create one in the model router settings first."),
+        this);
+    m_routerEmptyLabel->setObjectName(QStringLiteral("routerEmptyLabel"));
+    m_routerEmptyLabel->setWordWrap(true);
+    m_routerEmptyLabel->setVisible(false);
+
+    auto *routerControl = new QWidget(this);
+    auto *routerControlLayout = new QVBoxLayout(routerControl);
+    routerControlLayout->setContentsMargins(0, 0, 0, 0);
+    routerControlLayout->addWidget(m_routerCombo);
+    routerControlLayout->addWidget(m_routerEmptyLabel);
+
+    auto *routerSettingRow = new SettingRow(this);
+    routerSettingRow->setObjectName(QStringLiteral("routerSelectionRow"));
+    routerSettingRow->setTitle(tr("Model Router"));
+    routerSettingRow->setDescription(tr("Select the model router used for this workspace."));
+    routerSettingRow->setControl(routerControl);
+    m_routerRow = routerSettingRow;
+    m_routerRow->setVisible(false);
+    rootLayout->addWidget(m_routerRow);
+
     // Mode
     m_modeGroup = new QButtonGroup(this);
     m_modeGroup->setExclusive(true);
@@ -431,6 +461,7 @@ void ChatSettingsTab::setLoading(bool loading)
     m_providerCombo->setEnabled(!loading);
     m_modelCombo->setEnabled(!loading);
     m_modelLineEdit->setEnabled(!loading);
+    m_routerCombo->setEnabled(!loading);
     for (QAbstractButton *btn : m_modeGroup->buttons())
         btn->setEnabled(!loading);
     m_historySpin->setEnabled(!loading);
@@ -451,9 +482,62 @@ void ChatSettingsTab::loadCustomModels(const QString &provider)
         });
 }
 
+void ChatSettingsTab::loadModelRouters()
+{
+    m_routerCombo->clear();
+    m_routerCombo->setVisible(false);
+    m_routerEmptyLabel->setVisible(false);
+
+    if (!m_apiClient)
+        return;
+
+    m_apiClient->modelRouters(
+        [this](const QJsonArray &routers, const ApiError &error) {
+            onRoutersLoaded(routers, error);
+        });
+}
+
+void ChatSettingsTab::onRoutersLoaded(const QJsonArray &routers,
+                                      const ApiError &error)
+{
+    // Ignore stale responses if the provider changed in the meantime.
+    if (currentProvider() != QStringLiteral("anythingllm-router"))
+        return;
+
+    {
+        const QSignalBlocker blocker(m_routerCombo);
+        m_routerCombo->clear();
+        if (error.isEmpty()) {
+            for (const QJsonValue &v : routers) {
+                const QJsonObject router = v.toObject();
+                const QString id = router.value(QStringLiteral("id")).toString();
+                QString label = router.value(QStringLiteral("name")).toString();
+                const QString desc = router.value(QStringLiteral("description")).toString();
+                if (!desc.isEmpty())
+                    label += QStringLiteral(" — ") + desc;
+                m_routerCombo->addItem(label, id);
+            }
+        }
+    }
+
+    const bool hasRouters = m_routerCombo->count() > 0;
+    m_routerCombo->setVisible(hasRouters);
+    m_routerEmptyLabel->setVisible(!hasRouters);
+}
+
 void ChatSettingsTab::updateModelSelector()
 {
     const QString provider = currentProvider();
+    const bool isRouter = provider == QStringLiteral("anythingllm-router");
+
+    m_routerRow->setVisible(isRouter);
+    if (isRouter) {
+        m_modelCombo->setVisible(false);
+        m_modelLineEdit->setVisible(false);
+        loadModelRouters();
+        return;
+    }
+
     const bool manual = LlmModelSelector::isManualModelInput(provider);
     const bool supports = LlmModelSelector::supportsModelSelection(provider);
 
@@ -491,6 +575,12 @@ QJsonObject ChatSettingsTab::collectFields() const
     if (!model.isEmpty())
         body.insert(QStringLiteral("chatModel"), model);
 
+    if (provider == QStringLiteral("anythingllm-router")) {
+        const QString routerId = m_routerCombo->currentData().toString();
+        if (!routerId.isEmpty())
+            body.insert(QStringLiteral("router_id"), routerId);
+    }
+
     body.insert(QStringLiteral("chatMode"), m_modeGroup->checkedButton()
                 ? m_modeGroup->checkedButton()->property("modeId").toString()
                 : QStringLiteral("chat"));
@@ -509,7 +599,8 @@ QString ChatSettingsTab::currentProvider() const
 QString ChatSettingsTab::currentModel() const
 {
     const QString provider = currentProvider();
-    if (provider == QStringLiteral("default"))
+    if (provider == QStringLiteral("default")
+        || provider == QStringLiteral("anythingllm-router"))
         return QString();
     if (LlmModelSelector::isManualModelInput(provider))
         return m_modelLineEdit->text().trimmed();

@@ -43,6 +43,7 @@ private slots:
     void updateSystemPreferences();
     void defaultSystemPrompt();
     void promptVariables();
+    void modelRouters();
     void listUsers();
     void listWorkspaceUsers();
     void updateWorkspaceUsers();
@@ -991,6 +992,26 @@ void TestApiClient::promptVariables()
     m_client->promptVariables([&](const QJsonArray &vars, const ApiError &) { done = true; result = vars; });
     QTRY_VERIFY_WITH_TIMEOUT(done, 5000);
     QCOMPARE(result.size(), 1);
+}
+
+void TestApiClient::modelRouters()
+{
+    bool done = false;
+    QJsonArray result;
+    m_server->setHandler([](const QString &, const QString &path,
+                            const QHash<QString, QString> &, const QByteArray &) {
+        if (path == QStringLiteral("/api/model-routers"))
+            return QByteArray(R"({"routers":[{"id":"r1","name":"Router A"}]})");
+        return QByteArray("{}");
+    });
+    m_client->modelRouters([&](const QJsonArray &routers, const ApiError &) {
+        done = true;
+        result = routers;
+    });
+    QTRY_VERIFY_WITH_TIMEOUT(done, 5000);
+    QCOMPARE(result.size(), 1);
+    QCOMPARE(result.first().toObject().value(QStringLiteral("id")).toString(),
+             QStringLiteral("r1"));
 }
 
 void TestApiClient::listUsers()

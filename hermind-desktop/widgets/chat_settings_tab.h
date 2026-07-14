@@ -10,6 +10,7 @@ class HermindApiClient;
 class QButtonGroup;
 class QComboBox;
 class QDoubleSpinBox;
+class QLabel;
 class QLineEdit;
 class QPushButton;
 class QSpinBox;
@@ -39,6 +40,8 @@ private slots:
                                const ApiError &error);
     void onCustomModelsLoaded(const QStringList &models,
                               const ApiError &error);
+    void onRoutersLoaded(const QJsonArray &routers,
+                         const ApiError &error);
     void onWorkspaceUpdated(const HermindWorkspace &workspace,
                             const QString &message,
                             const ApiError &error);
@@ -55,6 +58,7 @@ private:
     void setLoading(bool loading);
     void loadWorkspace();
     void loadCustomModels(const QString &provider);
+    void loadModelRouters();
     void updateModelSelector();
     void updateHasChanges();
     QJsonObject collectFields() const;
@@ -73,6 +77,9 @@ private:
     QComboBox *m_providerCombo = nullptr;
     QComboBox *m_modelCombo = nullptr;
     QLineEdit *m_modelLineEdit = nullptr;
+    QWidget *m_routerRow = nullptr;
+    QComboBox *m_routerCombo = nullptr;
+    QLabel *m_routerEmptyLabel = nullptr;
     QButtonGroup *m_modeGroup = nullptr;
     QSpinBox *m_historySpin = nullptr;
     QDoubleSpinBox *m_tempSpin = nullptr;

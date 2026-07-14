@@ -97,6 +97,7 @@ run_test widgets tool_approval_dialog_test.pro tst_tool_approval_dialog
 run_test widgets sources_sidebar_test.pro tst_sources_sidebar
 run_test widgets memories_sidebar_test.pro tst_memories_sidebar
 run_test widgets members_tab_test.pro tst_members_tab
+run_test widgets chat_settings_tab_test.pro tst_chat_settings_tab
 run_test widgets suggested_messages_test.pro tst_suggested_messages
 run_test widgets default_chat_widget_test.pro tst_default_chat_widget
 run_test widgets chat_container_widget_test.pro tst_chat_container_widget
