@@ -14,6 +14,7 @@
 #include "llm_provider_info.h"
 #include "workspace_settings_tab.h"
 #include "suggested_messages_editor.h"
+#include "ai_provider_settings_tab.h"
 
 class TestWidgets : public QObject
 {
@@ -39,6 +40,11 @@ private slots:
     void workspaceSettingsTabs_indexOfInvalidReturnsNegativeOne();
     void workspaceSettingsTabs_titleOfFindsTitle();
     void suggestedMessagesEditor_setMessagesPopulatesRows();
+    void aiProviderSettingsTabs_all_hasSevenTabs();
+    void aiProviderSettingsTabs_orderMatchesWebSidebar();
+    void aiProviderSettingsTabs_indexOfFindsTab();
+    void aiProviderSettingsTabs_indexOfInvalidReturnsNegativeOne();
+    void aiProviderSettingsTabs_titleOfFindsTitle();
     void suggestedMessagesEditor_cannotExceedFourMessages();
     void suggestedMessagesEditor_removeMessageReducesCount();
     void suggestedMessagesEditor_validMessagesFiltersEmpty();
@@ -161,6 +167,39 @@ void TestWidgets::workspaceSettingsTabs_titleOfFindsTitle()
 {
     QVERIFY(WorkspaceSettingsTabs::titleOf(QStringLiteral("chat")).contains(
                 QStringLiteral("Chat"), Qt::CaseInsensitive));
+}
+
+void TestWidgets::aiProviderSettingsTabs_all_hasSevenTabs()
+{
+    QCOMPARE(AiProviderSettingsTabs::all().size(), 7);
+}
+
+void TestWidgets::aiProviderSettingsTabs_orderMatchesWebSidebar()
+{
+    const auto &tabs = AiProviderSettingsTabs::all();
+    QCOMPARE(tabs.at(0).id, QStringLiteral("llm-preference"));
+    QCOMPARE(tabs.at(1).id, QStringLiteral("vector-database"));
+    QCOMPARE(tabs.at(2).id, QStringLiteral("embedding-preference"));
+    QCOMPARE(tabs.at(3).id, QStringLiteral("text-splitter-preference"));
+    QCOMPARE(tabs.at(4).id, QStringLiteral("audio-preference"));
+    QCOMPARE(tabs.at(5).id, QStringLiteral("transcription-preference"));
+    QCOMPARE(tabs.at(6).id, QStringLiteral("model-routers"));
+}
+
+void TestWidgets::aiProviderSettingsTabs_indexOfFindsTab()
+{
+    QCOMPARE(AiProviderSettingsTabs::indexOf(QStringLiteral("audio-preference")), 4);
+}
+
+void TestWidgets::aiProviderSettingsTabs_indexOfInvalidReturnsNegativeOne()
+{
+    QCOMPARE(AiProviderSettingsTabs::indexOf(QStringLiteral("nope")), -1);
+}
+
+void TestWidgets::aiProviderSettingsTabs_titleOfFindsTitle()
+{
+    QVERIFY(!AiProviderSettingsTabs::titleOf(QStringLiteral("llm-preference")).isEmpty());
+    QVERIFY(AiProviderSettingsTabs::titleOf(QStringLiteral("nope")).isEmpty());
 }
 
 void TestWidgets::suggestedMessagesEditor_setMessagesPopulatesRows()

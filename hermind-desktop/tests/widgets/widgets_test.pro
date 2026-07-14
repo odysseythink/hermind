@@ -28,6 +28,7 @@ SOURCES += \
     ../../widgets/agent_config_state.cpp \
     ../../widgets/agent_config_tab.cpp \
     ../../models/hermind_workspace.cpp \
+    ../../widgets/ai_provider_settings_tab.cpp \
     ../../api/api_response.cpp \
     ../../api/hermind_api_client.cpp \
     ../../models/hermind_user.cpp \
@@ -65,6 +66,7 @@ HEADERS += \
     ../../widgets/agent_config_state.h \
     ../../widgets/agent_config_tab.h \
     ../../models/hermind_workspace.h \
+    ../../widgets/ai_provider_settings_tab.h \
     ../../api/api_response.h \
     ../../api/hermind_api_client.h \
     ../../models/hermind_user.h \
