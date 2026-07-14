@@ -52,6 +52,8 @@ SOURCES += \
     ../../widgets/llm_model_selector.cpp \
     ../../widgets/workspace_settings_tab.cpp \
     ../../widgets/workspace_settings_widget.cpp \
+    ../../widgets/ai_provider_settings_widget.cpp \
+    ../../widgets/ai_provider_settings_tab.cpp \
     ../../widgets/suggested_messages_editor.cpp \
     ../../widgets/general_appearance_tab.cpp \
     ../../widgets/chat_settings_tab.cpp \
@@ -140,6 +142,8 @@ HEADERS += \
     ../../widgets/llm_model_selector.h \
     ../../widgets/workspace_settings_tab.h \
     ../../widgets/workspace_settings_widget.h \
+    ../../widgets/ai_provider_settings_widget.h \
+    ../../widgets/ai_provider_settings_tab.h \
     ../../widgets/suggested_messages_editor.h \
     ../../widgets/general_appearance_tab.h \
     ../../widgets/chat_settings_tab.h \

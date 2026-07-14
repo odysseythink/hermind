@@ -6,6 +6,7 @@
 #include "navigation_manager.h"
 #include "auth/auth_manager.h"
 #include "workspace_settings_widget.h"
+#include "ai_provider_settings_widget.h"
 #include "general_appearance_tab.h"
 #include "chat_settings_tab.h"
 #include "vector_database_tab.h"
@@ -45,6 +46,15 @@ MainWindow::MainWindow(QWidget *parent)
             NavigationManager::instance().goBack();
         });
     }
+
+    auto *aiProviderWidget = new AiProviderSettingsWidget(
+        AuthManager::instance().apiClient(), this);
+    aiProviderWidget->setObjectName(QStringLiteral("aiProviderSettingsWidget"));
+    ui->stackedWidget->addWidget(aiProviderWidget);
+    connect(aiProviderWidget, &AiProviderSettingsWidget::returnClicked,
+            this, []() {
+        NavigationManager::instance().goBack();
+    });
 
     auto *workspaceSettingsWidget = new WorkspaceSettingsWidget(
         AuthManager::instance().apiClient(), this);
@@ -138,6 +148,19 @@ void MainWindow::onCurrentRouteChanged(const NavigationRoute &route)
     }
 
     ui->stackedWidget->setCurrentIndex(index);
+
+    if (route.page == NavigationPage::GeneralSettings) {
+        const QString prefix = QStringLiteral("settings/ai-provider/");
+        if (route.settingsPath.startsWith(prefix)) {
+            auto *aiWidget = findChild<AiProviderSettingsWidget *>(
+                QStringLiteral("aiProviderSettingsWidget"));
+            if (aiWidget) {
+                ui->stackedWidget->setCurrentWidget(aiWidget);
+                aiWidget->setActiveTab(route.settingsPath.mid(prefix.size()));
+            }
+        }
+        return;
+    }
 
     if (route.page == NavigationPage::WorkspaceSettings) {
         auto *w = qobject_cast<WorkspaceSettingsWidget *>(

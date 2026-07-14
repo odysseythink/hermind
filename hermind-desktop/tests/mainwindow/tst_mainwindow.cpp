@@ -16,6 +16,8 @@
 #include "vector_database_tab.h"
 #include "members_tab.h"
 #include "widgets/agent_config_tab.h"
+#include "ai_provider_settings_widget.h"
+#include "main_setting_widget.h"
 
 class TestMainWindow : public QObject
 {
@@ -38,6 +40,9 @@ private slots:
     void workspaceUpdatedRefreshesSettingsHeader();
     void agentSkillsRequestedNavigatesToGeneralSettings();
     void agentConfigTabIsRegisteredForAgentConfigRoute();
+    void aiProviderRouteShowsAiProviderFrame();
+    void bareGeneralSettingsRouteShowsLegacyPage();
+    void aiProviderReturnButtonGoesBack();
 };
 
 void TestMainWindow::init()
@@ -98,8 +103,9 @@ void TestMainWindow::workspaceSettingsPageIsReachable()
     route.settingsPath = QStringLiteral("general-appearance");
     NavigationManager::instance().navigateTo(route);
 
-    // MainChatWidget=0, MainSettingWidget=1, WorkspaceSettingsWidget=2
-    QCOMPARE(stack->currentIndex(), 2);
+    // MainChatWidget=0, MainSettingWidget=1, AiProviderSettingsWidget=2,
+    // WorkspaceSettingsWidget=3
+    QCOMPARE(stack->currentIndex(), 3);
 }
 
 void TestMainWindow::workspaceSettingsPageRestoresTabFromRoute()
@@ -259,7 +265,7 @@ void TestMainWindow::workspaceDeletedNavigatesToDefaultChat()
     route.workspaceSlug = QStringLiteral("acme");
     route.settingsPath = QStringLiteral("general-appearance");
     NavigationManager::instance().navigateTo(route);
-    QCOMPARE(stack->currentIndex(), 2);
+    QCOMPARE(stack->currentIndex(), 3);
 
     auto *settingsWidget = w.findChild<WorkspaceSettingsWidget *>();
     QVERIFY(settingsWidget);
@@ -344,6 +350,61 @@ void TestMainWindow::agentConfigTabIsRegisteredForAgentConfigRoute()
     auto *agentTab = qobject_cast<AgentConfigTab *>(stack->currentWidget());
     QVERIFY(agentTab);
     QCOMPARE(agentTab->workspaceSlug(), QStringLiteral("acme"));
+}
+
+void TestMainWindow::aiProviderRouteShowsAiProviderFrame()
+{
+    MainWindow w;
+    auto *stack = w.findChild<QStackedWidget *>();
+    QVERIFY(stack);
+
+    NavigationRoute route;
+    route.page = NavigationPage::GeneralSettings;
+    route.settingsPath = QStringLiteral("settings/ai-provider/audio-preference");
+    NavigationManager::instance().navigateTo(route);
+
+    auto *aiWidget = w.findChild<AiProviderSettingsWidget *>(
+        QStringLiteral("aiProviderSettingsWidget"));
+    QVERIFY(aiWidget);
+    QCOMPARE(stack->currentWidget(), static_cast<QWidget *>(aiWidget));
+    QCOMPARE(aiWidget->currentTabId(), QStringLiteral("audio-preference"));
+}
+
+void TestMainWindow::bareGeneralSettingsRouteShowsLegacyPage()
+{
+    MainWindow w;
+    auto *stack = w.findChild<QStackedWidget *>();
+    QVERIFY(stack);
+
+    NavigationRoute route;
+    route.page = NavigationPage::GeneralSettings;
+    NavigationManager::instance().navigateTo(route);
+
+    auto *legacy = w.findChild<MainSettingWidget *>();
+    QVERIFY(legacy);
+    QCOMPARE(stack->currentWidget(), static_cast<QWidget *>(legacy));
+}
+
+void TestMainWindow::aiProviderReturnButtonGoesBack()
+{
+    MainWindow w;
+
+    NavigationRoute aiRoute;
+    aiRoute.page = NavigationPage::GeneralSettings;
+    aiRoute.settingsPath = QStringLiteral("settings/ai-provider/llm-preference");
+    NavigationManager::instance().navigateTo(aiRoute);
+
+    auto *aiWidget = w.findChild<AiProviderSettingsWidget *>(
+        QStringLiteral("aiProviderSettingsWidget"));
+    QVERIFY(aiWidget);
+    auto *returnButton = aiWidget->findChild<QToolButton *>(
+        QStringLiteral("returnButton"));
+    QVERIFY(returnButton);
+
+    QTest::mouseClick(returnButton, Qt::LeftButton);
+
+    QCOMPARE(NavigationManager::instance().currentPage(),
+             NavigationPage::DefaultChat);
 }
 
 QTEST_MAIN(TestMainWindow)
