@@ -31,6 +31,8 @@ private slots:
                            const ApiError &error);
     void onSuggestedMessagesLoaded(const QStringList &messages,
                                    const ApiError &error);
+    void onSystemKeysLoaded(const QJsonObject &settings,
+                            const ApiError &error);
     void onWorkspaceUpdated(const HermindWorkspace &workspace,
                             const QString &message,
                             const ApiError &error);
@@ -51,6 +53,7 @@ private:
     QLineEdit *m_nameEdit = nullptr;
     QPushButton *m_updateNameButton = nullptr;
     SuggestedMessagesEditor *m_suggestedEditor = nullptr;
+    QWidget *m_deleteRow = nullptr;
     QPushButton *m_deleteButton = nullptr;
 };
 

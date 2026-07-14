@@ -61,6 +61,13 @@ void GeneralAppearanceTab::onWorkspaceLoaded(const HermindWorkspace &workspace,
     m_updateNameButton->setEnabled(true);
     m_deleteButton->setEnabled(true);
 
+    // The workspace deletion protection flag lives in the system keys
+    // (same source the web UI reads via System.keys()).
+    m_apiClient->systemKeys(
+        [this](const QJsonObject &settings, const ApiError &error) {
+            onSystemKeysLoaded(settings, error);
+        });
+
     m_apiClient->getSuggestedMessages(m_workspaceSlug,
         [this](const QStringList &messages, const ApiError &error) {
             onSuggestedMessagesLoaded(messages, error);
@@ -75,6 +82,21 @@ void GeneralAppearanceTab::onSuggestedMessagesLoaded(const QStringList &messages
         return;
     }
     m_suggestedEditor->setMessages(messages);
+}
+
+void GeneralAppearanceTab::onSystemKeysLoaded(const QJsonObject &settings,
+                                              const ApiError &error)
+{
+    if (!error.isEmpty())
+        return;
+
+    // Hide the delete row when the server protects workspaces from
+    // deletion (web: DeleteWorkspace visible={!deletionProtected}).
+    const QJsonValue flag = settings.value(QStringLiteral("WorkspaceDeletionProtection"));
+    const bool deletionProtected =
+        flag.toBool() || flag.toString().compare(QStringLiteral("true"), Qt::CaseInsensitive) == 0;
+    if (m_deleteRow)
+        m_deleteRow->setVisible(!deletionProtected);
 }
 
 void GeneralAppearanceTab::onWorkspaceUpdated(const HermindWorkspace &workspace,
@@ -219,6 +241,7 @@ void GeneralAppearanceTab::buildUi()
 
     // Delete workspace
     auto *deleteRow = new SettingRow(this);
+    deleteRow->setObjectName(QStringLiteral("deleteWorkspaceRow"));
     deleteRow->setTitle(tr("Delete workspace"));
     deleteRow->setDescription(tr("Permanently delete this workspace and all its data."));
 
@@ -228,6 +251,7 @@ void GeneralAppearanceTab::buildUi()
     connect(m_deleteButton, &QPushButton::clicked,
             this, &GeneralAppearanceTab::onDeleteClicked);
     deleteRow->setControl(m_deleteButton);
+    m_deleteRow = deleteRow;
     rootLayout->addWidget(deleteRow);
 
     rootLayout->addStretch();
