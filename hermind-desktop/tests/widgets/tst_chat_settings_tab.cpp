@@ -2,11 +2,13 @@
 #include <QTcpServer>
 #include <QTcpSocket>
 #include <QComboBox>
+#include <QDialog>
 #include <QJsonDocument>
 #include <QJsonObject>
 #include <QLabel>
 #include <QLineEdit>
 #include <QPushButton>
+#include <QTextEdit>
 
 #include "chat_settings_tab.h"
 #include "hermind_api_client.h"
@@ -17,6 +19,8 @@ class MockChatSettingsServer : public QTcpServer
     Q_OBJECT
 public:
     QByteArray routersBody = R"({"routers":[]})";
+    QByteArray variablesBody = R"({"variables":[]})";
+    QByteArray historyBody = R"({"history":[]})";
     QByteArray lastUpdateBody;
     int updateRequests = 0;
 
@@ -74,6 +78,12 @@ private:
         } else if (method == QLatin1String("GET")
                    && path == QLatin1String("/api/model-routers")) {
             payload = routersBody;
+        } else if (method == QLatin1String("GET")
+                   && path == QLatin1String("/api/system/prompt-variables")) {
+            payload = variablesBody;
+        } else if (method == QLatin1String("GET")
+                   && path == QLatin1String("/api/workspace/acme/prompt-history")) {
+            payload = historyBody;
         } else if (method == QLatin1String("POST")
                    && path == QLatin1String("/api/workspace/acme/update")) {
             ++updateRequests;
@@ -100,6 +110,10 @@ class TestChatSettingsTab : public QObject
 private slots:
     void routerProviderShowsEmptyStateWhenNoRouters();
     void routerSelectionPopulatesAndSavesRouterId();
+    void modeExplanationFollowsSelectedChatMode();
+    void promptVariablesHintShowsAvailableVariables();
+    void promptVariablesHintHiddenWhenNoVariables();
+    void promptHistoryDialogRestoresPromptIntoEditor();
 
 private:
     void loadTab(ChatSettingsTab &tab);
@@ -183,6 +197,109 @@ void TestChatSettingsTab::routerSelectionPopulatesAndSavesRouterId()
     QCOMPARE(sent.value(QStringLiteral("router_id")).toString(),
              QStringLiteral("r1"));
     QVERIFY(!sent.contains(QStringLiteral("chatModel")));
+}
+
+void TestChatSettingsTab::modeExplanationFollowsSelectedChatMode()
+{
+    MockChatSettingsServer server;
+    QVERIFY(server.start());
+
+    HermindApiClient client;
+    client.setBaseUrl(QUrl(QStringLiteral("http://127.0.0.1:%1/api").arg(server.port())));
+
+    ChatSettingsTab tab(&client);
+    loadTab(tab);
+
+    auto *explanation = tab.findChild<QLabel *>(QStringLiteral("chatModeExplanation"));
+    QVERIFY2(explanation, "chat mode explanation label must exist");
+
+    // Workspace loads with chatMode "chat".
+    QVERIFY(explanation->text().contains(QStringLiteral("general knowledge")));
+
+    auto *queryBtn = tab.findChild<QPushButton *>(QStringLiteral("modeButton_query"));
+    QVERIFY(queryBtn);
+    queryBtn->click();
+    QVERIFY(explanation->text().contains(QStringLiteral("only if document context")));
+
+    auto *agentBtn = tab.findChild<QPushButton *>(QStringLiteral("modeButton_automatic"));
+    QVERIFY(agentBtn);
+    agentBtn->click();
+    QVERIFY(explanation->text().contains(QStringLiteral("automatically use tools")));
+}
+
+void TestChatSettingsTab::promptVariablesHintShowsAvailableVariables()
+{
+    MockChatSettingsServer server;
+    server.variablesBody = R"({"variables":[{"key":"foo"},{"key":"bar"},{"key":"baz"},{"key":"qux"}]})";
+    QVERIFY(server.start());
+
+    HermindApiClient client;
+    client.setBaseUrl(QUrl(QStringLiteral("http://127.0.0.1:%1/api").arg(server.port())));
+
+    ChatSettingsTab tab(&client);
+    loadTab(tab);
+
+    auto *hint = tab.findChild<QLabel *>(QStringLiteral("promptVariablesHint"));
+    QVERIFY2(hint, "prompt variables hint label must exist");
+    QTRY_VERIFY_WITH_TIMEOUT(!hint->isHidden(), 5000);
+    QVERIFY(hint->text().contains(QStringLiteral("{foo}")));
+    QVERIFY(hint->text().contains(QStringLiteral("{bar}")));
+    QVERIFY(hint->text().contains(QStringLiteral("{baz}")));
+    QVERIFY(hint->text().contains(QStringLiteral("+1 more")));
+}
+
+void TestChatSettingsTab::promptVariablesHintHiddenWhenNoVariables()
+{
+    MockChatSettingsServer server;
+    server.variablesBody = R"({"variables":[]})";
+    QVERIFY(server.start());
+
+    HermindApiClient client;
+    client.setBaseUrl(QUrl(QStringLiteral("http://127.0.0.1:%1/api").arg(server.port())));
+
+    ChatSettingsTab tab(&client);
+    loadTab(tab);
+
+    auto *hint = tab.findChild<QLabel *>(QStringLiteral("promptVariablesHint"));
+    QVERIFY2(hint, "prompt variables hint label must exist");
+    // Give the variables request time to resolve; hint must stay hidden.
+    QTest::qWait(500);
+    QVERIFY(hint->isHidden());
+}
+
+void TestChatSettingsTab::promptHistoryDialogRestoresPromptIntoEditor()
+{
+    MockChatSettingsServer server;
+    server.historyBody = R"({"history":[{"id":1,"workspaceId":1,"prompt":"restored prompt text","modifiedAt":"2026-07-01T00:00:00Z"}]})";
+    QVERIFY(server.start());
+
+    HermindApiClient client;
+    client.setBaseUrl(QUrl(QStringLiteral("http://127.0.0.1:%1/api").arg(server.port())));
+
+    ChatSettingsTab tab(&client);
+    loadTab(tab);
+
+    auto *historyButton = tab.findChild<QPushButton *>(QStringLiteral("promptHistoryButton"));
+    QVERIFY2(historyButton, "prompt history button must exist");
+    historyButton->click();
+
+    QDialog *dialog = nullptr;
+    QTRY_VERIFY_WITH_TIMEOUT(
+        (dialog = tab.findChild<QDialog *>(QStringLiteral("promptHistoryDialog"))) != nullptr, 5000);
+
+    QPushButton *restoreButton = nullptr;
+    QTRY_VERIFY_WITH_TIMEOUT(
+        (restoreButton = dialog->findChild<QPushButton *>(QStringLiteral("restorePromptButton_1"))) != nullptr,
+        5000);
+    restoreButton->click();
+
+    auto *promptEdit = tab.findChild<QTextEdit *>(QStringLiteral("promptEdit"));
+    QVERIFY(promptEdit);
+    QCOMPARE(promptEdit->toPlainText(), QStringLiteral("restored prompt text"));
+
+    auto *saveButton = tab.findChild<QPushButton *>(QStringLiteral("updateWorkspaceButton"));
+    QVERIFY(saveButton);
+    QVERIFY(!saveButton->isHidden());
 }
 
 QTEST_MAIN(TestChatSettingsTab)

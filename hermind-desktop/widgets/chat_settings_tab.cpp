@@ -1,6 +1,7 @@
 #include "chat_settings_tab.h"
 #include "llm_model_selector.h"
 #include "llm_provider_info.h"
+#include "prompt_history_dialog.h"
 #include "setting_row.h"
 #include "theme_colors.h"
 #include "theme_manager.h"
@@ -86,6 +87,8 @@ void ChatSettingsTab::onWorkspaceLoaded(const HermindWorkspace &workspace,
         [this](const QJsonObject &settings, const ApiError &error) {
             onSystemKeysLoaded(settings, error);
         });
+
+    loadPromptVariables();
 }
 
 void ChatSettingsTab::onSystemKeysLoaded(const QJsonObject &settings,
@@ -193,8 +196,36 @@ void ChatSettingsTab::onProviderChanged(int)
 
 void ChatSettingsTab::onModeChanged()
 {
+    updateModeExplanation();
     m_hasChanges = true;
     updateHasChanges();
+}
+
+void ChatSettingsTab::updateModeExplanation()
+{
+    if (!m_modeExplanationLabel)
+        return;
+
+    const QString mode = m_modeGroup->checkedButton()
+        ? m_modeGroup->checkedButton()->property("modeId").toString()
+        : QStringLiteral("chat");
+
+    // Descriptions mirror the web ChatModeExplanation texts.
+    if (mode == QStringLiteral("automatic")) {
+        m_modeExplanationLabel->setText(tr(
+            "Agent mode: the LLM will automatically use tools if the model and provider "
+            "support native tool calling. If native tooling is not supported, you will "
+            "need to use the @agent command to use tools."));
+    } else if (mode == QStringLiteral("query")) {
+        m_modeExplanationLabel->setText(tr(
+            "Query mode: the LLM will provide answers only if document context is found. "
+            "You will need to use the @agent command to use tools."));
+    } else {
+        m_modeExplanationLabel->setText(tr(
+            "Chat mode: the LLM will provide answers with the LLM's general knowledge "
+            "and document context that is found. You will need to use the @agent command "
+            "to use tools."));
+    }
 }
 
 void ChatSettingsTab::onFieldEdited()
@@ -233,6 +264,19 @@ void ChatSettingsTab::onResetPromptClicked()
                 updateHasChanges();
             });
     }
+}
+
+void ChatSettingsTab::onPromptHistoryClicked()
+{
+    auto *dialog = new PromptHistoryDialog(m_apiClient, m_workspaceSlug, this);
+    dialog->setAttribute(Qt::WA_DeleteOnClose);
+    connect(dialog, &PromptHistoryDialog::promptSelected, this,
+            [this](const QString &prompt) {
+                m_promptEdit->setPlainText(prompt);
+                m_hasChanges = true;
+                updateHasChanges();
+            });
+    dialog->open();
 }
 
 void ChatSettingsTab::applyStyle()
@@ -379,11 +423,24 @@ void ChatSettingsTab::buildUi()
     }
     modeLayout->addStretch();
 
+    m_modeExplanationLabel = new QLabel(this);
+    m_modeExplanationLabel->setObjectName(QStringLiteral("chatModeExplanation"));
+    m_modeExplanationLabel->setWordWrap(true);
+
+    auto *modeControl = new QWidget(this);
+    auto *modeControlLayout = new QVBoxLayout(modeControl);
+    modeControlLayout->setContentsMargins(0, 0, 0, 0);
+    modeControlLayout->setSpacing(8);
+    modeControlLayout->addWidget(modeWidget);
+    modeControlLayout->addWidget(m_modeExplanationLabel);
+
     auto *modeRow = new SettingRow(this);
     modeRow->setTitle(tr("Chat Mode"));
     modeRow->setDescription(tr("Automatic: decide chat or query per message. Chat: conversational. Query: RAG-only."));
-    modeRow->setControl(modeWidget);
+    modeRow->setControl(modeControl);
     rootLayout->addWidget(modeRow);
+
+    updateModeExplanation();
 
     // History
     m_historySpin = new QSpinBox(this);
@@ -423,10 +480,21 @@ void ChatSettingsTab::buildUi()
     connect(m_promptEdit, &QTextEdit::textChanged,
             this, &ChatSettingsTab::onFieldEdited);
 
+    m_promptVariablesHint = new QLabel(this);
+    m_promptVariablesHint->setObjectName(QStringLiteral("promptVariablesHint"));
+    m_promptVariablesHint->setWordWrap(true);
+    m_promptVariablesHint->setStyleSheet(QStringLiteral("color: gray;"));
+    m_promptVariablesHint->hide();
+
     m_resetPromptButton = new QPushButton(tr("Restore to Default"), this);
     m_resetPromptButton->setObjectName(QStringLiteral("resetPromptButton"));
     connect(m_resetPromptButton, &QPushButton::clicked,
             this, &ChatSettingsTab::onResetPromptClicked);
+
+    m_promptHistoryButton = new QPushButton(tr("View History"), this);
+    m_promptHistoryButton->setObjectName(QStringLiteral("promptHistoryButton"));
+    connect(m_promptHistoryButton, &QPushButton::clicked,
+            this, &ChatSettingsTab::onPromptHistoryClicked);
 
     auto *promptRow = new SettingRow(this);
     promptRow->setTitle(tr("System Prompt"));
@@ -435,7 +503,12 @@ void ChatSettingsTab::buildUi()
     auto *promptControlLayout = new QVBoxLayout(promptControl);
     promptControlLayout->setContentsMargins(0, 0, 0, 0);
     promptControlLayout->addWidget(m_promptEdit);
-    promptControlLayout->addWidget(m_resetPromptButton, 0, Qt::AlignLeft);
+    promptControlLayout->addWidget(m_promptVariablesHint);
+    auto *promptButtonRow = new QHBoxLayout();
+    promptButtonRow->addWidget(m_resetPromptButton);
+    promptButtonRow->addWidget(m_promptHistoryButton);
+    promptButtonRow->addStretch();
+    promptControlLayout->addLayout(promptButtonRow);
     promptRow->setControl(promptControl);
     rootLayout->addWidget(promptRow);
 
@@ -523,6 +596,44 @@ void ChatSettingsTab::onRoutersLoaded(const QJsonArray &routers,
     const bool hasRouters = m_routerCombo->count() > 0;
     m_routerCombo->setVisible(hasRouters);
     m_routerEmptyLabel->setVisible(!hasRouters);
+}
+
+void ChatSettingsTab::loadPromptVariables()
+{
+    if (!m_apiClient)
+        return;
+
+    m_apiClient->promptVariables(
+        [this](const QJsonArray &variables, const ApiError &error) {
+            onPromptVariablesLoaded(variables, error);
+        });
+}
+
+void ChatSettingsTab::onPromptVariablesLoaded(const QJsonArray &variables,
+                                              const ApiError &error)
+{
+    if (!error.isEmpty() || variables.isEmpty()) {
+        m_promptVariablesHint->hide();
+        return;
+    }
+
+    QStringList names;
+    const int shown = qMin(3, variables.size());
+    for (int i = 0; i < shown; ++i) {
+        const QString key = variables.at(i).toObject().value(QStringLiteral("key")).toString();
+        if (!key.isEmpty())
+            names.append(QStringLiteral("{%1}").arg(key));
+    }
+    if (names.isEmpty()) {
+        m_promptVariablesHint->hide();
+        return;
+    }
+
+    QString text = tr("Available prompt variables: %1").arg(names.join(QStringLiteral(", ")));
+    if (variables.size() > shown)
+        text += tr(", +%1 more").arg(variables.size() - shown);
+    m_promptVariablesHint->setText(text);
+    m_promptVariablesHint->show();
 }
 
 void ChatSettingsTab::updateModelSelector()

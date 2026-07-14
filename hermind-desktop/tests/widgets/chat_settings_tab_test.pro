@@ -9,6 +9,7 @@ INCLUDEPATH += $$PWD/../../widgets $$PWD/../../api $$PWD/../../models $$PWD/../.
 SOURCES += \
     tst_chat_settings_tab.cpp \
     ../../widgets/chat_settings_tab.cpp \
+    ../../widgets/prompt_history_dialog.cpp \
     ../../widgets/setting_row.cpp \
     ../../widgets/llm_provider_info.cpp \
     ../../widgets/llm_model_selector.cpp \
@@ -31,6 +32,7 @@ SOURCES += \
 
 HEADERS += \
     ../../widgets/chat_settings_tab.h \
+    ../../widgets/prompt_history_dialog.h \
     ../../widgets/setting_row.h \
     ../../widgets/llm_provider_info.h \
     ../../widgets/llm_model_selector.h \

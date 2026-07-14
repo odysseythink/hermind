@@ -55,6 +55,7 @@ SOURCES += \
     ../../widgets/suggested_messages_editor.cpp \
     ../../widgets/general_appearance_tab.cpp \
     ../../widgets/chat_settings_tab.cpp \
+    ../../widgets/prompt_history_dialog.cpp \
     ../../widgets/vector_database_tab.cpp \
     ../../widgets/members_tab.cpp \
     ../../widgets/agent_config_state.cpp \
@@ -142,6 +143,7 @@ HEADERS += \
     ../../widgets/suggested_messages_editor.h \
     ../../widgets/general_appearance_tab.h \
     ../../widgets/chat_settings_tab.h \
+    ../../widgets/prompt_history_dialog.h \
     ../../widgets/vector_database_tab.h \
     ../../widgets/members_tab.h \
     ../../widgets/agent_config_state.h \

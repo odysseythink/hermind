@@ -44,6 +44,9 @@ private slots:
     void defaultSystemPrompt();
     void promptVariables();
     void modelRouters();
+    void promptHistory();
+    void deletePromptHistoryItem();
+    void clearPromptHistory();
     void listUsers();
     void listWorkspaceUsers();
     void updateWorkspaceUsers();
@@ -1012,6 +1015,75 @@ void TestApiClient::modelRouters()
     QCOMPARE(result.size(), 1);
     QCOMPARE(result.first().toObject().value(QStringLiteral("id")).toString(),
              QStringLiteral("r1"));
+}
+
+void TestApiClient::promptHistory()
+{
+    m_server->setHandler([](const QString &, const QString &path, const QHash<QString, QString> &, const QByteArray &) {
+        if (path == QStringLiteral("/api/workspace/acme/prompt-history")) {
+            return QByteArrayLiteral(
+                R"({"history":[{"id":1,"workspaceId":2,"prompt":"first prompt","modifiedAt":"2026-07-01T00:00:00Z"},
+{"id":2,"workspaceId":2,"prompt":"second prompt","modifiedAt":"2026-07-02T00:00:00Z"}]})");
+        }
+        return QByteArrayLiteral(R"({"error":"unexpected"})");
+    });
+
+    bool done = false;
+    m_client->promptHistory(QStringLiteral("acme"), [&done](const QJsonArray &history, const ApiError &error) {
+        QVERIFY2(error.isEmpty(), qPrintable(error.message()));
+        QCOMPARE(history.size(), 2);
+        QCOMPARE(history.first().toObject().value(QStringLiteral("id")).toInt(), 1);
+        QCOMPARE(history.first().toObject().value(QStringLiteral("prompt")).toString(),
+                 QStringLiteral("first prompt"));
+        done = true;
+    });
+    QTRY_VERIFY_WITH_TIMEOUT(done, 5000);
+}
+
+void TestApiClient::deletePromptHistoryItem()
+{
+    QString deletedPath;
+    m_server->setHandler([&deletedPath](const QString &method, const QString &path, const QHash<QString, QString> &, const QByteArray &) {
+        if (method == QStringLiteral("DELETE") && path.startsWith(QStringLiteral("/api/workspace/acme/prompt-history/"))) {
+            deletedPath = path;
+            return QByteArrayLiteral(R"({"success":true})");
+        }
+        return QByteArrayLiteral(R"({"error":"unexpected"})");
+    });
+
+    bool done = false;
+    m_client->deletePromptHistoryItem(QStringLiteral("acme"), 7,
+                                      [&done](bool ok, const QString &message, const ApiError &error) {
+        QVERIFY2(error.isEmpty(), qPrintable(error.message()));
+        QVERIFY(ok);
+        Q_UNUSED(message);
+        done = true;
+    });
+    QTRY_VERIFY_WITH_TIMEOUT(done, 5000);
+    QCOMPARE(deletedPath, QStringLiteral("/api/workspace/acme/prompt-history/7"));
+}
+
+void TestApiClient::clearPromptHistory()
+{
+    QString deletedPath;
+    m_server->setHandler([&deletedPath](const QString &method, const QString &path, const QHash<QString, QString> &, const QByteArray &) {
+        if (method == QStringLiteral("DELETE") && path == QStringLiteral("/api/workspace/acme/prompt-history")) {
+            deletedPath = path;
+            return QByteArrayLiteral(R"({"success":true})");
+        }
+        return QByteArrayLiteral(R"({"error":"unexpected"})");
+    });
+
+    bool done = false;
+    m_client->clearPromptHistory(QStringLiteral("acme"),
+                                 [&done](bool ok, const QString &message, const ApiError &error) {
+        QVERIFY2(error.isEmpty(), qPrintable(error.message()));
+        QVERIFY(ok);
+        Q_UNUSED(message);
+        done = true;
+    });
+    QTRY_VERIFY_WITH_TIMEOUT(done, 5000);
+    QCOMPARE(deletedPath, QStringLiteral("/api/workspace/acme/prompt-history"));
 }
 
 void TestApiClient::listUsers()

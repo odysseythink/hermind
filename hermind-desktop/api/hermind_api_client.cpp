@@ -709,6 +709,47 @@ void HermindApiClient::promptVariables(PromptVariablesCallback callback)
         });
 }
 
+void HermindApiClient::promptHistory(const QString &slug, PromptHistoryCallback callback)
+{
+    get(QStringLiteral("/workspace/") + slug + QStringLiteral("/prompt-history"), QUrlQuery(),
+        [callback](const ApiResponse &resp) {
+            if (!resp.isSuccess()) {
+                callback(QJsonArray(), resp.error());
+                return;
+            }
+            callback(resp.body().object().value(QStringLiteral("history")).toArray(), ApiError());
+        });
+}
+
+void HermindApiClient::deletePromptHistoryItem(const QString &slug, int id, OperationCallback callback)
+{
+    del(QStringLiteral("/workspace/") + slug + QStringLiteral("/prompt-history/") + QString::number(id),
+        QJsonObject(),
+        [callback](const ApiResponse &resp) {
+            if (!resp.isSuccess()) {
+                callback(false, QString(), resp.error());
+                return;
+            }
+            const QJsonObject obj = resp.body().object();
+            callback(obj.value(QStringLiteral("success")).toBool(),
+                     obj.value(QStringLiteral("message")).toString(), ApiError());
+        });
+}
+
+void HermindApiClient::clearPromptHistory(const QString &slug, OperationCallback callback)
+{
+    del(QStringLiteral("/workspace/") + slug + QStringLiteral("/prompt-history"), QJsonObject(),
+        [callback](const ApiResponse &resp) {
+            if (!resp.isSuccess()) {
+                callback(false, QString(), resp.error());
+                return;
+            }
+            const QJsonObject obj = resp.body().object();
+            callback(obj.value(QStringLiteral("success")).toBool(),
+                     obj.value(QStringLiteral("message")).toString(), ApiError());
+        });
+}
+
 void HermindApiClient::modelRouters(ModelRoutersCallback callback)
 {
     get(QStringLiteral("/model-routers"), QUrlQuery(),

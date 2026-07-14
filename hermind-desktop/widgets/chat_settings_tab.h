@@ -42,6 +42,8 @@ private slots:
                               const ApiError &error);
     void onRoutersLoaded(const QJsonArray &routers,
                          const ApiError &error);
+    void onPromptVariablesLoaded(const QJsonArray &variables,
+                                 const ApiError &error);
     void onWorkspaceUpdated(const HermindWorkspace &workspace,
                             const QString &message,
                             const ApiError &error);
@@ -51,6 +53,7 @@ private slots:
     void onFieldEdited();
     void onSaveClicked();
     void onResetPromptClicked();
+    void onPromptHistoryClicked();
     void applyStyle();
 
 private:
@@ -59,7 +62,9 @@ private:
     void loadWorkspace();
     void loadCustomModels(const QString &provider);
     void loadModelRouters();
+    void loadPromptVariables();
     void updateModelSelector();
+    void updateModeExplanation();
     void updateHasChanges();
     QJsonObject collectFields() const;
     QString currentProvider() const;
@@ -81,11 +86,14 @@ private:
     QComboBox *m_routerCombo = nullptr;
     QLabel *m_routerEmptyLabel = nullptr;
     QButtonGroup *m_modeGroup = nullptr;
+    QLabel *m_modeExplanationLabel = nullptr;
     QSpinBox *m_historySpin = nullptr;
     QDoubleSpinBox *m_tempSpin = nullptr;
     QTextEdit *m_promptEdit = nullptr;
     QTextEdit *m_refusalEdit = nullptr;
+    QLabel *m_promptVariablesHint = nullptr;
     QPushButton *m_resetPromptButton = nullptr;
+    QPushButton *m_promptHistoryButton = nullptr;
     QPushButton *m_saveButton = nullptr;
 };
 
