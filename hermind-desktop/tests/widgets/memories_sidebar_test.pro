@@ -19,6 +19,7 @@ SOURCES += \
     ../../models/hermind_memory.cpp \
     ../../models/hermind_user.cpp \
     ../../models/hermind_workspace.cpp \
+    ../../models/hermind_workspace_user.cpp \
     ../../models/hermind_workspace_thread.cpp \
     ../../models/hermind_chat_message.cpp \
     ../../models/hermind_stream_chat_response.cpp \
