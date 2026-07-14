@@ -14,6 +14,7 @@
 #include "general_appearance_tab.h"
 #include "chat_settings_tab.h"
 #include "vector_database_tab.h"
+#include "members_tab.h"
 #include "widgets/agent_config_tab.h"
 
 class TestMainWindow : public QObject
@@ -32,6 +33,8 @@ private slots:
     void generalAppearanceTabIsRegisteredForGeneralAppearanceRoute();
     void chatSettingsTabIsRegisteredForChatSettingsRoute();
     void vectorDatabaseTabIsRegisteredForVectorDatabaseRoute();
+    void membersTabIsRegisteredForMembersRoute();
+    void workspaceDeletedNavigatesToDefaultChat();
     void agentConfigTabIsRegisteredForAgentConfigRoute();
 };
 
@@ -214,6 +217,58 @@ void TestMainWindow::vectorDatabaseTabIsRegisteredForVectorDatabaseRoute()
     QVERIFY(topNSpin);
     auto *thresholdCombo = vectorTab->findChild<QComboBox *>(QStringLiteral("thresholdCombo"));
     QVERIFY(thresholdCombo);
+}
+
+void TestMainWindow::membersTabIsRegisteredForMembersRoute()
+{
+    MainWindow w;
+
+    NavigationRoute route;
+    route.page = NavigationPage::WorkspaceSettings;
+    route.workspaceSlug = QStringLiteral("acme");
+    route.settingsPath = QStringLiteral("members");
+    NavigationManager::instance().navigateTo(route);
+
+    auto *settingsWidget = w.findChild<WorkspaceSettingsWidget *>();
+    QVERIFY(settingsWidget);
+
+    auto *stack = settingsWidget->findChild<QStackedWidget *>(
+        QStringLiteral("contentStack"));
+    QVERIFY(stack);
+    QCOMPARE(stack->currentIndex(),
+             WorkspaceSettingsTabs::indexOf(QStringLiteral("members")));
+
+    auto *membersTab = qobject_cast<MembersTab *>(stack->currentWidget());
+    QVERIFY(membersTab);
+}
+
+// Regression: deleting the current workspace must leave the dead settings
+// page and return to the default chat (the web UI redirects to "/").
+// Previously workspaceDeleted had no receiver, so the user stayed on the
+// settings page of a workspace that no longer exists.
+void TestMainWindow::workspaceDeletedNavigatesToDefaultChat()
+{
+    MainWindow w;
+    auto *stack = w.findChild<QStackedWidget *>();
+    QVERIFY(stack);
+
+    NavigationRoute route;
+    route.page = NavigationPage::WorkspaceSettings;
+    route.workspaceSlug = QStringLiteral("acme");
+    route.settingsPath = QStringLiteral("general-appearance");
+    NavigationManager::instance().navigateTo(route);
+    QCOMPARE(stack->currentIndex(), 2);
+
+    auto *settingsWidget = w.findChild<WorkspaceSettingsWidget *>();
+    QVERIFY(settingsWidget);
+    auto *generalTab = settingsWidget->findChild<GeneralAppearanceTab *>();
+    QVERIFY(generalTab);
+
+    emit generalTab->workspaceDeleted();
+
+    QCOMPARE(NavigationManager::instance().currentPage(),
+             NavigationPage::DefaultChat);
+    QCOMPARE(stack->currentIndex(), 0);
 }
 
 void TestMainWindow::agentConfigTabIsRegisteredForAgentConfigRoute()

@@ -23,6 +23,10 @@ public:
     explicit MainChatWidget(QWidget *parent = nullptr);
     ~MainChatWidget();
 
+    /// Reload the workspace list in the sidebar (e.g. after a workspace
+    /// was renamed or deleted elsewhere).
+    void refreshWorkspaces();
+
 signals:
     void bottomSettingClicked();
 

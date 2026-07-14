@@ -9,6 +9,7 @@
 #include "general_appearance_tab.h"
 #include "chat_settings_tab.h"
 #include "vector_database_tab.h"
+#include "members_tab.h"
 #include "widgets/agent_config_tab.h"
 
 #include <QDebug>
@@ -63,6 +64,11 @@ MainWindow::MainWindow(QWidget *parent)
         AuthManager::instance().apiClient(), workspaceSettingsWidget);
     workspaceSettingsWidget->setTabWidget(QStringLiteral("vector-database"), vectorTab);
 
+    auto *membersTab = new MembersTab(
+        AuthManager::instance().apiClient(), workspaceSettingsWidget);
+    membersTab->setObjectName(QStringLiteral("membersTab"));
+    workspaceSettingsWidget->setTabWidget(QStringLiteral("members"), membersTab);
+
     auto *agentConfigTab = new AgentConfigTab(
         AuthManager::instance().apiClient(), workspaceSettingsWidget);
     agentConfigTab->setObjectName(QStringLiteral("agentConfigTab"));
@@ -72,6 +78,19 @@ MainWindow::MainWindow(QWidget *parent)
             this, []() {
         NavigationManager::instance().goBack();
     });
+
+    // After deleting a workspace from GeneralAppearance, leave the dead
+    // settings page, refresh the sidebar list, and go back to the default
+    // chat (mirrors the web UI redirecting to "/").
+    if (chatWidget) {
+        connect(generalTab, &GeneralAppearanceTab::workspaceDeleted,
+                this, [chatWidget]() {
+            chatWidget->refreshWorkspaces();
+            NavigationRoute route;
+            route.page = NavigationPage::DefaultChat;
+            NavigationManager::instance().navigateTo(route);
+        });
+    }
 
     connect(&NavigationManager::instance(), &NavigationManager::currentRouteChanged,
             this, &MainWindow::onCurrentRouteChanged);

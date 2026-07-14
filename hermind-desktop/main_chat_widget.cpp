@@ -59,6 +59,12 @@ MainChatWidget::~MainChatWidget()
     delete ui;
 }
 
+void MainChatWidget::refreshWorkspaces()
+{
+    if (m_sidebar)
+        m_sidebar->refreshWorkspaces();
+}
+
 void MainChatWidget::replaceSidebar()
 {
     m_sidebar = new SidebarWidget(this);

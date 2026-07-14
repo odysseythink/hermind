@@ -34,6 +34,7 @@ SOURCES += \
     widgets/general_appearance_tab.cpp \
     widgets/chat_settings_tab.cpp \
     widgets/vector_database_tab.cpp \
+    widgets/members_tab.cpp \
     widgets/agent_config_state.cpp \
     widgets/agent_config_tab.cpp \
     chat/chat_stream_handler.cpp \
@@ -112,6 +113,7 @@ HEADERS += \
     widgets/general_appearance_tab.h \
     widgets/chat_settings_tab.h \
     widgets/vector_database_tab.h \
+    widgets/members_tab.h \
     widgets/agent_config_state.h \
     widgets/agent_config_tab.h \
     chat/chat_stream_handler.h \
