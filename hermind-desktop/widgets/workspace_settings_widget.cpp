@@ -5,6 +5,7 @@
 #include "theme_colors.h"
 #include "theme_manager.h"
 #include "hermind_api_client.h"
+#include "auth_manager.h"
 
 #include <QButtonGroup>
 #include <QHBoxLayout>
@@ -21,6 +22,11 @@ WorkspaceSettingsWidget::WorkspaceSettingsWidget(HermindApiClient *apiClient,
     applyStyle();
     connect(&ThemeManager::instance(), &ThemeManager::themeChanged,
             this, &WorkspaceSettingsWidget::applyStyle);
+    connect(&AuthManager::instance(), &AuthManager::userChanged,
+            this, [this](const HermindUser &user) {
+                setUserRole(user.role());
+            });
+    setUserRole(AuthManager::instance().currentUser().role());
 }
 
 QString WorkspaceSettingsWidget::workspaceSlug() const
@@ -79,6 +85,18 @@ void WorkspaceSettingsWidget::setActiveTab(const QString &tabId)
     }
 
     emit tabChanged(actualId);
+}
+
+void WorkspaceSettingsWidget::setUserRole(const QString &role)
+{
+    const bool canManageMembers =
+        (role == QStringLiteral("admin") || role == QStringLiteral("manager"));
+
+    if (SidebarMenuButton *btn = m_tabButtons.value(QStringLiteral("members")))
+        btn->setVisible(canManageMembers);
+
+    if (!canManageMembers && m_currentTabId == QStringLiteral("members"))
+        setActiveTab(QStringLiteral("general-appearance"));
 }
 
 void WorkspaceSettingsWidget::setTabWidget(const QString &tabId, QWidget *widget)
