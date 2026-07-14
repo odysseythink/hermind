@@ -49,6 +49,7 @@ signals:
     void workspaceUpdated(const HermindWorkspace &workspace);
     void dirtyChanged(bool dirty);
     void performanceWarningChanged(bool warning);
+    void agentSkillsRequested();
 
 private slots:
     void onWorkspaceLoaded(const HermindWorkspace &workspace,
@@ -71,6 +72,7 @@ private:
     void refreshModelList();
     void updateWarning();
     void updateSaveButton();
+    void updateSkillsButton();
 
     HermindApiClient *m_apiClient = nullptr;
     QString m_workspaceSlug;
@@ -82,6 +84,8 @@ private:
     QComboBox *m_modelCombo = nullptr;
     QLabel *m_warningLabel = nullptr;
     QPushButton *m_saveButton = nullptr;
+    QWidget *m_skillsRow = nullptr;
+    QPushButton *m_agentSkillsButton = nullptr;
 };
 
 #endif // AGENT_CONFIG_TAB_H

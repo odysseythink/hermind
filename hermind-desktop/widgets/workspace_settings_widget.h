@@ -29,6 +29,7 @@ public slots:
     void setWorkspaceSlug(const QString &slug);
     void setActiveTab(const QString &tabId);
     void setUserRole(const QString &role);
+    void setWorkspaceDisplayName(const QString &name);
 
 signals:
     void returnClicked();

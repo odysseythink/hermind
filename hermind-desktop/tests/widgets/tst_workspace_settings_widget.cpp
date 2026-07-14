@@ -3,6 +3,8 @@
 #include "workspace_settings_widget.h"
 #include "sidebar_menu_button.h"
 
+#include <QLabel>
+
 class TestWorkspaceSettingsWidget : public QObject
 {
     Q_OBJECT
@@ -13,6 +15,7 @@ private slots:
     void membersButtonVisibleForManager();
     void membersButtonHiddenForMemberRole();
     void activeMembersTabFallsBackWhenRoleRevoked();
+    void displayNameUpdateChangesHeaderLabel();
 };
 
 void TestWorkspaceSettingsWidget::membersButtonHiddenForDefaultUser()
@@ -60,6 +63,15 @@ void TestWorkspaceSettingsWidget::activeMembersTabFallsBackWhenRoleRevoked()
 
     w.setUserRole(QStringLiteral("member"));
     QCOMPARE(w.currentTabId(), QStringLiteral("general-appearance"));
+}
+
+void TestWorkspaceSettingsWidget::displayNameUpdateChangesHeaderLabel()
+{
+    WorkspaceSettingsWidget w(nullptr);
+    w.setWorkspaceDisplayName(QStringLiteral("Renamed Workspace"));
+    auto *label = w.findChild<QLabel *>(QStringLiteral("workspaceNameLabel"));
+    QVERIFY(label);
+    QCOMPARE(label->text(), QStringLiteral("Renamed Workspace"));
 }
 
 QTEST_MAIN(TestWorkspaceSettingsWidget)

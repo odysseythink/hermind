@@ -87,6 +87,11 @@ void WorkspaceSettingsWidget::setActiveTab(const QString &tabId)
     emit tabChanged(actualId);
 }
 
+void WorkspaceSettingsWidget::setWorkspaceDisplayName(const QString &name)
+{
+    m_workspaceNameLabel->setText(name);
+}
+
 void WorkspaceSettingsWidget::setUserRole(const QString &role)
 {
     const bool canManageMembers =

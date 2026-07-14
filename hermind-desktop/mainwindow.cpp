@@ -74,6 +74,15 @@ MainWindow::MainWindow(QWidget *parent)
     agentConfigTab->setObjectName(QStringLiteral("agentConfigTab"));
     workspaceSettingsWidget->setTabWidget(QStringLiteral("agent-config"), agentConfigTab);
 
+    // "Configure Agent Skills" leads to the global settings page
+    // (web: /settings/agents).
+    connect(agentConfigTab, &AgentConfigTab::agentSkillsRequested,
+            this, []() {
+        NavigationRoute route;
+        route.page = NavigationPage::GeneralSettings;
+        NavigationManager::instance().navigateTo(route);
+    });
+
     connect(workspaceSettingsWidget, &WorkspaceSettingsWidget::returnClicked,
             this, []() {
         NavigationManager::instance().goBack();
@@ -89,6 +98,15 @@ MainWindow::MainWindow(QWidget *parent)
             NavigationRoute route;
             route.page = NavigationPage::DefaultChat;
             NavigationManager::instance().navigateTo(route);
+        });
+
+        // After renaming a workspace, refresh the sidebar list and update
+        // the settings header immediately (the web app only refreshes on
+        // full reload; the desktop does it live).
+        connect(generalTab, &GeneralAppearanceTab::workspaceUpdated,
+                this, [chatWidget, workspaceSettingsWidget](const HermindWorkspace &ws) {
+            chatWidget->refreshWorkspaces();
+            workspaceSettingsWidget->setWorkspaceDisplayName(ws.name());
         });
     }
 

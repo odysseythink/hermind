@@ -12,6 +12,9 @@ private slots:
     void localProviderShowsPerformanceWarning();
     void unsupportedOpenAiModelShowsWarning();
     void buildUpdatePayloadContainsAgentFields();
+    void agentSkillsButtonVisibleWhenClean();
+    void agentSkillsButtonHiddenWhenDirty();
+    void agentSkillsButtonEmitsNavigationRequest();
 };
 
 #endif // TST_AGENT_CONFIG_TAB_H

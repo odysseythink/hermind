@@ -41,6 +41,7 @@ SOURCES += \
     ../../streaming/hermind_websocket_client.cpp \
     ../../chat/chat_stream_handler.cpp \
     ../../chat/agent_event_handler.cpp \
+    ../../auth/auth_manager.cpp \
     ../../theme_manager.cpp \
     ../../settings_store.cpp
 
@@ -77,5 +78,6 @@ HEADERS += \
     ../../streaming/hermind_websocket_client.h \
     ../../chat/chat_stream_handler.h \
     ../../chat/agent_event_handler.h \
+    ../../auth/auth_manager.h \
     ../../theme_manager.h \
     ../../settings_store.h

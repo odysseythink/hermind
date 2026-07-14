@@ -1,5 +1,6 @@
 #include "agent_config_tab.h"
 #include "agent_config_state.h"
+#include "auth_manager.h"
 #include "hermind_api_client.h"
 #include "hermind_workspace.h"
 #include "llm_model_selector.h"
@@ -24,6 +25,11 @@ AgentConfigTab::AgentConfigTab(HermindApiClient *apiClient, QWidget *parent)
     applyTheme();
     connect(&ThemeManager::instance(), &ThemeManager::themeChanged,
             this, &AgentConfigTab::applyTheme);
+    connect(&AuthManager::instance(), &AuthManager::userChanged,
+            this, [this](const HermindUser &) {
+                updateSkillsButton();
+            });
+    updateSkillsButton();
 }
 
 QString AgentConfigTab::workspaceSlug() const
@@ -243,6 +249,20 @@ void AgentConfigTab::buildUi()
     modelRow->setControl(m_modelCombo);
     m_layout->addWidget(modelRow);
 
+    // Agent skills entry (global settings; web: /settings/agents)
+    auto *skillsRow = new SettingRow(this);
+    skillsRow->setObjectName(QStringLiteral("agentSkillsRow"));
+    skillsRow->setTitle(tr("Agent Skills"));
+    skillsRow->setDescription(tr("Customize the default agent's capabilities by enabling or disabling specific skills. Applied across all workspaces."));
+
+    m_agentSkillsButton = new QPushButton(tr("Configure Agent Skills"), this);
+    m_agentSkillsButton->setObjectName(QStringLiteral("agentSkillsButton"));
+    connect(m_agentSkillsButton, &QPushButton::clicked,
+            this, &AgentConfigTab::agentSkillsRequested);
+    skillsRow->setControl(m_agentSkillsButton);
+    m_skillsRow = skillsRow;
+    m_layout->addWidget(skillsRow);
+
     // Warning label
     m_warningLabel = new QLabel(this);
     m_warningLabel->setObjectName(QStringLiteral("agentPerformanceWarning"));
@@ -371,4 +391,18 @@ void AgentConfigTab::updateWarning()
 void AgentConfigTab::updateSaveButton()
 {
     m_saveButton->setEnabled(m_state.isDirty());
+    updateSkillsButton();
+}
+
+void AgentConfigTab::updateSkillsButton()
+{
+    if (!m_skillsRow)
+        return;
+
+    // Same visibility rule as the web UI: only admins (or single-user mode,
+    // where there is no user record) may manage global agent skills, and the
+    // entry is hidden while there are unsaved changes.
+    const HermindUser user = AuthManager::instance().currentUser();
+    const bool canManage = user.id() == 0 || user.role() == QStringLiteral("admin");
+    m_skillsRow->setVisible(canManage && !m_state.isDirty());
 }

@@ -2,6 +2,7 @@
 
 #include <QComboBox>
 #include <QLabel>
+#include <QPushButton>
 #include <QSignalSpy>
 #include <QTest>
 #include <QJsonObject>
@@ -111,4 +112,50 @@ void TestAgentConfigTab::buildUpdatePayloadContainsAgentFields()
              QStringLiteral("anthropic"));
     QCOMPARE(payload.value(QStringLiteral("agentModel")).toString(),
              QStringLiteral("claude-3-5-sonnet"));
+}
+
+void TestAgentConfigTab::agentSkillsButtonVisibleWhenClean()
+{
+    AgentConfigTab tab(nullptr);
+    tab.loadFromWorkspace(workspaceWithAgent(QStringLiteral("openai"),
+                                             QStringLiteral("gpt-4o-mini")));
+
+    auto *btn = tab.findChild<QPushButton *>(QStringLiteral("agentSkillsButton"));
+    QVERIFY2(btn, "Configure Agent Skills button must exist");
+    auto *row = tab.findChild<QWidget *>(QStringLiteral("agentSkillsRow"));
+    QVERIFY(row);
+    QVERIFY(!row->isHidden());
+}
+
+void TestAgentConfigTab::agentSkillsButtonHiddenWhenDirty()
+{
+    AgentConfigTab tab(nullptr);
+    tab.loadFromWorkspace(workspaceWithAgent(QStringLiteral("default"), QString()));
+
+    auto *btn = tab.findChild<QPushButton *>(QStringLiteral("agentSkillsButton"));
+    QVERIFY(btn);
+
+    auto *providerCombo = tab.findChild<QComboBox *>(QStringLiteral("agentProviderCombo"));
+    const int openAiIndex = providerCombo->findData(QStringLiteral("openai"));
+    QVERIFY(openAiIndex >= 0);
+    providerCombo->setCurrentIndex(openAiIndex);
+
+    QVERIFY(tab.isDirty());
+    auto *row = tab.findChild<QWidget *>(QStringLiteral("agentSkillsRow"));
+    QVERIFY(row);
+    QVERIFY(row->isHidden());
+}
+
+void TestAgentConfigTab::agentSkillsButtonEmitsNavigationRequest()
+{
+    AgentConfigTab tab(nullptr);
+    tab.loadFromWorkspace(workspaceWithAgent(QStringLiteral("openai"),
+                                             QStringLiteral("gpt-4o-mini")));
+
+    auto *btn = tab.findChild<QPushButton *>(QStringLiteral("agentSkillsButton"));
+    QVERIFY(btn);
+
+    QSignalSpy spy(&tab, &AgentConfigTab::agentSkillsRequested);
+    btn->click();
+    QCOMPARE(spy.count(), 1);
 }

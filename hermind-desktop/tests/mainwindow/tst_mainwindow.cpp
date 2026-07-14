@@ -35,6 +35,8 @@ private slots:
     void vectorDatabaseTabIsRegisteredForVectorDatabaseRoute();
     void membersTabIsRegisteredForMembersRoute();
     void workspaceDeletedNavigatesToDefaultChat();
+    void workspaceUpdatedRefreshesSettingsHeader();
+    void agentSkillsRequestedNavigatesToGeneralSettings();
     void agentConfigTabIsRegisteredForAgentConfigRoute();
 };
 
@@ -269,6 +271,56 @@ void TestMainWindow::workspaceDeletedNavigatesToDefaultChat()
     QCOMPARE(NavigationManager::instance().currentPage(),
              NavigationPage::DefaultChat);
     QCOMPARE(stack->currentIndex(), 0);
+}
+
+// After renaming a workspace in GeneralAppearance, the settings header must
+// show the new name immediately (the sidebar refresh is covered separately).
+void TestMainWindow::workspaceUpdatedRefreshesSettingsHeader()
+{
+    MainWindow w;
+
+    NavigationRoute route;
+    route.page = NavigationPage::WorkspaceSettings;
+    route.workspaceSlug = QStringLiteral("acme");
+    route.settingsPath = QStringLiteral("general-appearance");
+    NavigationManager::instance().navigateTo(route);
+
+    auto *settingsWidget = w.findChild<WorkspaceSettingsWidget *>();
+    QVERIFY(settingsWidget);
+    auto *generalTab = settingsWidget->findChild<GeneralAppearanceTab *>();
+    QVERIFY(generalTab);
+
+    QJsonObject obj;
+    obj.insert(QStringLiteral("name"), QStringLiteral("Renamed Workspace"));
+    obj.insert(QStringLiteral("slug"), QStringLiteral("acme"));
+    emit generalTab->workspaceUpdated(HermindWorkspace::fromJson(obj));
+
+    auto *label = settingsWidget->findChild<QLabel *>(QStringLiteral("workspaceNameLabel"));
+    QVERIFY(label);
+    QCOMPARE(label->text(), QStringLiteral("Renamed Workspace"));
+}
+
+// The "Configure Agent Skills" entry in the workspace Agent Config tab
+// leads to the global settings page (web: /settings/agents).
+void TestMainWindow::agentSkillsRequestedNavigatesToGeneralSettings()
+{
+    MainWindow w;
+
+    NavigationRoute route;
+    route.page = NavigationPage::WorkspaceSettings;
+    route.workspaceSlug = QStringLiteral("acme");
+    route.settingsPath = QStringLiteral("agent-config");
+    NavigationManager::instance().navigateTo(route);
+
+    auto *settingsWidget = w.findChild<WorkspaceSettingsWidget *>();
+    QVERIFY(settingsWidget);
+    auto *agentTab = settingsWidget->findChild<AgentConfigTab *>();
+    QVERIFY(agentTab);
+
+    emit agentTab->agentSkillsRequested();
+
+    QCOMPARE(NavigationManager::instance().currentPage(),
+             NavigationPage::GeneralSettings);
 }
 
 void TestMainWindow::agentConfigTabIsRegisteredForAgentConfigRoute()
